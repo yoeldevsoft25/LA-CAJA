@@ -1,0 +1,238 @@
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useMutation } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { inventoryService, StockAdjustedRequest, StockStatus } from '@/services/inventory.service'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
+
+interface StockAdjustModalProps {
+  isOpen: boolean
+  onClose: () => void
+  product: StockStatus | null
+  onSuccess?: () => void
+}
+
+const stockAdjustSchema = z.object({
+  qty_delta: z.preprocess(
+    (val) => Number(val),
+    z.number().refine((val) => val !== 0, 'La cantidad debe ser diferente de 0')
+  ),
+  reason: z.enum(['loss', 'damage', 'count', 'other']),
+  note: z.string().optional(),
+})
+
+type StockAdjustForm = z.infer<typeof stockAdjustSchema>
+
+const reasonLabels = {
+  loss: 'Pérdida',
+  damage: 'Daño',
+  count: 'Conteo',
+  other: 'Otro',
+}
+
+export default function StockAdjustModal({
+  isOpen,
+  onClose,
+  product,
+  onSuccess,
+}: StockAdjustModalProps) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<StockAdjustForm>({
+    resolver: zodResolver(stockAdjustSchema),
+    defaultValues: {
+      qty_delta: 0,
+      reason: 'other',
+      note: '',
+    },
+  })
+
+  const qtyDelta = watch('qty_delta')
+
+  // Calcular stock resultante
+  const resultingStock = product ? product.current_stock + (qtyDelta || 0) : 0
+
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        qty_delta: 0,
+        reason: 'other',
+        note: '',
+      })
+    }
+  }, [isOpen, reset])
+
+  const stockAdjustMutation = useMutation({
+    mutationFn: (data: StockAdjustedRequest) => {
+      if (!product) throw new Error('Producto no seleccionado')
+      return inventoryService.stockAdjusted({
+        ...data,
+        product_id: product.product_id,
+      })
+    },
+    onSuccess: () => {
+      toast.success('Stock ajustado exitosamente')
+      onSuccess?.()
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al ajustar stock')
+    },
+  })
+
+  const onSubmit = (data: StockAdjustForm) => {
+    if (!product) return
+    stockAdjustMutation.mutate(data)
+  }
+
+  if (!product) return null
+
+  const isLoading = stockAdjustMutation.isPending
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-lg sm:text-xl">Ajustar Stock</DialogTitle>
+          <DialogDescription className="sr-only">
+            Ajusta la cantidad de stock del producto
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+            <div className="space-y-4 sm:space-y-6">
+              {/* Información del producto */}
+              <Card className="bg-muted/50 border-border">
+                <CardContent className="p-3 sm:p-4">
+                  <p className="text-sm text-muted-foreground mb-1">Producto:</p>
+                  <p className="font-semibold text-foreground">{product.product_name}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Stock actual:</span>
+                      <span className="ml-2 font-bold text-foreground">{product.current_stock}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Stock resultante:</span>
+                      <span
+                        className={cn(
+                          'ml-2 font-bold',
+                          resultingStock < 0
+                            ? 'text-destructive'
+                            : resultingStock === product.current_stock
+                              ? 'text-muted-foreground'
+                              : 'text-primary'
+                        )}
+                      >
+                        {resultingStock}
+                      </span>
+                    </div>
+                  </div>
+                  {resultingStock < 0 && (
+                    <Alert className="mt-2 bg-destructive/10 border-destructive/50">
+                      <AlertDescription className="text-xs text-destructive">
+                        ⚠️ El stock resultante será negativo
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Cantidad delta */}
+              <div>
+                <Label htmlFor="qty_delta" className="mb-2">
+                  Ajuste de Cantidad <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="qty_delta"
+                  type="number"
+                  step="1"
+                  {...register('qty_delta', { valueAsNumber: true })}
+                  placeholder="Ej: -5 (reducir) o +3 (aumentar)"
+                />
+                {errors.qty_delta && (
+                  <p className="mt-1 text-sm text-destructive">{errors.qty_delta.message}</p>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Usa valores positivos para aumentar y negativos para reducir el stock
+                </p>
+              </div>
+
+              {/* Razón */}
+              <div>
+                <Label htmlFor="reason" className="mb-2">
+                  Razón del Ajuste <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={watch('reason')}
+                  onValueChange={(value) => setValue('reason', value as 'loss' | 'damage' | 'count' | 'other')}
+                >
+                  <SelectTrigger id="reason">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(reasonLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Nota */}
+              <div>
+                <Label htmlFor="note">Nota</Label>
+                <Textarea
+                  id="note"
+                  {...register('note')}
+                  rows={3}
+                  className="mt-2 resize-none"
+                  placeholder="Descripción del ajuste (opcional)"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Botones */}
+          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={isLoading || qtyDelta === 0 || resultingStock < 0}
+              >
+                {isLoading ? 'Ajustando...' : 'Ajustar Stock'}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+

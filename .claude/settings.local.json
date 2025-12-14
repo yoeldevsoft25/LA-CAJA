@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(npx shadcn@latest add:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "filesystem",
+    "secure-terminal",
+    "github-remote",
+    "postgres-advanced",
+    "brave-search",
+    "sequential-thinking",
+    "memory",
+    "shadcn"
+  ]
+}

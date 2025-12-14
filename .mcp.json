@@ -1,0 +1,87 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\Yoel-PC\\Documents\\GitHub\\LA-CAJA"
+      ],
+      "env": {}
+    },
+    "secure-terminal": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "tumf-mcp-shell-server"
+      ],
+      "env": {
+        "ALLOW_COMMANDS": "npm,node,tsc,next,docker,git,ls,cat,grep,find,psql,pwsh,powershell"
+      }
+    },
+    "github-remote": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
+      }
+    },
+    "brave-search": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "BSAGDQWRi7quKtFH0MNo9kCJ6UN8V3K"
+      }
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "env": {}
+    },
+    "memory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {}
+    },
+    "shadcn": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ],
+      "env": {}
+    },
+    "postgres-advanced": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "POSTGRES_URL=postgresql://postgres:2403@host.docker.internal:5432/la_caja",
+        "ghcr.io/henkdz/postgresql-mcp-server:latest"
+      ],
+      "env": {}
+    }
+  }
+}

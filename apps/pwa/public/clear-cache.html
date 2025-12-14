@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limpiar Cache - LA CAJA</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      display: none;
+    }
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Limpiar Cache - LA CAJA</h1>
+    <p>Si los cambios no se reflejan en el móvil, usa estos botones para limpiar el cache:</p>
+    
+    <button onclick="clearServiceWorker()">1. Desregistrar Service Worker</button>
+    <button onclick="clearCache()">2. Limpiar Cache del Navegador</button>
+    <button onclick="clearAll()">3. Limpiar Todo</button>
+    
+    <div id="status"></div>
+  </div>
+
+  <script>
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = type;
+      status.style.display = 'block';
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 5000);
+    }
+
+    async function clearServiceWorker() {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+          showStatus(`✅ ${registrations.length} Service Worker(s) desregistrado(s)`, 'success');
+        } else {
+          showStatus('⚠️ Service Workers no están disponibles', 'error');
+        }
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function clearCache() {
+      try {
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map(name => caches.delete(name)));
+          showStatus(`✅ ${cacheNames.length} cache(s) eliminado(s)`, 'success');
+        } else {
+          showStatus('⚠️ Cache API no está disponible', 'error');
+        }
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function clearAll() {
+      await clearServiceWorker();
+      await clearCache();
+      showStatus('✅ Todo limpio. Recarga la página principal.', 'success');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>
+

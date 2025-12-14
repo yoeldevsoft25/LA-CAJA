@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fix Service Worker - LA CAJA</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+      width: 100%;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    #log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #2563eb;
+      padding-left: 10px;
+    }
+    .log-error {
+      border-left-color: #ef4444;
+      color: #991b1b;
+    }
+    .log-success {
+      border-left-color: #10b981;
+      color: #065f46;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Fix Service Worker - LA CAJA</h1>
+    <p>Este script desregistrará TODOS los Service Workers de TODOS los hostnames (localhost, IP, etc.)</p>
+    
+    <button onclick="clearAllSW()">Desregistrar TODOS los Service Workers</button>
+    <button onclick="clearAllCaches()">Limpiar TODOS los Caches</button>
+    <button onclick="clearEverything()">Limpiar TODO</button>
+    <button onclick="checkStatus()">Verificar Estado Actual</button>
+    
+    <div id="log"></div>
+  </div>
+
+  <script>
+    function addLog(message, type = 'info') {
+      const log = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    async function clearAllSW() {
+      addLog('Iniciando limpieza de Service Workers...', 'info');
+      
+      if (!('serviceWorker' in navigator)) {
+        addLog('Service Workers no están disponibles en este navegador', 'error');
+        return;
+      }
+
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        addLog(`Encontrados ${registrations.length} Service Worker(s) registrados`, 'info');
+        
+        if (registrations.length === 0) {
+          addLog('No hay Service Workers registrados', 'success');
+          return;
+        }
+
+        for (const registration of registrations) {
+          try {
+            const unregistered = await registration.unregister();
+            if (unregistered) {
+              addLog(`✅ Desregistrado: ${registration.scope}`, 'success');
+            } else {
+              addLog(`⚠️ No se pudo desregistrar: ${registration.scope}`, 'error');
+            }
+          } catch (error) {
+            addLog(`❌ Error al desregistrar ${registration.scope}: ${error.message}`, 'error');
+          }
+        }
+
+        // Esperar un momento
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Verificar de nuevo
+        const remaining = await navigator.serviceWorker.getRegistrations();
+        if (remaining.length === 0) {
+          addLog('✅ Todos los Service Workers han sido desregistrados', 'success');
+        } else {
+          addLog(`⚠️ Aún quedan ${remaining.length} Service Worker(s) activos`, 'error');
+        }
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function clearAllCaches() {
+      addLog('Iniciando limpieza de caches...', 'info');
+
+      if (!('caches' in window)) {
+        addLog('Cache API no está disponible en este navegador', 'error');
+        return;
+      }
+
+      try {
+        const cacheNames = await caches.keys();
+        addLog(`Encontrados ${cacheNames.length} cache(s)`, 'info');
+
+        if (cacheNames.length === 0) {
+          addLog('No hay caches para limpiar', 'success');
+          return;
+        }
+
+        for (const cacheName of cacheNames) {
+          try {
+            const deleted = await caches.delete(cacheName);
+            if (deleted) {
+              addLog(`✅ Cache eliminado: ${cacheName}`, 'success');
+            } else {
+              addLog(`⚠️ No se pudo eliminar: ${cacheName}`, 'error');
+            }
+          } catch (error) {
+            addLog(`❌ Error al eliminar ${cacheName}: ${error.message}`, 'error');
+          }
+        }
+
+        // Verificar de nuevo
+        const remaining = await caches.keys();
+        if (remaining.length === 0) {
+          addLog('✅ Todos los caches han sido eliminados', 'success');
+        } else {
+          addLog(`⚠️ Aún quedan ${remaining.length} cache(s) activos`, 'error');
+        }
+      } catch (error) {
+        addLog(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    async function clearEverything() {
+      addLog('=== LIMPIEZA COMPLETA ===', 'info');
+      await clearAllSW();
+      await clearAllCaches();
+      addLog('=== LIMPIEZA COMPLETADA ===', 'success');
+      addLog('Ahora recarga la página principal (Ctrl+Shift+R o Cmd+Shift+R)', 'info');
+    }
+
+    async function checkStatus() {
+      addLog('=== ESTADO ACTUAL ===', 'info');
+      addLog(`Hostname: ${window.location.hostname}`, 'info');
+      addLog(`URL: ${window.location.href}`, 'info');
+      
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        addLog(`Service Workers registrados: ${registrations.length}`, registrations.length > 0 ? 'error' : 'success');
+        registrations.forEach((reg, index) => {
+          addLog(`  ${index + 1}. Scope: ${reg.scope}`, 'info');
+        });
+      } else {
+        addLog('Service Workers: No disponibles', 'info');
+      }
+
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        addLog(`Caches activos: ${cacheNames.length}`, cacheNames.length > 0 ? 'error' : 'success');
+        cacheNames.forEach((name, index) => {
+          addLog(`  ${index + 1}. ${name}`, 'info');
+        });
+      } else {
+        addLog('Cache API: No disponible', 'info');
+      }
+      
+      addLog('=== FIN DEL ESTADO ===', 'info');
+    }
+
+    // Verificar estado al cargar
+    window.addEventListener('load', () => {
+      checkStatus();
+    });
+  </script>
+</body>
+</html>
+

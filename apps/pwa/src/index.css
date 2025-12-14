@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Backgrounds - Clean white base */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 4%;
+
+    /* Cards */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 4%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 4%;
+
+    /* Primary - Sophisticated dark slate */
+    --primary: 240 6% 10%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary - Subtle neutral */
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
+
+    /* Muted - Soft gray palette */
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+
+    /* Accent - Minimal highlight */
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 6% 10%;
+
+    /* Destructive - Understated red */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success - Calm green */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning - Soft amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+
+    /* Info - Subtle blue */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 98%;
+
+    /* Borders & Inputs - Visible but refined lines */
+    --border: 240 5.9% 70%;
+    --input: 240 5.9% 70%;
+    --ring: 240 6% 10%;
+
+    /* Radius - Softer corners */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Backgrounds */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    /* Cards */
+    --card: 240 10% 8%;
+    --card-foreground: 0 0% 98%;
+
+    /* Popover */
+    --popover: 240 10% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Primary */
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary */
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    /* Muted */
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    /* Accent */
+    --accent: 262 90% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success */
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Info */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Borders & Inputs */
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 262 83% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border/0;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

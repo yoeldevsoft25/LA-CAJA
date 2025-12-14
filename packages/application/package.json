@@ -1,0 +1,19 @@
+{
+  "name": "@la-caja/application",
+  "version": "1.0.0",
+  "description": "Use cases and orchestration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@la-caja/domain": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
+
+

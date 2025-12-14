@@ -1,0 +1,481 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Event } from '../database/entities/event.entity';
+import { Product } from '../database/entities/product.entity';
+import { InventoryMovement } from '../database/entities/inventory-movement.entity';
+import { Sale } from '../database/entities/sale.entity';
+import { SaleItem } from '../database/entities/sale-item.entity';
+import { CashSession } from '../database/entities/cash-session.entity';
+import { Customer } from '../database/entities/customer.entity';
+import { Debt } from '../database/entities/debt.entity';
+import { DebtPayment } from '../database/entities/debt-payment.entity';
+import { DebtStatus } from '../database/entities/debt.entity';
+import { randomUUID } from 'crypto';
+
+@Injectable()
+export class ProjectionsService {
+  constructor(
+    @InjectRepository(Product)
+    private productRepository: Repository<Product>,
+    @InjectRepository(InventoryMovement)
+    private movementRepository: Repository<InventoryMovement>,
+    @InjectRepository(Sale)
+    private saleRepository: Repository<Sale>,
+    @InjectRepository(SaleItem)
+    private saleItemRepository: Repository<SaleItem>,
+    @InjectRepository(CashSession)
+    private cashSessionRepository: Repository<CashSession>,
+    @InjectRepository(Customer)
+    private customerRepository: Repository<Customer>,
+    @InjectRepository(Debt)
+    private debtRepository: Repository<Debt>,
+    @InjectRepository(DebtPayment)
+    private debtPaymentRepository: Repository<DebtPayment>,
+    private dataSource: DataSource,
+  ) {}
+
+  async projectEvent(event: Event): Promise<void> {
+    switch (event.type) {
+      case 'ProductCreated':
+        await this.projectProductCreated(event);
+        break;
+      case 'ProductUpdated':
+        await this.projectProductUpdated(event);
+        break;
+      case 'ProductDeactivated':
+        await this.projectProductDeactivated(event);
+        break;
+      case 'PriceChanged':
+        await this.projectPriceChanged(event);
+        break;
+      case 'StockReceived':
+        await this.projectStockReceived(event);
+        break;
+      case 'StockAdjusted':
+        await this.projectStockAdjusted(event);
+        break;
+      case 'SaleCreated':
+        await this.projectSaleCreated(event);
+        break;
+      case 'CashSessionOpened':
+        await this.projectCashSessionOpened(event);
+        break;
+      case 'CashSessionClosed':
+        await this.projectCashSessionClosed(event);
+        break;
+      case 'CustomerCreated':
+        await this.projectCustomerCreated(event);
+        break;
+      case 'CustomerUpdated':
+        await this.projectCustomerUpdated(event);
+        break;
+      case 'DebtCreated':
+        await this.projectDebtCreated(event);
+        break;
+      case 'DebtPaymentRecorded':
+        await this.projectDebtPaymentRecorded(event);
+        break;
+      default:
+        // Tipo de evento desconocido, no se proyecta
+        break;
+    }
+  }
+
+  private async projectProductCreated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const exists = await this.productRepository.findOne({
+      where: { id: payload.product_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    const product = this.productRepository.create({
+      id: payload.product_id,
+      store_id: event.store_id,
+      name: payload.name,
+      category: payload.category || null,
+      sku: payload.sku || null,
+      barcode: payload.barcode || null,
+      price_bs: Number(payload.price_bs) || 0,
+      price_usd: Number(payload.price_usd) || 0,
+      cost_bs: Number(payload.cost_bs) || 0,
+      cost_usd: Number(payload.cost_usd) || 0,
+      is_active: payload.is_active !== false,
+      low_stock_threshold: Number(payload.low_stock_threshold) || 0,
+    });
+
+    await this.productRepository.save(product);
+  }
+
+  private async projectProductUpdated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const product = await this.productRepository.findOne({
+      where: { id: payload.product_id, store_id: event.store_id },
+    });
+
+    if (!product) {
+      return; // Producto no existe
+    }
+
+    const patch = payload.patch || {};
+    if (patch.name !== undefined) product.name = patch.name;
+    if (patch.category !== undefined) product.category = patch.category || null;
+    if (patch.sku !== undefined) product.sku = patch.sku || null;
+    if (patch.barcode !== undefined) product.barcode = patch.barcode || null;
+    if (patch.low_stock_threshold !== undefined)
+      product.low_stock_threshold = Number(patch.low_stock_threshold) || 0;
+
+    await this.productRepository.save(product);
+  }
+
+  private async projectProductDeactivated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    await this.productRepository.update(
+      { id: payload.product_id, store_id: event.store_id },
+      { is_active: false },
+    );
+  }
+
+  private async projectPriceChanged(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    await this.productRepository.update(
+      { id: payload.product_id, store_id: event.store_id },
+      {
+        price_bs: Number(payload.price_bs) || 0,
+        price_usd: Number(payload.price_usd) || 0,
+      },
+    );
+  }
+
+  private async projectStockReceived(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const exists = await this.movementRepository.findOne({
+      where: { id: payload.movement_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    const movement = this.movementRepository.create({
+      id: payload.movement_id,
+      store_id: event.store_id,
+      product_id: payload.product_id,
+      movement_type: 'received',
+      qty_delta: Number(payload.qty) || 0,
+      unit_cost_bs: Number(payload.unit_cost_bs) || 0,
+      unit_cost_usd: Number(payload.unit_cost_usd) || 0,
+      note: payload.note || null,
+      ref: payload.ref || null,
+      happened_at: event.created_at,
+    });
+
+    await this.movementRepository.save(movement);
+  }
+
+  private async projectStockAdjusted(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const exists = await this.movementRepository.findOne({
+      where: { id: payload.movement_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    const movement = this.movementRepository.create({
+      id: payload.movement_id,
+      store_id: event.store_id,
+      product_id: payload.product_id,
+      movement_type: 'adjust',
+      qty_delta: Number(payload.qty_delta) || 0,
+      unit_cost_bs: 0,
+      unit_cost_usd: 0,
+      note: payload.note || null,
+      ref: null,
+      happened_at: event.created_at,
+    });
+
+    await this.movementRepository.save(movement);
+  }
+
+  private async projectSaleCreated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const exists = await this.saleRepository.findOne({
+      where: { id: payload.sale_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    // Crear venta
+    const sale = this.saleRepository.create({
+      id: payload.sale_id,
+      store_id: event.store_id,
+      cash_session_id: payload.cash_session_id || null,
+      sold_at: payload.sold_at ? new Date(payload.sold_at) : event.created_at,
+      exchange_rate: Number(payload.exchange_rate) || 0,
+      currency: payload.currency || 'BS',
+      totals: payload.totals || {},
+      payment: payload.payment || {},
+      customer_id: payload.customer_id || null,
+      note: payload.note || null,
+    });
+
+    const savedSale = await this.saleRepository.save(sale);
+
+    // Crear items de venta
+    if (payload.items && Array.isArray(payload.items)) {
+      const items = payload.items.map((item: any) =>
+        this.saleItemRepository.create({
+          id: item.item_id || randomUUID(),
+          sale_id: savedSale.id,
+          product_id: item.product_id,
+          qty: Number(item.qty) || 0,
+          unit_price_bs: Number(item.unit_price_bs) || 0,
+          unit_price_usd: Number(item.unit_price_usd) || 0,
+          discount_bs: Number(item.discount_bs) || 0,
+          discount_usd: Number(item.discount_usd) || 0,
+        }),
+      );
+
+      await this.saleItemRepository.save(items);
+    }
+
+    // Crear movimiento de inventario (descontar stock) si payment.method !== 'FIAO'
+    // Nota: Para FIAO, el stock se descuenta igual
+    if (payload.items && Array.isArray(payload.items)) {
+      for (const item of payload.items) {
+        const movement = this.movementRepository.create({
+          id: randomUUID(),
+          store_id: event.store_id,
+          product_id: item.product_id,
+          movement_type: 'sold',
+          qty_delta: -(Number(item.qty) || 0), // Negativo para descontar
+          unit_cost_bs: 0,
+          unit_cost_usd: 0,
+          note: `Venta ${payload.sale_id}`,
+          ref: { sale_id: payload.sale_id },
+          happened_at: payload.sold_at ? new Date(payload.sold_at) : event.created_at,
+        });
+
+        await this.movementRepository.save(movement);
+      }
+    }
+  }
+
+  private async projectCashSessionOpened(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const exists = await this.cashSessionRepository.findOne({
+      where: { id: payload.session_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    const session = this.cashSessionRepository.create({
+      id: payload.session_id,
+      store_id: event.store_id,
+      opened_by: event.actor_user_id,
+      opened_at: payload.opened_at ? new Date(payload.opened_at) : event.created_at,
+      opening_amount_bs: Number(payload.opening_amount_bs || 0),
+      opening_amount_usd: Number(payload.opening_amount_usd || 0),
+      closed_at: null,
+      closed_by: null,
+      expected: null,
+      counted: null,
+      note: payload.note || null,
+    });
+
+    await this.cashSessionRepository.save(session);
+  }
+
+  private async projectCashSessionClosed(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const session = await this.cashSessionRepository.findOne({
+      where: { id: payload.session_id, store_id: event.store_id },
+    });
+
+    if (!session) {
+      return; // Sesión no existe
+    }
+
+    session.closed_at = payload.closed_at ? new Date(payload.closed_at) : event.created_at;
+    session.closed_by = event.actor_user_id;
+    session.expected = payload.expected || null;
+    session.counted = payload.counted || null;
+    session.note = payload.note || session.note;
+
+    await this.cashSessionRepository.save(session);
+  }
+
+  private async projectCustomerCreated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const exists = await this.customerRepository.findOne({
+      where: { id: payload.customer_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    const customer = this.customerRepository.create({
+      id: payload.customer_id,
+      store_id: event.store_id,
+      name: payload.name,
+      phone: payload.phone || null,
+      note: payload.note || null,
+      updated_at: event.created_at,
+    });
+
+    await this.customerRepository.save(customer);
+  }
+
+  private async projectCustomerUpdated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const customer = await this.customerRepository.findOne({
+      where: { id: payload.customer_id, store_id: event.store_id },
+    });
+
+    if (!customer) {
+      return; // Cliente no existe
+    }
+
+    const patch = payload.patch || {};
+    if (patch.name !== undefined) customer.name = patch.name;
+    if (patch.phone !== undefined) customer.phone = patch.phone || null;
+    if (patch.note !== undefined) customer.note = patch.note || null;
+    customer.updated_at = new Date(event.created_at);
+
+    await this.customerRepository.save(customer);
+  }
+
+  private async projectDebtCreated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const exists = await this.debtRepository.findOne({
+      where: { id: payload.debt_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    const debt = this.debtRepository.create({
+      id: payload.debt_id,
+      store_id: event.store_id,
+      sale_id: payload.sale_id || null,
+      customer_id: payload.customer_id,
+      created_at: payload.created_at ? new Date(payload.created_at) : event.created_at,
+      amount_bs: Number(payload.amount_bs) || 0,
+      amount_usd: Number(payload.amount_usd) || 0,
+      status: DebtStatus.OPEN,
+    });
+
+    await this.debtRepository.save(debt);
+  }
+
+  private async projectDebtPaymentRecorded(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    
+    // Validar campos requeridos
+    if (!payload.payment_id) {
+      console.error(`[ProjectDebtPaymentRecorded] Error: payment_id faltante en evento ${event.event_id}`);
+      throw new Error(`payment_id es requerido en el payload del evento DebtPaymentRecorded`);
+    }
+
+    if (!payload.debt_id) {
+      console.error(`[ProjectDebtPaymentRecorded] Error: debt_id faltante en evento ${event.event_id}. Payload:`, JSON.stringify(payload));
+      throw new Error(`debt_id es requerido en el payload del evento DebtPaymentRecorded. Evento: ${event.event_id}`);
+    }
+
+    if (!payload.method) {
+      console.error(`[ProjectDebtPaymentRecorded] Error: method faltante en evento ${event.event_id}`);
+      throw new Error(`method es requerido en el payload del evento DebtPaymentRecorded`);
+    }
+
+    // Verificar que el pago no existe ya (idempotencia)
+    const exists = await this.debtPaymentRepository.findOne({
+      where: { id: payload.payment_id, store_id: event.store_id },
+    });
+
+    if (exists) {
+      return; // Ya existe, idempotente
+    }
+
+    // Verificar que la deuda existe antes de crear el pago
+    const debt = await this.debtRepository.findOne({
+      where: { id: payload.debt_id, store_id: event.store_id },
+    });
+
+    if (!debt) {
+      console.error(`[ProjectDebtPaymentRecorded] Error: Deuda ${payload.debt_id} no encontrada para store ${event.store_id} en evento ${event.event_id}`);
+      throw new Error(`La deuda ${payload.debt_id} no existe para la tienda ${event.store_id}`);
+    }
+
+    // Crear el pago usando SQL directo para evitar problemas con relaciones TypeORM
+    const paidAt = payload.paid_at ? new Date(payload.paid_at) : event.created_at;
+    const amountBs = Number(payload.amount_bs) || 0;
+    const amountUsd = Number(payload.amount_usd) || 0;
+
+    // Validar que debt_id no sea null antes de insertar
+    if (!payload.debt_id) {
+      console.error(`[ProjectDebtPaymentRecorded] Error crítico: debt_id es null/undefined. Payload completo:`, JSON.stringify(payload));
+      throw new Error(`debt_id es requerido y no puede ser null. Evento: ${event.event_id}`);
+    }
+
+    console.log(`[ProjectDebtPaymentRecorded] Insertando pago - payment_id: ${payload.payment_id}, store_id: ${event.store_id}, debt_id: ${payload.debt_id}`);
+
+    // Usar SQL directo para insertar (igual que en debts.service.ts)
+    await this.dataSource.query(
+      `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        payload.payment_id,
+        event.store_id,
+        payload.debt_id,
+        paidAt,
+        amountBs,
+        amountUsd,
+        payload.method,
+        payload.note || null,
+      ],
+    );
+
+    console.log(`[ProjectDebtPaymentRecorded] Pago insertado exitosamente`);
+
+    // Actualizar estado de la deuda si está completamente pagada
+    // Recargar la deuda con todos los pagos para calcular correctamente
+    const updatedDebt = await this.debtRepository.findOne({
+      where: { id: payload.debt_id, store_id: event.store_id },
+      relations: ['payments'],
+    });
+
+    if (updatedDebt) {
+      const totalPaidBs = (updatedDebt.payments || []).reduce(
+        (sum, p) => sum + Number(p.amount_bs),
+        0,
+      );
+      const totalPaidUsd = (updatedDebt.payments || []).reduce(
+        (sum, p) => sum + Number(p.amount_usd),
+        0,
+      );
+
+      const debtAmountBs = Number(updatedDebt.amount_bs);
+      const debtAmountUsd = Number(updatedDebt.amount_usd);
+
+      if (totalPaidBs >= debtAmountBs && totalPaidUsd >= debtAmountUsd) {
+        updatedDebt.status = DebtStatus.PAID;
+        await this.debtRepository.save(updatedDebt);
+      } else if (totalPaidBs > 0 || totalPaidUsd > 0) {
+        updatedDebt.status = DebtStatus.PARTIAL;
+        await this.debtRepository.save(updatedDebt);
+      }
+    }
+  }
+}
+

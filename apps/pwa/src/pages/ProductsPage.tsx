@@ -1,0 +1,313 @@
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign } from 'lucide-react'
+import { productsService, Product } from '@/services/products.service'
+import toast from 'react-hot-toast'
+import ProductFormModal from '@/components/products/ProductFormModal'
+import ChangePriceModal from '@/components/products/ChangePriceModal'
+import BulkPriceChangeModal from '@/components/products/BulkPriceChangeModal'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+
+export default function ProductsPage() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false)
+  const [priceProduct, setPriceProduct] = useState<Product | null>(null)
+  const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false)
+  const queryClient = useQueryClient()
+
+  // Búsqueda de productos
+  const { data: productsData, isLoading } = useQuery({
+    queryKey: ['products', 'list', searchQuery],
+    queryFn: () =>
+      productsService.search({
+        q: searchQuery || undefined,
+        limit: 100,
+      }),
+  })
+
+  const products = productsData?.products || []
+  const total = productsData?.total || 0
+
+  // Mutación para desactivar producto
+  const deactivateMutation = useMutation({
+    mutationFn: productsService.deactivate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Producto desactivado exitosamente')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error al desactivar el producto'
+      toast.error(message)
+    },
+  })
+
+  // Mutación para activar producto
+  const activateMutation = useMutation({
+    mutationFn: productsService.activate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Producto activado exitosamente')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error al activar el producto'
+      toast.error(message)
+    },
+  })
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product)
+    setIsFormOpen(true)
+  }
+
+  const handleCreate = () => {
+    setEditingProduct(null)
+    setIsFormOpen(true)
+  }
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false)
+    setEditingProduct(null)
+  }
+
+  const handleDeactivate = (product: Product) => {
+    if (window.confirm(`¿Estás seguro de desactivar "${product.name}"?`)) {
+      deactivateMutation.mutate(product.id)
+    }
+  }
+
+  const handleActivate = (product: Product) => {
+    if (window.confirm(`¿Estás seguro de activar "${product.name}"?`)) {
+      activateMutation.mutate(product.id)
+    }
+  }
+
+  const handleChangePrice = (product: Product) => {
+    setPriceProduct(product)
+    setIsPriceModalOpen(true)
+  }
+
+  return (
+    <div className="h-full max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Gestión de Productos</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              {total} {total === 1 ? 'producto' : 'productos'} encontrados
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => setIsBulkPriceModalOpen(true)}
+              variant="default"
+              className="bg-success hover:bg-success/90"
+            >
+              <DollarSign className="w-5 h-5 mr-2" />
+              Cambio Masivo
+            </Button>
+            <Button
+              onClick={handleCreate}
+              variant="default"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Nuevo Producto
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de búsqueda */}
+      <div className="mb-4 sm:mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5 z-10" />
+          <Input
+            type="text"
+            placeholder="Buscar por nombre, SKU o código de barras..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-2.5 sm:py-3 text-base sm:text-lg"
+            autoFocus
+          />
+        </div>
+      </div>
+
+      {/* Lista de productos */}
+      <Card className="border border-border">
+        <CardContent className="p-0">
+        {isLoading ? (
+            <div className="p-8 text-center">
+              <div className="flex flex-col items-center justify-center py-8">
+                <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground animate-pulse" />
+                <p className="text-muted-foreground">Cargando productos...</p>
+              </div>
+          </div>
+        ) : products.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Package className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-lg font-medium text-foreground mb-1">
+              {searchQuery ? 'No se encontraron productos' : 'No hay productos registrados'}
+            </p>
+                <p className="text-sm text-muted-foreground">
+              {searchQuery
+                ? 'Intenta con otro término de búsqueda'
+                : 'Haz clic en "Nuevo Producto" para comenzar'}
+            </p>
+              </div>
+          </div>
+        ) : (
+            <div className="overflow-x-auto">
+            <table className="w-full">
+                <thead className="bg-muted/50">
+                <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Producto
+                  </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider hidden sm:table-cell">
+                    Categoría
+                  </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider hidden md:table-cell">
+                    SKU
+                  </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Precio
+                  </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Estado
+                  </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+                <tbody className="bg-background divide-y divide-border">
+                {products.map((product) => (
+                  <tr
+                    key={product.id}
+                    className={`hover:bg-accent/50 transition-colors ${
+                      !product.is_active ? 'opacity-60' : ''
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-semibold text-foreground text-sm sm:text-base">{product.name}</p>
+                        {product.barcode && (
+                          <p className="text-xs text-muted-foreground mt-0.5">Código: {product.barcode}</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
+                      {product.category || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">
+                      {product.sku || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="text-sm sm:text-base">
+                        <p className="font-semibold text-foreground">
+                          ${Number(product.price_usd).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Bs. {Number(product.price_bs).toFixed(2)}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {product.is_active ? (
+                        <Badge variant="default" className="bg-success/10 text-success hover:bg-success/20">
+                          Activo
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          Inactivo
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleChangePrice(product)}
+                          className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                          title="Cambiar Precio"
+                        >
+                          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(product)}
+                          className="h-8 w-8"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
+                        {product.is_active ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeactivate(product)}
+                            disabled={deactivateMutation.isPending}
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Desactivar"
+                          >
+                            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleActivate(product)}
+                            disabled={activateMutation.isPending}
+                            className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                            title="Activar"
+                          >
+                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        </CardContent>
+      </Card>
+
+      {/* Modal de formulario */}
+      <ProductFormModal
+        isOpen={isFormOpen}
+        onClose={handleCloseForm}
+        product={editingProduct}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['products'] })
+          handleCloseForm()
+        }}
+      />
+
+      {/* Modal de cambio de precio */}
+      <ChangePriceModal
+        isOpen={isPriceModalOpen}
+        onClose={() => setIsPriceModalOpen(false)}
+        product={priceProduct}
+      />
+
+      {/* Modal de cambio masivo de precios */}
+      <BulkPriceChangeModal
+        isOpen={isBulkPriceModalOpen}
+        onClose={() => setIsBulkPriceModalOpen(false)}
+        products={products}
+      />
+    </div>
+  )
+}

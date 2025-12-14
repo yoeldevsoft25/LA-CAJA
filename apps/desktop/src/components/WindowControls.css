@@ -1,0 +1,41 @@
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.window-control-btn:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.window-control-btn.close:hover {
+  background: #e81123;
+  color: white;
+}
+
+.window-control-btn.always-on-top.active {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.window-control-btn svg {
+  pointer-events: none;
+}
+

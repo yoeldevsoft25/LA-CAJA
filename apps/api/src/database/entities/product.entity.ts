@@ -1,0 +1,49 @@
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, UpdateDateColumn } from 'typeorm';
+import { Store } from './store.entity';
+
+@Entity('products')
+export class Product {
+  @PrimaryColumn('uuid')
+  id: string;
+
+  @ManyToOne(() => Store, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'store_id' })
+  store: Store;
+
+  @Column('uuid')
+  store_id: string;
+
+  @Column({ type: 'text' })
+  name: string;
+
+  @Column({ type: 'text', nullable: true })
+  category: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  sku: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  barcode: string | null;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  price_bs: number;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  price_usd: number;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  cost_bs: number;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  cost_usd: number;
+
+  @Column({ type: 'int', default: 0 })
+  low_stock_threshold: number;
+
+  @Column({ type: 'boolean', default: true })
+  is_active: boolean;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updated_at: Date;
+}
+
