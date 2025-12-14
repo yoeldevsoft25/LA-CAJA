@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History } from 'lucide-react'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { productsService } from '@/services/products.service'
+import { useAuth } from '@/stores/auth.store'
 import toast from 'react-hot-toast'
 import StockReceivedModal from '@/components/inventory/StockReceivedModal'
 import StockAdjustModal from '@/components/inventory/StockAdjustModal'
@@ -26,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 export default function InventoryPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [isStockReceivedModalOpen, setIsStockReceivedModalOpen] = useState(false)
@@ -34,10 +36,11 @@ export default function InventoryPage() {
   const [selectedProduct, setSelectedProduct] = useState<StockStatus | null>(null)
   const queryClient = useQueryClient()
 
-  // Obtener todos los productos activos para buscar por nombre
+  // Obtener todos los productos activos para buscar por nombre (con cache offline)
   const { data: productsData } = useQuery({
-    queryKey: ['products', 'list'],
-    queryFn: () => productsService.search({ limit: 1000 }),
+    queryKey: ['products', 'list', user?.store_id],
+    queryFn: () => productsService.search({ limit: 1000 }, user?.store_id),
+    enabled: !!user?.store_id,
   })
 
   // Obtener estado del stock

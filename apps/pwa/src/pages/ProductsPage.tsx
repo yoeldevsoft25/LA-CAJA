@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign } from 'lucide-react'
 import { productsService, Product } from '@/services/products.service'
+import { useAuth } from '@/stores/auth.store'
 import toast from 'react-hot-toast'
 import ProductFormModal from '@/components/products/ProductFormModal'
 import ChangePriceModal from '@/components/products/ChangePriceModal'
@@ -13,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ProductsPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -21,14 +23,15 @@ export default function ProductsPage() {
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false)
   const queryClient = useQueryClient()
 
-  // Búsqueda de productos
+  // Búsqueda de productos (con cache offline)
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', 'list', searchQuery],
+    queryKey: ['products', 'list', searchQuery, user?.store_id],
     queryFn: () =>
       productsService.search({
         q: searchQuery || undefined,
         limit: 100,
-      }),
+      }, user?.store_id),
+    enabled: !!user?.store_id,
   })
 
   const products = productsData?.products || []
@@ -36,7 +39,7 @@ export default function ProductsPage() {
 
   // Mutación para desactivar producto
   const deactivateMutation = useMutation({
-    mutationFn: productsService.deactivate,
+    mutationFn: (id: string) => productsService.deactivate(id, user?.store_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       toast.success('Producto desactivado exitosamente')
@@ -49,7 +52,7 @@ export default function ProductsPage() {
 
   // Mutación para activar producto
   const activateMutation = useMutation({
-    mutationFn: productsService.activate,
+    mutationFn: (id: string) => productsService.activate(id, user?.store_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       toast.success('Producto activado exitosamente')

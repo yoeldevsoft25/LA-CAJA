@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { inventoryService, StockReceivedRequest, StockStatus } from '@/services/inventory.service'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
+import { useAuth } from '@/stores/auth.store'
 import { Plus, Trash2, Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ export default function StockReceivedModal({
   product,
   onSuccess,
 }: StockReceivedModalProps) {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [productItems, setProductItems] = useState<ProductItem[]>([])
@@ -44,11 +46,11 @@ export default function StockReceivedModal({
   const [invoice, setInvoice] = useState('')
   const [note, setNote] = useState('')
 
-  // Obtener productos para selección
+  // Obtener productos para selección (con cache offline)
   const { data: productsData } = useQuery({
-    queryKey: ['products', 'list'],
-    queryFn: () => productsService.search({ limit: 1000 }),
-    enabled: isOpen,
+    queryKey: ['products', 'list', user?.store_id],
+    queryFn: () => productsService.search({ limit: 1000 }, user?.store_id),
+    enabled: isOpen && !!user?.store_id,
   })
 
   // Obtener tasa BCV

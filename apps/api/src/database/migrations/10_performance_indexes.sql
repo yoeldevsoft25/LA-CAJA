@@ -28,23 +28,22 @@ WHERE sold_by_user_id IS NOT NULL;
 -- ============================================
 -- ÍNDICES PARA EVENTOS (SYNC)
 -- ============================================
+-- NOTA: sync_status se maneja en el cliente (IndexedDB), no en el servidor
 
--- Índice compuesto para queries de sincronización (muy crítico)
-CREATE INDEX IF NOT EXISTS idx_events_store_device_sync 
-ON events(store_id, device_id, sync_status);
+-- Índice compuesto para queries de sincronización por tienda y dispositivo (muy crítico)
+-- Complementa idx_events_store_seq que ya existe
+CREATE INDEX IF NOT EXISTS idx_events_store_device 
+ON events(store_id, device_id);
 
--- Índice para búsqueda por event_id (deduplicación)
-CREATE INDEX IF NOT EXISTS idx_events_event_id 
-ON events(event_id);
-
--- Índice compuesto para obtener eventos pendientes ordenados
-CREATE INDEX IF NOT EXISTS idx_events_sync_created 
-ON events(sync_status, created_at) 
-WHERE sync_status = 'pending';
-
--- Índice para búsqueda por secuencia (para ordenamiento)
+-- Índice compuesto para obtener eventos ordenados por dispositivo y secuencia
+-- Complementa idx_events_device que ya existe
 CREATE INDEX IF NOT EXISTS idx_events_device_seq 
-ON events(device_id, seq);
+ON events(device_id, seq DESC);
+
+-- Índice para búsqueda por tipo de evento (complementa idx_events_store_type que ya existe)
+-- Este es más específico para queries que filtran por tipo
+CREATE INDEX IF NOT EXISTS idx_events_store_type_created 
+ON events(store_id, type, created_at DESC);
 
 -- ============================================
 -- ÍNDICES PARA PRODUCTOS
@@ -144,16 +143,3 @@ ON sale_items(sale_id);
 -- Índice para búsqueda de items por producto (para reportes)
 CREATE INDEX IF NOT EXISTS idx_sale_items_product 
 ON sale_items(product_id);
-
--- ============================================
--- COMENTARIOS Y NOTAS
--- ============================================
-
--- Los índices parciales (WHERE condition) solo indexan filas que cumplen la condición,
--- lo que los hace más pequeños y eficientes para queries que filtran por esos valores.
-
--- Los índices compuestos están optimizados para el orden de las columnas en las queries más comunes.
-
--- Revisar periódicamente el uso de índices con:
--- SELECT * FROM pg_stat_user_indexes WHERE schemaname = 'public' ORDER BY idx_scan DESC;
-

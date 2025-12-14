@@ -10,7 +10,6 @@ import {
   SyncQueue,
   SyncQueueConfig,
   SyncMetricsCollector,
-  BatchSyncCallback,
 } from '@la-caja/sync';
 
 export interface PushSyncDto {
@@ -42,9 +41,34 @@ class SyncServiceClass {
   private storeId: string | null = null;
   private syncIntervalId: ReturnType<typeof setInterval> | null = null;
   private readonly SYNC_INTERVAL_MS = 30000; // Sincronizar cada 30 segundos
+  private onlineListener: (() => void) | null = null;
+  private offlineListener: (() => void) | null = null;
 
   constructor() {
     this.metrics = new SyncMetricsCollector();
+    this.setupConnectivityListeners();
+  }
+
+  /**
+   * Configura listeners para cambios de conectividad
+   */
+  private setupConnectivityListeners(): void {
+    this.onlineListener = () => {
+      // Cuando vuelve la conexión, sincronizar inmediatamente
+      if (this.isInitialized && this.syncQueue) {
+        this.syncQueue.flush().catch(() => {
+          // Silenciar errores, el sync periódico lo intentará de nuevo
+        });
+      }
+    };
+
+    this.offlineListener = () => {
+      // Cuando se pierde la conexión, pausar sincronización periódica
+      // Los eventos seguirán guardándose localmente
+    };
+
+    window.addEventListener('online', this.onlineListener);
+    window.addEventListener('offline', this.offlineListener);
   }
 
   /**
@@ -171,6 +195,17 @@ class SyncServiceClass {
       clearInterval(this.syncIntervalId);
       this.syncIntervalId = null;
     }
+    
+    // Remover listeners de conectividad
+    if (this.onlineListener) {
+      window.removeEventListener('online', this.onlineListener);
+      this.onlineListener = null;
+    }
+    if (this.offlineListener) {
+      window.removeEventListener('offline', this.offlineListener);
+      this.offlineListener = null;
+    }
+    
     this.syncQueue?.flush();
     this.isInitialized = false;
   }
@@ -183,6 +218,14 @@ class SyncServiceClass {
       return {
         success: false,
         error: new Error('storeId o deviceId no están configurados'),
+      };
+    }
+
+    // Verificar conectividad antes de intentar sincronizar
+    if (!navigator.onLine) {
+      return {
+        success: false,
+        error: new Error('Sin conexión a internet'),
       };
     }
 
@@ -205,7 +248,6 @@ class SyncServiceClass {
 
       // Manejar eventos rechazados
       if (response.data.rejected.length > 0) {
-        const rejectedIds = response.data.rejected.map((r) => r.event_id);
         for (const rejected of response.data.rejected) {
           const error = new Error(`${rejected.code}: ${rejected.message}`);
           error.name = rejected.code;
@@ -235,6 +277,7 @@ class SyncServiceClass {
         this.syncQueue.enqueueBatch(baseEvents);
       }
     } catch (error) {
+      // Silenciar errores de carga, se reintentará en la próxima inicialización
       console.error('Error cargando eventos pendientes:', error);
     }
   }
@@ -283,6 +326,7 @@ class SyncServiceClass {
 
   /**
    * Inicia sincronización periódica
+   * Solo sincroniza si hay conexión a internet
    */
   private startPeriodicSync(): void {
     if (this.syncIntervalId) {
@@ -290,9 +334,10 @@ class SyncServiceClass {
     }
 
     this.syncIntervalId = setInterval(() => {
-      if (this.syncQueue) {
-        this.syncQueue.flush().catch((error) => {
-          console.error('Error en sincronización periódica:', error);
+      // Solo sincronizar si hay conexión
+      if (navigator.onLine && this.syncQueue) {
+        this.syncQueue.flush().catch(() => {
+          // Silenciar errores, se reintentará en el siguiente intervalo
         });
       }
     }, this.SYNC_INTERVAL_MS);

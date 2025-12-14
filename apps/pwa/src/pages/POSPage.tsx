@@ -5,6 +5,7 @@ import { productsService } from '@/services/products.service'
 import { salesService } from '@/services/sales.service'
 import { cashService } from '@/services/cash.service'
 import { useCart } from '@/stores/cart.store'
+import { useAuth } from '@/stores/auth.store'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import { Input } from '@/components/ui/input'
@@ -16,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
 export default function POSPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCheckout, setShowCheckout] = useState(false)
   const { items, addItem, updateItem, removeItem, clear, getTotal } = useCart()
@@ -27,16 +29,16 @@ export default function POSPage() {
     refetchInterval: 60000, // Refrescar cada minuto
   })
 
-  // Búsqueda de productos
+  // Búsqueda de productos (con cache offline)
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', 'search', searchQuery],
+    queryKey: ['products', 'search', searchQuery, user?.store_id],
     queryFn: () =>
       productsService.search({
         q: searchQuery || undefined,
         is_active: true,
         limit: 50,
-      }),
-    enabled: searchQuery.length >= 2 || searchQuery.length === 0,
+      }, user?.store_id),
+    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id,
   })
 
   const products = productsData?.products || []

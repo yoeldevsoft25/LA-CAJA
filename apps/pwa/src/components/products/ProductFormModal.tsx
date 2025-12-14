@@ -124,9 +124,12 @@ export default function ProductFormModal({
     }
   }, [product, reset])
 
+  // Obtener storeId del usuario autenticado
+  const { user } = useAuth()
+
   // Mutación para crear/actualizar
   const createMutation = useMutation({
-    mutationFn: productsService.create,
+    mutationFn: (data: Partial<Product>) => productsService.create(data, user?.store_id),
     onSuccess: () => {
       toast.success('Producto creado exitosamente')
       onSuccess?.()
@@ -138,7 +141,7 @@ export default function ProductFormModal({
   })
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<Product>) => productsService.update(product!.id, data),
+    mutationFn: (data: Partial<Product>) => productsService.update(product!.id, data, user?.store_id),
     onSuccess: () => {
       toast.success('Producto actualizado exitosamente')
       onSuccess?.()

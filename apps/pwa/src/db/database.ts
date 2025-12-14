@@ -12,8 +12,49 @@ export interface LocalEvent extends BaseEvent {
   synced_at?: number;
 }
 
+export interface LocalProduct {
+  id: string;
+  store_id: string;
+  name: string;
+  category: string | null;
+  sku: string | null;
+  barcode: string | null;
+  price_bs: number;
+  price_usd: number;
+  cost_bs: number;
+  cost_usd: number;
+  low_stock_threshold: number;
+  is_active: boolean;
+  updated_at: number; // timestamp
+  cached_at: number; // cuando se guardó en cache
+}
+
+export interface LocalCustomer {
+  id: string;
+  store_id: string;
+  name: string;
+  document_id: string | null;
+  phone: string | null;
+  note: string | null;
+  updated_at: number;
+  cached_at: number;
+}
+
+export interface LocalSale {
+  id: string;
+  store_id: string;
+  sold_at: number;
+  totals: any;
+  payment: any;
+  customer_id: string | null;
+  cached_at: number;
+}
+
 export class LaCajaDB extends Dexie {
   localEvents!: Table<LocalEvent, number>;
+  products!: Table<LocalProduct, string>;
+  customers!: Table<LocalCustomer, string>;
+  sales!: Table<LocalSale, string>;
   kv!: Table<{ key: string; value: any }, string>;
 
   constructor() {
@@ -25,13 +66,21 @@ export class LaCajaDB extends Dexie {
       kv: 'key',
     });
     
-    // Versión 2: Índices optimizados (migración automática de Dexie)
+    // Versión 2: Índices optimizados
     this.version(2).stores({
       localEvents: '++id, event_id, store_id, device_id, seq, type, sync_status, created_at, [sync_status+created_at], [store_id+device_id+sync_status]',
       kv: 'key',
+    });
+    
+    // Versión 3: Agregar read models locales (productos, clientes, ventas)
+    this.version(3).stores({
+      localEvents: '++id, event_id, store_id, device_id, seq, type, sync_status, created_at, [sync_status+created_at], [store_id+device_id+sync_status]',
+      products: 'id, store_id, name, category, barcode, sku, is_active, [store_id+is_active], [store_id+category]',
+      customers: 'id, store_id, name, document_id, [store_id+document_id]',
+      sales: 'id, store_id, sold_at, customer_id, [store_id+sold_at]',
+      kv: 'key',
     }).upgrade(async (tx) => {
       // Migración automática - Dexie maneja esto sin pérdida de datos
-      // Los índices se crean automáticamente sobre datos existentes
     });
   }
   
@@ -63,6 +112,111 @@ export class LaCajaDB extends Dexie {
       .orderBy('created_at')
       .limit(limit)
       .toArray();
+  }
+
+  /**
+   * PRODUCTOS - Read Model Local
+   */
+  async getProducts(storeId: string, options?: {
+    search?: string;
+    category?: string;
+    is_active?: boolean;
+    limit?: number;
+  }): Promise<LocalProduct[]> {
+    let query = this.products.where('store_id').equals(storeId);
+
+    if (options?.is_active !== undefined) {
+      query = query.filter(p => p.is_active === options.is_active);
+    }
+
+    if (options?.category) {
+      query = query.filter(p => p.category === options.category);
+    }
+
+    if (options?.search) {
+      const searchLower = options.search.toLowerCase();
+      query = query.filter(p => 
+        p.name.toLowerCase().includes(searchLower) ||
+        p.sku?.toLowerCase().includes(searchLower) ||
+        p.barcode?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    const products = await query.toArray();
+    
+    // Ordenar por nombre
+    products.sort((a, b) => a.name.localeCompare(b.name));
+
+    if (options?.limit) {
+      return products.slice(0, options.limit);
+    }
+
+    return products;
+  }
+
+  async getProductById(id: string): Promise<LocalProduct | undefined> {
+    return this.products.get(id);
+  }
+
+  async cacheProducts(products: LocalProduct[]): Promise<void> {
+    await this.products.bulkPut(products);
+  }
+
+  async cacheProduct(product: LocalProduct): Promise<void> {
+    await this.products.put(product);
+  }
+
+  /**
+   * CLIENTES - Read Model Local
+   */
+  async getCustomers(storeId: string, search?: string): Promise<LocalCustomer[]> {
+    let query = this.customers.where('store_id').equals(storeId);
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      query = query.filter(c => 
+        c.name.toLowerCase().includes(searchLower) ||
+        c.document_id?.toLowerCase().includes(searchLower) ||
+        c.phone?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return query.toArray();
+  }
+
+  async getCustomerById(id: string): Promise<LocalCustomer | undefined> {
+    return this.customers.get(id);
+  }
+
+  async cacheCustomers(customers: LocalCustomer[]): Promise<void> {
+    await this.customers.bulkPut(customers);
+  }
+
+  async cacheCustomer(customer: LocalCustomer): Promise<void> {
+    await this.customers.put(customer);
+  }
+
+  /**
+   * VENTAS - Read Model Local (para historial rápido)
+   */
+  async getSales(storeId: string, limit?: number): Promise<LocalSale[]> {
+    let query = this.sales
+      .where('store_id')
+      .equals(storeId)
+      .orderBy('sold_at')
+      .reverse();
+
+    const sales = await query.toArray();
+    
+    if (limit) {
+      return sales.slice(0, limit);
+    }
+
+    return sales;
+  }
+
+  async cacheSale(sale: LocalSale): Promise<void> {
+    await this.sales.put(sale);
   }
 }
 

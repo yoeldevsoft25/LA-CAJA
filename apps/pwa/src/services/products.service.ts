@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { productsCacheService } from './products-cache.service'
 
 export interface Product {
   id: string
@@ -30,40 +31,149 @@ export interface ProductSearchResponse {
 }
 
 export const productsService = {
-  async search(params: ProductSearchParams): Promise<ProductSearchResponse> {
-    // El backend usa 'search' en lugar de 'q'
-    const backendParams = {
-      ...params,
-      search: params.q,
+  async search(params: ProductSearchParams, storeId?: string): Promise<ProductSearchResponse> {
+    const isOnline = navigator.onLine;
+
+    // Si está offline, usar cache local
+    if (!isOnline && storeId) {
+      const cachedProducts = await productsCacheService.getProductsFromCache(storeId, {
+        search: params.q,
+        category: params.category,
+        is_active: params.is_active,
+        limit: params.limit,
+      });
+
+      return {
+        products: cachedProducts,
+        total: cachedProducts.length,
+      };
     }
-    delete (backendParams as any).q
-    
-    const response = await api.get<ProductSearchResponse>('/products', { params: backendParams })
-    return response.data
+
+    // Si está online, obtener del API y guardar en cache
+    try {
+      const backendParams = {
+        ...params,
+        search: params.q,
+      }
+      delete (backendParams as any).q
+      
+      const response = await api.get<ProductSearchResponse>('/products', { params: backendParams })
+      
+      // Guardar en cache local para uso offline
+      if (storeId && response.data.products.length > 0) {
+        await productsCacheService.cacheProducts(response.data.products, storeId).catch(() => {
+          // Silenciar errores de cache, no es crítico
+        });
+      }
+      
+      return response.data
+    } catch (error: any) {
+      // Si falla la petición y hay cache, usar cache como fallback
+      if (storeId && error.code !== 'ERR_NETWORK') {
+        throw error; // Re-lanzar si no es error de red
+      }
+
+      if (storeId) {
+        const cachedProducts = await productsCacheService.getProductsFromCache(storeId, {
+          search: params.q,
+          category: params.category,
+          is_active: params.is_active,
+          limit: params.limit,
+        });
+
+        if (cachedProducts.length > 0) {
+          return {
+            products: cachedProducts,
+            total: cachedProducts.length,
+          };
+        }
+      }
+
+      throw error;
+    }
   },
 
-  async getById(id: string): Promise<Product> {
-    const response = await api.get<Product>(`/products/${id}`)
-    return response.data
+  async getById(id: string, storeId?: string): Promise<Product> {
+    const isOnline = navigator.onLine;
+
+    // Si está offline, usar cache local
+    if (!isOnline && storeId) {
+      const cached = await productsCacheService.getProductByIdFromCache(id);
+      if (cached) {
+        return cached;
+      }
+      throw new Error('Producto no encontrado en cache local');
+    }
+
+    // Si está online, obtener del API y guardar en cache
+    try {
+      const response = await api.get<Product>(`/products/${id}`)
+      
+      // Guardar en cache
+      if (storeId) {
+        await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+          // Silenciar errores de cache
+        });
+      }
+      
+      return response.data
+    } catch (error: any) {
+      // Si falla y hay cache, intentar desde cache
+      if (storeId && error.code === 'ERR_NETWORK') {
+        const cached = await productsCacheService.getProductByIdFromCache(id);
+        if (cached) {
+          return cached;
+        }
+      }
+      throw error;
+    }
   },
 
-  async create(data: Partial<Product>): Promise<Product> {
+  async create(data: Partial<Product>, storeId?: string): Promise<Product> {
     const response = await api.post<Product>('/products', data)
+    
+    // Guardar en cache
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+        // Silenciar errores de cache
+      });
+    }
+    
     return response.data
   },
 
-  async update(id: string, data: Partial<Product>): Promise<Product> {
+  async update(id: string, data: Partial<Product>, storeId?: string): Promise<Product> {
     const response = await api.patch<Product>(`/products/${id}`, data)
+    
+    // Actualizar cache
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+        // Silenciar errores de cache
+      });
+    }
+    
     return response.data
   },
 
-  async deactivate(id: string): Promise<Product> {
+  async deactivate(id: string, storeId?: string): Promise<Product> {
     const response = await api.post<Product>(`/products/${id}/deactivate`)
+    
+    // Actualizar cache
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {});
+    }
+    
     return response.data
   },
 
-  async activate(id: string): Promise<Product> {
+  async activate(id: string, storeId?: string): Promise<Product> {
     const response = await api.post<Product>(`/products/${id}/activate`)
+    
+    // Actualizar cache
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {});
+    }
+    
     return response.data
   },
 
@@ -73,9 +183,16 @@ export const productsService = {
       price_bs: number
       price_usd: number
       rounding?: 'none' | '0.1' | '0.5' | '1'
-    }
+    },
+    storeId?: string
   ): Promise<Product> {
     const response = await api.patch<Product>(`/products/${id}/price`, data)
+    
+    // Actualizar cache
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {});
+    }
+    
     return response.data
   },
 

@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@la-caja/domain': path.resolve(__dirname, '../../packages/domain/src/index.ts'),
+      '@la-caja/sync': path.resolve(__dirname, '../../packages/sync/src/index.ts'),
     },
   },
   server: {

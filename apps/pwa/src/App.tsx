@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import MainLayout from './components/layout/MainLayout'
@@ -10,8 +11,28 @@ import CashPage from './pages/CashPage'
 import CustomersPage from './pages/CustomersPage'
 import DebtsPage from './pages/DebtsPage'
 import ReportsPage from './pages/ReportsPage'
+import { useOnline } from './hooks/use-online'
+import { offlineIndicator } from './services/offline-indicator.service'
+import { syncService } from './services/sync.service'
 
 function App() {
+  const { isOnline, wasOffline } = useOnline();
+
+  // Manejar cambios de conectividad
+  useEffect(() => {
+    if (!isOnline) {
+      offlineIndicator.showOffline();
+    } else {
+      offlineIndicator.showOnline();
+      // Intentar sincronizar cuando se recupera la conexión
+      if (wasOffline) {
+        syncService.syncNow().catch(() => {
+          // Silenciar errores, el sync periódico lo intentará de nuevo
+        });
+      }
+    }
+  }, [isOnline, wasOffline]);
+
   return (
     <BrowserRouter>
       <Routes>

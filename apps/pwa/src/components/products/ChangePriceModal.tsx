@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
+import { useAuth } from '@/stores/auth.store'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -86,9 +87,12 @@ export default function ChangePriceModal({
     }
   }, [product, reset])
 
+  // Obtener storeId del usuario autenticado
+  const { user } = useAuth()
+
   const changePriceMutation = useMutation({
     mutationFn: (data: PriceFormData) =>
-      productsService.changePrice(product!.id, data),
+      productsService.changePrice(product!.id, data, user?.store_id),
     onSuccess: () => {
       toast.success('Precio actualizado exitosamente')
       queryClient.invalidateQueries({ queryKey: ['products'] })
