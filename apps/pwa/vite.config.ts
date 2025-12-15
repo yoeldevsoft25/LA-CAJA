@@ -18,14 +18,16 @@ export default defineConfig(({ mode }) => ({
         disableDevLogs: true,
       },
       workbox: {
-        // CRÍTICO: Precachear index.html explícitamente
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        globIgnores: ['**/node_modules/**/*'],
+        // CRÍTICO: Precachear index.html explícitamente y todos los assets
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}'],
+        globIgnores: ['**/node_modules/**/*', '**/sw.js', '**/workbox-*.js'],
         // Asegurar que index.html esté SIEMPRE en el precache
         additionalManifestEntries: [
           { url: '/index.html', revision: null }, // Sin revision para que siempre se cachee
         ],
-        // Estrategia para navegación: NetworkFirst con timeout muy corto
+        // Modo de precache más agresivo para producción
+        mode: 'production',
+        // Estrategia para navegación: NetworkFirst con fallback a CacheFirst para offline
         runtimeCaching: [
           {
             // Interceptar TODAS las peticiones de navegación
@@ -46,9 +48,19 @@ export default defineConfig(({ mode }) => ({
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 año (cache persistente)
               },
               cacheableResponse: {
-                statuses: [0, 200], // Cachear incluso errores de red
+                statuses: [0, 200], // Cachear incluso errores de red (status 0 = offline)
               },
-              networkTimeoutSeconds: 1, // Timeout de 1 segundo para detectar offline rápido
+              networkTimeoutSeconds: 0.3, // Timeout muy corto (300ms) para detectar offline rápido
+              // Plugin para cachear incluso cuando falla la red
+              plugins: [
+                {
+                  cacheWillUpdate: async ({ response }) => {
+                    // Cachear siempre, incluso si la respuesta es un error de red (status 0)
+                    // Esto permite que el caché tenga algo que servir cuando está offline
+                    return response && (response.status === 0 || response.status === 200) ? response : null;
+                  },
+                },
+              ],
             },
           },
           {
@@ -111,14 +123,22 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: true,
         // CRÍTICO: navigateFallback para servir index.html cuando falla la navegación
         navigateFallback: '/index.html',
+        navigateFallbackAllowlist: [
+          /^(?!\/_).*/,              // Permitir todas las rutas excepto las que empiezan con _
+        ],
         navigateFallbackDenylist: [
           /^\/_/,                    // Excluir rutas que empiezan con _
-          /\/[^/?]+\.[^/]+$/,        // Excluir archivos con extensión
+          /\/[^/?]+\.[^/]+$/,        // Excluir archivos con extensión (pero permitir rutas SPA)
           /^\/api\//,                // Excluir rutas de API
           /^\/socket\.io\//,         // Excluir WebSocket
         ],
         // No hacer cache busting para index.html
         dontCacheBustURLsMatching: /^\/index\.html$/,
+        // Asegurar que el precache incluya todos los assets necesarios
+        cleanupOutdatedCaches: true,
+        // Forzar actualización del Service Worker cuando cambia
+        clientsClaim: true,
+        skipWaiting: true,
       },
       manifest: {
         name: 'LA CAJA',
