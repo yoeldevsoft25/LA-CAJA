@@ -65,8 +65,8 @@ export const exchangeService = {
           await Promise.all([
             db.kv.put({ key: EXCHANGE_RATE_KEY, value: response.data.rate }),
             db.kv.put({
-              key: EXCHANGE_RATE_TIMESTAMP_KEY,
-              value: response.data.timestamp || new Date().toISOString(),
+            key: EXCHANGE_RATE_TIMESTAMP_KEY,
+            value: response.data.timestamp || new Date().toISOString(),
             }),
           ])
           console.log('[Exchange] ✅ Tasa BCV guardada en IndexedDB:', response.data.rate)

@@ -178,11 +178,24 @@ function calculateTotals(
 
 export const salesService = {
   async create(data: CreateSaleRequest): Promise<Sale> {
-    // Verificar estado de conexión
+    // Verificar estado de conexión PRIMERO
     const isOnline = navigator.onLine
     
+    console.log('[Sales] Iniciando creación de venta:', {
+      isOnline,
+      hasStoreId: !!data.store_id,
+      hasUserId: !!data.user_id,
+      itemsCount: data.items?.length,
+    })
+    
     // Si está offline Y tenemos store_id/user_id, guardar como evento local inmediatamente
-    if (!isOnline && data.store_id && data.user_id) {
+    // NUNCA intentar llamada HTTP si está offline
+    if (!isOnline) {
+      if (!data.store_id || !data.user_id) {
+        throw new Error('Se requiere store_id y user_id para guardar ventas offline')
+      }
+      
+      console.log('[Sales] ⚠️ Modo OFFLINE detectado - guardando localmente inmediatamente')
       const saleId = randomUUID()
       const deviceId = getDeviceId()
       const now = Date.now()
@@ -291,7 +304,7 @@ export const salesService = {
 
       // Guardar evento localmente
       try {
-        await syncService.enqueueEvent(event)
+      await syncService.enqueueEvent(event)
         console.log('[Sales] ✅ Venta guardada localmente para sincronización:', saleId)
       } catch (error) {
         console.error('[Sales] ❌ Error guardando venta localmente:', error)
@@ -352,10 +365,13 @@ export const salesService = {
       return mockSale
     }
 
-    // Si está online Y tenemos store_id/user_id, intentar hacer la llamada HTTP normal
+    // Si llegamos aquí, significa que está ONLINE
+    // Intentar hacer la llamada HTTP normal
     // Si falla por error de red, guardar como evento offline
+    console.log('[Sales] ✅ Modo ONLINE - intentando llamada HTTP')
+    
     // Verificar nuevamente antes de intentar (puede haber cambiado)
-    if (!navigator.onLine && data.store_id && data.user_id) {
+    if (!navigator.onLine) {
       // Si se perdió la conexión mientras procesábamos, guardar offline
       console.log('[Sales] ⚠️ Conexión perdida durante el proceso, guardando offline...')
       // Reutilizar la lógica offline (código duplicado pero necesario)
@@ -448,14 +464,14 @@ export const salesService = {
 
       const event: BaseEvent = {
         event_id: randomUUID(),
-        store_id: data.store_id,
+        store_id: data.store_id!, // Ya verificamos que existe arriba
         device_id: deviceId,
         seq: nextSeq,
         type: 'SaleCreated',
         version: 1,
         created_at: now,
         actor: {
-          user_id: data.user_id,
+          user_id: data.user_id!, // Ya verificamos que existe arriba
           role: data.user_role || 'cashier',
         },
         payload,
@@ -470,7 +486,7 @@ export const salesService = {
 
       const mockSale: Sale = {
         id: saleId,
-        store_id: data.store_id,
+        store_id: data.store_id!, // Ya verificamos que existe arriba
         cash_session_id: data.cash_session_id || null,
         customer_id: data.customer_id || null,
         sold_by_user_id: data.user_id || null,
@@ -566,7 +582,7 @@ export const salesService = {
         error.message === 'TIMEOUT' ||
         !navigator.onLine
       
-      console.log('[Sales] Error capturado:', {
+      console.log('[Sales] ❌ Error capturado en catch:', {
         code: error.code,
         isOffline: error.isOffline,
         message: error.message,
@@ -574,7 +590,16 @@ export const salesService = {
         isNetworkError,
         hasStoreId: !!data.store_id,
         hasUserId: !!data.user_id,
+        error: error,
       })
+      
+      // Si no es un error de red o no tenemos los datos necesarios, lanzar el error
+      if (!isNetworkError || !data.store_id || !data.user_id) {
+        console.error('[Sales] ❌ Error no manejable o faltan datos:', error)
+        throw error
+      }
+      
+      console.log('[Sales] ⚠️ Error de red detectado - guardando offline como fallback')
 
       if (isNetworkError && data.store_id && data.user_id) {
         // Reutilizar la lógica offline
@@ -686,7 +711,7 @@ export const salesService = {
 
         // Guardar evento localmente
         try {
-          await syncService.enqueueEvent(event)
+        await syncService.enqueueEvent(event)
           console.log('[Sales] ✅ Venta guardada localmente después de error de red:', saleId)
         } catch (error) {
           console.error('[Sales] ❌ Error guardando venta localmente después de error de red:', error)

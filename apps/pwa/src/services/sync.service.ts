@@ -132,7 +132,7 @@ class SyncServiceClass {
           await this.initialize(event.store_id, deviceId);
           // Después de inicializar, agregar a la cola
           if (this.syncQueue) {
-            this.syncQueue.enqueue(event);
+    this.syncQueue.enqueue(event);
           }
         } catch (error) {
           // Si falla la inicialización, el evento ya está guardado en la BD
