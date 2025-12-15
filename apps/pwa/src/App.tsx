@@ -58,6 +58,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* Panel admin: acceso directo con admin key, no requiere sesión */}
+        <Route path="/admin" element={<AdminPage />} />
         <Route
           path="/"
           element={
@@ -75,7 +77,6 @@ function App() {
           <Route path="customers" element={<CustomersPage />} />
           <Route path="debts" element={<DebtsPage />} />
           <Route path="reports" element={<ReportsPage />} />
-          <Route path="admin" element={<AdminPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

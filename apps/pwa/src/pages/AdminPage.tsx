@@ -18,8 +18,7 @@ function formatDate(value: string | null) {
 export default function AdminPage() {
   const qc = useQueryClient()
   const [adminKey, setAdminKey] = useState<string>(() => adminService.getKey() || '')
-
-  const { data: stores, isLoading, refetch } = useQuery({
+  const { data: stores, isLoading, refetch, error } = useQuery<AdminStore[], Error>({
     queryKey: ['admin-stores'],
     queryFn: () => adminService.listStores(),
     enabled: !!adminKey,
@@ -95,6 +94,10 @@ export default function AdminPage() {
         <p className="text-sm text-muted-foreground">Ingresa la admin key para gestionar licencias.</p>
       ) : isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
+      ) : error ? (
+        <p className="text-sm text-destructive">
+          No se pudo cargar: {error.message || 'Error cargando tiendas'}
+        </p>
       ) : (
         <div className="overflow-auto border rounded-lg">
           <table className="min-w-full text-sm">
