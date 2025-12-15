@@ -52,6 +52,7 @@ class SyncServiceClass {
     this.onlineListener = () => {
       // Cuando vuelve la conexión, sincronizar inmediatamente
       if (this.isInitialized && this.syncQueue) {
+        console.log('[SyncService] online -> flush queue');
         this.syncQueue.flush().catch(() => {
           // Silenciar errores, el sync periódico lo intentará de nuevo
         });
@@ -122,6 +123,13 @@ class SyncServiceClass {
   async enqueueEvent(event: BaseEvent): Promise<void> {
     // Siempre guardar en base de datos local primero (incluso si no está inicializado)
     await this.saveEventToDB(event);
+    console.log('[SyncService] Evento guardado/encolado', {
+      event_id: event.event_id,
+      type: event.type,
+      store_id: event.store_id,
+      device_id: event.device_id,
+      seq: event.seq,
+    });
 
     // Si está inicializado, agregar a la cola de sincronización
     if (this.isInitialized && this.syncQueue) {
@@ -390,6 +398,10 @@ class SyncServiceClass {
       const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
 
       if (baseEvents.length > 0) {
+        console.log('[SyncService] Cargando pendientes desde DB', {
+          count: baseEvents.length,
+          first_event: baseEvents[0],
+        });
         this.syncQueue.enqueueBatch(baseEvents);
       }
     } catch (error) {
