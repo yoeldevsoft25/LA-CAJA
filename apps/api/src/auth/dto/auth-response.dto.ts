@@ -4,5 +4,6 @@ export class AuthResponseDto {
   store_id: string;
   role: 'owner' | 'cashier';
   full_name: string | null;
+  license_status?: string;
+  license_expires_at?: Date | null;
 }
-

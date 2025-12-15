@@ -11,11 +11,15 @@ export interface LoginResponse {
   store_id: string
   role: 'owner' | 'cashier'
   full_name: string | null
+  license_status?: string
+  license_expires_at?: string | null
 }
 
 export interface Store {
   id: string
   name: string
+  license_status?: string
+  license_expires_at?: string | null
 }
 
 export interface Cashier {
@@ -40,4 +44,3 @@ export const authService = {
     return response.data
   },
 }
-

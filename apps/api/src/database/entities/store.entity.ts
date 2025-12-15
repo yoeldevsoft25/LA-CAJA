@@ -10,5 +10,19 @@ export class Store {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
-}
 
+  @Column({ type: 'text', default: 'active' })
+  license_status: string;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  license_expires_at: Date | null;
+
+  @Column({ type: 'integer', default: 3 })
+  license_grace_days: number;
+
+  @Column({ type: 'text', nullable: true })
+  license_plan: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  license_notes: string | null;
+}

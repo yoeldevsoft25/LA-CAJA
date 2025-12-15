@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -121,6 +121,21 @@ export class AuthService {
       throw new UnauthorizedException('PIN incorrecto o cajero no encontrado');
     }
 
+    // Validar licencia de la tienda
+    const store = await this.storeRepository.findOne({ where: { id: dto.store_id } });
+    if (!store) {
+      throw new UnauthorizedException('Tienda no encontrada');
+    }
+    const now = Date.now();
+    const expires = store.license_expires_at ? store.license_expires_at.getTime() : null;
+    const graceMs = (store.license_grace_days ?? 0) * 24 * 60 * 60 * 1000;
+    if (store.license_status === 'suspended') {
+      throw new ForbiddenException('Licencia suspendida. Contacta al administrador.');
+    }
+    if (expires && now > expires + graceMs) {
+      throw new ForbiddenException('Licencia expirada. Contacta al administrador.');
+    }
+
     // Generar JWT
     const payload = {
       sub: validMember.user_id,
@@ -134,16 +149,20 @@ export class AuthService {
       store_id: dto.store_id,
       role: validMember.role,
       full_name: validMember.profile.full_name,
+      license_status: store.license_status,
+      license_expires_at: store.license_expires_at,
     };
   }
 
-  async getStores(): Promise<Array<{ id: string; name: string }>> {
+  async getStores(): Promise<Array<{ id: string; name: string; license_status: string; license_expires_at: Date | null }>> {
     const stores = await this.storeRepository.find({
       order: { created_at: 'DESC' },
     });
     return stores.map((store) => ({
       id: store.id,
       name: store.name,
+      license_status: store.license_status,
+      license_expires_at: store.license_expires_at,
     }));
   }
 
@@ -175,4 +194,3 @@ export class AuthService {
     });
   }
 }
-

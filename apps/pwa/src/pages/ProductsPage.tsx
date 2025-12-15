@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { inventoryService, StockStatus } from '@/services/inventory.service'
 
 export default function ProductsPage() {
   const { user } = useAuth()
@@ -27,6 +28,16 @@ export default function ProductsPage() {
   // Cargar datos desde cache al iniciar (para mostrar inmediatamente)
   const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined);
   const { isOnline } = useOnline(); // Usar hook más confiable
+  const { data: stockStatus } = useQuery({
+    queryKey: ['inventory', 'status', user?.store_id],
+    queryFn: () => inventoryService.getStockStatus(),
+    enabled: !!user?.store_id,
+    staleTime: 1000 * 60 * 5,
+  })
+  const stockByProduct = (stockStatus || []).reduce<Record<string, StockStatus>>((acc, item) => {
+    acc[item.product_id] = item
+    return acc
+  }, {})
   
   // Cargar desde IndexedDB al montar el componente o cuando cambia la búsqueda
   useEffect(() => {
@@ -216,6 +227,9 @@ export default function ProductsPage() {
                     <th className="px-4 py-3 text-right text-xs font-semibold text-foreground uppercase tracking-wider">
                     Precio
                   </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-foreground uppercase tracking-wider hidden sm:table-cell">
+                    Stock
+                  </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-foreground uppercase tracking-wider">
                     Estado
                   </th>
@@ -253,6 +267,22 @@ export default function ProductsPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">Bs. {Number(product.price_bs).toFixed(2)}</p>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-center hidden sm:table-cell">
+                      {stockByProduct[product.id] ? (
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-sm font-semibold">
+                            {stockByProduct[product.id].current_stock}
+                          </span>
+                          {stockByProduct[product.id].is_low_stock && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              Bajo
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {product.is_active ? (

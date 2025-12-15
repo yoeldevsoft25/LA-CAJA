@@ -29,6 +29,7 @@ import { Customer } from './database/entities/customer.entity';
 import { Debt } from './database/entities/debt.entity';
 import { DebtPayment } from './database/entities/debt-payment.entity';
 import { Event } from './database/entities/event.entity';
+import { LicenseGuard } from './auth/guards/license.guard';
 
 @Module({
   imports: [
@@ -95,8 +96,11 @@ import { Event } from './database/entities/event.entity';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: LicenseGuard,
+    },
   ],
 })
 export class AppModule {}
-
 

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/stores/auth.store'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { prefetchPageData } from '@/services/prefetch.service'
 import {
   LogOut,
@@ -16,6 +16,9 @@ import {
   ChevronLeft,
   Settings,
   Bell,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -34,6 +37,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNotifications } from '@/stores/notifications.store'
+import { ScrollArea as ShadScrollArea } from '@/components/ui/scroll-area'
+import { useOnline } from '@/hooks/use-online'
+import { inventoryService } from '@/services/inventory.service'
+import { cashService } from '@/services/cash.service'
 
 const navItems = [
   { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart, badge: null },
@@ -51,6 +59,28 @@ export default function MainLayout() {
   const location = useLocation()
   const queryClient = useQueryClient()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const { isOnline } = useOnline()
+  const { items: notifications, add, addUnique, markAsRead, markAllAsRead, clear } = useNotifications()
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications])
+  const storeId = user?.store_id
+
+  // Alertas de stock bajo (se refrescan cada 5 min)
+  const { data: lowStock } = useQuery({
+    queryKey: ['alerts', 'low-stock', storeId],
+    queryFn: () => inventoryService.getLowStock(),
+    enabled: !!storeId,
+    staleTime: 1000 * 60 * 5,
+    refetchInterval: 1000 * 60 * 5,
+  })
+
+  // Estado de caja actual (para recordatorio de cierre)
+  const { data: currentCash } = useQuery({
+    queryKey: ['alerts', 'cash-session', storeId],
+    queryFn: () => cashService.getCurrentSession(),
+    enabled: !!storeId,
+    staleTime: 1000 * 60 * 2,
+    refetchInterval: 1000 * 60 * 2,
+  })
 
   // Prefetch inteligente cuando el usuario navega entre páginas
   useEffect(() => {
@@ -81,6 +111,44 @@ export default function MainLayout() {
     logout()
     navigate('/login')
   }
+
+  // Alertas básicas de conectividad
+  useEffect(() => {
+    add({
+      title: isOnline ? 'Conexión restaurada' : 'Sin conexión',
+      description: isOnline
+        ? 'Seguimos sincronizando en segundo plano.'
+        : 'Estás offline, las ventas se guardarán localmente.',
+      type: isOnline ? 'success' : 'warning',
+    })
+  }, [isOnline, add])
+
+  // Alertas de stock bajo
+  useEffect(() => {
+    if (!lowStock || lowStock.length === 0) return
+    lowStock.forEach((item) => {
+      const remaining = Number(item.current_stock ?? 0)
+      addUnique(`low-stock-${item.product_id}`, {
+        title: `Stock bajo: ${item.product_name}`,
+        description: `Quedan ${remaining} unidades (umbral ${item.low_stock_threshold}).`,
+        type: 'warning',
+      })
+    })
+  }, [lowStock, addUnique])
+
+  // Recordatorio de cierre de caja (si lleva > 8h abierta)
+  useEffect(() => {
+    if (!currentCash?.id || !currentCash.opened_at || currentCash.closed_at) return
+    const openedAt = new Date(currentCash.opened_at).getTime()
+    const hoursOpen = (Date.now() - openedAt) / (1000 * 60 * 60)
+    if (hoursOpen >= 8) {
+      addUnique(`cash-open-${currentCash.id}`, {
+        title: 'Cierre de caja pendiente',
+        description: `Sesión abierta hace ${hoursOpen.toFixed(1)}h. Considera cerrar o hacer arqueo.`,
+        type: 'info',
+      })
+    }
+  }, [currentCash, addUnique])
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/')
@@ -234,10 +302,86 @@ export default function MainLayout() {
           {/* Right Actions */}
           <div className="flex items-center gap-2">
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-destructive text-[10px] leading-[18px] rounded-full text-white text-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <div>
+                    <p className="text-sm font-semibold">Notificaciones</p>
+                    <p className="text-xs text-muted-foreground">
+                      {unreadCount} sin leer · {notifications.length} total
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="xs" variant="ghost" onClick={markAllAsRead}>
+                      Marcar leídas
+                    </Button>
+                    <Button size="xs" variant="ghost" onClick={clear}>
+                      Limpiar
+                    </Button>
+                  </div>
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                    Sin notificaciones
+                  </div>
+                ) : (
+                  <ShadScrollArea className="max-h-96">
+                    <div className="divide-y divide-border">
+                      {notifications.map((n) => {
+                        const Icon =
+                          n.type === 'warning'
+                            ? AlertTriangle
+                            : n.type === 'success'
+                            ? CheckCircle2
+                            : Info
+                        const color =
+                          n.type === 'warning'
+                            ? 'text-amber-600'
+                            : n.type === 'success'
+                            ? 'text-emerald-600'
+                            : n.type === 'error'
+                            ? 'text-red-600'
+                            : 'text-primary'
+                        return (
+                          <button
+                            key={n.id}
+                            className={cn(
+                              'w-full text-left px-4 py-3 hover:bg-accent transition-colors',
+                              !n.read && 'bg-accent/40'
+                            )}
+                            onClick={() => markAsRead(n.id)}
+                          >
+                            <div className="flex gap-3 items-start">
+                              <Icon className={cn('w-4 h-4 mt-0.5', color)} />
+                              <div className="flex-1 space-y-0.5">
+                                <p className="text-sm font-medium text-foreground">{n.title}</p>
+                                {n.description && (
+                                  <p className="text-xs text-muted-foreground">{n.description}</p>
+                                )}
+                                <p className="text-[10px] text-muted-foreground">
+                                  {new Date(n.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                              {!n.read && <span className="w-2 h-2 rounded-full bg-primary mt-1" />}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </ShadScrollArea>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Settings */}
             <Button variant="ghost" size="icon">
