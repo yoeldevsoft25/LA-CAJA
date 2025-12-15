@@ -35,6 +35,16 @@ export interface AdminStore {
   license_grace_days: number
   license_notes: string | null
   created_at: string
+  member_count: number
+  members: { user_id: string; role: string; full_name: string | null }[]
+}
+
+export interface AdminMember {
+  store_id: string
+  user_id: string
+  role: string
+  full_name: string | null
+  created_at: string
 }
 
 const adminServiceObj = {
@@ -79,6 +89,30 @@ const adminServiceObj = {
       { days, grace_days },
       { headers: { 'x-admin-key': key } }
     )
+    return res.data
+  },
+
+  async listUsers(storeId: string) {
+    const key = ensureKey()
+    const res = await adminApi.get<AdminMember[]>(`/admin/stores/${storeId}/users`, {
+      headers: { 'x-admin-key': key },
+    })
+    return res.data
+  },
+
+  async createUser(storeId: string, payload: { full_name: string; role: string; pin?: string; user_id?: string }) {
+    const key = ensureKey()
+    const res = await adminApi.post(`/admin/stores/${storeId}/users`, payload, {
+      headers: { 'x-admin-key': key },
+    })
+    return res.data
+  },
+
+  async deleteUser(storeId: string, userId: string) {
+    const key = ensureKey()
+    const res = await adminApi.delete(`/admin/stores/${storeId}/users/${userId}`, {
+      headers: { 'x-admin-key': key },
+    })
     return res.data
   },
 }

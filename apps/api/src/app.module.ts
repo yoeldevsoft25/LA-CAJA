@@ -78,7 +78,7 @@ import { LicenseGuard } from './auth/guards/license.guard';
       },
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Store]),
+    TypeOrmModule.forFeature([Store, StoreMember, Profile]),
     SyncModule,
     AuthModule,
     ProductsModule,
