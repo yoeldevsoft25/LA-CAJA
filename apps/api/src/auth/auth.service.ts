@@ -197,12 +197,13 @@ export class AuthService {
   }
 
   async getCashiers(storeId: string): Promise<Array<{ user_id: string; full_name: string | null; role: string }>> {
+    // Devolvemos todos los miembros (owner y cashier) para permitir login de owner con PIN
     const members = await this.storeMemberRepository.find({
       where: {
         store_id: storeId,
-        role: 'cashier',
       },
       relations: ['profile'],
+      order: { created_at: 'ASC' },
     });
 
     return members
