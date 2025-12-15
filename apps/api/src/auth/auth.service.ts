@@ -129,9 +129,19 @@ export class AuthService {
     const now = Date.now();
     const expires = store.license_expires_at ? store.license_expires_at.getTime() : null;
     const graceMs = (store.license_grace_days ?? 0) * 24 * 60 * 60 * 1000;
+
+    if (!store.license_status) {
+      throw new ForbiddenException('Licencia no configurada. Contacta al administrador.');
+    }
+
+    if (!expires) {
+      throw new ForbiddenException('Licencia sin fecha de expiración. Contacta al administrador.');
+    }
+
     if (store.license_status === 'suspended') {
       throw new ForbiddenException('Licencia suspendida. Contacta al administrador.');
     }
+
     if (expires && now > expires + graceMs) {
       throw new ForbiddenException('Licencia expirada. Contacta al administrador.');
     }
