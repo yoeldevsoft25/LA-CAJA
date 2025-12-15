@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/stores/auth.store'
 import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History } from 'lucide-react'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { productsService } from '@/services/products.service'
@@ -28,13 +29,13 @@ import { cn } from '@/lib/utils'
 
 export default function InventoryPage() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [isStockReceivedModalOpen, setIsStockReceivedModalOpen] = useState(false)
   const [isStockAdjustModalOpen, setIsStockAdjustModalOpen] = useState(false)
   const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<StockStatus | null>(null)
-  const queryClient = useQueryClient()
 
   // Obtener todos los productos activos para buscar por nombre (con cache offline persistente)
   const [initialProducts, setInitialProducts] = useState<{ products: any[]; total: number } | undefined>(undefined);
@@ -62,10 +63,17 @@ export default function InventoryPage() {
     placeholderData: initialProducts,
   })
 
+  // Obtener datos del prefetch como placeholderData
+  const prefetchedStockStatus = queryClient.getQueryData<StockStatus[]>(['inventory', 'status', user?.store_id])
+
   // Obtener estado del stock
-  const { data: stockStatus, isLoading } = useQuery({
+  const { data: stockStatus, isLoading } = useQuery<StockStatus[]>({
     queryKey: ['inventory', 'stock-status'],
     queryFn: () => inventoryService.getStockStatus(),
+    placeholderData: prefetchedStockStatus, // Usar cache del prefetch
+    staleTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: Infinity, // Nunca eliminar
+    refetchOnMount: false, // Usar cache si existe
   })
 
   // Filtrar stock según búsqueda y filtro de stock bajo

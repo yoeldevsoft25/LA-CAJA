@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/stores/auth.store'
 import { Lock, Unlock, Eye } from 'lucide-react'
 import { cashService, CashSession } from '@/services/cash.service'
 import { format } from 'date-fns'
@@ -18,14 +19,23 @@ import {
 } from '@/components/ui/table'
 
 export default function CashSessionsList() {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [selectedSession, setSelectedSession] = useState<CashSession | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const limit = 10
 
+  // Obtener datos del prefetch como placeholderData (primera página)
+  const prefetchedSessions = queryClient.getQueryData<{ sessions: CashSession[]; total: number }>(['cash', 'sessions', user?.store_id])
+
   const { data: sessionsData, isLoading } = useQuery({
     queryKey: ['cash', 'sessions', currentPage],
     queryFn: () => cashService.listSessions({ limit, offset: (currentPage - 1) * limit }),
+    placeholderData: currentPage === 1 ? prefetchedSessions : undefined, // Usar cache del prefetch en primera página
+    staleTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: Infinity, // Nunca eliminar
+    refetchOnMount: false, // Usar cache si existe
   })
 
   const handleViewDetail = (session: CashSession) => {

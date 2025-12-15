@@ -67,9 +67,16 @@ export async function prefetchAllData({ storeId, queryClient, onProgress }: Pref
 
     // 2. Prefetch clientes (usado en ventas y deudas)
     updateProgress('Cacheando clientes...')
+    const customersData = await customersService.search('') // Obtener todos los clientes
+    
+    // Establecer en múltiples queryKeys para que todos los componentes lo encuentren
+    queryClient.setQueryData(['customers', ''], customersData) // Para CustomersPage
+    queryClient.setQueryData(['customers'], customersData) // Para DebtsPage
+    
+    // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
-      queryKey: ['customers', storeId],
-      queryFn: () => customersService.search(''), // Obtener todos los clientes
+      queryKey: ['customers', ''],
+      queryFn: () => Promise.resolve(customersData),
       staleTime: 1000 * 60 * 30,
       gcTime: Infinity,
     })
@@ -87,36 +94,63 @@ export async function prefetchAllData({ storeId, queryClient, onProgress }: Pref
 
     // 5. Prefetch ventas recientes (últimas 50)
     updateProgress('Cacheando ventas recientes...')
+    const salesData = await salesService.list({ limit: 50, store_id: storeId })
+    
+    // Establecer en la queryKey que usa el prefetch
+    queryClient.setQueryData(['sales', 'list', storeId, { limit: 50 }], salesData)
+    
+    // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
       queryKey: ['sales', 'list', storeId, { limit: 50 }],
-      queryFn: () => salesService.list({ limit: 50, store_id: storeId }),
+      queryFn: () => Promise.resolve(salesData),
       staleTime: 1000 * 60 * 10,
       gcTime: Infinity,
     })
 
     // 6. Prefetch deudas activas
     updateProgress('Cacheando deudas...')
+    const debtsData = await debtsService.findAll() // Obtener todas las deudas
+    
+    // Establecer en la queryKey que usa DebtsPage
+    queryClient.setQueryData(['debts', undefined], debtsData) // Para DebtsPage cuando statusFilter es 'all'
+    
+    // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
-      queryKey: ['debts', 'list', storeId],
-      queryFn: () => debtsService.findAll(), // Obtener todas las deudas
+      queryKey: ['debts', undefined],
+      queryFn: () => Promise.resolve(debtsData),
       staleTime: 1000 * 60 * 15,
       gcTime: Infinity,
     })
 
     // 7. Prefetch estado de inventario (productos con stock bajo)
     updateProgress('Cacheando inventario...')
+    const stockStatusData = await inventoryService.getLowStock()
+    
+    // Establecer en la queryKey del prefetch
+    queryClient.setQueryData(['inventory', 'status', storeId], stockStatusData)
+    
+    // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
       queryKey: ['inventory', 'status', storeId],
-      queryFn: () => inventoryService.getLowStock(),
+      queryFn: () => Promise.resolve(stockStatusData),
       staleTime: 1000 * 60 * 10,
       gcTime: Infinity,
     })
 
     // 8. Prefetch sesiones de caja recientes
     updateProgress('Cacheando sesiones de caja...')
+    const sessionsData = await cashService.listSessions({ limit: 20 })
+    
+    // Establecer en la queryKey del prefetch
+    queryClient.setQueryData(['cash', 'sessions', storeId], sessionsData)
+    
+    // También establecer en la queryKey que usa CashSessionsList (primera página)
+    queryClient.setQueryData(['cash', 'sessions', 1], sessionsData)
+    
+    // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
       queryKey: ['cash', 'sessions', storeId],
-      queryFn: () => cashService.listSessions({ limit: 20 }),
+      queryFn: () => Promise.resolve(sessionsData),
       staleTime: 1000 * 60 * 10,
       gcTime: Infinity,
     })

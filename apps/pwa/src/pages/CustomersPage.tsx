@@ -14,9 +14,16 @@ export default function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const queryClient = useQueryClient()
 
+  // Obtener datos del prefetch como placeholderData
+  const prefetchedCustomers = queryClient.getQueryData<Customer[]>(['customers', ''])
+
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers', searchQuery],
     queryFn: () => customersService.search(searchQuery || undefined),
+    placeholderData: searchQuery === '' ? prefetchedCustomers : undefined, // Usar cache del prefetch si no hay búsqueda
+    staleTime: 1000 * 60 * 30, // 30 minutos
+    gcTime: Infinity, // Nunca eliminar
+    refetchOnMount: false, // Usar cache si existe
   })
 
   const handleEdit = (customer: Customer) => {

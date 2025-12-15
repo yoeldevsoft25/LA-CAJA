@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/stores/auth.store'
 import {
   Search,
   Users,
@@ -50,16 +51,28 @@ export default function DebtsPage() {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
   const queryClient = useQueryClient()
 
+  // Obtener datos del prefetch como placeholderData
+  const prefetchedDebts = queryClient.getQueryData<Debt[]>(['debts', undefined]) // Prefetch usa undefined para 'all'
+  const prefetchedCustomers = queryClient.getQueryData<Customer[]>(['customers']) // Prefetch usa ['customers']
+
   // Obtener todas las deudas
   const { data: allDebts = [], isLoading: isLoadingDebts } = useQuery({
     queryKey: ['debts', statusFilter === 'all' ? undefined : statusFilter],
     queryFn: () => debtsService.findAll(statusFilter === 'all' ? undefined : statusFilter),
+    placeholderData: statusFilter === 'all' ? prefetchedDebts : undefined, // Usar cache del prefetch
+    staleTime: 1000 * 60 * 15, // 15 minutos
+    gcTime: Infinity, // Nunca eliminar
+    refetchOnMount: false, // Usar cache si existe
   })
 
   // Obtener todos los clientes
   const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
     queryKey: ['customers'],
     queryFn: () => customersService.search(),
+    placeholderData: prefetchedCustomers, // Usar cache del prefetch
+    staleTime: 1000 * 60 * 30, // 30 minutos
+    gcTime: Infinity, // Nunca eliminar
+    refetchOnMount: false, // Usar cache si existe
   })
 
   // Agrupar deudas por cliente

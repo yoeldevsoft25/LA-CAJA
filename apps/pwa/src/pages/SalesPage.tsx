@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle } from 'lucide-react'
 import { salesService, Sale } from '@/services/sales.service'
 import { authService } from '@/services/auth.service'
@@ -111,6 +111,9 @@ export default function SalesPage() {
   // Determinar store_id a usar
   const effectiveStoreId = selectedStoreId || user?.store_id || ''
 
+  // Obtener datos del prefetch como placeholderData (últimas 50 ventas)
+  const prefetchedSales = queryClient.getQueryData<{ sales: Sale[]; total: number }>(['sales', 'list', effectiveStoreId, { limit: 50 }])
+
   // Obtener ventas
   const { data: salesData, isLoading } = useQuery<{ sales: Sale[]; total: number }>({
     queryKey: ['sales', 'list', effectiveDateFrom, effectiveDateTo, effectiveStoreId, currentPage],
@@ -122,6 +125,10 @@ export default function SalesPage() {
         limit,
         offset: (currentPage - 1) * limit,
       }),
+    placeholderData: currentPage === 1 && !effectiveDateFrom && !effectiveDateTo ? prefetchedSales : undefined, // Usar cache del prefetch si es la primera página sin filtros
+    staleTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: Infinity, // Nunca eliminar
+    refetchOnMount: false, // Usar cache si existe
   })
 
   useEffect(() => {

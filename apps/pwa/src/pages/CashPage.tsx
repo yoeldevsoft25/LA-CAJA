@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/stores/auth.store'
 import { DollarSign, Lock, Unlock, Calendar, CheckCircle2 } from 'lucide-react'
 import { cashService, CashSessionSummary } from '@/services/cash.service'
 import toast from 'react-hot-toast'
@@ -14,10 +15,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 
 export default function CashPage() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [isOpenModalOpen, setIsOpenModalOpen] = useState(false)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+
+  // Obtener datos del prefetch como placeholderData
+  const prefetchedCurrentSession = queryClient.getQueryData<CashSession | null>(['cash', 'current-session'])
 
   // Obtener sesión actual
   const {
@@ -27,7 +32,11 @@ export default function CashPage() {
   } = useQuery({
     queryKey: ['cash', 'current-session'],
     queryFn: () => cashService.getCurrentSession(),
+    placeholderData: prefetchedCurrentSession, // Usar cache del prefetch
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    gcTime: Infinity, // Nunca eliminar
     refetchInterval: 30000, // Refrescar cada 30 segundos
+    refetchOnMount: false, // Usar cache si existe
   })
 
   // Obtener resumen si hay sesión abierta
