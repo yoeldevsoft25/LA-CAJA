@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.lacaja.app",
+      "sha256_cert_fingerprints": [
+        "2F:D8:13:56:F3:58:65:FF:43:7E:34:B2:09:2A:27:ED:D4:52:D4:91:B2:75:22:83:89:8D:B6:18:FE:3F:E1:84"
+      ]
+    }
+  }
+]
