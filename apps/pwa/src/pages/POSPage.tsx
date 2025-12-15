@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Search, Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react'
 import { productsService, ProductSearchResponse } from '@/services/products.service'
 import { productsCacheService } from '@/services/products-cache.service'
 import { salesService } from '@/services/sales.service'
 import { cashService } from '@/services/cash.service'
-import { useCart } from '@/stores/cart.store'
+import { useCart, CartItem } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
 import { useOnline } from '@/hooks/use-online'
+import { printService } from '@/services/print.service'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import { Input } from '@/components/ui/input'
@@ -16,13 +17,17 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
 export default function POSPage() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCheckout, setShowCheckout] = useState(false)
+  const [shouldPrint, setShouldPrint] = useState(false)
   const { items, addItem, updateItem, removeItem, clear, getTotal } = useCart()
+  const lastCartSnapshot = useRef<CartItem[]>([])
 
   // Obtener sesión actual de caja
   const { data: currentCashSession } = useQuery({
@@ -112,6 +117,28 @@ export default function POSPage() {
           { duration: 5000 }
         )
       }
+
+      // Intentar imprimir ticket
+      if (shouldPrint) {
+        try {
+          printService.printSale(sale, {
+          storeName: 'SISTEMA POS',
+            cartItems: lastCartSnapshot.current.map((ci) => ({
+              product_id: ci.product_id,
+              product_name: ci.product_name,
+              qty: ci.qty,
+              unit_price_bs: ci.unit_price_bs,
+              unit_price_usd: ci.unit_price_usd,
+              discount_bs: ci.discount_bs,
+              discount_usd: ci.discount_usd,
+            })),
+            cashierName: user?.full_name || undefined,
+          })
+        } catch (err) {
+          console.warn('[POS] No se pudo imprimir el ticket:', err)
+        }
+      }
+
       clear()
       setShowCheckout(false)
     },
@@ -161,6 +188,9 @@ export default function POSPage() {
       toast.error('No hay caja abierta. Debes abrir caja antes de procesar ventas.')
       return
     }
+
+    // Guardar snapshot para impresión
+    lastCartSnapshot.current = [...items]
 
     createSaleMutation.mutate({
       items: saleItems,
@@ -412,7 +442,16 @@ export default function POSPage() {
                       Debes abrir caja para procesar ventas.
                     </div>
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium">Imprimir ticket</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Preguntar antes de gastar tinta/papel
+                        </p>
+                      </div>
+                      <Switch checked={shouldPrint} onCheckedChange={setShouldPrint} />
+                    </div>
                     <div className="flex justify-between items-baseline">
                       <span className="text-sm font-medium text-muted-foreground">Total USD:</span>
                       <span className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">

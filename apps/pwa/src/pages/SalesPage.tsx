@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle } from 'lucide-react'
+import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle, Printer } from 'lucide-react'
 import { salesService, Sale } from '@/services/sales.service'
 import { authService } from '@/services/auth.service'
 import { useAuth } from '@/stores/auth.store'
@@ -31,6 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
+import { printService } from '@/services/print.service'
 
 const paymentMethodLabels: Record<string, string> = {
   CASH_BS: 'Efectivo Bs',
@@ -157,6 +158,17 @@ export default function SalesPage() {
   const handleViewDetail = (sale: Sale) => {
     setSelectedSale(sale)
     setIsDetailModalOpen(true)
+  }
+
+  const handlePrint = (sale: Sale) => {
+    try {
+      printService.printSale(sale, {
+        storeName: 'SISTEMA POS',
+        cashierName: sale.sold_by_user?.full_name || undefined,
+      })
+    } catch (err) {
+      console.warn('[Sales] No se pudo imprimir el ticket:', err)
+    }
   }
 
   const handleCloseDetail = () => {
@@ -447,7 +459,7 @@ export default function SalesPage() {
                             )}
                           </div>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right space-x-1">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -456,6 +468,15 @@ export default function SalesPage() {
                             >
                               <Eye className="w-4 h-4 mr-1.5" />
                               Ver
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrint(sale)}
+                              className="text-primary"
+                            >
+                              <Printer className="w-4 h-4 mr-1" />
+                              Ticket
                             </Button>
                           </TableCell>
                         </TableRow>

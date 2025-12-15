@@ -1,47 +1,42 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
-
-# Testing
-coverage/
+# Global
+node_modules
+dist
 *.log
-
-# Production
-dist/
-build/
-*.local
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
 .DS_Store
-Thumbs.db
 
-# Tauri
-apps/desktop/src-tauri/target/
-apps/desktop/src-tauri/Cargo.lock
+# Root artifacts / sensitive
+android.keystore
+*.keystore
+app-release-*.apk
+app-release-*.aab
+app-release-*.idsig
+app/           # bubblewrap generated project
 
-# SQLite
-*.db
-*.db-shm
-*.db-wal
-*.sqlite
-*.sqlite3
+# Build artifacts
+build/
+*.aab
+*.apk
+*.idsig
 
-# Temporary
-tmp/
-temp/
-*.tmp
+# PWA
+/apps/pwa/node_modules
+/apps/pwa/dist
 
+# Desktop
+/apps/desktop/node_modules
+/apps/desktop/dist
+/apps/desktop/.env
+
+# API / Packages
+/apps/api/node_modules
+/apps/api/dist
+/packages/**/node_modules
+/packages/**/dist
+
+# Cache / tmp
+.turbo
+.parcel-cache
+.pnp.*
+.cache
+.env.local
 

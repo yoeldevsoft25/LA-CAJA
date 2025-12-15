@@ -37,7 +37,15 @@ la-caja/
 │   ├── domain/       # Reglas de negocio
 │   ├── application/  # Casos de uso
 │   └── sync/         # Motor de sincronización
-└── roadmap.md        # Roadmap completo
+├── docs/             # Documentación organizada
+│   ├── deployment/   # Guías de despliegue
+│   ├── development/  # Setup y desarrollo
+│   ├── fixes/        # Soluciones a problemas
+│   ├── architecture/ # Arquitectura del sistema
+│   └── roadmap/      # Roadmaps y sprints
+├── scripts/          # Scripts de utilidad
+├── config/           # Archivos de configuración
+└── assets/           # Assets compartidos
 ```
 
 ## Desarrollo
@@ -55,8 +63,21 @@ npm run dev:desktop  # Desktop App
 npm run build
 ```
 
-## Roadmap
+## Documentación
 
-Ver [roadmap la caja.md](./roadmap%20la%20caja.md) para el plan completo de 12 sprints.
+Toda la documentación está organizada en el directorio [`docs/`](./docs/). Ver el [índice de documentación](./docs/README.md) para una guía completa.
+
+### Guías Rápidas
+- 📖 [Instalación](./docs/development/INSTALL.md)
+- 🚀 [Despliegue](./docs/deployment/DEPLOY.md)
+- 🏗️ [Arquitectura](./docs/architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md)
+- 🗺️ [Roadmap](./docs/roadmap/roadmap%20la%20caja.md)
+
+## Scripts
+
+Scripts de utilidad disponibles en [`scripts/`](./scripts/):
+- `start-dev.sh` - Iniciar entorno de desarrollo
+- `build-desktop.ps1` - Build de la app desktop
+- `test-api.ps1` - Tests de la API
 
 
