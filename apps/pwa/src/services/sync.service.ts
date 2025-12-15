@@ -298,7 +298,14 @@ class SyncServiceClass {
         // Remover store_id y device_id del payload individual
         // El backend los recibe en el DTO principal
         const { store_id: _s, device_id: _d, ...rest } = evt as any;
-        return rest;
+        return {
+          ...rest,
+          payload: {
+            ...((rest as any).payload || {}),
+            store_id: undefined,
+            device_id: undefined,
+          },
+        };
       })
       .filter(Boolean) as BaseEvent[];
 
