@@ -68,6 +68,14 @@ class SyncServiceClass {
   }
 
   /**
+   * Valida un UUID simple
+   */
+  private isUUID(value: string | undefined | null): boolean {
+    if (!value || typeof value !== 'string') return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  }
+
+  /**
    * Asegura que el servicio esté inicializado (idempotente)
    * Útil para rehidratar después de un reload con sesión guardada.
    */
@@ -268,12 +276,50 @@ class SyncServiceClass {
       };
     }
 
+    // Validar storeId y deviceId antes de enviar
+    if (!this.storeId || !this.isUUID(this.storeId)) {
+      const err = new Error(`storeId inválido para sync: ${this.storeId}`);
+      return { success: false, error: err };
+    }
+    if (!this.deviceId || !this.isUUID(this.deviceId)) {
+      const err = new Error(`deviceId inválido para sync: ${this.deviceId}`);
+      return { success: false, error: err };
+    }
+
+    // Filtrar y sanear eventos (backend no quiere store_id/device_id dentro de cada evento)
+    const invalidActorEventIds: string[] = [];
+    const sanitizedEvents = events
+      .map((evt) => {
+        const actorUserId = evt.actor?.user_id;
+        if (!this.isUUID(actorUserId)) {
+          invalidActorEventIds.push(evt.event_id);
+          return null;
+        }
+        // Remover store_id y device_id del payload individual
+        // El backend los recibe en el DTO principal
+        const { store_id: _s, device_id: _d, ...rest } = evt as any;
+        return rest;
+      })
+      .filter(Boolean) as BaseEvent[];
+
+    if (invalidActorEventIds.length > 0) {
+      const error = new Error('Eventos inválidos (falta actor.user_id UUID). Se marcan como failed.');
+      for (const evtId of invalidActorEventIds) {
+        await this.markEventAsFailed(evtId, error);
+      }
+      this.syncQueue?.markAsFailed(invalidActorEventIds, error);
+    }
+
+    if (sanitizedEvents.length === 0) {
+      return { success: true };
+    }
+
     try {
       const dto: PushSyncDto = {
         store_id: this.storeId,
         device_id: this.deviceId,
         client_version: '1.0.0', // TODO: Obtener de package.json
-        events,
+        events: sanitizedEvents,
       };
 
       const response = await api.post<PushSyncResponseDto>('/sync/push', dto);
