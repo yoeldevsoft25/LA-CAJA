@@ -1,8 +1,11 @@
-import { IsUUID, IsArray, IsString, ValidateNested, IsNumber, IsObject } from 'class-validator';
+import { IsArray, IsString, ValidateNested, IsNumber, IsObject, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
 
+// UUID permisivo (acepta placeholders v1/v4/etc.)
+const RELAXED_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 class EventActorDto {
-  @IsUUID()
+  @Matches(RELAXED_UUID_REGEX, { message: 'actor.user_id must be a UUID' })
   user_id: string;
 
   @IsString()
@@ -10,7 +13,7 @@ class EventActorDto {
 }
 
 class EventDto {
-  @IsUUID()
+  @Matches(RELAXED_UUID_REGEX, { message: 'event_id must be a UUID' })
   event_id: string;
 
   @IsNumber()
@@ -34,10 +37,10 @@ class EventDto {
 }
 
 export class PushSyncDto {
-  @IsUUID()
+  @Matches(RELAXED_UUID_REGEX, { message: 'store_id must be a UUID' })
   store_id: string;
 
-  @IsUUID()
+  @Matches(RELAXED_UUID_REGEX, { message: 'device_id must be a UUID' })
   device_id: string;
 
   @IsString()
@@ -67,5 +70,4 @@ export class PushSyncResponseDto {
   server_time: number;
   last_processed_seq: number;
 }
-
 
