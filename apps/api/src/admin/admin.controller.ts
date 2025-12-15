@@ -232,7 +232,7 @@ export class AdminController {
       throw new ConflictException('El usuario ya pertenece a la tienda');
     }
 
-    const pinHash = dto.role === 'cashier' && dto.pin ? await bcrypt.hash(dto.pin, 10) : null;
+    const pinHash = dto.pin ? await bcrypt.hash(dto.pin, 10) : null;
 
     const member = this.memberRepo.create({
       store_id: storeId,

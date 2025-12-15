@@ -111,16 +111,13 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
-    // Buscar store member por store_id y role cashier
+    // Buscar store members por store_id (owner o cashier)
     const members = await this.storeMemberRepository.find({
-      where: {
-        store_id: dto.store_id,
-        role: 'cashier',
-      },
+      where: { store_id: dto.store_id },
       relations: ['profile'],
     });
 
-    // Verificar PIN contra todos los cajeros de la tienda
+    // Verificar PIN contra todos los miembros de la tienda
     let validMember: StoreMember | null = null;
     for (const member of members) {
       if (member.pin_hash && (await bcrypt.compare(dto.pin, member.pin_hash))) {
@@ -130,7 +127,7 @@ export class AuthService {
     }
 
     if (!validMember || !validMember.profile) {
-      throw new UnauthorizedException('PIN incorrecto o cajero no encontrado');
+      throw new UnauthorizedException('PIN incorrecto o usuario no encontrado');
     }
 
     // Validar licencia de la tienda

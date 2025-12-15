@@ -16,6 +16,7 @@ export class AppService {
       database: {
         status: 'unknown',
         connected: false,
+        error: null as string | null,
       },
     };
 
@@ -41,5 +42,4 @@ export class AppService {
     return health;
   }
 }
-
 

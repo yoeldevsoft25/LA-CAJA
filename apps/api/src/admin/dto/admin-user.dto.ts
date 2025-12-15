@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, Length, MinLength } from 'class-validator';
 
 const ROLES = ['owner', 'cashier'] as const;
 export type AdminUserRole = (typeof ROLES)[number];
@@ -13,7 +13,7 @@ export class AdminCreateUserDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(4)
+  @Length(4, 6)
   pin?: string;
 
   @IsOptional()

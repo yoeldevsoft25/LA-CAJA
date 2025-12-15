@@ -186,7 +186,7 @@ export default function AdminPage() {
       adminService.createUser(userSheetStore!.id, {
         full_name: newUser.full_name,
         role: newUser.role,
-        pin: newUser.role === 'cashier' ? newUser.pin : undefined,
+        pin: newUser.pin ? newUser.pin : undefined,
       }),
     onSuccess: () => {
       toast.success('Usuario creado')
@@ -613,22 +613,34 @@ export default function AdminPage() {
                   </SelectContent>
                 </Select>
               </div>
-              {newUser.role === 'cashier' && (
-                <div className="space-y-2">
-                  <Label className="text-slate-200">PIN</Label>
-                  <Input
-                    type="password"
-                    value={newUser.pin}
-                    onChange={(e) => setNewUser((prev) => ({ ...prev, pin: e.target.value }))}
-                    className="bg-slate-950 border-slate-800 text-slate-100"
-                    placeholder="PIN para cajero"
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label className="text-slate-200">PIN / Contraseña</Label>
+                <Input
+                  type="password"
+                  value={newUser.pin}
+                  onChange={(e) => setNewUser((prev) => ({ ...prev, pin: e.target.value }))}
+                  className="bg-slate-950 border-slate-800 text-slate-100"
+                  placeholder={
+                    newUser.role === 'cashier'
+                      ? 'PIN para cajero (4-6 dígitos)'
+                      : 'PIN para owner (4-6 dígitos, opcional pero recomendado)'
+                  }
+                />
+                <p className="text-xs text-slate-500">
+                  {newUser.role === 'cashier'
+                    ? 'Requerido para cajeros.'
+                    : 'Si lo defines, el owner podrá ingresar con este PIN.'}
+                </p>
+              </div>
               <Button
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => createUserMutation.mutate()}
-                disabled={!newUser.full_name || createUserMutation.isPending || !userSheetStore}
+                disabled={
+                  !newUser.full_name ||
+                  createUserMutation.isPending ||
+                  !userSheetStore ||
+                  (newUser.role === 'cashier' && !newUser.pin)
+                }
               >
                 Crear usuario
               </Button>

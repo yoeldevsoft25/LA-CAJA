@@ -7,6 +7,7 @@ import {
   LogOut,
   ShoppingCart,
   Package,
+  Boxes,
   Users,
   DollarSign,
   FileText,
@@ -47,6 +48,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 const navItems = [
   { path: '/pos', label: 'Punto de Venta', icon: ShoppingCart, badge: null },
   { path: '/products', label: 'Productos', icon: Package, badge: null },
+  { path: '/inventory', label: 'Inventario', icon: Boxes, badge: null },
   { path: '/sales', label: 'Ventas', icon: FileText, badge: null },
   { path: '/cash', label: 'Caja', icon: DollarSign, badge: null },
   { path: '/customers', label: 'Clientes', icon: Users, badge: null },
