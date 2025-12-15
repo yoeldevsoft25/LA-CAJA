@@ -93,6 +93,7 @@ export default function POSPage() {
   }
 
   const total = getTotal()
+  const hasOpenCash = !!currentCashSession?.id
 
   // Crear venta
   const createSaleMutation = useMutation({
@@ -154,6 +155,12 @@ export default function POSPage() {
       discount_bs: item.discount_bs || 0,
       discount_usd: item.discount_usd || 0,
     }))
+
+    // Bloquear checkout si no hay caja abierta
+    if (!hasOpenCash) {
+      toast.error('No hay caja abierta. Debes abrir caja antes de procesar ventas.')
+      return
+    }
 
     createSaleMutation.mutate({
       items: saleItems,
@@ -400,6 +407,11 @@ export default function POSPage() {
                 </div>
 
                 <div className="p-3 sm:p-4 border-t border-border space-y-3 sm:space-y-4 bg-muted/30">
+                  {!hasOpenCash && (
+                    <div className="rounded-md border border-amber-500/70 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                      Debes abrir caja para procesar ventas.
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <div className="flex justify-between items-baseline">
                       <span className="text-sm font-medium text-muted-foreground">Total USD:</span>
@@ -416,7 +428,7 @@ export default function POSPage() {
                   </div>
                   <Button
                     onClick={() => setShowCheckout(true)}
-                    disabled={items.length === 0}
+                    disabled={items.length === 0 || !hasOpenCash}
                     className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold shadow-sm"
                     size="lg"
                   >

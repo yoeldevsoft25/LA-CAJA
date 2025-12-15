@@ -10,6 +10,8 @@ import { Debt, DebtStatus } from '../database/entities/debt.entity';
 import { DebtPayment } from '../database/entities/debt-payment.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { randomUUID } from 'crypto';
+import { CashSession } from '../database/entities/cash-session.entity';
+import { IsNull } from 'typeorm';
 
 @Injectable()
 export class SalesService {
@@ -28,6 +30,8 @@ export class SalesService {
     private debtRepository: Repository<Debt>,
     @InjectRepository(DebtPayment)
     private debtPaymentRepository: Repository<DebtPayment>,
+    @InjectRepository(CashSession)
+    private cashSessionRepository: Repository<CashSession>,
     private dataSource: DataSource,
   ) {}
 
@@ -36,6 +40,23 @@ export class SalesService {
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('El carrito no puede estar vacío');
     }
+
+    // Validar que exista una sesión de caja abierta
+    const openSession = await this.cashSessionRepository.findOne({
+      where: { store_id: storeId, closed_at: IsNull() },
+    });
+
+    if (!openSession) {
+      throw new BadRequestException('No hay una sesión de caja abierta. Abre caja para registrar ventas.');
+    }
+
+    // Si se envía cash_session_id debe coincidir con la sesión abierta
+    if (dto.cash_session_id && dto.cash_session_id !== openSession.id) {
+      throw new BadRequestException('La venta debe asociarse a la sesión de caja abierta actual.');
+    }
+
+    // Forzar asociación a la sesión abierta (incluye casos en los que no se envió cash_session_id)
+    dto.cash_session_id = openSession.id;
 
     // Usar transacción para asegurar consistencia (incluye creación/actualización de cliente)
     return this.dataSource.transaction(async (manager) => {
@@ -428,4 +449,3 @@ export class SalesService {
     return parseInt(result.stock, 10) || 0;
   }
 }
-
