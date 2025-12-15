@@ -164,9 +164,6 @@ export default defineConfig(({ mode }) => ({
         dontCacheBustURLsMatching: /^\/index\.html$/,
         // Asegurar que el precache incluya todos los assets necesarios
         cleanupOutdatedCaches: true,
-        // Forzar actualización del Service Worker cuando cambia
-        clientsClaim: true,
-        skipWaiting: true,
       },
       manifest: {
         name: 'LA CAJA',
