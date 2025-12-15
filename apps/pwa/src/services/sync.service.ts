@@ -305,9 +305,11 @@ class SyncServiceClass {
     // Verificar conectividad antes de intentar sincronizar
     if (!navigator.onLine) {
       console.warn('[SyncService] Aborting sync, navigator.offline');
+      const offlineError = new Error('Sin conexión a internet');
+      offlineError.name = 'OfflineError';
       return {
         success: false,
-        error: new Error('Sin conexión a internet'),
+        error: offlineError,
       };
     }
 
@@ -478,7 +480,11 @@ class SyncServiceClass {
   /**
    * Marca un evento como fallido en la base de datos
    */
-  private async markEventAsFailed(eventId: string, _error: Error): Promise<void> {
+  private async markEventAsFailed(eventId: string, error: Error): Promise<void> {
+    // No persistir como failed si es un error de conectividad; se mantiene pendiente
+    if (error?.name === 'OfflineError' || error?.message?.includes('Sin conexión')) {
+      return;
+    }
     const event = await db.localEvents.where('event_id').equals(eventId).first();
     if (event) {
       await db.localEvents.update(event.id!, {

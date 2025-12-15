@@ -229,6 +229,17 @@ export class SyncQueue {
         return { success: true };
       } else {
         const error = result.error || new Error('Unknown sync error');
+        // Si es error offline, mantener en pending (no marcar failed)
+        if (error?.name === 'OfflineError' || error?.message?.includes('Sin conexión')) {
+          for (const eventId of eventIds) {
+            const queuedEvent = this.queue.get(eventId);
+            if (queuedEvent) {
+              queuedEvent.status = 'pending';
+            }
+          }
+          this.updateMetricsPendingCount();
+          return { success: false, error };
+        }
         this.markAsFailed(eventIds, error);
         return { success: false, error };
       }
