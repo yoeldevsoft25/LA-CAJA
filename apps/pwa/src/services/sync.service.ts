@@ -302,10 +302,12 @@ class SyncServiceClass {
 
     // Validar storeId y deviceId antes de enviar
     if (!this.storeId || !this.isUUID(this.storeId)) {
+      console.error('[SyncService] storeId inválido antes de sync', this.storeId);
       const err = new Error(`storeId inválido para sync: ${this.storeId}`);
       return { success: false, error: err };
     }
     if (!this.deviceId || !this.isUUID(this.deviceId)) {
+      console.error('[SyncService] deviceId inválido antes de sync', this.deviceId);
       const err = new Error(`deviceId inválido para sync: ${this.deviceId}`);
       return { success: false, error: err };
     }
@@ -332,6 +334,13 @@ class SyncServiceClass {
         };
       })
       .filter(Boolean) as BaseEvent[];
+
+    console.log('[SyncService] Sanitized events', {
+      original_count: events.length,
+      sanitized_count: sanitizedEvents.length,
+      invalid_actor_count: invalidActorEventIds.length,
+      first_sanitized_event: sanitizedEvents[0],
+    });
 
     if (invalidActorEventIds.length > 0) {
       const error = new Error('Eventos inválidos (falta actor.user_id UUID). Se marcan como failed.');
