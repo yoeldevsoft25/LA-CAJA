@@ -57,10 +57,12 @@ export default function ChangePriceModal({
     },
   })
 
-  // Obtener tasa BCV para cálculo automático
+  // Obtener tasa BCV para cálculo automático (usa cache del prefetch)
   const { data: bcvRateData } = useQuery({
-    queryKey: ['bcvRate'],
+    queryKey: ['exchange', 'bcv'],
     queryFn: () => exchangeService.getBCVRate(),
+    staleTime: 1000 * 60 * 60 * 2, // 2 horas
+    gcTime: Infinity, // Nunca eliminar
     enabled: isOpen,
     staleTime: 1000 * 60 * 5, // 5 minutos
   })

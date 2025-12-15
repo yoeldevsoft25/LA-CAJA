@@ -65,9 +65,12 @@ export default function CheckoutModal({
   const [receivedBs, setReceivedBs] = useState<number>(0)
 
   // Obtener tasa BCV automáticamente cuando se abre el modal
+  // Usa la misma queryKey que el prefetch para aprovechar el cache
   const { data: bcvRateData, isLoading: isLoadingBCV } = useQuery({
-    queryKey: ['bcvRate'],
+    queryKey: ['exchange', 'bcv'],
     queryFn: () => exchangeService.getBCVRate(),
+    staleTime: 1000 * 60 * 60 * 2, // 2 horas
+    gcTime: Infinity, // Nunca eliminar
     enabled: isOpen, // Solo obtener cuando el modal está abierto
     staleTime: 1000 * 60 * 5, // 5 minutos de cache
     refetchOnWindowFocus: false,

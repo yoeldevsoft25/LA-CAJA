@@ -304,3 +304,53 @@ https://tu-dominio-frontend.com,http://localhost:5173
 
 Esto permitirá que tanto el frontend en producción como el local puedan acceder a la API.
 
+---
+
+## 🔄 Mantener el Servicio Despierto (Keep-Alive)
+
+Render Free Tier pone los servicios a **dormir después de 15 minutos de inactividad**. Para mantener tu servicio siempre activo, usa un servicio de ping externo.
+
+### Endpoints Disponibles
+
+He creado endpoints ligeros que puedes usar:
+
+- **`GET /ping`** - Endpoint ligero y rápido (recomendado)
+- **`GET /keepalive`** - Alias del anterior
+- **`GET /health`** - Endpoint más completo
+
+Todos estos endpoints:
+- ✅ No requieren autenticación
+- ✅ Son muy rápidos (< 50ms)
+- ✅ No consumen recursos significativos
+
+### Solución Recomendada: UptimeRobot (Gratis)
+
+1. Ve a [uptimerobot.com](https://uptimerobot.com) y crea cuenta gratis
+2. Click en **"Add New Monitor"**
+3. Configura:
+   - **Monitor Type**: HTTP(s)
+   - **Friendly Name**: La Caja API
+   - **URL**: `https://tu-api.onrender.com/ping`
+   - **Monitoring Interval**: 5 minutes
+4. Click **"Create Monitor"**
+
+**Listo!** UptimeRobot hará ping cada 5 minutos y tu servicio nunca se dormirá.
+
+### Otras Opciones
+
+- **cron-job.org**: [cron-job.org](https://cron-job.org) - Ping cada 10 minutos
+- **EasyCron**: [easycron.com](https://www.easycron.com) - Ping cada 10 minutos
+- **GitHub Actions**: Crea un workflow que haga ping periódicamente
+
+Ver `apps/api/KEEP_ALIVE.md` para más detalles y opciones.
+
+---
+
+## ⚠️ Nota sobre Render Free Tier
+
+- El servicio se duerme después de 15 minutos de inactividad
+- El primer request después de dormir puede tardar 30-60 segundos (cold start)
+- Con ping cada 5-10 minutos, el servicio **nunca se dormirá**
+
+Si necesitas 0 cold starts, considera el plan pago de Render ($7/mes).
+

@@ -116,6 +116,36 @@ export default defineConfig(({ mode }) => ({
               networkTimeoutSeconds: 1,
             },
           },
+          {
+            // CRÍTICO: Cachear respuestas de API para máximo rendimiento offline
+            urlPattern: ({ url }) => {
+              // Cachear todas las peticiones a la API
+              return url.origin.includes('onrender.com') || url.pathname.startsWith('/api/')
+            },
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 500, // Muchas respuestas de API
+                maxAgeSeconds: 60 * 60 * 24, // 1 día
+              },
+              cacheableResponse: {
+                statuses: [0, 200], // Cachear incluso errores de red
+              },
+              networkTimeoutSeconds: 2, // Timeout de 2 segundos
+              plugins: [
+                {
+                  cacheWillUpdate: async ({ response }) => {
+                    // Solo cachear respuestas exitosas o errores de red
+                    if (response && (response.status === 0 || response.status === 200)) {
+                      return response
+                    }
+                    return null
+                  },
+                },
+              ],
+            },
+          },
         ],
         skipWaiting: true,
         clientsClaim: true,

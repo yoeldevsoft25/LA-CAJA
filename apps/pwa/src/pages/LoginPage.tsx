@@ -8,6 +8,8 @@ import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/stores/auth.store'
 import { authService } from '@/services/auth.service'
+import { useQueryClient } from '@tanstack/react-query'
+import { prefetchAllData } from '@/services/prefetch.service'
 import { Loader2, Store, Lock, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +28,7 @@ type LoginForm = z.infer<typeof loginSchema>
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const queryClient = useQueryClient()
   const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [selectedCashierId, setSelectedCashierId] = useState<string>('')
 
@@ -55,7 +58,7 @@ export default function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: authService.login,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       login(data.access_token, {
         user_id: data.user_id,
         store_id: data.store_id,
@@ -63,6 +66,21 @@ export default function LoginPage() {
         full_name: data.full_name,
       })
       toast.success(`Bienvenido, ${data.full_name || 'Usuario'}`)
+      
+      // Prefetch inteligente en background - no bloquea la navegación
+      prefetchAllData({
+        storeId: data.store_id,
+        queryClient,
+        onProgress: (progress, message) => {
+          // Log silencioso - no molestar al usuario
+          if (progress === 100) {
+            console.log('[Prefetch] ✅ Cacheo completo')
+          }
+        },
+      }).catch(() => {
+        // Silenciar errores - el prefetch es opcional
+      })
+      
       navigate('/pos')
     },
     onError: (error: any) => {

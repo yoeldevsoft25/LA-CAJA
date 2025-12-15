@@ -73,10 +73,12 @@ export default function StockReceivedModal({
     }
   }, [user?.store_id, isOpen]);
 
-  // Obtener tasa BCV
+  // Obtener tasa BCV (usa cache del prefetch)
   const { data: bcvRateData } = useQuery({
-    queryKey: ['bcvRate'],
+    queryKey: ['exchange', 'bcv'],
     queryFn: () => exchangeService.getBCVRate(),
+    staleTime: 1000 * 60 * 60 * 2, // 2 horas
+    gcTime: Infinity, // Nunca eliminar
     enabled: isOpen,
     staleTime: 1000 * 60 * 5,
   })

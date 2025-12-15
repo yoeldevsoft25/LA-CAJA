@@ -58,17 +58,21 @@ export const exchangeService = {
         params: force ? { force: 'true' } : {},
       })
 
-      // Guardar en cache local si la tasa está disponible
+      // CRÍTICO: Guardar en cache local SIEMPRE si la tasa está disponible
+      // Esto asegura que esté disponible offline
       if (response.data.available && response.data.rate) {
         try {
-          await db.kv.put({ key: EXCHANGE_RATE_KEY, value: response.data.rate })
-          await db.kv.put({
-            key: EXCHANGE_RATE_TIMESTAMP_KEY,
-            value: response.data.timestamp || new Date().toISOString(),
-          })
+          await Promise.all([
+            db.kv.put({ key: EXCHANGE_RATE_KEY, value: response.data.rate }),
+            db.kv.put({
+              key: EXCHANGE_RATE_TIMESTAMP_KEY,
+              value: response.data.timestamp || new Date().toISOString(),
+            }),
+          ])
+          console.log('[Exchange] ✅ Tasa BCV guardada en IndexedDB:', response.data.rate)
         } catch (error) {
-          console.error('Error guardando tasa en cache:', error)
-          // No fallar si no se puede guardar en cache
+          console.error('[Exchange] ❌ Error guardando tasa en IndexedDB:', error)
+          // No fallar si no se puede guardar en cache, pero loguear el error
         }
       }
 

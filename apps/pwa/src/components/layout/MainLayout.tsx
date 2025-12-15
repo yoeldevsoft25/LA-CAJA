@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/stores/auth.store'
+import { useQueryClient } from '@tanstack/react-query'
+import { prefetchPageData } from '@/services/prefetch.service'
 import {
   LogOut,
   ShoppingCart,
@@ -47,7 +49,32 @@ export default function MainLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // Prefetch inteligente cuando el usuario navega entre páginas
+  useEffect(() => {
+    if (!user?.store_id) return
+
+    const pathToPage: Record<string, 'pos' | 'products' | 'inventory' | 'sales' | 'cash' | 'customers' | 'debts' | 'reports'> = {
+      '/pos': 'pos',
+      '/products': 'products',
+      '/inventory': 'inventory',
+      '/sales': 'sales',
+      '/cash': 'cash',
+      '/customers': 'customers',
+      '/debts': 'debts',
+      '/reports': 'reports',
+    }
+
+    const page = pathToPage[location.pathname]
+    if (page) {
+      // Prefetch en background - no bloquea la UI
+      prefetchPageData(page, user.store_id, queryClient).catch(() => {
+        // Silenciar errores
+      })
+    }
+  }, [location.pathname, user?.store_id, queryClient])
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = () => {
