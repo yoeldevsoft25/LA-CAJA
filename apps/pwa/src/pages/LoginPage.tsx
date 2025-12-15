@@ -10,6 +10,7 @@ import { useAuth } from '@/stores/auth.store'
 import { authService } from '@/services/auth.service'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchAllData } from '@/services/prefetch.service'
+import { syncService } from '@/services/sync.service' // Importar el servicio de sincronización
 import { Loader2, Store, Lock, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,6 +67,17 @@ export default function LoginPage() {
         full_name: data.full_name,
       })
       toast.success(`Bienvenido, ${data.full_name || 'Usuario'}`)
+      
+      // Inicializar servicio de sincronización para ventas offline
+      let deviceId = localStorage.getItem('device_id')
+      if (!deviceId) {
+        deviceId = crypto.randomUUID()
+        localStorage.setItem('device_id', deviceId)
+      }
+      syncService.initialize(data.store_id, deviceId).catch((error) => {
+        console.error('[SyncService] Error inicializando:', error)
+        // No bloquear el login si falla la inicialización
+      })
       
       // Prefetch inteligente en background - no bloquea la navegación
       prefetchAllData({

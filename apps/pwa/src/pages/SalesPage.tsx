@@ -88,6 +88,7 @@ function DatePicker({
 
 export default function SalesPage() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const isOwner = user?.role === 'owner'
   const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date())
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date())

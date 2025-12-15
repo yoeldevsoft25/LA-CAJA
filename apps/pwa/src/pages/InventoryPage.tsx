@@ -5,7 +5,6 @@ import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { productsService } from '@/services/products.service'
 import { productsCacheService } from '@/services/products-cache.service'
-import { useAuth } from '@/stores/auth.store'
 import StockReceivedModal from '@/components/inventory/StockReceivedModal'
 import StockAdjustModal from '@/components/inventory/StockAdjustModal'
 import MovementsModal from '@/components/inventory/MovementsModal'

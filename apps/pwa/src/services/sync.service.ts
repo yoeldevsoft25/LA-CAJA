@@ -114,17 +114,45 @@ class SyncServiceClass {
   /**
    * Agrega un evento a la cola de sincronización
    * También lo guarda en la base de datos local
+   * Si no está inicializado, guarda directamente en la BD (modo offline seguro)
    */
   async enqueueEvent(event: BaseEvent): Promise<void> {
-    if (!this.isInitialized || !this.syncQueue) {
-      throw new Error('SyncService no está inicializado. Llama a initialize() primero.');
-    }
-
-    // Guardar en base de datos local primero
+    // Siempre guardar en base de datos local primero (incluso si no está inicializado)
     await this.saveEventToDB(event);
 
-    // Agregar a la cola de sincronización
-    this.syncQueue.enqueue(event);
+    // Si está inicializado, agregar a la cola de sincronización
+    if (this.isInitialized && this.syncQueue) {
+      this.syncQueue.enqueue(event);
+    } else {
+      // Si no está inicializado, intentar inicializar automáticamente si tenemos los datos necesarios
+      if (event.store_id && event.device_id) {
+        try {
+          // Obtener deviceId del evento o del localStorage
+          const deviceId = event.device_id || this.getOrCreateDeviceId();
+          await this.initialize(event.store_id, deviceId);
+          // Después de inicializar, agregar a la cola
+          if (this.syncQueue) {
+            this.syncQueue.enqueue(event);
+          }
+        } catch (error) {
+          // Si falla la inicialización, el evento ya está guardado en la BD
+          // Se sincronizará cuando el servicio se inicialice correctamente
+          console.warn('[SyncService] No se pudo inicializar automáticamente, pero el evento está guardado:', error);
+        }
+      }
+    }
+  }
+
+  /**
+   * Obtiene o crea un deviceId
+   */
+  private getOrCreateDeviceId(): string {
+    let deviceId = localStorage.getItem('device_id');
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem('device_id', deviceId);
+    }
+    return deviceId;
   }
 
   /**
