@@ -97,6 +97,10 @@ export default function POSPage() {
   // Crear venta
   const createSaleMutation = useMutation({
     mutationFn: salesService.create,
+    // Necesitamos ejecutar la mutación incluso en modo offline para encolar la venta
+    // y usar el fallback local. Si queda en 'online', react-query la pausa
+    // hasta que vuelva la conexión y el botón se queda en "Procesando...".
+    networkMode: 'always',
     onSuccess: (sale) => {
       const isOnline = navigator.onLine
       if (isOnline) {
@@ -111,7 +115,20 @@ export default function POSPage() {
       setShowCheckout(false)
     },
     onError: (error: any) => {
-      console.error('[POS] Error en createSaleMutation:', error)
+      console.error('[POS] ❌ Error en createSaleMutation:', {
+        error,
+        message: error.message,
+        code: error.code,
+        response: error.response,
+        stack: error.stack,
+      })
+      
+      // Si es un error de "requiere store_id y user_id", es porque está offline sin datos
+      if (error.message?.includes('store_id y user_id')) {
+        toast.error('Error: No se pueden guardar ventas offline sin datos de usuario. Por favor, recarga la página.')
+        return
+      }
+      
       const message = error.response?.data?.message || error.message || 'Error al procesar la venta'
       toast.error(message)
     },
@@ -424,4 +441,3 @@ export default function POSPage() {
     </div>
   )
 }
-
