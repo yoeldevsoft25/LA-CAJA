@@ -133,7 +133,8 @@ function getDeviceId(): string {
   return deviceId
 }
 
-// Función auxiliar para calcular totales de la venta
+// Función auxiliar para calcular totales de la venta (no usada actualmente)
+// @ts-ignore - Función no usada pero puede ser útil en el futuro
 function calculateTotals(
   items: CartItemDto[],
   products: Array<{ id: string; price_bs: number; price_usd: number }>
@@ -252,7 +253,13 @@ export const salesService = {
         totals,
         payment: {
           method: data.payment_method,
-          split: data.split,
+          split: data.split ? {
+            cash_bs: data.split.cash_bs ?? 0,
+            cash_usd: data.split.cash_usd ?? 0,
+            pago_movil_bs: data.split.pago_movil_bs ?? 0,
+            transfer_bs: data.split.transfer_bs ?? 0,
+            other_bs: data.split.other_bs ?? 0,
+          } : undefined,
         },
         customer: data.customer_id
           ? {
@@ -323,7 +330,13 @@ export const salesService = {
         })),
         payment: {
           method: data.payment_method,
-          split: data.split,
+          split: data.split ? {
+            cash_bs: data.split.cash_bs ?? 0,
+            cash_usd: data.split.cash_usd ?? 0,
+            pago_movil_bs: data.split.pago_movil_bs ?? 0,
+            transfer_bs: data.split.transfer_bs ?? 0,
+            other_bs: data.split.other_bs ?? 0,
+          } : undefined,
         },
         note: data.note || null,
       }
@@ -436,11 +449,17 @@ export const salesService = {
           currency: data.currency,
           items: saleItems,
           totals,
-          payment: {
-            method: data.payment_method,
-            split: data.split,
-          },
-          customer: data.customer_id
+        payment: {
+          method: data.payment_method,
+          split: data.split ? {
+            cash_bs: data.split.cash_bs ?? 0,
+            cash_usd: data.split.cash_usd ?? 0,
+            pago_movil_bs: data.split.pago_movil_bs ?? 0,
+            transfer_bs: data.split.transfer_bs ?? 0,
+            other_bs: data.split.other_bs ?? 0,
+          } : undefined,
+        },
+        customer: data.customer_id
             ? {
                 customer_id: data.customer_id,
               }
@@ -507,11 +526,17 @@ export const salesService = {
             discount_bs: item.discount_bs,
             discount_usd: item.discount_usd,
           })),
-          payment: {
-            method: data.payment_method,
-            split: data.split,
-          },
-          note: data.note || null,
+        payment: {
+          method: data.payment_method,
+          split: data.split ? {
+            cash_bs: data.split.cash_bs ?? 0,
+            cash_usd: data.split.cash_usd ?? 0,
+            pago_movil_bs: data.split.pago_movil_bs ?? 0,
+            transfer_bs: data.split.transfer_bs ?? 0,
+            other_bs: data.split.other_bs ?? 0,
+          } : undefined,
+        },
+        note: data.note || null,
         }
 
         return mockSale

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { inventoryService, StockReceivedRequest, StockStatus } from '@/services/inventory.service'
 import { productsService, Product } from '@/services/products.service'
+import { productsCacheService } from '@/services/products-cache.service'
 import { exchangeService } from '@/services/exchange.service'
 import { useAuth } from '@/stores/auth.store'
 import { Plus, Trash2, Search } from 'lucide-react'
@@ -14,7 +15,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
 
 interface StockReceivedModalProps {
   isOpen: boolean
@@ -46,12 +46,32 @@ export default function StockReceivedModal({
   const [invoice, setInvoice] = useState('')
   const [note, setNote] = useState('')
 
-  // Obtener productos para selección (con cache offline)
+  // Obtener productos para selección (con cache offline persistente)
   const { data: productsData } = useQuery({
     queryKey: ['products', 'list', user?.store_id],
     queryFn: () => productsService.search({ limit: 1000 }, user?.store_id),
     enabled: isOpen && !!user?.store_id,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    gcTime: Infinity, // Nunca eliminar del cache
+    placeholderData: undefined, // Se carga desde cache en useEffect
   })
+
+  // Cargar desde cache cuando se abre el modal
+  const [initialProducts, setInitialProducts] = useState<{ products: any[]; total: number } | undefined>(undefined);
+  
+  useEffect(() => {
+    if (user?.store_id && isOpen) {
+      productsCacheService.getProductsFromCache(user.store_id, { limit: 1000 })
+        .then(cached => {
+          if (cached.length > 0) {
+            setInitialProducts({ products: cached, total: cached.length });
+          }
+        })
+        .catch(error => {
+          console.warn('[StockReceivedModal] Error cargando cache:', error);
+        });
+    }
+  }, [user?.store_id, isOpen]);
 
   // Obtener tasa BCV
   const { data: bcvRateData } = useQuery({
@@ -61,12 +81,12 @@ export default function StockReceivedModal({
     staleTime: 1000 * 60 * 5,
   })
 
-  const products = productsData?.products || []
+  const products = (productsData?.products || initialProducts?.products || []) as any[]
   const exchangeRate = bcvRateData?.rate || 36
 
   // Filtrar productos según búsqueda (excluyendo los ya agregados)
   const addedProductIds = new Set(productItems.map((item) => item.product_id))
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = products.filter((p: any) => {
     if (addedProductIds.has(p.id)) return false
     if (!searchQuery) return true
     const searchLower = searchQuery.toLowerCase()
@@ -255,7 +275,7 @@ export default function StockReceivedModal({
                       </div>
                     ) : (
                       <div className="divide-y divide-border">
-                        {filteredProducts.map((p) => (
+                        {filteredProducts.map((p: any) => (
                           <button
                             key={p.id}
                             type="button"

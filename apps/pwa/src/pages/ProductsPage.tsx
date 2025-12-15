@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign } from 'lucide-react'
-import { productsService, Product } from '@/services/products.service'
+import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
+import { productsCacheService } from '@/services/products-cache.service'
 import { useAuth } from '@/stores/auth.store'
+import { useOnline } from '@/hooks/use-online'
 import toast from 'react-hot-toast'
 import ProductFormModal from '@/components/products/ProductFormModal'
 import ChangePriceModal from '@/components/products/ChangePriceModal'
@@ -11,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ProductsPage() {
   const { user } = useAuth()
@@ -23,7 +24,30 @@ export default function ProductsPage() {
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false)
   const queryClient = useQueryClient()
 
-  // Búsqueda de productos (con cache offline)
+  // Cargar datos desde cache al iniciar (para mostrar inmediatamente)
+  const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined);
+  const { isOnline } = useOnline(); // Usar hook más confiable
+  
+  // Cargar desde IndexedDB al montar el componente o cuando cambia la búsqueda
+  useEffect(() => {
+    if (user?.store_id) {
+      productsCacheService.getProductsFromCache(user.store_id, {
+        search: searchQuery || undefined,
+        limit: 100,
+      }).then(cached => {
+        if (cached.length > 0) {
+          setInitialData({
+            products: cached,
+            total: cached.length,
+          });
+        }
+      }).catch(() => {
+        // Silenciar errores
+      });
+    }
+  }, [user?.store_id, searchQuery]);
+
+  // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['products', 'list', searchQuery, user?.store_id],
     queryFn: () =>
@@ -31,7 +55,15 @@ export default function ProductsPage() {
         q: searchQuery || undefined,
         limit: 100,
       }, user?.store_id),
-    enabled: !!user?.store_id,
+    enabled: !!user?.store_id && isOnline, // Solo ejecutar query si está online
+    // Configuración para persistencia offline
+    staleTime: 1000 * 60 * 5, // 5 minutos - considerar datos frescos
+    gcTime: Infinity, // Nunca eliminar del cache de React Query
+    retry: false, // No reintentar si falla (usaremos cache)
+    // Si está offline, usar cache como datos iniciales
+    initialData: !isOnline ? initialData : undefined,
+    // Si está offline, mantener cache como placeholder
+    placeholderData: !isOnline ? initialData : undefined,
   })
 
   const products = productsData?.products || []

@@ -9,15 +9,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 const openCashSchema = z.object({
   cash_bs: z
-    .number({ required_error: 'El monto en Bs es requerido' })
+    .number({ message: 'El monto en Bs es requerido' })
     .min(0, 'El monto en Bs no puede ser negativo')
     .max(999999999.99, 'El monto en Bs excede el límite máximo'),
   cash_usd: z
-    .number({ required_error: 'El monto en USD es requerido' })
+    .number({ message: 'El monto en USD es requerido' })
     .min(0, 'El monto en USD no puede ser negativo')
     .max(999999999.99, 'El monto en USD excede el límite máximo'),
   note: z.string().optional(),
@@ -40,7 +39,6 @@ export default function OpenCashModal({
     register,
     handleSubmit,
     formState: { errors },
-    reset,
   } = useForm<OpenCashSessionRequest>({
     resolver: zodResolver(openCashSchema),
     defaultValues: {

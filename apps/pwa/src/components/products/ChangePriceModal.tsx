@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -48,8 +48,8 @@ export default function ChangePriceModal({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<PriceFormData>({
-    resolver: zodResolver(priceSchema),
+  } = useForm({
+    resolver: zodResolver(priceSchema) as any,
     defaultValues: {
       price_bs: 0,
       price_usd: 0,
@@ -92,7 +92,11 @@ export default function ChangePriceModal({
 
   const changePriceMutation = useMutation({
     mutationFn: (data: PriceFormData) =>
-      productsService.changePrice(product!.id, data, user?.store_id),
+      productsService.changePrice(product!.id, {
+        price_usd: data.price_usd,
+        price_bs: data.price_bs ?? 0,
+        rounding: data.rounding,
+      }, user?.store_id),
     onSuccess: () => {
       toast.success('Precio actualizado exitosamente')
       queryClient.invalidateQueries({ queryKey: ['products'] })
@@ -137,7 +141,7 @@ export default function ChangePriceModal({
 
         {/* Form */}
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit as any)}
           className="flex-1 flex flex-col min-h-0 overflow-hidden"
         >
           <CardContent className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overscroll-contain">

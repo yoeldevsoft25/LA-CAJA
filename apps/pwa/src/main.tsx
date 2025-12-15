@@ -5,39 +5,45 @@ import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 
-// En desarrollo, desregistrar cualquier Service Worker existente para evitar problemas de cache
-// Esto es especialmente importante cuando se accede desde diferentes hostnames (localhost vs IP)
-if (import.meta.env.DEV) {
-  // Desregistrar Service Workers de cualquier scope
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      console.log(`[DEV] Hostname: ${window.location.hostname}`)
-      console.log(`[DEV] Encontrados ${registrations.length} Service Worker(s) registrados`)
-      registrations.forEach((registration) => {
-        registration.unregister().then((success) => {
-          if (success) {
-            console.log(`[DEV] Service Worker desregistrado: ${registration.scope}`)
+// Registrar Service Worker para soporte offline robusto
+if ('serviceWorker' in navigator) {
+  // Limpiar Service Workers antiguos de scopes diferentes
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    const currentScope = window.location.origin + '/';
+    registrations.forEach((registration) => {
+      if (registration.scope !== currentScope) {
+        console.log(`[SW] Desregistrando Service Worker de scope diferente: ${registration.scope}`)
+        registration.unregister().catch(() => {
+          // Ignorar errores
+        })
+      }
+    })
+  })
+
+  // Registrar Service Worker cuando la página carga
+  window.addEventListener('load', () => {
+    // El plugin VitePWA debería registrar automáticamente, pero lo hacemos manualmente como respaldo
+    if ('serviceWorker' in navigator) {
+      // Esperar un momento para que VitePWA lo registre primero
+      setTimeout(() => {
+        navigator.serviceWorker.getRegistration().then((registration) => {
+          if (!registration) {
+            console.warn('[SW] Service Worker no registrado por VitePWA, intentando registro manual...')
+            // Intentar registrar manualmente como último recurso
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+              .then((reg) => {
+                console.log('[SW] Service Worker registrado manualmente:', reg.scope)
+              })
+              .catch((err) => {
+                console.error('[SW] Error al registrar Service Worker:', err)
+              })
           } else {
-            console.warn(`[DEV] No se pudo desregistrar: ${registration.scope}`)
+            console.log('[SW] Service Worker ya registrado:', registration.scope)
           }
         })
-      })
-    })
-    
-    // Limpiar todos los caches
-    if ('caches' in window) {
-      caches.keys().then((cacheNames) => {
-        console.log(`[DEV] Limpiando ${cacheNames.length} cache(s)`)
-        cacheNames.forEach((cacheName) => {
-          caches.delete(cacheName).then((deleted) => {
-            if (deleted) {
-              console.log(`[DEV] Cache eliminado: ${cacheName}`)
-            }
-          })
-        })
-      })
+      }, 1000)
     }
-  }
+  })
 }
 
 const queryClient = new QueryClient({

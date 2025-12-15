@@ -26,9 +26,18 @@ export const api = axios.create({
   },
 });
 
-// Interceptor para agregar token JWT
+// Interceptor para agregar token JWT y bloquear peticiones offline
 api.interceptors.request.use(
   (config) => {
+    // Bloquear peticiones si está offline
+    if (!navigator.onLine) {
+      return Promise.reject({
+        code: 'ERR_INTERNET_DISCONNECTED',
+        message: 'Sin conexión a internet',
+        isOffline: true,
+      });
+    }
+
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -44,6 +53,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Si es un error offline, no hacer nada más (ya fue manejado en el request interceptor)
+    if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED') {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401) {
       // Token inválido o expirado
       localStorage.removeItem('auth_token');

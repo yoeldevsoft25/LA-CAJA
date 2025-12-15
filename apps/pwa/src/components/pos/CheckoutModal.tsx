@@ -170,7 +170,6 @@ export default function CheckoutModal({
     : 0
   
   // Calcular cambio en Bs cuando se paga con USD físico (cambio en Bs)
-  const totalBsFromUsd = total.usd * exchangeRate
   const roundedChangeResultUsd = giveChangeInBs && changeUsd > 0 && exchangeRate > 0
     ? calculateRoundedChange(changeUsd, exchangeRate)
     : { changeBs: 0, breakdown: {}, breakdownFormatted: '' }
@@ -196,7 +195,6 @@ export default function CheckoutModal({
   
   // Para USD con cambio en Bs
   const changeBsFromUsd = roundedChangeResultUsd.changeBs
-  const changeBreakdownFromUsd = roundedChangeResultUsd.breakdown
   const changeBreakdownFormattedFromUsd = roundedChangeResultUsd.breakdownFormatted
   
   // Calcular excedente para USD con cambio en Bs (diferencia entre cambio exacto y redondeado)

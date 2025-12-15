@@ -34,22 +34,44 @@ export const productsService = {
   async search(params: ProductSearchParams, storeId?: string): Promise<ProductSearchResponse> {
     const isOnline = navigator.onLine;
 
-    // Si está offline, usar cache local
-    if (!isOnline && storeId) {
-      const cachedProducts = await productsCacheService.getProductsFromCache(storeId, {
-        search: params.q,
-        category: params.category,
-        is_active: params.is_active,
-        limit: params.limit,
-      });
+    // ESTRATEGIA: Stale-While-Revalidate
+    // 1. SIEMPRE intentar cargar desde cache primero (incluso online)
+    // 2. Si hay cache, retornarlo inmediatamente
+    // 3. Si está online, actualizar en background
+    // 4. Si está offline, solo usar cache
 
-      return {
-        products: cachedProducts,
-        total: cachedProducts.length,
-      };
+    let cachedData: ProductSearchResponse | null = null;
+
+    // Intentar cargar desde cache primero (rápido, síncrono)
+    if (storeId) {
+      try {
+        const cachedProducts = await productsCacheService.getProductsFromCache(storeId, {
+          search: params.q,
+          category: params.category,
+          is_active: params.is_active,
+          limit: params.limit,
+        });
+
+        if (cachedProducts.length > 0) {
+          cachedData = {
+            products: cachedProducts,
+            total: cachedProducts.length,
+          };
+        }
+      } catch (error) {
+        console.warn('[productsService] Error cargando desde cache:', error);
+      }
     }
 
-    // Si está online, obtener del API y guardar en cache
+    // Si está offline, retornar cache inmediatamente
+    if (!isOnline) {
+      if (cachedData) {
+        return cachedData;
+      }
+      throw new Error('Sin conexión y sin datos en cache local');
+    }
+
+    // Si está online, intentar actualizar desde API
     try {
       const backendParams = {
         ...params,
@@ -66,29 +88,16 @@ export const productsService = {
         });
       }
       
+      // Retornar datos frescos del API
       return response.data
     } catch (error: any) {
-      // Si falla la petición y hay cache, usar cache como fallback
-      if (storeId && error.code !== 'ERR_NETWORK') {
-        throw error; // Re-lanzar si no es error de red
+      // Si falla la petición, usar cache como fallback
+      if (cachedData) {
+        console.warn('[productsService] Error en API, usando cache local:', error.message);
+        return cachedData;
       }
 
-      if (storeId) {
-        const cachedProducts = await productsCacheService.getProductsFromCache(storeId, {
-          search: params.q,
-          category: params.category,
-          is_active: params.is_active,
-          limit: params.limit,
-        });
-
-        if (cachedProducts.length > 0) {
-          return {
-            products: cachedProducts,
-            total: cachedProducts.length,
-          };
-        }
-      }
-
+      // Si no hay cache y falló la petición, lanzar error
       throw error;
     }
   },
@@ -96,16 +105,31 @@ export const productsService = {
   async getById(id: string, storeId?: string): Promise<Product> {
     const isOnline = navigator.onLine;
 
-    // Si está offline, usar cache local
-    if (!isOnline && storeId) {
-      const cached = await productsCacheService.getProductByIdFromCache(id);
-      if (cached) {
-        return cached;
+    // ESTRATEGIA: Stale-While-Revalidate
+    // 1. Intentar cargar desde cache primero
+    // 2. Si está online, actualizar desde API
+    // 3. Si está offline o falla, usar cache
+
+    let cachedProduct: Product | null = null;
+
+    // Intentar cargar desde cache primero
+    if (storeId) {
+      try {
+        cachedProduct = await productsCacheService.getProductByIdFromCache(id);
+      } catch (error) {
+        console.warn('[productsService] Error cargando producto desde cache:', error);
       }
-      throw new Error('Producto no encontrado en cache local');
     }
 
-    // Si está online, obtener del API y guardar en cache
+    // Si está offline, retornar cache inmediatamente
+    if (!isOnline) {
+      if (cachedProduct) {
+        return cachedProduct;
+      }
+      throw new Error('Sin conexión y producto no encontrado en cache local');
+    }
+
+    // Si está online, intentar actualizar desde API
     try {
       const response = await api.get<Product>(`/products/${id}`)
       
@@ -118,12 +142,10 @@ export const productsService = {
       
       return response.data
     } catch (error: any) {
-      // Si falla y hay cache, intentar desde cache
-      if (storeId && error.code === 'ERR_NETWORK') {
-        const cached = await productsCacheService.getProductByIdFromCache(id);
-        if (cached) {
-          return cached;
-        }
+      // Si falla y hay cache, usar cache como fallback
+      if (cachedProduct) {
+        console.warn('[productsService] Error en API, usando cache local:', error.message);
+        return cachedProduct;
       }
       throw error;
     }

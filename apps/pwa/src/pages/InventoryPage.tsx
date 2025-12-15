@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History } from 'lucide-react'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { productsService } from '@/services/products.service'
+import { productsCacheService } from '@/services/products-cache.service'
 import { useAuth } from '@/stores/auth.store'
-import toast from 'react-hot-toast'
 import StockReceivedModal from '@/components/inventory/StockReceivedModal'
 import StockAdjustModal from '@/components/inventory/StockAdjustModal'
 import MovementsModal from '@/components/inventory/MovementsModal'
@@ -36,11 +36,30 @@ export default function InventoryPage() {
   const [selectedProduct, setSelectedProduct] = useState<StockStatus | null>(null)
   const queryClient = useQueryClient()
 
-  // Obtener todos los productos activos para buscar por nombre (con cache offline)
+  // Obtener todos los productos activos para buscar por nombre (con cache offline persistente)
+  const [initialProducts, setInitialProducts] = useState<{ products: any[]; total: number } | undefined>(undefined);
+  
+  useEffect(() => {
+    if (user?.store_id) {
+      productsCacheService.getProductsFromCache(user.store_id, { limit: 1000 })
+        .then(cached => {
+          if (cached.length > 0) {
+            setInitialProducts({ products: cached, total: cached.length });
+          }
+        })
+        .catch(error => {
+          console.warn('[InventoryPage] Error cargando cache:', error);
+        });
+    }
+  }, [user?.store_id]);
+
   const { data: productsData } = useQuery({
     queryKey: ['products', 'list', user?.store_id],
     queryFn: () => productsService.search({ limit: 1000 }, user?.store_id),
     enabled: !!user?.store_id,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    gcTime: Infinity, // Nunca eliminar del cache
+    placeholderData: initialProducts,
   })
 
   // Obtener estado del stock
@@ -58,7 +77,7 @@ export default function InventoryPage() {
 
     // Búsqueda por nombre
     if (searchQuery) {
-      const product = productsData?.products.find((p) => p.id === item.product_id)
+      const product = productsData?.products?.find((p: any) => p.id === item.product_id)
       if (product) {
         const searchLower = searchQuery.toLowerCase()
         return (

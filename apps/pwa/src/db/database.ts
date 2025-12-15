@@ -79,7 +79,7 @@ export class LaCajaDB extends Dexie {
       customers: 'id, store_id, name, document_id, [store_id+document_id]',
       sales: 'id, store_id, sold_at, customer_id, [store_id+sold_at]',
       kv: 'key',
-    }).upgrade(async (tx) => {
+    }).upgrade(async (_tx) => {
       // Migración automática - Dexie maneja esto sin pérdida de datos
     });
   }
@@ -89,12 +89,13 @@ export class LaCajaDB extends Dexie {
    * Usa el índice compuesto [sync_status+created_at] para mejor performance
    */
   async getPendingEvents(limit: number = 50): Promise<LocalEvent[]> {
-    return this.localEvents
+    const events = await this.localEvents
       .where('sync_status')
       .equals('pending')
-      .orderBy('created_at')
-      .limit(limit)
       .toArray();
+    return events
+      .sort((a, b) => (a.created_at as number) - (b.created_at as number))
+      .slice(0, limit);
   }
   
   /**
@@ -106,12 +107,13 @@ export class LaCajaDB extends Dexie {
     status: LocalEvent['sync_status'],
     limit: number = 50
   ): Promise<LocalEvent[]> {
-    return this.localEvents
+    const events = await this.localEvents
       .where('[store_id+device_id+sync_status]')
       .equals([storeId, deviceId, status])
-      .orderBy('created_at')
-      .limit(limit)
       .toArray();
+    return events
+      .sort((a, b) => (a.created_at as number) - (b.created_at as number))
+      .slice(0, limit);
   }
 
   /**
@@ -135,11 +137,12 @@ export class LaCajaDB extends Dexie {
 
     if (options?.search) {
       const searchLower = options.search.toLowerCase();
-      query = query.filter(p => 
-        p.name.toLowerCase().includes(searchLower) ||
-        p.sku?.toLowerCase().includes(searchLower) ||
-        p.barcode?.toLowerCase().includes(searchLower)
-      );
+      query = query.filter(p => {
+        const nameMatch = p.name.toLowerCase().includes(searchLower);
+        const skuMatch = p.sku?.toLowerCase().includes(searchLower) ?? false;
+        const barcodeMatch = p.barcode?.toLowerCase().includes(searchLower) ?? false;
+        return nameMatch || skuMatch || barcodeMatch;
+      });
     }
 
     const products = await query.toArray();
@@ -174,11 +177,12 @@ export class LaCajaDB extends Dexie {
 
     if (search) {
       const searchLower = search.toLowerCase();
-      query = query.filter(c => 
-        c.name.toLowerCase().includes(searchLower) ||
-        c.document_id?.toLowerCase().includes(searchLower) ||
-        c.phone?.toLowerCase().includes(searchLower)
-      );
+      query = query.filter(c => {
+        const nameMatch = c.name.toLowerCase().includes(searchLower);
+        const docMatch = c.document_id?.toLowerCase().includes(searchLower) ?? false;
+        const phoneMatch = c.phone?.toLowerCase().includes(searchLower) ?? false;
+        return nameMatch || docMatch || phoneMatch;
+      });
     }
 
     return query.toArray();
@@ -200,13 +204,12 @@ export class LaCajaDB extends Dexie {
    * VENTAS - Read Model Local (para historial rápido)
    */
   async getSales(storeId: string, limit?: number): Promise<LocalSale[]> {
-    let query = this.sales
+    const sales = await this.sales
       .where('store_id')
       .equals(storeId)
-      .orderBy('sold_at')
-      .reverse();
-
-    const sales = await query.toArray();
+      .toArray();
+    
+    sales.sort((a, b) => (b.sold_at as number) - (a.sold_at as number));
     
     if (limit) {
       return sales.slice(0, limit);

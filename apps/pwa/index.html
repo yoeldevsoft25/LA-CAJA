@@ -7,6 +7,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Sistema POS Offline-First" />
     <title>LA CAJA</title>
+    <!-- Service Worker Registration - Debe estar ANTES de cualquier otro script -->
+    <script>
+      // Registrar Service Worker inmediatamente para soporte offline
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Verificar si ya está registrado
+          navigator.serviceWorker.getRegistration().then((registration) => {
+            if (!registration) {
+              // Intentar registrar si no está registrado
+              navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then((reg) => {
+                  console.log('[SW] Service Worker registrado:', reg.scope);
+                  // Forzar activación inmediata
+                  if (reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                })
+                .catch((err) => {
+                  console.warn('[SW] Error al registrar Service Worker:', err);
+                });
+            } else {
+              console.log('[SW] Service Worker ya registrado:', registration.scope);
+            }
+          });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

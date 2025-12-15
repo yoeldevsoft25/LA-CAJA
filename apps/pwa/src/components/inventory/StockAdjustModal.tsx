@@ -13,7 +13,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
 interface StockAdjustModalProps {
@@ -54,8 +53,8 @@ export default function StockAdjustModal({
     watch,
     setValue,
     formState: { errors },
-  } = useForm<StockAdjustForm>({
-    resolver: zodResolver(stockAdjustSchema),
+  } = useForm({
+    resolver: zodResolver(stockAdjustSchema) as any,
     defaultValues: {
       qty_delta: 0,
       reason: 'other',
@@ -97,7 +96,10 @@ export default function StockAdjustModal({
 
   const onSubmit = (data: StockAdjustForm) => {
     if (!product) return
-    stockAdjustMutation.mutate(data)
+    stockAdjustMutation.mutate({
+      ...data,
+      product_id: product.product_id,
+    })
   }
 
   if (!product) return null
@@ -114,7 +116,7 @@ export default function StockAdjustModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+        <form onSubmit={handleSubmit(onSubmit as any)} className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
             <div className="space-y-4 sm:space-y-6">
               {/* Información del producto */}

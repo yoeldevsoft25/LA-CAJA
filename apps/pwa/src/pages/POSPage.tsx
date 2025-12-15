@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Search, Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react'
-import { productsService } from '@/services/products.service'
+import { productsService, ProductSearchResponse } from '@/services/products.service'
+import { productsCacheService } from '@/services/products-cache.service'
 import { salesService } from '@/services/sales.service'
 import { cashService } from '@/services/cash.service'
 import { useCart } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
+import { useOnline } from '@/hooks/use-online'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import { Input } from '@/components/ui/input'
@@ -29,7 +31,30 @@ export default function POSPage() {
     refetchInterval: 60000, // Refrescar cada minuto
   })
 
-  // Búsqueda de productos (con cache offline)
+  const { isOnline } = useOnline(); // Usar hook más confiable
+  const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined);
+
+  // Cargar desde IndexedDB al montar o cuando cambia la búsqueda
+  useEffect(() => {
+    if (user?.store_id && (searchQuery.length >= 2 || searchQuery.length === 0)) {
+      productsCacheService.getProductsFromCache(user.store_id, {
+        search: searchQuery || undefined,
+        is_active: true,
+        limit: 50,
+      }).then(cached => {
+        if (cached.length > 0) {
+          setInitialData({
+            products: cached,
+            total: cached.length,
+          });
+        }
+      }).catch(() => {
+        // Silenciar errores
+      });
+    }
+  }, [user?.store_id, searchQuery]);
+
+  // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['products', 'search', searchQuery, user?.store_id],
     queryFn: () =>
@@ -38,7 +63,12 @@ export default function POSPage() {
         is_active: true,
         limit: 50,
       }, user?.store_id),
-    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id,
+    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id && isOnline,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    gcTime: Infinity, // Nunca eliminar del cache
+    retry: false, // No reintentar si falla
+    initialData: !isOnline ? initialData : undefined,
+    placeholderData: !isOnline ? initialData : undefined,
   })
 
   const products = productsData?.products || []

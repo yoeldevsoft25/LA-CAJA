@@ -1,4 +1,4 @@
-import { X, Calendar, DollarSign, CreditCard, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Calendar, DollarSign, CreditCard, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import { Debt, DebtPayment, calculateDebtTotals } from '@/services/debts.service'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
 interface DebtDetailModalProps {

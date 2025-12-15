@@ -30,7 +30,7 @@ async function bootstrap() {
   const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
   const origins = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => origin.trim())
-    : ['http://localhost:5173', 'http://localhost:3000']; // Defaults para desarrollo
+    : ['http://localhost:5173', 'http://localhost:4173', 'http://localhost:3000']; // Defaults para desarrollo (5173) y preview (4173)
 
   app.enableCors({
     origin: (origin, callback) => {

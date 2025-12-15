@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Calendar, DollarSign, Lock, Unlock, Eye } from 'lucide-react'
+import { Lock, Unlock, Eye } from 'lucide-react'
 import { cashService, CashSession } from '@/services/cash.service'
 import { format } from 'date-fns'
 import CashSessionDetailModal from './CashSessionDetailModal'

@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { DollarSign, Lock, Unlock, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react'
-import { cashService, CashSession, CashSessionSummary } from '@/services/cash.service'
-import { useAuth } from '@/stores/auth.store'
+import { DollarSign, Lock, Unlock, Calendar, CheckCircle2 } from 'lucide-react'
+import { cashService, CashSessionSummary } from '@/services/cash.service'
 import toast from 'react-hot-toast'
 import OpenCashModal from '@/components/cash/OpenCashModal'
 import CloseCashModal from '@/components/cash/CloseCashModal'
@@ -15,7 +14,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 
 export default function CashPage() {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [isOpenModalOpen, setIsOpenModalOpen] = useState(false)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)

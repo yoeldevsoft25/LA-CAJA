@@ -6,36 +6,139 @@ import path from 'path';
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    // Solo habilitar PWA en producción
-    ...(mode === 'production' ? [
-      VitePWA({
-        registerType: 'autoUpdate',
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-          // No cachear en modo desarrollo
-          skipWaiting: true,
-          clientsClaim: true,
-        },
-        manifest: {
-          name: 'LA CAJA',
-          short_name: 'LA CAJA',
-          description: 'Sistema POS Offline-First',
-          theme_color: '#ffffff',
-          icons: [
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
+    // Habilitar PWA también en desarrollo para soporte offline
+    VitePWA({
+      registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true, // Habilitar en desarrollo
+        type: 'module', // Usar module type para desarrollo
+        navigateFallback: 'index.html',
+        // Deshabilitar en desarrollo porque Vite necesita el servidor
+        // En producción funciona perfectamente offline
+        disableDevLogs: true,
+      },
+      workbox: {
+        // CRÍTICO: Precachear index.html explícitamente
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globIgnores: ['**/node_modules/**/*'],
+        // Asegurar que index.html esté SIEMPRE en el precache
+        additionalManifestEntries: [
+          { url: '/index.html', revision: null }, // Sin revision para que siempre se cachee
+        ],
+        // Estrategia para navegación: NetworkFirst con timeout muy corto
+        runtimeCaching: [
+          {
+            // Interceptar TODAS las peticiones de navegación
+            urlPattern: ({ request, url }) => {
+              // Capturar navegación y documentos HTML
+              const isNavigation = request.mode === 'navigate';
+              const isDocument = request.destination === 'document';
+              const isRoot = url.pathname === '/' || url.pathname === '/index.html';
+              const isHtml = url.pathname.endsWith('.html');
+              
+              return isNavigation || isDocument || isRoot || isHtml;
             },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 año (cache persistente)
+              },
+              cacheableResponse: {
+                statuses: [0, 200], // Cachear incluso errores de red
+              },
+              networkTimeoutSeconds: 1, // Timeout de 1 segundo para detectar offline rápido
             },
-          ],
-        },
-      })
-    ] : []),
+          },
+          {
+            // CRÍTICO: Interceptar módulos de Vite en desarrollo
+            urlPattern: ({ url, request }) => {
+              // Capturar módulos de Vite (@vite/client, @react-refresh, etc.)
+              const pathname = url.pathname;
+              return pathname.startsWith('/@') || 
+                     pathname.startsWith('/src/') ||
+                     pathname.includes('@vite') ||
+                     pathname.includes('@react-refresh') ||
+                     pathname.includes('vite-plugin-pwa') ||
+                     pathname.endsWith('.tsx') ||
+                     pathname.endsWith('.ts') ||
+                     pathname.endsWith('.jsx') ||
+                     (pathname.endsWith('.js') && !pathname.includes('node_modules'));
+            },
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'vite-modules',
+              expiration: {
+                maxEntries: 1000, // Más entradas para desarrollo
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 días
+              },
+              cacheableResponse: {
+                statuses: [0, 200], // Cachear incluso errores de red
+              },
+              networkTimeoutSeconds: 1, // Timeout rápido para detectar offline
+            },
+          },
+          {
+            urlPattern: /\.(?:js|css|woff2?|png|jpg|jpeg|svg|gif|ico)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-resources',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 año
+              },
+            },
+          },
+          {
+            // Interceptar manifest.webmanifest
+            urlPattern: ({ url }) => url.pathname.includes('manifest.webmanifest'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 1,
+            },
+          },
+        ],
+        skipWaiting: true,
+        clientsClaim: true,
+        // CRÍTICO: navigateFallback para servir index.html cuando falla la navegación
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [
+          /^\/_/,                    // Excluir rutas que empiezan con _
+          /\/[^/?]+\.[^/]+$/,        // Excluir archivos con extensión
+          /^\/api\//,                // Excluir rutas de API
+          /^\/socket\.io\//,         // Excluir WebSocket
+        ],
+        // No hacer cache busting para index.html
+        dontCacheBustURLsMatching: /^\/index\.html$/,
+      },
+      manifest: {
+        name: 'LA CAJA',
+        short_name: 'LA CAJA',
+        description: 'Sistema POS Offline-First',
+        theme_color: '#ffffff',
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+        ],
+      },
+    }),
   ],
   resolve: {
     alias: {

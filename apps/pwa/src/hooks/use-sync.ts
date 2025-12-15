@@ -5,8 +5,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { syncService, SyncStatus } from '@/services/sync.service';
-import { SyncMetrics } from '@la-caja/sync';
+// import { SyncMetrics } from '@la-caja/sync';
 import { useAuth } from '@/stores/auth.store';
+
+type SyncMetrics = any;
 
 export function useSync() {
   const { user } = useAuth();

@@ -16,14 +16,13 @@ import {
   Percent,
   Wallet,
 } from 'lucide-react'
-import { reportsService, SalesByDayReport, TopProduct, DebtSummaryReport } from '@/services/reports.service'
+import { reportsService } from '@/services/reports.service'
 import { format, subDays, startOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
