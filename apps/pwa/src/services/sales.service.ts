@@ -545,16 +545,18 @@ export const salesService = {
         keys: Object.keys(cleanedData),
       })
 
-      // Agregar timeout de 10 segundos para evitar que se quede colgada
+      // Agregar timeout de 5 segundos para evitar que se quede colgada
+      // El interceptor de axios ya rechaza si está offline, así que esto solo se ejecuta si está online
       const response = await Promise.race([
         api.post<Sale>('/sales', cleanedData),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('TIMEOUT')), 10000)
+          setTimeout(() => reject(new Error('TIMEOUT')), 5000)
         ),
       ])
       return response.data
     } catch (error: any) {
       // Si falla por error de red, timeout, o error offline y tenemos los datos necesarios, guardar offline
+      // El interceptor de axios rechaza con ERR_INTERNET_DISCONNECTED si está offline
       const isNetworkError =
         !error.response || 
         error.code === 'ECONNABORTED' || 
@@ -563,6 +565,16 @@ export const salesService = {
         error.isOffline ||
         error.message === 'TIMEOUT' ||
         !navigator.onLine
+      
+      console.log('[Sales] Error capturado:', {
+        code: error.code,
+        isOffline: error.isOffline,
+        message: error.message,
+        navigatorOnLine: navigator.onLine,
+        isNetworkError,
+        hasStoreId: !!data.store_id,
+        hasUserId: !!data.user_id,
+      })
 
       if (isNetworkError && data.store_id && data.user_id) {
         // Reutilizar la lógica offline

@@ -4,6 +4,7 @@
  */
 
 import { QueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import { productsService } from './products.service'
 import { customersService } from './customers.service'
 import { cashService } from './cash.service'
@@ -27,7 +28,7 @@ interface PrefetchOptions {
 export async function prefetchAllData({ storeId, queryClient, onProgress }: PrefetchOptions): Promise<void> {
   if (!storeId) return
 
-  const totalSteps = 8
+  const totalSteps = 9
   let currentStep = 0
 
   const updateProgress = (message: string) => {
@@ -154,6 +155,31 @@ export async function prefetchAllData({ storeId, queryClient, onProgress }: Pref
       staleTime: 1000 * 60 * 10,
       gcTime: Infinity,
     })
+
+    // 9. Prefetch reportes (hoy)
+    updateProgress('Cacheando reportes...')
+    const today = format(new Date(), 'yyyy-MM-dd')
+    try {
+      const [salesReport, topProducts, debtSummary] = await Promise.all([
+        reportsService.getSalesByDay({ start_date: today, end_date: today }).catch(() => null),
+        reportsService.getTopProducts(10, { start_date: today, end_date: today }).catch(() => null),
+        reportsService.getDebtSummary().catch(() => null),
+      ])
+      
+      // Establecer en las queryKeys que usa ReportsPage
+      if (salesReport) {
+        queryClient.setQueryData(['reports', 'sales-by-day', today, today], salesReport)
+      }
+      if (topProducts) {
+        queryClient.setQueryData(['reports', 'top-products', today, today], topProducts)
+      }
+      if (debtSummary) {
+        queryClient.setQueryData(['reports', 'debt-summary'], debtSummary)
+      }
+    } catch (error) {
+      // Silenciar errores de reportes - no son críticos
+      console.warn('[Prefetch] Error cacheando reportes:', error)
+    }
 
     updateProgress('¡Cacheo completo!')
   } catch (error) {
