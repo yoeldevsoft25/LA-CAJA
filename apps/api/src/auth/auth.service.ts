@@ -24,11 +24,23 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  private getTrialExpiration(): { expiresAt: Date; plan: string; graceDays: number } {
+    const trialDays = Number(process.env.LICENSE_TRIAL_DAYS ?? 14);
+    const graceDays = Number(process.env.LICENSE_GRACE_DEFAULT ?? 3);
+    const expiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+    return { expiresAt, plan: 'trial', graceDays: Number.isFinite(graceDays) ? graceDays : 3 };
+  }
+
   async createStore(dto: CreateStoreDto, ownerUserId: string): Promise<{ store: Store; member: StoreMember }> {
     // Crear tienda
+    const trial = this.getTrialExpiration();
     const store = this.storeRepository.create({
       id: randomUUID(),
       name: dto.name,
+      license_status: 'active',
+      license_plan: trial.plan,
+      license_expires_at: trial.expiresAt,
+      license_grace_days: trial.graceDays,
     });
 
     const savedStore = await this.storeRepository.save(store);
@@ -126,6 +138,17 @@ export class AuthService {
     if (!store) {
       throw new UnauthorizedException('Tienda no encontrada');
     }
+
+    // Autocompletar licencia para tiendas antiguas sin datos
+    if (!store.license_status || !store.license_expires_at) {
+      const trial = this.getTrialExpiration();
+      store.license_status = 'active';
+      store.license_plan = store.license_plan ?? trial.plan;
+      store.license_expires_at = trial.expiresAt;
+      store.license_grace_days = store.license_grace_days ?? trial.graceDays;
+      await this.storeRepository.save(store);
+    }
+
     const now = Date.now();
     const expires = store.license_expires_at ? store.license_expires_at.getTime() : null;
     const graceMs = (store.license_grace_days ?? 0) * 24 * 60 * 60 * 1000;

@@ -17,6 +17,8 @@ import { DebtsModule } from './debts/debts.module';
 import { ReportsModule } from './reports/reports.module';
 import { BackupModule } from './backup/backup.module';
 import { ExchangeModule } from './exchange/exchange.module';
+import { AdminController } from './admin/admin.controller';
+import { LicenseWatcherService } from './admin/license-watcher.service';
 import { Store } from './database/entities/store.entity';
 import { Profile } from './database/entities/profile.entity';
 import { StoreMember } from './database/entities/store-member.entity';
@@ -76,6 +78,7 @@ import { LicenseGuard } from './auth/guards/license.guard';
       },
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([Store]),
     SyncModule,
     AuthModule,
     ProductsModule,
@@ -86,11 +89,12 @@ import { LicenseGuard } from './auth/guards/license.guard';
         DebtsModule,
         ReportsModule,
         BackupModule,
-        ExchangeModule,
-      ],
-  controllers: [AppController],
+    ExchangeModule,
+  ],
+  controllers: [AppController, AdminController],
   providers: [
     AppService,
+    LicenseWatcherService,
     // Aplicar rate limiting globalmente
     {
       provide: APP_GUARD,
@@ -103,4 +107,3 @@ import { LicenseGuard } from './auth/guards/license.guard';
   ],
 })
 export class AppModule {}
-

@@ -12,6 +12,7 @@ import CustomersPage from './pages/CustomersPage'
 import DebtsPage from './pages/DebtsPage'
 import ReportsPage from './pages/ReportsPage'
 import LicenseBlockedPage from './pages/LicenseBlockedPage'
+import AdminPage from './pages/AdminPage'
 import { useOnline } from './hooks/use-online'
 import { useAuth } from './stores/auth.store'
 import { offlineIndicator } from './services/offline-indicator.service'
@@ -74,6 +75,7 @@ function App() {
           <Route path="customers" element={<CustomersPage />} />
           <Route path="debts" element={<DebtsPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
