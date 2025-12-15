@@ -297,7 +297,24 @@ class SyncServiceClass {
 
       return { success: true };
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
+      // Log detallado para depurar 400/validaciones
+      const anyErr: any = error;
+      const status = anyErr?.response?.status;
+      const data = anyErr?.response?.data;
+      console.error('[SyncService] ❌ Error sincronizando /sync/push', {
+        status,
+        data,
+        eventsCount: events.length,
+      });
+
+      const message =
+        status && data?.message
+          ? `HTTP ${status}: ${data.message}`
+          : anyErr?.message || 'Error desconocido al sincronizar';
+      const err = new Error(message);
+      if (status && status >= 400 && status < 500) {
+        err.name = 'ValidationError';
+      }
       return { success: false, error: err };
     }
   }
