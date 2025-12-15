@@ -98,7 +98,10 @@ export default function LoginPage() {
       navigate('/pos')
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'PIN incorrecto o cajero no encontrado'
+      const serverMsg = error.response?.data?.message
+      const message = Array.isArray(serverMsg)
+        ? serverMsg.join(' · ')
+        : serverMsg || 'PIN incorrecto o cajero no encontrado'
       toast.error(message)
     },
   })
