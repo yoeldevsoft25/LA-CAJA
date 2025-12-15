@@ -16,7 +16,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false,
-    "skipLibCheck": true,
 
     /* Path aliases */
     "baseUrl": ".",
@@ -29,5 +28,4 @@
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
-
 

@@ -38,12 +38,14 @@ export class LaCajaDB extends Dexie {
    * Query optimizada para obtener eventos pendientes de sincronización
    */
   async getPendingEvents(limit: number = 50): Promise<LocalEvent[]> {
-    return this.localEvents
+    const events = await this.localEvents
       .where('sync_status')
       .equals('pending')
-      .orderBy('created_at')
-      .limit(limit)
       .toArray();
+
+    return events
+      .sort((a, b) => (a.created_at as number) - (b.created_at as number))
+      .slice(0, limit);
   }
   
   /**
@@ -55,15 +57,16 @@ export class LaCajaDB extends Dexie {
     status: LocalEvent['sync_status'],
     limit: number = 50
   ): Promise<LocalEvent[]> {
-    return this.localEvents
+    const events = await this.localEvents
       .where('[store_id+device_id+sync_status]')
       .equals([storeId, deviceId, status])
-      .orderBy('created_at')
-      .limit(limit)
       .toArray();
+
+    return events
+      .sort((a, b) => (a.created_at as number) - (b.created_at as number))
+      .slice(0, limit);
   }
 }
 
 export const db = new LaCajaDB();
-
 

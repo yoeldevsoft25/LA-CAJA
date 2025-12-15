@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
     // Habilitar PWA también en desarrollo para soporte offline
     VitePWA({
       registerType: 'autoUpdate',
+      // Evitar minificado del SW porque Terser se estaba colgando en renderChunk
+      // y bloqueaba el build (workbox+terser issue).
+      minify: false,
       devOptions: {
         enabled: true, // Habilitar en desarrollo
         type: 'module', // Usar module type para desarrollo
@@ -26,8 +29,8 @@ export default defineConfig(({ mode }) => ({
         globIgnores: ['**/node_modules/**/*', '**/sw.js'],
         // NO agregar index.html manualmente - Workbox lo detecta automáticamente
         // Si lo agregamos manualmente, causa conflicto con la entrada automática
-        // Modo de precache más agresivo para producción
-        mode: 'production',
+        // Usar modo development para evitar minificación con Terser (estaba colgando el build)
+        mode: 'development',
         // Estrategia para navegación: NetworkFirst con fallback a CacheFirst para offline
         runtimeCaching: [
           {
@@ -199,4 +202,3 @@ export default defineConfig(({ mode }) => ({
     host: '0.0.0.0', // Exponer en la red local
   },
 }));
-

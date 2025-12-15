@@ -30,7 +30,6 @@ export interface SyncQueueConfig {
 
 export class SyncQueue {
   private queue: Map<string, QueuedEvent> = new Map(); // key: event_id
-  private isSyncing = false;
   private batchSync: BatchSync;
   private retryStrategy: RetryStrategy;
   private metrics: SyncMetricsCollector;
@@ -234,7 +233,6 @@ export class SyncQueue {
         return { success: false, error };
       }
     } catch (error) {
-      const duration = Date.now() - startTime;
       const err = error instanceof Error ? error : new Error(String(error));
       this.markAsFailed(eventIds, err);
       this.metrics.recordError(err);
