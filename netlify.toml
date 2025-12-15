@@ -1,8 +1,8 @@
 [build]
   # Especificar que queremos construir el proyecto PWA
   base = "apps/pwa"
-  command = "cd apps/pwa && npm install && npm run build"
-  publish = "apps/pwa/dist"
+  command = "npm install && npm run build"
+  publish = "dist"
 
 [[redirects]]
   from = "/*"
