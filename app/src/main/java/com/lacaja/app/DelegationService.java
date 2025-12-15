@@ -1,4 +1,4 @@
-package app.netlify.la_caja.twa;
+package com.lacaja.app;
 
 
 import com.google.androidbrowserhelper.locationdelegation.LocationDelegationExtraCommandHandler;
