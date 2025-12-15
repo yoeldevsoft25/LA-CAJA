@@ -21,10 +21,8 @@ export default defineConfig(({ mode }) => ({
         // CRÍTICO: Precachear index.html explícitamente y todos los assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}'],
         globIgnores: ['**/node_modules/**/*', '**/sw.js', '**/workbox-*.js'],
-        // Asegurar que index.html esté SIEMPRE en el precache
-        additionalManifestEntries: [
-          { url: '/index.html', revision: null }, // Sin revision para que siempre se cachee
-        ],
+        // NO agregar index.html manualmente - Workbox lo detecta automáticamente
+        // Si lo agregamos manualmente, causa conflicto con la entrada automática
         // Modo de precache más agresivo para producción
         mode: 'production',
         // Estrategia para navegación: NetworkFirst con fallback a CacheFirst para offline
@@ -145,16 +143,15 @@ export default defineConfig(({ mode }) => ({
         short_name: 'LA CAJA',
         description: 'Sistema POS Offline-First',
         theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
         icons: [
           {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
+            src: '/favicon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable',
           },
         ],
       },
