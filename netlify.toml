@@ -1,0 +1,38 @@
+[build]
+  # Directorio base donde está el proyecto PWA
+  base = "apps/pwa"
+  # Comando para construir
+  command = "npm install && npm run build"
+  # Directorio de publicación (relativo al base)
+  publish = "dist"
+
+# Redirecciones SPA - CRÍTICO para evitar 404
+# Todas las rutas deben redirigir a index.html para que React Router funcione
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers para Service Worker
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+# Headers para manifest
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=3600"
+
+# Headers de seguridad
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
