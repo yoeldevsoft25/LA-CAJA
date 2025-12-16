@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Store } from './store.entity';
 import { Product } from './product.entity';
+import { ProductVariant } from './product-variant.entity';
 
 export type MovementType = 'received' | 'adjust' | 'sold';
 
@@ -22,6 +23,13 @@ export class InventoryMovement {
 
   @Column('uuid')
   product_id: string;
+
+  @ManyToOne(() => ProductVariant, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'variant_id' })
+  variant: ProductVariant | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  variant_id: string | null;
 
   @Column({ type: 'varchar', length: 20 })
   movement_type: MovementType;

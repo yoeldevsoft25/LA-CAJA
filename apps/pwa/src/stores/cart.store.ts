@@ -11,6 +11,8 @@ export interface CartItem {
   unit_price_usd: number
   discount_bs?: number
   discount_usd?: number
+  variant_id?: string | null
+  variant_name?: string | null
 }
 
 interface CartState {

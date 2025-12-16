@@ -21,6 +21,7 @@ export interface CartItemDto {
   qty: number
   discount_bs?: number
   discount_usd?: number
+  variant_id?: string | null
 }
 
 export interface CreateSaleRequest {

@@ -4,6 +4,10 @@ export class CartItemDto {
   @IsUUID()
   product_id: string;
 
+  @IsUUID()
+  @IsOptional()
+  variant_id?: string | null;
+
   @IsNumber()
   @Min(1)
   qty: number;

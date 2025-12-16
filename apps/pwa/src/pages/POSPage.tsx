@@ -10,9 +10,11 @@ import { useAuth } from '@/stores/auth.store'
 import { useOnline } from '@/hooks/use-online'
 import { printService } from '@/services/print.service'
 import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.service'
+import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import QuickProductsGrid from '@/components/fast-checkout/QuickProductsGrid'
+import VariantSelector from '@/components/variants/VariantSelector'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -28,6 +30,11 @@ export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showCheckout, setShowCheckout] = useState(false)
   const [shouldPrint, setShouldPrint] = useState(false)
+  const [showVariantSelector, setShowVariantSelector] = useState(false)
+  const [selectedProductForVariant, setSelectedProductForVariant] = useState<{
+    id: string
+    name: string
+  } | null>(null)
   const { items, addItem, updateItem, removeItem, clear, getTotal } = useCart()
   const lastCartSnapshot = useRef<CartItem[]>([])
 
@@ -52,23 +59,55 @@ export default function POSPage() {
       return
     }
 
-    // Buscar si el producto ya está en el carrito
-    const existingItem = items.find((item) => item.product_id === quickProduct.product_id)
+    // Verificar si el producto tiene variantes activas
+    try {
+      const variants = await productVariantsService.getVariantsByProduct(quickProduct.product_id)
+      const activeVariants = variants.filter((v) => v.is_active)
 
-    if (existingItem) {
-      // Si existe, aumentar cantidad
-      updateItem(existingItem.id, { qty: existingItem.qty + 1 })
-      toast.success(`${quickProduct.product.name} agregado al carrito`)
-    } else {
-      // Si no existe, agregar nuevo item
-      addItem({
-        product_id: quickProduct.product_id,
-        product_name: quickProduct.product.name,
-        qty: 1,
-        unit_price_bs: Number(quickProduct.product.price_bs),
-        unit_price_usd: Number(quickProduct.product.price_usd),
-      })
-      toast.success(`${quickProduct.product.name} agregado al carrito`)
+      if (activeVariants.length > 0) {
+        // Mostrar selector de variantes
+        setSelectedProductForVariant({
+          id: quickProduct.product_id,
+          name: quickProduct.product.name,
+        })
+        setShowVariantSelector(true)
+      } else {
+        // Agregar directamente sin variante
+        const existingItem = items.find((item) => item.product_id === quickProduct.product_id)
+
+        if (existingItem) {
+          // Si existe, aumentar cantidad
+          updateItem(existingItem.id, { qty: existingItem.qty + 1 })
+          toast.success(`${quickProduct.product.name} agregado al carrito`)
+        } else {
+          // Si no existe, agregar nuevo item
+          addItem({
+            product_id: quickProduct.product_id,
+            product_name: quickProduct.product.name,
+            qty: 1,
+            unit_price_bs: Number(quickProduct.product.price_bs),
+            unit_price_usd: Number(quickProduct.product.price_usd),
+          })
+          toast.success(`${quickProduct.product.name} agregado al carrito`)
+        }
+      }
+    } catch (error) {
+      // Si hay error, agregar sin variante
+      const existingItem = items.find((item) => item.product_id === quickProduct.product_id)
+
+      if (existingItem) {
+        updateItem(existingItem.id, { qty: existingItem.qty + 1 })
+        toast.success(`${quickProduct.product.name} agregado al carrito`)
+      } else {
+        addItem({
+          product_id: quickProduct.product_id,
+          product_name: quickProduct.product.name,
+          qty: 1,
+          unit_price_bs: Number(quickProduct.product.price_bs),
+          unit_price_usd: Number(quickProduct.product.price_usd),
+        })
+        toast.success(`${quickProduct.product.name} agregado al carrito`)
+      }
     }
   }
 
@@ -144,15 +183,62 @@ export default function POSPage() {
 
   const products = productsData?.products || []
 
-  const handleAddToCart = (product: any) => {
+
+  const handleAddToCart = async (product: any, variant: ProductVariant | null = null) => {
+    // Determinar precios (usar precio de variante si existe, sino precio del producto)
+    const priceBs = variant?.price_bs
+      ? Number(variant.price_bs)
+      : Number(product.price_bs)
+    const priceUsd = variant?.price_usd
+      ? Number(variant.price_usd)
+      : Number(product.price_usd)
+
+    // Construir nombre con variante si existe
+    const productName = variant
+      ? `${product.name} (${variant.variant_type}: ${variant.variant_value})`
+      : product.name
+
     addItem({
       product_id: product.id,
-      product_name: product.name,
+      product_name: productName,
       qty: 1,
-      unit_price_bs: Number(product.price_bs),
-      unit_price_usd: Number(product.price_usd),
+      unit_price_bs: priceBs,
+      unit_price_usd: priceUsd,
+      variant_id: variant?.id || null,
+      variant_name: variant ? `${variant.variant_type}: ${variant.variant_value}` : null,
     })
-    toast.success(`${product.name} agregado al carrito`)
+    toast.success(`${productName} agregado al carrito`)
+  }
+
+  const handleProductClick = async (product: any) => {
+    // Verificar si el producto tiene variantes activas
+    try {
+      const variants = await productVariantsService.getVariantsByProduct(product.id)
+      const activeVariants = variants.filter((v) => v.is_active)
+
+      if (activeVariants.length > 0) {
+        // Mostrar selector de variantes
+        setSelectedProductForVariant({ id: product.id, name: product.name })
+        setShowVariantSelector(true)
+      } else {
+        // Agregar directamente sin variante
+        handleAddToCart(product, null)
+      }
+    } catch (error) {
+      // Si hay error, agregar sin variante
+      handleAddToCart(product, null)
+    }
+  }
+
+  const handleVariantSelect = (variant: ProductVariant | null) => {
+    if (selectedProductForVariant) {
+      const product = products.find((p) => p.id === selectedProductForVariant.id)
+      if (product) {
+        handleAddToCart(product, variant)
+      }
+    }
+    setShowVariantSelector(false)
+    setSelectedProductForVariant(null)
   }
 
   const handleUpdateQty = (itemId: string, newQty: number) => {
@@ -247,6 +333,7 @@ export default function POSPage() {
       qty: item.qty,
       discount_bs: item.discount_bs || 0,
       discount_usd: item.discount_usd || 0,
+      variant_id: item.variant_id || null,
     }))
 
     // Bloquear checkout si no hay caja abierta
@@ -353,13 +440,13 @@ export default function POSPage() {
                       index > 0 && "border-t border-border"
                     )}
                     style={{ WebkitTapHighlightColor: 'transparent' }}
-                    onClick={() => handleAddToCart(product)}
+                    onClick={() => handleProductClick(product)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        handleAddToCart(product)
+                        handleProductClick(product)
                       }
                     }}
                   >
@@ -560,6 +647,20 @@ export default function POSPage() {
         onConfirm={handleCheckout}
         isLoading={createSaleMutation.isPending}
       />
+
+      {/* Selector de variantes */}
+      {selectedProductForVariant && (
+        <VariantSelector
+          isOpen={showVariantSelector}
+          onClose={() => {
+            setShowVariantSelector(false)
+            setSelectedProductForVariant(null)
+          }}
+          productId={selectedProductForVariant.id}
+          productName={selectedProductForVariant.name}
+          onSelect={handleVariantSelect}
+        />
+      )}
     </div>
   )
 }

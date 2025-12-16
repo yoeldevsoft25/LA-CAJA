@@ -14,6 +14,7 @@ import { CashSession } from '../database/entities/cash-session.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { DiscountsModule } from '../discounts/discounts.module';
 import { FastCheckoutModule } from '../fast-checkout/fast-checkout.module';
+import { ProductVariantsModule } from '../product-variants/product-variants.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { FastCheckoutModule } from '../fast-checkout/fast-checkout.module';
     PaymentsModule,
     DiscountsModule,
     FastCheckoutModule,
+    ProductVariantsModule,
   ],
   controllers: [SalesController],
   providers: [SalesService],

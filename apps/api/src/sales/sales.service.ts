@@ -15,6 +15,8 @@ import { IsNull } from 'typeorm';
 import { PaymentRulesService } from '../payments/payment-rules.service';
 import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { FastCheckoutRulesService } from '../fast-checkout/fast-checkout-rules.service';
+import { ProductVariant } from '../database/entities/product-variant.entity';
+import { ProductVariantsService } from '../product-variants/product-variants.service';
 
 @Injectable()
 export class SalesService {
@@ -39,6 +41,7 @@ export class SalesService {
     private paymentRulesService: PaymentRulesService,
     private discountRulesService: DiscountRulesService,
     private fastCheckoutRulesService: FastCheckoutRulesService,
+    private productVariantsService: ProductVariantsService,
   ) {}
 
   async create(storeId: string, dto: CreateSaleDto, userId?: string): Promise<Sale> {
@@ -175,19 +178,48 @@ export class SalesService {
 
         productMap.set(product.id, product);
 
-        // Verificar stock disponible
-        const currentStock = await this.getCurrentStock(storeId, product.id);
+        // Manejar variante si se proporciona
+        let variant: ProductVariant | null = null;
+        if (cartItem.variant_id) {
+          variant = await manager.findOne(ProductVariant, {
+            where: { id: cartItem.variant_id, product_id: product.id },
+          });
+
+          if (!variant) {
+            throw new NotFoundException(
+              `Variante ${cartItem.variant_id} no encontrada para el producto ${product.name}`,
+            );
+          }
+
+          if (!variant.is_active) {
+            throw new BadRequestException(
+              `La variante ${variant.variant_type}: ${variant.variant_value} está desactivada`,
+            );
+          }
+        }
+
+        // Verificar stock disponible (por variante si aplica)
+        const currentStock = variant
+          ? await this.productVariantsService.getVariantStock(storeId, variant.id)
+          : await this.getCurrentStock(storeId, product.id);
+
         if (currentStock < cartItem.qty) {
+          const variantInfo = variant
+            ? ` (${variant.variant_type}: ${variant.variant_value})`
+            : '';
           throw new BadRequestException(
-            `Stock insuficiente para ${product.name}. Disponible: ${currentStock}, Solicitado: ${cartItem.qty}`,
+            `Stock insuficiente para ${product.name}${variantInfo}. Disponible: ${currentStock}, Solicitado: ${cartItem.qty}`,
           );
         }
 
-        // Calcular precios
+        // Calcular precios (usar precio de variante si existe, sino del producto)
+        const priceBs = variant?.price_bs ?? product.price_bs;
+        const priceUsd = variant?.price_usd ?? product.price_usd;
+
         const itemDiscountBs = cartItem.discount_bs || 0;
         const itemDiscountUsd = cartItem.discount_usd || 0;
-        const itemSubtotalBs = product.price_bs * cartItem.qty - itemDiscountBs;
-        const itemSubtotalUsd = product.price_usd * cartItem.qty - itemDiscountUsd;
+        const itemSubtotalBs = priceBs * cartItem.qty - itemDiscountBs;
+        const itemSubtotalUsd = priceUsd * cartItem.qty - itemDiscountUsd;
 
         subtotalBs += itemSubtotalBs;
         subtotalUsd += itemSubtotalUsd;
@@ -199,9 +231,10 @@ export class SalesService {
           id: randomUUID(),
           sale_id: saleId,
           product_id: product.id,
+          variant_id: variant?.id || null,
           qty: cartItem.qty,
-          unit_price_bs: product.price_bs,
-          unit_price_usd: product.price_usd,
+          unit_price_bs: priceBs,
+          unit_price_usd: priceUsd,
           discount_bs: itemDiscountBs,
           discount_usd: itemDiscountUsd,
         });
@@ -307,6 +340,7 @@ export class SalesService {
           id: randomUUID(),
           store_id: storeId,
           product_id: item.product_id,
+          variant_id: item.variant_id || null,
           movement_type: 'sold',
           qty_delta: -item.qty, // Negativo para descontar
           unit_cost_bs: 0,
@@ -314,6 +348,7 @@ export class SalesService {
           note: `Venta ${saleId}`,
           ref: { sale_id: saleId },
           happened_at: soldAt,
+          approved: true, // Las ventas se aprueban automáticamente
         });
 
         await manager.save(InventoryMovement, movement);

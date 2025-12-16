@@ -18,4 +18,5 @@ export { DiscountConfig } from './discount-config.entity';
 export { DiscountAuthorization } from './discount-authorization.entity';
 export { FastCheckoutConfig } from './fast-checkout-config.entity';
 export { QuickProduct } from './quick-product.entity';
+export { ProductVariant } from './product-variant.entity';
 
