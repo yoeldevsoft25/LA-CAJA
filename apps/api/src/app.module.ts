@@ -17,6 +17,11 @@ import { PaymentsModule } from './payments/payments.module';
 import { DiscountsModule } from './discounts/discounts.module';
 import { FastCheckoutModule } from './fast-checkout/fast-checkout.module';
 import { ProductVariantsModule } from './product-variants/product-variants.module';
+import { ProductLotsModule } from './product-lots/product-lots.module';
+import { ProductSerialsModule } from './product-serials/product-serials.module';
+import { InvoiceSeriesModule } from './invoice-series/invoice-series.module';
+import { TablesModule } from './tables/tables.module';
+import { OrdersModule } from './orders/orders.module';
 import { CustomersModule } from './customers/customers.module';
 import { DebtsModule } from './debts/debts.module';
 import { ReportsModule } from './reports/reports.module';
@@ -41,6 +46,14 @@ import { DiscountAuthorization } from './database/entities/discount-authorizatio
 import { FastCheckoutConfig } from './database/entities/fast-checkout-config.entity';
 import { QuickProduct } from './database/entities/quick-product.entity';
 import { ProductVariant } from './database/entities/product-variant.entity';
+import { ProductLot } from './database/entities/product-lot.entity';
+import { LotMovement } from './database/entities/lot-movement.entity';
+import { ProductSerial } from './database/entities/product-serial.entity';
+import { InvoiceSeries } from './database/entities/invoice-series.entity';
+import { Table } from './database/entities/table.entity';
+import { Order } from './database/entities/order.entity';
+import { OrderItem } from './database/entities/order-item.entity';
+import { OrderPayment } from './database/entities/order-payment.entity';
 import { Customer } from './database/entities/customer.entity';
 import { Debt } from './database/entities/debt.entity';
 import { DebtPayment } from './database/entities/debt-payment.entity';
@@ -88,7 +101,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           username: url.username,
           password: decodeURIComponent(url.password), // Decodificar contraseña URL-encoded
           database: url.pathname.slice(1), // Remover el '/' inicial
-          entities: [Store, Profile, StoreMember, Product, ProductVariant, InventoryMovement, Sale, SaleItem, CashSession, Shift, ShiftCut, PaymentMethodConfig, CashMovement, DiscountConfig, DiscountAuthorization, FastCheckoutConfig, QuickProduct, Customer, Debt, DebtPayment, Event],
+          entities: [Store, Profile, StoreMember, Product, ProductVariant, ProductLot, LotMovement, ProductSerial, InvoiceSeries, Table, Order, OrderItem, OrderPayment, InventoryMovement, Sale, SaleItem, CashSession, Shift, ShiftCut, PaymentMethodConfig, CashMovement, DiscountConfig, DiscountAuthorization, FastCheckoutConfig, QuickProduct, Customer, Debt, DebtPayment, Event],
           synchronize: false, // Usamos migraciones SQL manuales
           logging: configService.get<string>('NODE_ENV') === 'development',
           // Configuración robusta del pool de conexiones para Render/Cloud
@@ -129,6 +142,11 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
         DiscountsModule,
         FastCheckoutModule,
         ProductVariantsModule,
+        ProductLotsModule,
+        ProductSerialsModule,
+        InvoiceSeriesModule,
+        TablesModule,
+        OrdersModule,
         CustomersModule,
         DebtsModule,
         ReportsModule,

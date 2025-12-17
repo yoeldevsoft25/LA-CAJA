@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash } from 'lucide-react'
 import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
 import { productsCacheService } from '@/services/products-cache.service'
 import { useAuth } from '@/stores/auth.store'
@@ -9,6 +9,9 @@ import toast from 'react-hot-toast'
 import ProductFormModal from '@/components/products/ProductFormModal'
 import ChangePriceModal from '@/components/products/ChangePriceModal'
 import BulkPriceChangeModal from '@/components/products/BulkPriceChangeModal'
+import ProductVariantsModal from '@/components/variants/ProductVariantsModal'
+import ProductLotsModal from '@/components/lots/ProductLotsModal'
+import ProductSerialsModal from '@/components/serials/ProductSerialsModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,6 +26,9 @@ export default function ProductsPage() {
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false)
   const [priceProduct, setPriceProduct] = useState<Product | null>(null)
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false)
+  const [variantsProduct, setVariantsProduct] = useState<Product | null>(null)
+  const [lotsProduct, setLotsProduct] = useState<Product | null>(null)
+  const [serialsProduct, setSerialsProduct] = useState<Product | null>(null)
   const queryClient = useQueryClient()
 
   // Cargar datos desde cache al iniciar (para mostrar inmediatamente)
@@ -136,6 +142,18 @@ export default function ProductsPage() {
   const handleChangePrice = (product: Product) => {
     setPriceProduct(product)
     setIsPriceModalOpen(true)
+  }
+
+  const handleManageVariants = (product: Product) => {
+    setVariantsProduct(product)
+  }
+
+  const handleManageLots = (product: Product) => {
+    setLotsProduct(product)
+  }
+
+  const handleManageSerials = (product: Product) => {
+    setSerialsProduct(product)
   }
 
   return (
@@ -300,6 +318,33 @@ export default function ProductsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleManageVariants(product)}
+                          className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                          title="Gestionar Variantes"
+                        >
+                          <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleManageLots(product)}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-600 hover:bg-blue-600/10"
+                          title="Gestionar Lotes"
+                        >
+                          <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleManageSerials(product)}
+                          className="h-8 w-8 text-purple-600 hover:text-purple-600 hover:bg-purple-600/10"
+                          title="Gestionar Seriales"
+                        >
+                          <Hash className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleChangePrice(product)}
                           className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
                           title="Cambiar Precio"
@@ -372,6 +417,27 @@ export default function ProductsPage() {
         isOpen={isBulkPriceModalOpen}
         onClose={() => setIsBulkPriceModalOpen(false)}
         products={products}
+      />
+
+      {/* Modal de gestión de variantes */}
+      <ProductVariantsModal
+        isOpen={!!variantsProduct}
+        onClose={() => setVariantsProduct(null)}
+        product={variantsProduct}
+      />
+
+      {/* Modal de gestión de lotes */}
+      <ProductLotsModal
+        isOpen={!!lotsProduct}
+        onClose={() => setLotsProduct(null)}
+        product={lotsProduct}
+      />
+
+      {/* Modal de gestión de seriales */}
+      <ProductSerialsModal
+        isOpen={!!serialsProduct}
+        onClose={() => setSerialsProduct(null)}
+        product={serialsProduct}
       />
     </div>
   )

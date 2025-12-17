@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Sale } from './sale.entity';
 import { Product } from './product.entity';
 import { ProductVariant } from './product-variant.entity';
+import { ProductLot } from './product-lot.entity';
 
 @Entity('sale_items')
 export class SaleItem {
@@ -28,6 +29,13 @@ export class SaleItem {
 
   @Column({ type: 'uuid', nullable: true })
   variant_id: string | null;
+
+  @ManyToOne(() => ProductLot, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'lot_id' })
+  lot: ProductLot | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  lot_id: string | null;
 
   @Column({ type: 'int' })
   qty: number;

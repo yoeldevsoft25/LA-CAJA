@@ -11,6 +11,7 @@ import { useOnline } from '@/hooks/use-online'
 import { printService } from '@/services/print.service'
 import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.service'
 import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
+import { productSerialsService } from '@/services/product-serials.service'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import QuickProductsGrid from '@/components/fast-checkout/QuickProductsGrid'
@@ -35,6 +36,7 @@ export default function POSPage() {
     id: string
     name: string
   } | null>(null)
+  const [pendingSerials, setPendingSerials] = useState<Record<string, string[]>>({})
   const { items, addItem, updateItem, removeItem, clear, getTotal } = useCart()
   const lastCartSnapshot = useRef<CartItem[]>([])
 
@@ -259,7 +261,7 @@ export default function POSPage() {
     // y usar el fallback local. Si queda en 'online', react-query la pausa
     // hasta que vuelva la conexión y el botón se queda en "Procesando...".
     networkMode: 'always',
-    onSuccess: (sale) => {
+    onSuccess: async (sale) => {
       const isOnline = navigator.onLine
       if (isOnline) {
         toast.success(`Venta #${sale.id.slice(0, 8)} procesada exitosamente`)
@@ -268,6 +270,28 @@ export default function POSPage() {
           `Venta #${sale.id.slice(0, 8)} guardada localmente. Se sincronizará cuando vuelva la conexión.`,
           { duration: 5000 }
         )
+      }
+
+      // Asignar seriales si hay
+      if (pendingSerials && Object.keys(pendingSerials).length > 0 && isOnline) {
+        try {
+          // Obtener los items de la venta para mapear seriales
+          const saleItems = sale.items || []
+          for (const [productId, serialNumbers] of Object.entries(pendingSerials)) {
+            const saleItem = saleItems.find((item) => item.product_id === productId)
+            if (saleItem && serialNumbers.length > 0) {
+              await productSerialsService.assignSerialsToSale({
+                sale_id: sale.id,
+                sale_item_id: saleItem.id,
+                serial_numbers: serialNumbers,
+              })
+            }
+          }
+          setPendingSerials({}) // Limpiar seriales pendientes
+        } catch (err) {
+          console.error('[POS] Error al asignar seriales:', err)
+          toast.error('Venta creada pero hubo un error al asignar seriales')
+        }
       }
 
       // Intentar imprimir ticket
@@ -327,6 +351,8 @@ export default function POSPage() {
     customer_document_id?: string
     customer_phone?: string
     customer_note?: string
+    serials?: Record<string, string[]> // product_id -> serial_numbers[]
+    invoice_series_id?: string | null // ID de la serie de factura
   }) => {
     const saleItems = items.map((item) => ({
       product_id: item.product_id,
@@ -345,6 +371,11 @@ export default function POSPage() {
     // Guardar snapshot para impresión
     lastCartSnapshot.current = [...items]
 
+    // Guardar seriales para asignar después de crear la venta
+    if (checkoutData.serials) {
+      setPendingSerials(checkoutData.serials)
+    }
+
     createSaleMutation.mutate({
       items: saleItems,
       exchange_rate: checkoutData.exchange_rate,
@@ -358,6 +389,7 @@ export default function POSPage() {
       customer_phone: checkoutData.customer_phone,
       customer_note: checkoutData.customer_note,
       note: null,
+      invoice_series_id: checkoutData.invoice_series_id || undefined,
       // Datos para modo offline
       store_id: user?.store_id,
       user_id: user?.user_id,

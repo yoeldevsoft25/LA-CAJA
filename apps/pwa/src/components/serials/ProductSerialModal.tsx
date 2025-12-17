@@ -1,0 +1,475 @@
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Hash, Save, Plus, X } from 'lucide-react'
+import {
+  ProductSerial,
+  CreateProductSerialRequest,
+  CreateSerialsBatchRequest,
+} from '@/services/product-serials.service'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+const serialSchema = z.object({
+  serial_number: z.string().min(1, 'El número de serie es requerido').max(200, 'Máximo 200 caracteres'),
+  received_at: z.string().min(1, 'La fecha de recepción es requerida'),
+  note: z.string().max(1000).nullable().optional(),
+})
+
+const batchSchema = z.object({
+  serial_numbers: z.string().min(1, 'Debe ingresar al menos un número de serie'),
+  received_at: z.string().min(1, 'La fecha de recepción es requerida'),
+})
+
+type SerialFormData = z.infer<typeof serialSchema>
+type BatchFormData = z.infer<typeof batchSchema>
+
+interface ProductSerialModalProps {
+  isOpen: boolean
+  onClose: () => void
+  productId: string
+  serial: ProductSerial | null
+  onConfirm: (data: CreateProductSerialRequest) => void
+  onBatchConfirm: (data: CreateSerialsBatchRequest) => void
+  isLoading: boolean
+}
+
+export default function ProductSerialModal({
+  isOpen,
+  onClose,
+  productId,
+  serial,
+  onConfirm,
+  onBatchConfirm,
+  isLoading,
+}: ProductSerialModalProps) {
+  const [batchSerialNumbers, setBatchSerialNumbers] = useState<string[]>([''])
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<SerialFormData>({
+    resolver: zodResolver(serialSchema),
+    defaultValues: {
+      serial_number: '',
+      received_at: new Date().toISOString().slice(0, 16),
+      note: null,
+    },
+  })
+
+  const {
+    register: registerBatch,
+    handleSubmit: handleSubmitBatch,
+    formState: { errors: errorsBatch },
+    reset: resetBatch,
+  } = useForm<BatchFormData>({
+    resolver: zodResolver(batchSchema),
+    defaultValues: {
+      serial_numbers: '',
+      received_at: new Date().toISOString().slice(0, 16),
+    },
+  })
+
+  useEffect(() => {
+    if (serial) {
+      reset({
+        serial_number: serial.serial_number,
+        received_at: new Date(serial.received_at).toISOString().slice(0, 16),
+        note: serial.note || null,
+      })
+    } else {
+      reset({
+        serial_number: '',
+        received_at: new Date().toISOString().slice(0, 16),
+        note: null,
+      })
+    }
+    resetBatch({
+      serial_numbers: '',
+      received_at: new Date().toISOString().slice(0, 16),
+    })
+    setBatchSerialNumbers([''])
+  }, [serial, reset, resetBatch])
+
+  const onSubmit = (data: SerialFormData) => {
+    const requestData: CreateProductSerialRequest = {
+      product_id: productId,
+      serial_number: data.serial_number,
+      received_at: new Date(data.received_at).toISOString(),
+      note: data.note || null,
+    }
+    onConfirm(requestData)
+  }
+
+  const onBatchSubmit = (data: BatchFormData) => {
+    const validSerialNumbers = batchSerialNumbers.filter((sn) => sn.trim() !== '')
+    if (validSerialNumbers.length === 0) {
+      return
+    }
+
+    const requestData: CreateSerialsBatchRequest = {
+      product_id: productId,
+      serial_numbers: validSerialNumbers,
+      received_at: new Date(data.received_at).toISOString(),
+    }
+    onBatchConfirm(requestData)
+  }
+
+  const addBatchSerialField = () => {
+    setBatchSerialNumbers([...batchSerialNumbers, ''])
+  }
+
+  const removeBatchSerialField = (index: number) => {
+    setBatchSerialNumbers(batchSerialNumbers.filter((_, i) => i !== index))
+  }
+
+  const updateBatchSerialNumber = (index: number, value: string) => {
+    const updated = [...batchSerialNumbers]
+    updated[index] = value
+    setBatchSerialNumbers(updated)
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-lg sm:text-xl flex items-center">
+            <Hash className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
+            {serial ? 'Editar Serial' : 'Crear Serial'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {serial ? 'Edita los datos del serial' : 'Crea un nuevo serial para el producto'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {serial ? (
+          // Editar serial individual
+          <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+              <div className="space-y-4">
+                <Alert className="bg-info/5 border-info/50">
+                  <AlertDescription className="text-sm text-foreground">
+                    Los seriales permiten rastrear productos individuales por número de serie.
+                  </AlertDescription>
+                </Alert>
+
+                <div>
+                  <Label htmlFor="serial_number">
+                    Número de Serie <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="serial_number"
+                    {...register('serial_number')}
+                    className="mt-2"
+                    placeholder="Ej: SN-2024-001"
+                    maxLength={200}
+                    disabled={isLoading || !!serial}
+                  />
+                  {errors.serial_number && (
+                    <p className="mt-1 text-sm text-destructive">{errors.serial_number.message}</p>
+                  )}
+                  {serial && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      El número de serie no se puede modificar
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="received_at">
+                    Fecha de Recepción <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="received_at"
+                    type="datetime-local"
+                    {...register('received_at')}
+                    className="mt-2"
+                    disabled={isLoading}
+                  />
+                  {errors.received_at && (
+                    <p className="mt-1 text-sm text-destructive">{errors.received_at.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="note">Nota (Opcional)</Label>
+                  <Textarea
+                    id="note"
+                    {...register('note')}
+                    rows={3}
+                    className="mt-2 resize-none"
+                    placeholder="Notas adicionales sobre el serial..."
+                    maxLength={1000}
+                    disabled={isLoading}
+                  />
+                  {errors.note && (
+                    <p className="mt-1 text-sm text-destructive">{errors.note.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1"
+                  disabled={isLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 mr-2" />
+                      Actualizar Serial
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          // Crear serial (individual o en lote)
+          <Tabs defaultValue="single" className="flex-1 flex flex-col min-h-0">
+            <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 pt-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="single">Individual</TabsTrigger>
+                <TabsTrigger value="batch">En Lote</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="single" className="flex-1 flex flex-col min-h-0 mt-0">
+              <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+                  <div className="space-y-4">
+                    <Alert className="bg-info/5 border-info/50">
+                      <AlertDescription className="text-sm text-foreground">
+                        Crea un serial individual para el producto.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div>
+                      <Label htmlFor="single_serial_number">
+                        Número de Serie <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="single_serial_number"
+                        {...register('serial_number')}
+                        className="mt-2"
+                        placeholder="Ej: SN-2024-001"
+                        maxLength={200}
+                        disabled={isLoading}
+                      />
+                      {errors.serial_number && (
+                        <p className="mt-1 text-sm text-destructive">
+                          {errors.serial_number.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="single_received_at">
+                        Fecha de Recepción <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="single_received_at"
+                        type="datetime-local"
+                        {...register('received_at')}
+                        className="mt-2"
+                        disabled={isLoading}
+                      />
+                      {errors.received_at && (
+                        <p className="mt-1 text-sm text-destructive">{errors.received_at.message}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="single_note">Nota (Opcional)</Label>
+                      <Textarea
+                        id="single_note"
+                        {...register('note')}
+                        rows={3}
+                        className="mt-2 resize-none"
+                        placeholder="Notas adicionales sobre el serial..."
+                        maxLength={1000}
+                        disabled={isLoading}
+                      />
+                      {errors.note && (
+                        <p className="mt-1 text-sm text-destructive">{errors.note.message}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onClose}
+                      className="flex-1"
+                      disabled={isLoading}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                          Guardando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Crear Serial
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="batch" className="flex-1 flex flex-col min-h-0 mt-0">
+              <form onSubmit={handleSubmitBatch(onBatchSubmit)} className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+                  <div className="space-y-4">
+                    <Alert className="bg-info/5 border-info/50">
+                      <AlertDescription className="text-sm text-foreground">
+                        Crea múltiples seriales a la vez. Ingresa un número de serie por línea.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div>
+                      <Label htmlFor="batch_received_at">
+                        Fecha de Recepción <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="batch_received_at"
+                        type="datetime-local"
+                        {...registerBatch('received_at')}
+                        className="mt-2"
+                        disabled={isLoading}
+                      />
+                      {errorsBatch.received_at && (
+                        <p className="mt-1 text-sm text-destructive">
+                          {errorsBatch.received_at.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label>Números de Serie</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addBatchSerialField}
+                          disabled={isLoading}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Agregar
+                        </Button>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {batchSerialNumbers.map((serialNumber, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Input
+                              value={serialNumber}
+                              onChange={(e) => updateBatchSerialNumber(index, e.target.value)}
+                              placeholder={`Serial ${index + 1}`}
+                              maxLength={200}
+                              disabled={isLoading}
+                              className="flex-1"
+                            />
+                            {batchSerialNumbers.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeBatchSerialField(index)}
+                                disabled={isLoading}
+                                className="h-10 w-10"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {batchSerialNumbers.filter((sn) => sn.trim() !== '').length === 0 && (
+                        <p className="mt-1 text-sm text-destructive">
+                          Debe ingresar al menos un número de serie
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onClose}
+                      className="flex-1"
+                      disabled={isLoading}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      disabled={
+                        isLoading ||
+                        batchSerialNumbers.filter((sn) => sn.trim() !== '').length === 0
+                      }
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                          Guardando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Crear Seriales ({batchSerialNumbers.filter((sn) => sn.trim() !== '').length})
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </TabsContent>
+          </Tabs>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+

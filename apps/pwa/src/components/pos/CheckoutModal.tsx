@@ -6,12 +6,21 @@ import { exchangeService } from '@/services/exchange.service'
 import { customersService } from '@/services/customers.service'
 import { paymentsService } from '@/services/payments.service'
 import { fastCheckoutService } from '@/services/fast-checkout.service'
+import { invoiceSeriesService } from '@/services/invoice-series.service'
 import { calculateRoundedChange, roundToNearestDenomination, calculateChange, formatChangeBreakdown } from '@/utils/vzla-denominations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import SerialSelector from '@/components/serials/SerialSelector'
 
 interface CheckoutModalProps {
   isOpen: boolean
@@ -35,6 +44,8 @@ interface CheckoutModalProps {
     customer_document_id?: string
     customer_phone?: string
     customer_note?: string
+    serials?: Record<string, string[]> // product_id -> serial_numbers[]
+    invoice_series_id?: string | null // ID de la serie de factura a usar
   }) => void
   isLoading?: boolean
 }
@@ -66,6 +77,15 @@ export default function CheckoutModal({
   // Estados para manejo de efectivo Bs con cambio en Bs
   const [receivedBs, setReceivedBs] = useState<number>(0)
 
+  // Estados para seriales
+  const [selectedSerials, setSelectedSerials] = useState<Record<string, string[]>>({})
+  const [serialSelectorItem, setSerialSelectorItem] = useState<{
+    productId: string
+    productName: string
+    quantity: number
+    itemId: string
+  } | null>(null)
+
   // Obtener tasa BCV automáticamente cuando se abre el modal
   // Usa la misma queryKey que el prefetch para aprovechar el cache
   const { data: bcvRateData, isLoading: isLoadingBCV } = useQuery({
@@ -93,12 +113,37 @@ export default function CheckoutModal({
     enabled: isOpen,
   })
 
+  // Obtener series de factura disponibles
+  const { data: invoiceSeries } = useQuery({
+    queryKey: ['invoice-series'],
+    queryFn: () => invoiceSeriesService.getSeriesByStore(),
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    enabled: isOpen,
+  })
+
+  // Obtener serie por defecto
+  const { data: defaultSeries } = useQuery({
+    queryKey: ['invoice-series', 'default'],
+    queryFn: () => invoiceSeriesService.getDefaultSeries(),
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    enabled: isOpen,
+  })
+
+  const [selectedInvoiceSeriesId, setSelectedInvoiceSeriesId] = useState<string | null>(null)
+
   // Prellenar la tasa cuando se obtiene del backend
   useEffect(() => {
     if (isOpen && bcvRateData?.available && bcvRateData?.rate) {
       setExchangeRate(bcvRateData.rate)
     }
   }, [isOpen, bcvRateData])
+
+  // Prellenar serie por defecto
+  useEffect(() => {
+    if (isOpen && defaultSeries && !selectedInvoiceSeriesId) {
+      setSelectedInvoiceSeriesId(defaultSeries.id)
+    }
+  }, [isOpen, defaultSeries, selectedInvoiceSeriesId])
 
   // Buscar clientes cuando se escribe en el campo de búsqueda
   const { data: customerSearchResults = [], isLoading: isLoadingCustomers } = useQuery({
@@ -122,6 +167,9 @@ export default function CheckoutModal({
       setReceivedUsd(0)
       setGiveChangeInBs(false)
       setReceivedBs(0)
+      setSelectedInvoiceSeriesId(null)
+      setSelectedSerials({})
+      setSerialSelectorItem(null)
     }
   }, [isOpen])
 
@@ -376,6 +424,10 @@ export default function CheckoutModal({
       }
     }
 
+    // Verificar si hay productos que requieren seriales
+    // Por ahora, omitimos la verificación automática y permitimos que el usuario seleccione seriales opcionalmente
+    // En una implementación completa, verificaríamos con la API si el producto tiene seriales disponibles
+
     onConfirm({
       payment_method: finalPaymentMethod,
       currency,
@@ -387,8 +439,19 @@ export default function CheckoutModal({
       customer_document_id: customerDocumentId.trim() || undefined,
       customer_phone: customerPhone.trim() || undefined,
       customer_note: customerNote.trim() || undefined,
+      serials: Object.keys(selectedSerials).length > 0 ? selectedSerials : undefined,
     })
     setError('')
+  }
+
+  const handleSerialSelect = (serialNumbers: string[]) => {
+    if (serialSelectorItem) {
+      setSelectedSerials({
+        ...selectedSerials,
+        [serialSelectorItem.productId]: serialNumbers,
+      })
+      setSerialSelectorItem(null)
+    }
   }
 
   const methods = [
@@ -730,6 +793,40 @@ export default function CheckoutModal({
             </Card>
           )}
 
+          {/* Serie de Factura (Opcional) */}
+          {invoiceSeries && invoiceSeries.length > 0 && (
+            <div>
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                Serie de Factura (Opcional)
+              </label>
+              <Select
+                value={selectedInvoiceSeriesId || 'default'}
+                onValueChange={(value) => {
+                  setSelectedInvoiceSeriesId(value === 'default' ? null : value)
+                  setError('')
+                }}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Usar serie por defecto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Usar serie por defecto</SelectItem>
+                  {invoiceSeries
+                    .filter((s) => s.is_active)
+                    .map((serie) => (
+                      <SelectItem key={serie.id} value={serie.id}>
+                        {serie.name} ({serie.series_code})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Si no se selecciona, se usará la serie por defecto activa
+              </p>
+            </div>
+          )}
+
           {/* Tasa de cambio */}
           <div>
             <label className="block text-sm font-semibold text-foreground mb-2">
@@ -976,6 +1073,18 @@ export default function CheckoutModal({
           </div>
         </CardContent>
       </Card>
+
+      {/* Selector de seriales */}
+      {serialSelectorItem && (
+        <SerialSelector
+          isOpen={!!serialSelectorItem}
+          onClose={() => setSerialSelectorItem(null)}
+          productId={serialSelectorItem.productId}
+          productName={serialSelectorItem.productName}
+          quantity={serialSelectorItem.quantity}
+          onSelect={handleSerialSelect}
+        />
+      )}
     </div>
   )
 }

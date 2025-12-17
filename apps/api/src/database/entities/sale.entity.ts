@@ -3,6 +3,7 @@ import { Store } from './store.entity';
 import { SaleItem } from './sale-item.entity';
 import { Profile } from './profile.entity';
 import { Customer } from './customer.entity';
+import { InvoiceSeries } from './invoice-series.entity';
 
 @Entity('sales')
 export class Sale {
@@ -74,6 +75,19 @@ export class Sale {
 
   @Column({ type: 'text', nullable: true })
   note: string | null;
+
+  @ManyToOne(() => InvoiceSeries, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'invoice_series_id' })
+  invoiceSeries: InvoiceSeries | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  invoice_series_id: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  invoice_number: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  invoice_full_number: string | null; // Número completo: "A-001", "FAC-B-123", etc.
 
   @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
   items: SaleItem[];

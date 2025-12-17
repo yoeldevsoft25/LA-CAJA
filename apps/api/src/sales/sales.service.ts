@@ -17,6 +17,13 @@ import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { FastCheckoutRulesService } from '../fast-checkout/fast-checkout-rules.service';
 import { ProductVariant } from '../database/entities/product-variant.entity';
 import { ProductVariantsService } from '../product-variants/product-variants.service';
+import { ProductLot } from '../database/entities/product-lot.entity';
+import { LotMovement } from '../database/entities/lot-movement.entity';
+import { ProductLotsService } from '../product-lots/product-lots.service';
+import { InventoryRulesService } from '../product-lots/inventory-rules.service';
+import { ProductSerial } from '../database/entities/product-serial.entity';
+import { ProductSerialsService } from '../product-serials/product-serials.service';
+import { InvoiceSeriesService } from '../invoice-series/invoice-series.service';
 
 @Injectable()
 export class SalesService {
@@ -42,6 +49,10 @@ export class SalesService {
     private discountRulesService: DiscountRulesService,
     private fastCheckoutRulesService: FastCheckoutRulesService,
     private productVariantsService: ProductVariantsService,
+    private productLotsService: ProductLotsService,
+    private inventoryRulesService: InventoryRulesService,
+    private productSerialsService: ProductSerialsService,
+    private invoiceSeriesService: InvoiceSeriesService,
   ) {}
 
   async create(storeId: string, dto: CreateSaleDto, userId?: string): Promise<Sale> {
@@ -198,18 +209,97 @@ export class SalesService {
           }
         }
 
-        // Verificar stock disponible (por variante si aplica)
-        const currentStock = variant
-          ? await this.productVariantsService.getVariantStock(storeId, variant.id)
-          : await this.getCurrentStock(storeId, product.id);
+        // Verificar si el producto tiene seriales
+        const productSerials = await manager.find(ProductSerial, {
+          where: { product_id: product.id },
+        });
 
-        if (currentStock < cartItem.qty) {
-          const variantInfo = variant
-            ? ` (${variant.variant_type}: ${variant.variant_value})`
-            : '';
-          throw new BadRequestException(
-            `Stock insuficiente para ${product.name}${variantInfo}. Disponible: ${currentStock}, Solicitado: ${cartItem.qty}`,
+        // Si el producto tiene seriales, validar que haya suficientes disponibles
+        if (productSerials.length > 0) {
+          const availableSerials = productSerials.filter(
+            (s) => s.status === 'available',
           );
+
+          if (availableSerials.length < cartItem.qty) {
+            throw new BadRequestException(
+              `No hay suficientes seriales disponibles para ${product.name}. Disponibles: ${availableSerials.length}, Solicitados: ${cartItem.qty}`,
+            );
+          }
+
+          // Nota: Los seriales se asignan después de la venta mediante el endpoint de asignación
+          // Esto permite flexibilidad para escanear seriales después de crear la venta
+        }
+
+        // Verificar si el producto tiene lotes
+        const productLots = await manager.find(ProductLot, {
+          where: { product_id: product.id },
+        });
+
+        let lotId: string | null = null;
+
+        // Si el producto tiene lotes, usar lógica FIFO
+        if (productLots.length > 0) {
+          // Filtrar lotes disponibles (con stock)
+          const availableLots = productLots.filter(
+            (lot) => lot.remaining_quantity > 0,
+          );
+
+          if (availableLots.length === 0) {
+            throw new BadRequestException(
+              `No hay stock disponible en lotes para ${product.name}`,
+            );
+          }
+
+          // Obtener asignación FIFO
+          const allocations = this.inventoryRulesService.getLotsForSale(
+            product.id,
+            cartItem.qty,
+            availableLots,
+          );
+
+          // Usar el primer lote asignado (puede haber múltiples si se agota uno)
+          // En una implementación más completa, podríamos crear múltiples sale_items
+          // uno por cada lote asignado, pero por simplicidad usamos el primero
+          lotId = allocations[0]?.lot_id || null;
+
+          // Actualizar remaining_quantity de los lotes asignados
+          for (const allocation of allocations) {
+            const lot = availableLots.find((l) => l.id === allocation.lot_id);
+            if (lot) {
+              lot.remaining_quantity -= allocation.quantity;
+              lot.updated_at = new Date();
+              await manager.save(ProductLot, lot);
+
+              // Crear movimiento de lote
+              const lotMovement = manager.create(LotMovement, {
+                id: randomUUID(),
+                lot_id: lot.id,
+                movement_type: 'sold',
+                qty_delta: -allocation.quantity,
+                happened_at: soldAt,
+                sale_id: saleId,
+                note: `Venta ${saleId}`,
+              });
+              await manager.save(LotMovement, lotMovement);
+            }
+          }
+        } else {
+          // Si no tiene lotes, verificar stock normal (por variante si aplica)
+          const currentStock = variant
+            ? await this.productVariantsService.getVariantStock(
+                storeId,
+                variant.id,
+              )
+            : await this.getCurrentStock(storeId, product.id);
+
+          if (currentStock < cartItem.qty) {
+            const variantInfo = variant
+              ? ` (${variant.variant_type}: ${variant.variant_value})`
+              : '';
+            throw new BadRequestException(
+              `Stock insuficiente para ${product.name}${variantInfo}. Disponible: ${currentStock}, Solicitado: ${cartItem.qty}`,
+            );
+          }
         }
 
         // Calcular precios (usar precio de variante si existe, sino del producto)
@@ -232,6 +322,7 @@ export class SalesService {
           sale_id: saleId,
           product_id: product.id,
           variant_id: variant?.id || null,
+          lot_id: lotId,
           qty: cartItem.qty,
           unit_price_bs: priceBs,
           unit_price_usd: priceUsd,
@@ -302,6 +393,25 @@ export class SalesService {
         }
       }
 
+      // Generar número de factura automáticamente
+      let invoiceSeriesId: string | null = null;
+      let invoiceNumber: string | null = null;
+      let invoiceFullNumber: string | null = null;
+
+      try {
+        const invoiceData = await this.invoiceSeriesService.generateNextInvoiceNumber(
+          storeId,
+          dto.invoice_series_id,
+        );
+        invoiceSeriesId = invoiceData.series.id;
+        invoiceNumber = invoiceData.invoice_number;
+        invoiceFullNumber = invoiceData.invoice_full_number;
+      } catch (error) {
+        // Si no hay series configuradas, la venta se crea sin número de factura
+        // Esto permite que el sistema funcione aunque no se hayan configurado series
+        console.warn('No se pudo generar número de factura:', error);
+      }
+
       // Crear la venta
       const sale = manager.create(Sale, {
         id: saleId,
@@ -327,6 +437,9 @@ export class SalesService {
         customer_id: finalCustomerId,
         sold_by_user_id: userId || null,
         note: dto.note || null,
+        invoice_series_id: invoiceSeriesId,
+        invoice_number: invoiceNumber,
+        invoice_full_number: invoiceFullNumber,
       });
 
       const savedSale = await manager.save(Sale, sale);
@@ -335,23 +448,28 @@ export class SalesService {
       await manager.save(SaleItem, items);
 
       // Crear movimientos de inventario (descontar stock)
+      // Solo si el producto NO tiene lotes (los lotes ya se manejaron arriba)
       for (const item of items) {
-        const movement = manager.create(InventoryMovement, {
-          id: randomUUID(),
-          store_id: storeId,
-          product_id: item.product_id,
-          variant_id: item.variant_id || null,
-          movement_type: 'sold',
-          qty_delta: -item.qty, // Negativo para descontar
-          unit_cost_bs: 0,
-          unit_cost_usd: 0,
-          note: `Venta ${saleId}`,
-          ref: { sale_id: saleId },
-          happened_at: soldAt,
-          approved: true, // Las ventas se aprueban automáticamente
-        });
+        // Verificar si este item tiene lote asignado
+        // Si tiene lote, el movimiento ya se creó en la lógica FIFO
+        if (!item.lot_id) {
+          const movement = manager.create(InventoryMovement, {
+            id: randomUUID(),
+            store_id: storeId,
+            product_id: item.product_id,
+            variant_id: item.variant_id || null,
+            movement_type: 'sold',
+            qty_delta: -item.qty, // Negativo para descontar
+            unit_cost_bs: 0,
+            unit_cost_usd: 0,
+            note: `Venta ${saleId}`,
+            ref: { sale_id: saleId },
+            happened_at: soldAt,
+            approved: true, // Las ventas se aprueban automáticamente
+          });
 
-        await manager.save(InventoryMovement, movement);
+          await manager.save(InventoryMovement, movement);
+        }
       }
 
       // Si es venta FIAO, crear la deuda automáticamente

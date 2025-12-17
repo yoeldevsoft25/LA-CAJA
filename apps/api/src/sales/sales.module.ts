@@ -15,6 +15,9 @@ import { PaymentsModule } from '../payments/payments.module';
 import { DiscountsModule } from '../discounts/discounts.module';
 import { FastCheckoutModule } from '../fast-checkout/fast-checkout.module';
 import { ProductVariantsModule } from '../product-variants/product-variants.module';
+import { ProductLotsModule } from '../product-lots/product-lots.module';
+import { ProductSerialsModule } from '../product-serials/product-serials.module';
+import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
 
 @Module({
   imports: [
@@ -33,6 +36,9 @@ import { ProductVariantsModule } from '../product-variants/product-variants.modu
     DiscountsModule,
     FastCheckoutModule,
     ProductVariantsModule,
+    ProductLotsModule,
+    ProductSerialsModule,
+    InvoiceSeriesModule,
   ],
   controllers: [SalesController],
   providers: [SalesService],

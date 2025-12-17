@@ -1,0 +1,268 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { InvoiceSeries } from '../database/entities/invoice-series.entity';
+import { CreateInvoiceSeriesDto } from './dto/create-invoice-series.dto';
+import { UpdateInvoiceSeriesDto } from './dto/update-invoice-series.dto';
+import { randomUUID } from 'crypto';
+
+/**
+ * Servicio para gestión de series de facturas y generación de números consecutivos
+ */
+@Injectable()
+export class InvoiceSeriesService {
+  constructor(
+    @InjectRepository(InvoiceSeries)
+    private seriesRepository: Repository<InvoiceSeries>,
+    private dataSource: DataSource,
+  ) {}
+
+  /**
+   * Crea una nueva serie de factura
+   */
+  async createSeries(
+    storeId: string,
+    dto: CreateInvoiceSeriesDto,
+  ): Promise<InvoiceSeries> {
+    // Verificar que no exista una serie con el mismo código
+    const existing = await this.seriesRepository.findOne({
+      where: {
+        store_id: storeId,
+        series_code: dto.series_code.toUpperCase(),
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        `Ya existe una serie con código "${dto.series_code}"`,
+      );
+    }
+
+    const series = this.seriesRepository.create({
+      id: randomUUID(),
+      store_id: storeId,
+      series_code: dto.series_code.toUpperCase(),
+      name: dto.name,
+      prefix: dto.prefix || null,
+      current_number: 0,
+      start_number: dto.start_number || 1,
+      is_active: dto.is_active !== undefined ? dto.is_active : true,
+      note: dto.note || null,
+    });
+
+    return this.seriesRepository.save(series);
+  }
+
+  /**
+   * Obtiene todas las series de una tienda
+   */
+  async getSeriesByStore(storeId: string): Promise<InvoiceSeries[]> {
+    return this.seriesRepository.find({
+      where: { store_id: storeId },
+      order: { series_code: 'ASC' },
+    });
+  }
+
+  /**
+   * Obtiene una serie por ID
+   */
+  async getSeriesById(storeId: string, seriesId: string): Promise<InvoiceSeries> {
+    const series = await this.seriesRepository.findOne({
+      where: { id: seriesId, store_id: storeId },
+    });
+
+    if (!series) {
+      throw new NotFoundException('Serie de factura no encontrada');
+    }
+
+    return series;
+  }
+
+  /**
+   * Obtiene una serie por código
+   */
+  async getSeriesByCode(
+    storeId: string,
+    seriesCode: string,
+  ): Promise<InvoiceSeries> {
+    const series = await this.seriesRepository.findOne({
+      where: {
+        store_id: storeId,
+        series_code: seriesCode.toUpperCase(),
+      },
+    });
+
+    if (!series) {
+      throw new NotFoundException(
+        `Serie de factura con código "${seriesCode}" no encontrada`,
+      );
+    }
+
+    return series;
+  }
+
+  /**
+   * Obtiene la serie activa por defecto (primera serie activa)
+   */
+  async getDefaultSeries(storeId: string): Promise<InvoiceSeries | null> {
+    const series = await this.seriesRepository.findOne({
+      where: { store_id: storeId, is_active: true },
+      order: { created_at: 'ASC' },
+    });
+
+    return series;
+  }
+
+  /**
+   * Genera el siguiente número de factura para una serie
+   * Usa transacción para evitar condiciones de carrera
+   */
+  async generateNextInvoiceNumber(
+    storeId: string,
+    seriesId?: string,
+  ): Promise<{ series: InvoiceSeries; invoice_number: string; invoice_full_number: string }> {
+    return this.dataSource.transaction(async (manager) => {
+      // Si no se especifica serie, usar la serie por defecto
+      let series: InvoiceSeries | null;
+
+      if (seriesId) {
+        series = await manager.findOne(InvoiceSeries, {
+          where: { id: seriesId, store_id: storeId },
+          lock: { mode: 'pessimistic_write' }, // Bloqueo pesimista para evitar duplicados
+        });
+
+        if (!series) {
+          throw new NotFoundException('Serie de factura no encontrada');
+        }
+      } else {
+        series = await manager.findOne(InvoiceSeries, {
+          where: { store_id: storeId, is_active: true },
+          order: { created_at: 'ASC' },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!series) {
+          throw new NotFoundException(
+            'No hay series de factura activas configuradas',
+          );
+        }
+      }
+
+      if (!series.is_active) {
+        throw new BadRequestException(
+          `La serie "${series.series_code}" está desactivada`,
+        );
+      }
+
+      // Incrementar el número actual
+      series.current_number += 1;
+      series.updated_at = new Date();
+
+      await manager.save(InvoiceSeries, series);
+
+      // Generar número de factura
+      const invoiceNumber = series.current_number.toString().padStart(6, '0'); // 000001, 000002, etc.
+
+      // Generar número completo
+      let invoiceFullNumber: string;
+      if (series.prefix) {
+        invoiceFullNumber = `${series.prefix}-${series.series_code}-${invoiceNumber}`;
+      } else {
+        invoiceFullNumber = `${series.series_code}-${invoiceNumber}`;
+      }
+
+      return {
+        series,
+        invoice_number: invoiceNumber,
+        invoice_full_number: invoiceFullNumber,
+      };
+    });
+  }
+
+  /**
+   * Actualiza una serie de factura
+   */
+  async updateSeries(
+    storeId: string,
+    seriesId: string,
+    dto: UpdateInvoiceSeriesDto,
+  ): Promise<InvoiceSeries> {
+    const series = await this.getSeriesById(storeId, seriesId);
+
+    // Si se está cambiando el código, verificar que no exista otro con ese código
+    if (dto.series_code && dto.series_code !== series.series_code) {
+      const existing = await this.seriesRepository.findOne({
+        where: {
+          store_id: storeId,
+          series_code: dto.series_code.toUpperCase(),
+        },
+      });
+
+      if (existing) {
+        throw new BadRequestException(
+          `Ya existe una serie con código "${dto.series_code}"`,
+        );
+      }
+
+      series.series_code = dto.series_code.toUpperCase();
+    }
+
+    if (dto.name !== undefined) series.name = dto.name;
+    if (dto.prefix !== undefined) series.prefix = dto.prefix;
+    if (dto.start_number !== undefined) series.start_number = dto.start_number;
+    if (dto.current_number !== undefined) series.current_number = dto.current_number;
+    if (dto.is_active !== undefined) series.is_active = dto.is_active;
+    if (dto.note !== undefined) series.note = dto.note;
+
+    series.updated_at = new Date();
+
+    return this.seriesRepository.save(series);
+  }
+
+  /**
+   * Elimina una serie de factura (solo si no tiene ventas asociadas)
+   */
+  async deleteSeries(storeId: string, seriesId: string): Promise<void> {
+    const series = await this.getSeriesById(storeId, seriesId);
+
+    // Verificar si hay ventas asociadas
+    const salesCount = await this.dataSource
+      .getRepository('Sale')
+      .count({ where: { invoice_series_id: seriesId } });
+
+    if (salesCount > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar la serie porque tiene ${salesCount} venta(s) asociada(s)`,
+      );
+    }
+
+    await this.seriesRepository.remove(series);
+  }
+
+  /**
+   * Reinicia el consecutivo de una serie
+   */
+  async resetSeriesNumber(
+    storeId: string,
+    seriesId: string,
+    newNumber: number,
+  ): Promise<InvoiceSeries> {
+    const series = await this.getSeriesById(storeId, seriesId);
+
+    if (newNumber < series.start_number) {
+      throw new BadRequestException(
+        `El nuevo número (${newNumber}) no puede ser menor al número inicial (${series.start_number})`,
+      );
+    }
+
+    series.current_number = newNumber;
+    series.updated_at = new Date();
+
+    return this.seriesRepository.save(series);
+  }
+}
+

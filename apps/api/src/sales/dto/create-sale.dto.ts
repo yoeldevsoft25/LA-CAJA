@@ -75,5 +75,9 @@ export class CreateSaleDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  @IsUUID()
+  @IsOptional()
+  invoice_series_id?: string; // Serie de factura a usar (opcional, usa la por defecto si no se especifica)
 }
 

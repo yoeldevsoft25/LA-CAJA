@@ -207,9 +207,9 @@ export default function FastCheckoutConfigModal({
               <div>
                 <Label htmlFor="default_payment_method">Método de Pago por Defecto</Label>
                 <Select
-                  value={watch('default_payment_method') || ''}
+                  value={watch('default_payment_method') || 'none'}
                   onValueChange={(value) =>
-                    setValue('default_payment_method', value === '' ? null : (value as PaymentMethod))
+                    setValue('default_payment_method', value === 'none' ? null : (value as PaymentMethod))
                   }
                   disabled={isLoading}
                 >
@@ -217,7 +217,7 @@ export default function FastCheckoutConfigModal({
                     <SelectValue placeholder="Sin método por defecto" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin método por defecto</SelectItem>
+                    <SelectItem value="none">Sin método por defecto</SelectItem>
                     <SelectItem value="CASH_BS">{paymentMethodLabels.CASH_BS}</SelectItem>
                     <SelectItem value="CASH_USD">{paymentMethodLabels.CASH_USD}</SelectItem>
                     <SelectItem value="PAGO_MOVIL">{paymentMethodLabels.PAGO_MOVIL}</SelectItem>

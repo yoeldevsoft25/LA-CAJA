@@ -19,4 +19,12 @@ export { DiscountAuthorization } from './discount-authorization.entity';
 export { FastCheckoutConfig } from './fast-checkout-config.entity';
 export { QuickProduct } from './quick-product.entity';
 export { ProductVariant } from './product-variant.entity';
+export { ProductLot } from './product-lot.entity';
+export { LotMovement } from './lot-movement.entity';
+export { ProductSerial } from './product-serial.entity';
+export { InvoiceSeries } from './invoice-series.entity';
+export { Table } from './table.entity';
+export { Order } from './order.entity';
+export { OrderItem } from './order-item.entity';
+export { OrderPayment } from './order-payment.entity';
 

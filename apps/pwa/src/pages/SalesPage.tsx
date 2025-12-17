@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle, Printer } from 'lucide-react'
+import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle, Printer, Receipt } from 'lucide-react'
 import { salesService, Sale } from '@/services/sales.service'
 import { authService } from '@/services/auth.service'
 import { useAuth } from '@/stores/auth.store'
@@ -226,9 +226,9 @@ export default function SalesPage() {
                 Filtrar por Tienda
                 </Label>
                 <Select
-                value={selectedStoreId}
+                value={selectedStoreId || 'all'}
                   onValueChange={(value) => {
-                    setSelectedStoreId(value)
+                    setSelectedStoreId(value === 'all' ? '' : value)
                   setCurrentPage(1)
                 }}
                 >
@@ -236,7 +236,7 @@ export default function SalesPage() {
                     <SelectValue placeholder="Todas las tiendas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas las tiendas</SelectItem>
+                    <SelectItem value="all">Todas las tiendas</SelectItem>
                 {stores.map((store) => (
                       <SelectItem key={store.id} value={store.id}>
                     {store.name}
@@ -321,6 +321,7 @@ export default function SalesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Fecha/Hora</TableHead>
+                      <TableHead className="hidden sm:table-cell">Factura</TableHead>
                       <TableHead className="hidden sm:table-cell">Productos</TableHead>
                       <TableHead className="text-center">Total</TableHead>
                       <TableHead className="text-center hidden md:table-cell">Moneda</TableHead>
@@ -363,6 +364,18 @@ export default function SalesPage() {
                               {format(new Date(sale.sold_at), 'HH:mm')}
                             </p>
                           </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                          {sale.invoice_full_number ? (
+                            <div className="flex items-center gap-1">
+                              <Receipt className="w-4 h-4 text-primary" />
+                              <p className="font-mono font-semibold text-primary text-sm">
+                                {sale.invoice_full_number}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">-</p>
+                          )}
                           </TableCell>
                           <TableCell className="hidden sm:table-cell">
                           <div className="text-sm">

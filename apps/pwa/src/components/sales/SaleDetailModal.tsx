@@ -1,4 +1,4 @@
-import { FileText, Package, DollarSign, Calendar, User, CreditCard, UserCircle } from 'lucide-react'
+import { FileText, Package, DollarSign, Calendar, User, CreditCard, UserCircle, Receipt } from 'lucide-react'
 import { Sale } from '@/services/sales.service'
 import { format } from 'date-fns'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -43,7 +43,15 @@ export default function SaleDetailModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl">Detalle de Venta</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
+            Detalle de Venta
+            {sale.invoice_full_number && (
+              <Badge variant="default" className="ml-2 font-mono">
+                <Receipt className="w-3 h-3 mr-1" />
+                {sale.invoice_full_number}
+              </Badge>
+            )}
+          </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm mt-0.5">
             ID: {sale.id.substring(0, 8)}...
           </DialogDescription>
@@ -69,6 +77,20 @@ export default function SaleDetailModal({
                       </p>
                     </CardContent>
                   </Card>
+
+                  {sale.invoice_full_number && (
+                    <Card className="bg-primary/5 border-primary/50">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center mb-2">
+                          <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-primary mr-2" />
+                          <span className="text-xs sm:text-sm font-semibold text-primary">Número de Factura</span>
+                        </div>
+                        <p className="text-sm sm:text-base font-semibold font-mono text-primary">
+                          {sale.invoice_full_number}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   <Card className="bg-muted/50 border-border">
                     <CardContent className="p-3 sm:p-4">

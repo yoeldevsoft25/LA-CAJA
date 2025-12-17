@@ -47,6 +47,36 @@ export default function ProductVariantsList({ productId }: ProductVariantsListPr
     staleTime: 1000 * 60 * 5, // 5 minutos
   })
 
+  // Obtener stock de cada variante
+  const variantIds = variants?.map((v) => v.id) || []
+  const { data: variantStocks } = useQuery({
+    queryKey: ['product-variants', 'stock', variantIds],
+    queryFn: async () => {
+      const stocks = await Promise.all(
+        variantIds.map(async (id) => {
+          try {
+            const stock = await productVariantsService.getVariantStock(id)
+            return { id, stock }
+          } catch {
+            return { id, stock: 0 }
+          }
+        })
+      )
+      return stocks.reduce<Record<string, number>>((acc, { id, stock }) => {
+        acc[id] = stock
+        return acc
+      }, {})
+    },
+    enabled: variantIds.length > 0,
+    staleTime: 1000 * 60 * 2, // 2 minutos
+  })
+
+  // Agregar stock a las variantes
+  const variantsWithStock = variants?.map((variant) => ({
+    ...variant,
+    stock: variantStocks?.[variant.id] ?? undefined,
+  }))
+
   const createMutation = useMutation({
     mutationFn: (data: CreateProductVariantRequest) => productVariantsService.createVariant(data),
     onSuccess: () => {
@@ -114,8 +144,8 @@ export default function ProductVariantsList({ productId }: ProductVariantsListPr
     )
   }
 
-  const activeVariants = variants?.filter((v) => v.is_active) || []
-  const inactiveVariants = variants?.filter((v) => !v.is_active) || []
+  const activeVariants = variantsWithStock?.filter((v) => v.is_active) || []
+  const inactiveVariants = variantsWithStock?.filter((v) => !v.is_active) || []
 
   return (
     <>

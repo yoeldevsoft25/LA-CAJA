@@ -51,6 +51,7 @@ export interface CreateSaleRequest {
   customer_note?: string
   cash_session_id?: string
   note?: string | null
+  invoice_series_id?: string | null // ID de la serie de factura a usar
   // Para modo offline
   store_id?: string
   user_id?: string
@@ -122,6 +123,9 @@ export interface Sale {
     }
   }
   note: string | null
+  invoice_series_id?: string | null
+  invoice_number?: string | null
+  invoice_full_number?: string | null
 }
 
 // Función auxiliar para generar device_id
