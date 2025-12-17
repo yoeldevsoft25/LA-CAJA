@@ -39,10 +39,12 @@ import { useAuth } from './stores/auth.store'
 import { offlineIndicator } from './services/offline-indicator.service'
 import { syncService } from './services/sync.service'
 import { realtimeWebSocketService } from './services/realtime-websocket.service'
+import { usePushNotifications } from './hooks/usePushNotifications'
 
 function App() {
   const { user, isAuthenticated } = useAuth()
-  const { isOnline, wasOffline } = useOnline();
+  const { isOnline, wasOffline } = useOnline()
+  const { isSupported, subscribe } = usePushNotifications()
 
   // Rehidratar el sync service si hay sesión persistida
   useEffect(() => {
@@ -79,7 +81,29 @@ function App() {
         });
       }
     }
-  }, [isOnline, wasOffline]);
+  }, [isOnline, wasOffline])
+
+  // Registrar service worker y suscribirse a push notifications
+  useEffect(() => {
+    if (isAuthenticated && isSupported && 'serviceWorker' in navigator) {
+      // Registrar el service worker para push notifications
+      navigator.serviceWorker
+        .register('/sw-push.js')
+        .then(() => {
+          console.log('[PushNotifications] Service worker registrado')
+          // Intentar suscribirse automáticamente después de un pequeño delay
+          // para dar tiempo a que el service worker esté listo
+          setTimeout(() => {
+            subscribe().catch((error) => {
+              console.error('[PushNotifications] Error al suscribirse:', error)
+            })
+          }, 2000)
+        })
+        .catch((error) => {
+          console.error('[PushNotifications] Error registrando service worker:', error)
+        })
+    }
+  }, [isAuthenticated, isSupported, subscribe])
 
   return (
     <BrowserRouter>

@@ -21,6 +21,8 @@ import { MarkAlertReadDto } from './dto/mark-alert-read.dto';
 import { GetHeatmapDto } from './dto/get-heatmap.dto';
 import { GetComparativeDto } from './dto/get-comparative.dto';
 import { RealTimeAnalyticsGateway } from './realtime-analytics.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Controller('realtime-analytics')
 @UseGuards(JwtAuthGuard)
@@ -28,6 +30,8 @@ export class RealTimeAnalyticsController {
   constructor(
     private readonly analyticsService: RealTimeAnalyticsService,
     private readonly gateway: RealTimeAnalyticsGateway,
+    private readonly notificationsService: NotificationsService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   /**
@@ -110,6 +114,23 @@ export class RealTimeAnalyticsController {
     // Emitir alertas nuevas a través de WebSocket
     for (const alert of alerts) {
       this.gateway.emitNewAlert(storeId, alert);
+      
+      // Crear notificación desde alerta
+      try {
+        const notification = await this.notificationsService.createFromAlert(storeId, alert);
+        
+        // Emitir vía WebSocket de notificaciones
+        if (alert.entity_type && alert.entity_id) {
+          // Notificación específica para el usuario relacionado
+          // Por ahora emitir a todo el store
+          this.notificationsGateway.emitToStore(storeId, notification);
+        } else {
+          this.notificationsGateway.emitToStore(storeId, notification);
+        }
+      } catch (error) {
+        // Log error pero no fallar el proceso
+        console.error('Error creando notificación desde alerta', error);
+      }
     }
 
     return { alerts, count: alerts.length };
