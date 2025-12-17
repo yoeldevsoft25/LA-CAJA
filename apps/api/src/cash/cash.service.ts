@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull } from 'typeorm';
 import { CashSession } from '../database/entities/cash-session.entity';
@@ -17,7 +21,11 @@ export class CashService {
     private dataSource: DataSource,
   ) {}
 
-  async openSession(storeId: string, userId: string, dto: OpenCashSessionDto): Promise<CashSession> {
+  async openSession(
+    storeId: string,
+    userId: string,
+    dto: OpenCashSessionDto,
+  ): Promise<CashSession> {
     // Verificar si hay una sesión abierta
     const openSession = await this.cashSessionRepository.findOne({
       where: {
@@ -71,7 +79,9 @@ export class CashService {
     }
 
     if (countedBs < 0 || countedUsd < 0) {
-      throw new BadRequestException('Los montos contados no pueden ser negativos');
+      throw new BadRequestException(
+        'Los montos contados no pueden ser negativos',
+      );
     }
 
     // 2. Obtener sesión y validar que existe y está abierta
@@ -101,12 +111,16 @@ export class CashService {
       .getMany();
 
     // Cálculo principal
-    let expectedBs = Math.round(Number(session.opening_amount_bs || 0) * 100) / 100;
-    let expectedUsd = Math.round(Number(session.opening_amount_usd || 0) * 100) / 100;
+    let expectedBs =
+      Math.round(Number(session.opening_amount_bs || 0) * 100) / 100;
+    let expectedUsd =
+      Math.round(Number(session.opening_amount_usd || 0) * 100) / 100;
 
     // Cálculo secundario para verificación
-    let expectedBsVerify = Math.round(Number(session.opening_amount_bs || 0) * 100) / 100;
-    let expectedUsdVerify = Math.round(Number(session.opening_amount_usd || 0) * 100) / 100;
+    let expectedBsVerify =
+      Math.round(Number(session.opening_amount_bs || 0) * 100) / 100;
+    let expectedUsdVerify =
+      Math.round(Number(session.opening_amount_usd || 0) * 100) / 100;
 
     // Sumar ingresos de ventas en efectivo
     for (const sale of sales) {
@@ -127,70 +141,94 @@ export class CashService {
         // La caja debe reflejar: +Bs recibido - Bs de cambio dado = Efectivo neto en caja
         if (payment.cash_payment_bs && payment.cash_payment_bs.received_bs) {
           // Cliente pagó con Bs físico: entra el Bs recibido (SIEMPRE)
-          const receivedBs = Math.round(Number(payment.cash_payment_bs.received_bs) * 100) / 100;
+          const receivedBs =
+            Math.round(Number(payment.cash_payment_bs.received_bs) * 100) / 100;
           expectedBs = Math.round((expectedBs + receivedBs) * 100) / 100;
-          expectedBsVerify = Math.round((expectedBsVerify + receivedBs) * 100) / 100;
+          expectedBsVerify =
+            Math.round((expectedBsVerify + receivedBs) * 100) / 100;
 
           // Si se dio cambio en Bs (redondeado, solo si > 0), se descuenta del efectivo
           // NOTA: Si el cambio es menor a 5 Bs, se redondea a 0 y NO se envía change_bs
           // En ese caso, el excedente queda a favor del POS (no se descuenta nada)
-          if (payment.cash_payment_bs.change_bs && payment.cash_payment_bs.change_bs > 0) {
-            const changeBs = Math.round(Number(payment.cash_payment_bs.change_bs) * 100) / 100;
+          if (
+            payment.cash_payment_bs.change_bs &&
+            payment.cash_payment_bs.change_bs > 0
+          ) {
+            const changeBs =
+              Math.round(Number(payment.cash_payment_bs.change_bs) * 100) / 100;
             expectedBs = Math.round((expectedBs - changeBs) * 100) / 100;
-            expectedBsVerify = Math.round((expectedBsVerify - changeBs) * 100) / 100;
+            expectedBsVerify =
+              Math.round((expectedBsVerify - changeBs) * 100) / 100;
           }
           // Si change_bs es 0 o no existe, NO se descuenta nada (excedente a favor del POS)
         } else {
           // Pago exacto en Bs (sin especificar monto recibido, asumimos exacto)
           const amount = totalBs;
           expectedBs = Math.round((expectedBs + amount) * 100) / 100;
-          expectedBsVerify = Math.round((expectedBsVerify + amount) * 100) / 100;
+          expectedBsVerify =
+            Math.round((expectedBsVerify + amount) * 100) / 100;
         }
       } else if (payment.method === 'CASH_USD') {
         // LÓGICA ROBUSTA PARA PAGOS EN USD FÍSICO CON CAMBIO EN Bs
         // La caja debe reflejar: +USD recibido - Bs de cambio dado = Efectivo neto en caja
         if (payment.cash_payment && payment.cash_payment.received_usd) {
           // Cliente pagó con USD físico: entra el USD recibido (SIEMPRE)
-          const receivedUsd = Math.round(Number(payment.cash_payment.received_usd) * 100) / 100;
+          const receivedUsd =
+            Math.round(Number(payment.cash_payment.received_usd) * 100) / 100;
           expectedUsd = Math.round((expectedUsd + receivedUsd) * 100) / 100;
-          expectedUsdVerify = Math.round((expectedUsdVerify + receivedUsd) * 100) / 100;
+          expectedUsdVerify =
+            Math.round((expectedUsdVerify + receivedUsd) * 100) / 100;
 
           // Si se dio cambio en Bs (redondeado, solo si > 0), se descuenta del efectivo en Bs
           // NOTA: Si el cambio es menor a 5 Bs, se redondea a 0 y NO se envía change_bs
           // En ese caso, el excedente queda a favor del POS (no se descuenta nada)
-          if (payment.cash_payment.change_bs && payment.cash_payment.change_bs > 0) {
-            const changeBs = Math.round(Number(payment.cash_payment.change_bs) * 100) / 100;
+          if (
+            payment.cash_payment.change_bs &&
+            payment.cash_payment.change_bs > 0
+          ) {
+            const changeBs =
+              Math.round(Number(payment.cash_payment.change_bs) * 100) / 100;
             expectedBs = Math.round((expectedBs - changeBs) * 100) / 100;
-            expectedBsVerify = Math.round((expectedBsVerify - changeBs) * 100) / 100;
+            expectedBsVerify =
+              Math.round((expectedBsVerify - changeBs) * 100) / 100;
           }
           // Si change_bs es 0 o no existe, NO se descuenta nada (excedente a favor del POS)
         } else {
           // Pago exacto en USD (sin especificar monto recibido, asumimos exacto)
           const amount = totalUsd;
           expectedUsd = Math.round((expectedUsd + amount) * 100) / 100;
-          expectedUsdVerify = Math.round((expectedUsdVerify + amount) * 100) / 100;
+          expectedUsdVerify =
+            Math.round((expectedUsdVerify + amount) * 100) / 100;
         }
       } else if (payment.method === 'SPLIT' && payment.split) {
-        const cashBs = Math.round(Number(payment.split.cash_bs || 0) * 100) / 100;
-        const cashUsd = Math.round(Number(payment.split.cash_usd || 0) * 100) / 100;
+        const cashBs =
+          Math.round(Number(payment.split.cash_bs || 0) * 100) / 100;
+        const cashUsd =
+          Math.round(Number(payment.split.cash_usd || 0) * 100) / 100;
         expectedBs = Math.round((expectedBs + cashBs) * 100) / 100;
         expectedUsd = Math.round((expectedUsd + cashUsd) * 100) / 100;
         expectedBsVerify = Math.round((expectedBsVerify + cashBs) * 100) / 100;
-        expectedUsdVerify = Math.round((expectedUsdVerify + cashUsd) * 100) / 100;
+        expectedUsdVerify =
+          Math.round((expectedUsdVerify + cashUsd) * 100) / 100;
       }
       // PAGO_MOVIL, TRANSFER, OTHER, FIAO no se suman al efectivo
     }
 
     // 5. VERIFICACIÓN DE INTEGRIDAD: Los dos cálculos deben coincidir exactamente
-    if (Math.abs(expectedBs - expectedBsVerify) > 0.01 || Math.abs(expectedUsd - expectedUsdVerify) > 0.01) {
+    if (
+      Math.abs(expectedBs - expectedBsVerify) > 0.01 ||
+      Math.abs(expectedUsd - expectedUsdVerify) > 0.01
+    ) {
       throw new BadRequestException(
         'Error de integridad: Los cálculos no coinciden. Por favor, contacte al administrador.',
       );
     }
 
     // 6. Validar que los montos contados sean razonables (no más del 200% del esperado + apertura)
-    const maxReasonableBs = (expectedBs + Number(session.opening_amount_bs || 0)) * 2;
-    const maxReasonableUsd = (expectedUsd + Number(session.opening_amount_usd || 0)) * 2;
+    const maxReasonableBs =
+      (expectedBs + Number(session.opening_amount_bs || 0)) * 2;
+    const maxReasonableUsd =
+      (expectedUsd + Number(session.opening_amount_usd || 0)) * 2;
 
     if (countedBs > maxReasonableBs) {
       throw new BadRequestException(
@@ -205,8 +243,9 @@ export class CashService {
     }
 
     // 7. Calcular diferencias (con redondeo)
-    const differenceBs = Math.round((countedBs - expectedBs) * 100) / 100;
-    const differenceUsd = Math.round((countedUsd - expectedUsd) * 100) / 100;
+    // Las diferencias se calculan pero se usan implícitamente en el objeto counted
+    Math.round((countedBs - expectedBs) * 100) / 100;
+    Math.round((countedUsd - expectedUsd) * 100) / 100;
 
     // 8. Registrar timestamp preciso antes de guardar
     const closedAt = new Date();
@@ -224,7 +263,7 @@ export class CashService {
     };
     session.note = dto.note || session.note;
 
-    const savedSession = await this.cashSessionRepository.save(session);
+    await this.cashSessionRepository.save(session);
 
     // 10. Verificación final: Re-leer la sesión y validar que se guardó correctamente
     const verifySession = await this.cashSessionRepository.findOne({
@@ -238,8 +277,10 @@ export class CashService {
     }
 
     // 11. Validar que los valores guardados coinciden con los enviados
-    const savedCountedBs = Math.round(Number(verifySession.counted?.cash_bs || 0) * 100) / 100;
-    const savedCountedUsd = Math.round(Number(verifySession.counted?.cash_usd || 0) * 100) / 100;
+    const savedCountedBs =
+      Math.round(Number(verifySession.counted?.cash_bs || 0) * 100) / 100;
+    const savedCountedUsd =
+      Math.round(Number(verifySession.counted?.cash_usd || 0) * 100) / 100;
 
     if (
       Math.abs(savedCountedBs - countedBs) > 0.01 ||
@@ -316,10 +357,13 @@ export class CashService {
         if (payment.cash_payment_bs && payment.cash_payment_bs.received_bs) {
           const receivedBs = Number(payment.cash_payment_bs.received_bs || 0);
           summary.cash_flow.sales_bs += receivedBs;
-          
+
           // Si se dio cambio en Bs (redondeado, solo si > 0), se descuenta
           // Si change_bs es 0 o no existe, NO se descuenta (excedente a favor del POS)
-          if (payment.cash_payment_bs.change_bs && payment.cash_payment_bs.change_bs > 0) {
+          if (
+            payment.cash_payment_bs.change_bs &&
+            payment.cash_payment_bs.change_bs > 0
+          ) {
             const changeBs = Number(payment.cash_payment_bs.change_bs);
             summary.cash_flow.sales_bs -= changeBs; // Se descuenta porque salió de la caja
           }
@@ -332,10 +376,13 @@ export class CashService {
         if (payment.cash_payment && payment.cash_payment.received_usd) {
           const receivedUsd = Number(payment.cash_payment.received_usd || 0);
           summary.cash_flow.sales_usd += receivedUsd;
-          
+
           // Si se dio cambio en Bs (redondeado, solo si > 0), se descuenta
           // Si change_bs es 0 o no existe, NO se descuenta (excedente a favor del POS)
-          if (payment.cash_payment.change_bs && payment.cash_payment.change_bs > 0) {
+          if (
+            payment.cash_payment.change_bs &&
+            payment.cash_payment.change_bs > 0
+          ) {
             const changeBs = Number(payment.cash_payment.change_bs);
             summary.cash_flow.sales_bs -= changeBs; // Se descuenta porque salió de la caja
           }
@@ -351,8 +398,10 @@ export class CashService {
 
     summary.cash_flow.opening_bs = Number(session.opening_amount_bs) || 0;
     summary.cash_flow.opening_usd = Number(session.opening_amount_usd) || 0;
-    summary.cash_flow.expected_bs = summary.cash_flow.opening_bs + summary.cash_flow.sales_bs;
-    summary.cash_flow.expected_usd = summary.cash_flow.opening_usd + summary.cash_flow.sales_usd;
+    summary.cash_flow.expected_bs =
+      summary.cash_flow.opening_bs + summary.cash_flow.sales_bs;
+    summary.cash_flow.expected_usd =
+      summary.cash_flow.opening_usd + summary.cash_flow.sales_usd;
 
     if (session.counted && session.expected) {
       summary['closing'] = {
@@ -386,4 +435,3 @@ export class CashService {
     return { sessions, total };
   }
 }
-

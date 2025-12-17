@@ -14,4 +14,3 @@ import { Table } from '../database/entities/table.entity';
   exports: [TablesService],
 })
 export class TablesModule {}
-

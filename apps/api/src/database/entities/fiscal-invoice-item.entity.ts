@@ -87,4 +87,3 @@ export class FiscalInvoiceItem {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

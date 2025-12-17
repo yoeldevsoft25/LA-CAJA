@@ -161,4 +161,3 @@ export class ProductSerialsController {
     return this.serialsService.getSerialsBySaleItem(storeId, saleItemId);
   }
 }
-

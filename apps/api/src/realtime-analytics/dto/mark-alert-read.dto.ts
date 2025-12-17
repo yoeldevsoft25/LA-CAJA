@@ -4,4 +4,3 @@ export class MarkAlertReadDto {
   @IsUUID()
   alert_id: string;
 }
-

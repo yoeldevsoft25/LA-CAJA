@@ -46,4 +46,3 @@ export class LotMovement {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   created_at: Date;
 }
-

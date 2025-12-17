@@ -29,7 +29,10 @@ export class NotificationDelivery {
   @Column('uuid')
   notification_id: string;
 
-  @ManyToOne(() => NotificationSubscription, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => NotificationSubscription, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'subscription_id' })
   subscription: NotificationSubscription | null;
 
@@ -54,4 +57,3 @@ export class NotificationDelivery {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

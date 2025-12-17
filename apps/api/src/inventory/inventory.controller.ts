@@ -25,7 +25,12 @@ export class InventoryController {
   @HttpCode(HttpStatus.CREATED)
   async stockReceived(@Body() dto: StockReceivedDto, @Request() req: any) {
     const storeId = req.user.store_id;
-    return this.inventoryService.stockReceived(storeId, dto, req.user.sub, req.user.role);
+    return this.inventoryService.stockReceived(
+      storeId,
+      dto,
+      req.user.sub,
+      req.user.role,
+    );
   }
 
   @Post('stock/adjust')
@@ -39,11 +44,19 @@ export class InventoryController {
   @HttpCode(HttpStatus.OK)
   async approveStock(@Body() dto: ApproveStockDto, @Request() req: any) {
     const storeId = req.user.store_id;
-    return this.inventoryService.approveReceivedMovement(storeId, dto.movement_id, req.user.sub, req.user.role);
+    return this.inventoryService.approveReceivedMovement(
+      storeId,
+      dto.movement_id,
+      req.user.sub,
+      req.user.role,
+    );
   }
 
   @Get('stock/status')
-  async getStockStatus(@Query('product_id') productId: string, @Request() req: any) {
+  async getStockStatus(
+    @Query('product_id') productId: string,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
     return this.inventoryService.getStockStatus(storeId, productId);
   }
@@ -73,9 +86,15 @@ export class InventoryController {
   }
 
   @Get('stock/:productId')
-  async getProductStock(@Param('productId') productId: string, @Request() req: any) {
+  async getProductStock(
+    @Param('productId') productId: string,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
-    const stock = await this.inventoryService.getCurrentStock(storeId, productId);
+    const stock = await this.inventoryService.getCurrentStock(
+      storeId,
+      productId,
+    );
     return { product_id: productId, current_stock: stock };
   }
 }

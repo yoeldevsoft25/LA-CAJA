@@ -12,7 +12,6 @@ import { es } from 'date-fns/locale'
 export function NotificationsPanel() {
   const {
     notifications,
-    unreadNotifications,
     markAsRead,
     markAllAsRead,
     isLoading,
@@ -76,7 +75,7 @@ export function NotificationsPanel() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => markAllAsRead()}
+            onClick={() => markAllAsRead(undefined)}
             className="h-8 text-xs"
           >
             <CheckCheck className="h-3 w-3 mr-1" />

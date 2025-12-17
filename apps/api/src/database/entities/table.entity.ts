@@ -10,7 +10,12 @@ import {
 import { Store } from './store.entity';
 import { Order } from './order.entity';
 
-export type TableStatus = 'available' | 'occupied' | 'reserved' | 'cleaning' | 'out_of_service';
+export type TableStatus =
+  | 'available'
+  | 'occupied'
+  | 'reserved'
+  | 'cleaning'
+  | 'out_of_service';
 
 @Entity('tables')
 @Index(['store_id'])
@@ -55,4 +60,3 @@ export class Table {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   updated_at: Date;
 }
-

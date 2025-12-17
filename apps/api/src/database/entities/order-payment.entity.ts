@@ -56,4 +56,3 @@ export class OrderPayment {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   created_at: Date;
 }
-

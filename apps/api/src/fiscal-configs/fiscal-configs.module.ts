@@ -11,4 +11,3 @@ import { FiscalConfig } from '../database/entities/fiscal-config.entity';
   exports: [FiscalConfigsService],
 })
 export class FiscalConfigsModule {}
-

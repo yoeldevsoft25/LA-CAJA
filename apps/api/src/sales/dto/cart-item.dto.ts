@@ -22,4 +22,3 @@ export class CartItemDto {
   @IsOptional()
   discount_usd?: number;
 }
-

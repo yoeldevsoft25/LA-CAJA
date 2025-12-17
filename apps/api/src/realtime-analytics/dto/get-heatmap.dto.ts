@@ -14,4 +14,3 @@ export class GetHeatmapDto {
   @Min(0)
   hour?: number; // 0-23, opcional para filtrar por hora específica
 }
-

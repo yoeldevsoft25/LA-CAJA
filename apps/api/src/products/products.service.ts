@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, In } from 'typeorm';
 import { Product } from '../database/entities/product.entity';
@@ -39,7 +44,7 @@ export class ProductsService {
     const cost_usd = this.roundToTwoDecimals(dto.cost_usd);
 
     this.logger.log(
-      `Creando producto: price_usd=${price_usd} -> price_bs=${price_bs.toFixed(2)} (tasa=${exchangeRate})`
+      `Creando producto: price_usd=${price_usd} -> price_bs=${price_bs.toFixed(2)} (tasa=${exchangeRate})`,
     );
 
     const product = this.productRepository.create({
@@ -60,23 +65,31 @@ export class ProductsService {
     return this.productRepository.save(product);
   }
 
-  async findAll(storeId: string, searchDto: SearchProductsDto): Promise<{ products: Product[]; total: number }> {
-    const query = this.productRepository.createQueryBuilder('product')
+  async findAll(
+    storeId: string,
+    searchDto: SearchProductsDto,
+  ): Promise<{ products: Product[]; total: number }> {
+    const query = this.productRepository
+      .createQueryBuilder('product')
       .where('product.store_id = :storeId', { storeId });
 
     if (searchDto.search) {
       query.andWhere(
         '(product.name ILIKE :search OR product.sku ILIKE :search OR product.barcode ILIKE :search)',
-        { search: `%${searchDto.search}%` }
+        { search: `%${searchDto.search}%` },
       );
     }
 
     if (searchDto.category) {
-      query.andWhere('product.category = :category', { category: searchDto.category });
+      query.andWhere('product.category = :category', {
+        category: searchDto.category,
+      });
     }
 
     if (searchDto.is_active !== undefined) {
-      query.andWhere('product.is_active = :isActive', { isActive: searchDto.is_active });
+      query.andWhere('product.is_active = :isActive', {
+        isActive: searchDto.is_active,
+      });
     }
 
     const total = await query.getCount();
@@ -107,7 +120,11 @@ export class ProductsService {
     return product;
   }
 
-  async update(storeId: string, productId: string, dto: UpdateProductDto): Promise<Product> {
+  async update(
+    storeId: string,
+    productId: string,
+    dto: UpdateProductDto,
+  ): Promise<Product> {
     const product = await this.findOne(storeId, productId);
 
     // Obtener tasa BCV una sola vez si es necesaria
@@ -123,7 +140,8 @@ export class ProductsService {
     if (dto.category !== undefined) product.category = dto.category ?? null;
     if (dto.sku !== undefined) product.sku = dto.sku ?? null;
     if (dto.barcode !== undefined) product.barcode = dto.barcode ?? null;
-    if (dto.low_stock_threshold !== undefined) product.low_stock_threshold = dto.low_stock_threshold;
+    if (dto.low_stock_threshold !== undefined)
+      product.low_stock_threshold = dto.low_stock_threshold;
     if (dto.is_active !== undefined) product.is_active = dto.is_active;
 
     // Si se actualiza el precio USD, recalcular el precio Bs usando la tasa BCV
@@ -132,7 +150,7 @@ export class ProductsService {
       product.price_usd = this.roundToTwoDecimals(dto.price_usd);
       product.price_bs = this.roundToTwoDecimals(dto.price_usd * exchangeRate);
       this.logger.log(
-        `Actualizando precio: price_usd=${product.price_usd} -> price_bs=${product.price_bs.toFixed(2)} (tasa=${exchangeRate})`
+        `Actualizando precio: price_usd=${product.price_usd} -> price_bs=${product.price_bs.toFixed(2)} (tasa=${exchangeRate})`,
       );
     }
 
@@ -142,14 +160,18 @@ export class ProductsService {
       product.cost_usd = this.roundToTwoDecimals(dto.cost_usd);
       product.cost_bs = this.roundToTwoDecimals(dto.cost_usd * exchangeRate);
       this.logger.log(
-        `Actualizando costo: cost_usd=${product.cost_usd} -> cost_bs=${product.cost_bs.toFixed(2)} (tasa=${exchangeRate})`
+        `Actualizando costo: cost_usd=${product.cost_usd} -> cost_bs=${product.cost_bs.toFixed(2)} (tasa=${exchangeRate})`,
       );
     }
 
     return this.productRepository.save(product);
   }
 
-  async changePrice(storeId: string, productId: string, dto: ChangePriceDto): Promise<Product> {
+  async changePrice(
+    storeId: string,
+    productId: string,
+    dto: ChangePriceDto,
+  ): Promise<Product> {
     const product = await this.findOne(storeId, productId);
 
     // Obtener tasa BCV actual
@@ -157,7 +179,7 @@ export class ProductsService {
     const exchangeRate = bcvRate?.rate || 36;
 
     // Calcular price_bs desde price_usd usando la tasa BCV
-    let priceUsd = this.roundToTwoDecimals(dto.price_usd);
+    const priceUsd = this.roundToTwoDecimals(dto.price_usd);
     let priceBs = priceUsd * exchangeRate;
 
     // Aplicar redondeo si se especifica
@@ -172,7 +194,7 @@ export class ProductsService {
     priceBs = this.roundToTwoDecimals(priceBs);
 
     this.logger.log(
-      `Cambiando precio: price_usd=${priceUsd} -> price_bs=${priceBs.toFixed(2)} (tasa=${exchangeRate}, redondeo=${rounding})`
+      `Cambiando precio: price_usd=${priceUsd} -> price_bs=${priceBs.toFixed(2)} (tasa=${exchangeRate}, redondeo=${rounding})`,
     );
 
     product.price_usd = priceUsd;
@@ -314,7 +336,10 @@ export class ProductsService {
     return this.productRepository.save(product);
   }
 
-  async importFromCSV(storeId: string, csvData: string): Promise<{ created: number; errors: string[] }> {
+  async importFromCSV(
+    storeId: string,
+    csvData: string,
+  ): Promise<{ created: number; errors: string[] }> {
     const lines = csvData.trim().split('\n');
     const errors: string[] = [];
     let created = 0;
@@ -328,13 +353,22 @@ export class ProductsService {
 
       try {
         const columns = this.parseCSVLine(line);
-        
+
         if (columns.length < 2) {
           errors.push(`Línea ${i + 1}: Formato inválido`);
           continue;
         }
 
-        const [name, category, sku, barcode, priceBs, priceUsd, costBs, costUsd] = columns;
+        const [
+          name,
+          category,
+          sku,
+          barcode,
+          priceBs,
+          priceUsd,
+          costBs,
+          costUsd,
+        ] = columns;
 
         const productData: CreateProductDto = {
           name: name || `Producto ${i}`,
@@ -358,7 +392,9 @@ export class ProductsService {
 
         created++;
       } catch (error) {
-        errors.push(`Línea ${i + 1}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        errors.push(
+          `Línea ${i + 1}: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        );
       }
     }
 
@@ -387,4 +423,3 @@ export class ProductsService {
     return result;
   }
 }
-

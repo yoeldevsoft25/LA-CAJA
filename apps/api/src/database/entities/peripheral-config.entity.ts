@@ -8,13 +8,25 @@ import {
 } from 'typeorm';
 import { Store } from './store.entity';
 
-export type PeripheralType = 'scanner' | 'printer' | 'drawer' | 'scale' | 'customer_display';
-export type ConnectionType = 'serial' | 'usb' | 'network' | 'bluetooth' | 'web_serial';
+export type PeripheralType =
+  | 'scanner'
+  | 'printer'
+  | 'drawer'
+  | 'scale'
+  | 'customer_display';
+export type ConnectionType =
+  | 'serial'
+  | 'usb'
+  | 'network'
+  | 'bluetooth'
+  | 'web_serial';
 
 @Entity('peripheral_configs')
 @Index(['store_id'])
 @Index(['store_id', 'peripheral_type', 'is_active'])
-@Index(['store_id', 'peripheral_type', 'is_default'], { where: 'is_default = true' })
+@Index(['store_id', 'peripheral_type', 'is_default'], {
+  where: 'is_default = true',
+})
 export class PeripheralConfig {
   @PrimaryColumn('uuid')
   id: string;
@@ -81,4 +93,3 @@ export class PeripheralConfig {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   updated_at: Date;
 }
-

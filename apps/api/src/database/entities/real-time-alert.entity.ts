@@ -9,9 +9,19 @@ import {
 } from 'typeorm';
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
-import { AlertThreshold, AlertType, AlertSeverity } from './alert-threshold.entity';
+import {
+  AlertThreshold,
+  AlertType,
+  AlertSeverity,
+} from './alert-threshold.entity';
 
-export type EntityType = 'sale' | 'product' | 'inventory' | 'customer' | 'debt' | 'purchase';
+export type EntityType =
+  | 'sale'
+  | 'product'
+  | 'inventory'
+  | 'customer'
+  | 'debt'
+  | 'purchase';
 
 @Entity('real_time_alerts')
 @Index(['store_id'])
@@ -86,4 +96,3 @@ export class RealTimeAlert {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

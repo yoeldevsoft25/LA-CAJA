@@ -11,5 +11,3 @@ import { ProjectionsModule } from '../projections/projections.module';
   providers: [SyncService],
 })
 export class SyncModule {}
-
-

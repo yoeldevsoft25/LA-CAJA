@@ -21,7 +21,12 @@ export type AnomalyType =
 
 export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical';
 
-export type EntityType = 'sale' | 'product' | 'customer' | 'inventory' | 'payment';
+export type EntityType =
+  | 'sale'
+  | 'product'
+  | 'customer'
+  | 'inventory'
+  | 'payment';
 
 @Entity('detected_anomalies')
 @Index(['store_id'])
@@ -85,4 +90,3 @@ export class DetectedAnomaly {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

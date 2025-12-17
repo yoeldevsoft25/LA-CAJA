@@ -33,4 +33,3 @@ export { PriceListItem } from './price-list-item.entity';
 export { Promotion } from './promotion.entity';
 export { PromotionProduct } from './promotion-product.entity';
 export { PromotionUsage } from './promotion-usage.entity';
-

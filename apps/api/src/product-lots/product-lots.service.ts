@@ -216,7 +216,7 @@ export class ProductLotsService {
     storeId: string,
     lotId: string,
   ): Promise<LotMovement[]> {
-    const lot = await this.getLotById(storeId, lotId);
+    await this.getLotById(storeId, lotId);
 
     return this.lotMovementRepository.find({
       where: { lot_id: lotId },
@@ -225,4 +225,3 @@ export class ProductLotsService {
     });
   }
 }
-

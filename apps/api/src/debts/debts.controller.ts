@@ -43,13 +43,15 @@ export class DebtsController {
     @Request() req: any,
   ) {
     const storeId = req.user.store_id;
-    
+
     // Validar que debtId no sea null o undefined
     if (!debtId || debtId.trim() === '') {
       throw new BadRequestException('El ID de la deuda es requerido');
     }
-    
-    this.logger.debug(`Agregando pago a deuda - debtId: ${debtId}, storeId: ${storeId}`);
+
+    this.logger.debug(
+      `Agregando pago a deuda - debtId: ${debtId}, storeId: ${storeId}`,
+    );
     return this.debtsService.addPayment(storeId, debtId, dto);
   }
 
@@ -89,4 +91,3 @@ export class DebtsController {
     return this.debtsService.findOne(storeId, id);
   }
 }
-

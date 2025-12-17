@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsNumber, IsBoolean, IsOptional, Min, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -39,4 +47,3 @@ export class CreateProductDto {
   @IsOptional()
   low_stock_threshold?: number;
 }
-

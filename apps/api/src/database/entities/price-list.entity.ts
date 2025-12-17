@@ -59,4 +59,3 @@ export class PriceList {
   @OneToMany(() => PriceListItem, (item) => item.priceList, { cascade: true })
   items: PriceListItem[];
 }
-

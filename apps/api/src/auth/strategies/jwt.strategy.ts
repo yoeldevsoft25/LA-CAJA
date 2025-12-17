@@ -14,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!jwtSecret) {
       throw new Error(
         'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-        'En producción, esto es obligatorio por seguridad.',
+          'En producción, esto es obligatorio por seguridad.',
       );
     }
 
@@ -27,7 +27,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     // Validar que el usuario existe en la tienda
-    const member = await this.authService.validateUser(payload.sub, payload.store_id);
+    const member = await this.authService.validateUser(
+      payload.sub,
+      payload.store_id,
+    );
     if (!member) {
       throw new UnauthorizedException('Usuario no autorizado para esta tienda');
     }
@@ -39,4 +42,3 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     };
   }
 }
-

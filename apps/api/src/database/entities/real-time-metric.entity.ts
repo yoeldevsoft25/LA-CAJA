@@ -71,4 +71,3 @@ export class RealTimeMetric {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

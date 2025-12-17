@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Sale } from './sale.entity';
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
@@ -51,4 +58,3 @@ export class DiscountAuthorization {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   authorized_at: Date;
 }
-

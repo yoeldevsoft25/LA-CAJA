@@ -24,4 +24,3 @@ import { Product } from '../database/entities/product.entity';
   exports: [PromotionsService],
 })
 export class PromotionsModule {}
-

@@ -24,8 +24,7 @@ export class InventoryRulesService {
   ): LotAllocation[] {
     // Filtrar solo lotes del producto con stock disponible
     const availableLots = lots.filter(
-      (lot) =>
-        lot.product_id === productId && lot.remaining_quantity > 0,
+      (lot) => lot.product_id === productId && lot.remaining_quantity > 0,
     );
 
     if (availableLots.length === 0) {
@@ -102,4 +101,3 @@ export class InventoryRulesService {
     });
   }
 }
-

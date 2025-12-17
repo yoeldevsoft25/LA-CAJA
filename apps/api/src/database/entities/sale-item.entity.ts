@@ -52,4 +52,3 @@ export class SaleItem {
   @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
   discount_usd: number;
 }
-

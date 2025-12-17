@@ -13,4 +13,3 @@ export class UpdateCustomerDto {
   @IsOptional()
   note?: string;
 }
-

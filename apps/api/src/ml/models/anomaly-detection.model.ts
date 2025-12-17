@@ -17,7 +17,11 @@ export class AnomalyDetectionModel {
   ): Array<{ index: number; score: number; isAnomaly: boolean }> {
     if (data.length === 0) return [];
 
-    const anomalies: Array<{ index: number; score: number; isAnomaly: boolean }> = [];
+    const anomalies: Array<{
+      index: number;
+      score: number;
+      isAnomaly: boolean;
+    }> = [];
     const min = Math.min(...data);
     const max = Math.max(...data);
 
@@ -34,7 +38,10 @@ export class AnomalyDetectionModel {
         totalPathLength += this.isolatePoint(data[i], data, min, max, 0);
       }
       const avgPathLength = totalPathLength / nTrees;
-      const score = Math.pow(2, -avgPathLength / this.calculateAveragePathLength(data.length));
+      const score = Math.pow(
+        2,
+        -avgPathLength / this.calculateAveragePathLength(data.length),
+      );
       scores.push(score);
     }
 
@@ -42,13 +49,16 @@ export class AnomalyDetectionModel {
     const maxScore = Math.max(...scores);
     const minScore = Math.min(...scores);
     const normalizedScores = scores.map(
-      (s) => (maxScore > minScore ? (s - minScore) / (maxScore - minScore) : 0) * 100,
+      (s) =>
+        (maxScore > minScore ? (s - minScore) / (maxScore - minScore) : 0) *
+        100,
     );
 
     // Determinar umbral basado en contaminación
     const sortedScores = [...normalizedScores].sort((a, b) => b - a);
     const thresholdIndex = Math.floor(data.length * contamination);
-    const threshold = thresholdIndex > 0 ? sortedScores[thresholdIndex] : sortedScores[0];
+    const threshold =
+      thresholdIndex > 0 ? sortedScores[thresholdIndex] : sortedScores[0];
 
     // Marcar anomalías
     for (let i = 0; i < data.length; i++) {
@@ -87,8 +97,8 @@ export class AnomalyDetectionModel {
 
       // Calcular reachability distance
       const kDistance = kNeighbors[kNeighbors.length - 1].distance;
-      const reachabilityDistances = kNeighbors.map(
-        (n) => Math.max(kDistance, Math.abs(data[n.index] - data[i])),
+      const reachabilityDistances = kNeighbors.map((n) =>
+        Math.max(kDistance, Math.abs(data[n.index] - data[i])),
       );
 
       // Calcular local reachability density
@@ -103,15 +113,21 @@ export class AnomalyDetectionModel {
         }));
         neighborDistances.sort((a, b) => a.distance - b.distance);
         const neighborKNeighbors = neighborDistances.slice(1, k + 1);
-        const neighborKDistance = neighborKNeighbors[neighborKNeighbors.length - 1].distance;
+        const neighborKDistance =
+          neighborKNeighbors[neighborKNeighbors.length - 1].distance;
         const neighborReachabilityDistances = neighborKNeighbors.map((n) =>
-          Math.max(neighborKDistance, Math.abs(data[n.index] - data[neighbor.index])),
+          Math.max(
+            neighborKDistance,
+            Math.abs(data[n.index] - data[neighbor.index]),
+          ),
         );
-        const neighborLRD = k / neighborReachabilityDistances.reduce((a, b) => a + b, 0);
+        const neighborLRD =
+          k / neighborReachabilityDistances.reduce((a, b) => a + b, 0);
         neighborLRDs.push(neighborLRD);
       }
 
-      const avgNeighborLRD = neighborLRDs.reduce((a, b) => a + b, 0) / neighborLRDs.length;
+      const avgNeighborLRD =
+        neighborLRDs.reduce((a, b) => a + b, 0) / neighborLRDs.length;
       const lof = avgNeighborLRD > 0 ? lrd / avgNeighborLRD : 1;
 
       scores.push(lof);
@@ -120,8 +136,8 @@ export class AnomalyDetectionModel {
     // Normalizar y determinar anomalías
     const maxScore = Math.max(...scores);
     const minScore = Math.min(...scores);
-    const normalizedScores = scores.map(
-      (s) => (maxScore > minScore ? ((s - minScore) / (maxScore - minScore)) * 100 : 50),
+    const normalizedScores = scores.map((s) =>
+      maxScore > minScore ? ((s - minScore) / (maxScore - minScore)) * 100 : 50,
     );
 
     // LOF > 1 indica anomalía
@@ -140,15 +156,27 @@ export class AnomalyDetectionModel {
   statisticalDetection(
     data: number[],
     method: 'zscore' | 'iqr' | 'both' = 'both',
-  ): Array<{ index: number; score: number; isAnomaly: boolean; method: string }> {
+  ): Array<{
+    index: number;
+    score: number;
+    isAnomaly: boolean;
+    method: string;
+  }> {
     if (data.length === 0) return [];
 
-    const results: Array<{ index: number; score: number; isAnomaly: boolean; method: string }> = [];
+    const results: Array<{
+      index: number;
+      score: number;
+      isAnomaly: boolean;
+      method: string;
+    }> = [];
 
     // Z-score
     if (method === 'zscore' || method === 'both') {
       const mean = data.reduce((a, b) => a + b, 0) / data.length;
-      const variance = data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / data.length;
+      const variance =
+        data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) /
+        data.length;
       const stdDev = Math.sqrt(variance);
 
       if (stdDev > 0) {
@@ -179,7 +207,10 @@ export class AnomalyDetectionModel {
       for (let i = 0; i < data.length; i++) {
         const isOutlier = data[i] < lowerBound || data[i] > upperBound;
         const distance = isOutlier
-          ? Math.min(Math.abs(data[i] - lowerBound), Math.abs(data[i] - upperBound))
+          ? Math.min(
+              Math.abs(data[i] - lowerBound),
+              Math.abs(data[i] - upperBound),
+            )
           : 0;
         const score = Math.min(100, (distance / (iqr || 1)) * 50);
         results.push({
@@ -224,4 +255,3 @@ export class AnomalyDetectionModel {
     return 2 * (Math.log(n - 1) + 0.5772156649) - (2 * (n - 1)) / n;
   }
 }
-

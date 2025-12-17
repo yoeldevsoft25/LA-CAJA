@@ -2,7 +2,12 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Event } from '../database/entities/event.entity';
-import { PushSyncDto, PushSyncResponseDto, AcceptedEventDto, RejectedEventDto } from './dto/push-sync.dto';
+import {
+  PushSyncDto,
+  PushSyncResponseDto,
+  AcceptedEventDto,
+  RejectedEventDto,
+} from './dto/push-sync.dto';
 import { ProjectionsService } from '../projections/projections.service';
 import { SyncStatusDto } from './dto/sync-status.dto';
 
@@ -50,22 +55,39 @@ export class SyncService {
     for (const event of dto.events) {
       try {
         // Validación básica
-        if (!event.event_id || !event.type || !event.payload || !event.actor || !event.actor.user_id || !event.actor.role) {
+        if (
+          !event.event_id ||
+          !event.type ||
+          !event.payload ||
+          !event.actor ||
+          !event.actor.user_id ||
+          !event.actor.role
+        ) {
           rejected.push({
             event_id: event.event_id || 'unknown',
             seq: event.seq,
             code: 'VALIDATION_ERROR',
-            message: 'Evento inválido: campos requeridos faltantes (event_id, type, payload, actor.user_id, actor.role)',
+            message:
+              'Evento inválido: campos requeridos faltantes (event_id, type, payload, actor.user_id, actor.role)',
           });
           continue;
         }
 
         // Validar tipo de evento conocido (ejemplo, se expandirá en Sprint 8)
         const knownEventTypes = [
-          'ProductCreated', 'ProductUpdated', 'ProductDeactivated', 'PriceChanged',
-          'StockReceived', 'StockAdjusted', 'SaleCreated',
-          'CashSessionOpened', 'CashSessionClosed',
-          'CustomerCreated', 'CustomerUpdated', 'DebtCreated', 'DebtPaymentRecorded'
+          'ProductCreated',
+          'ProductUpdated',
+          'ProductDeactivated',
+          'PriceChanged',
+          'StockReceived',
+          'StockAdjusted',
+          'SaleCreated',
+          'CashSessionOpened',
+          'CashSessionClosed',
+          'CustomerCreated',
+          'CustomerUpdated',
+          'DebtCreated',
+          'DebtPaymentRecorded',
         ];
         if (!knownEventTypes.includes(event.type)) {
           rejected.push({
@@ -118,7 +140,8 @@ export class SyncService {
           event_id: event.event_id,
           seq: event.seq,
           code: 'PROCESSING_ERROR',
-          message: error instanceof Error ? error.message : 'Error procesando evento',
+          message:
+            error instanceof Error ? error.message : 'Error procesando evento',
         });
       }
     }
@@ -133,7 +156,10 @@ export class SyncService {
           await this.projectionsService.projectEvent(event);
         } catch (error) {
           // Log error pero no fallar el sync
-          this.logger.error(`Error proyectando evento ${event.event_id}`, error instanceof Error ? error.stack : String(error));
+          this.logger.error(
+            `Error proyectando evento ${event.event_id}`,
+            error instanceof Error ? error.stack : String(error),
+          );
         }
       }
     }
@@ -146,7 +172,10 @@ export class SyncService {
     };
   }
 
-  async getSyncStatus(storeId: string, deviceId: string): Promise<SyncStatusDto> {
+  async getSyncStatus(
+    storeId: string,
+    deviceId: string,
+  ): Promise<SyncStatusDto> {
     // Obtener último evento sincronizado de este dispositivo
     const lastEvent = await this.eventRepository.findOne({
       where: { store_id: storeId, device_id: deviceId },
@@ -169,7 +198,10 @@ export class SyncService {
     };
   }
 
-  async getLastProcessedSeq(storeId: string, deviceId: string): Promise<number> {
+  async getLastProcessedSeq(
+    storeId: string,
+    deviceId: string,
+  ): Promise<number> {
     const lastEvent = await this.eventRepository.findOne({
       where: { store_id: storeId, device_id: deviceId },
       order: { seq: 'DESC' },

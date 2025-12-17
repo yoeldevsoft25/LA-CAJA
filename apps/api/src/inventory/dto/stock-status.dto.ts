@@ -5,4 +5,3 @@ export class StockStatusDto {
   @IsOptional()
   product_id?: string; // Si no se especifica, devuelve todos los productos de la tienda
 }
-

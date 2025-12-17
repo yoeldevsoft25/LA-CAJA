@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DiscountAuthorization } from '../database/entities/discount-authorization.entity';
@@ -47,7 +51,9 @@ export class DiscountAuthorizationsService {
     const saleDiscountUsd = Number(totals.discount_usd || 0);
 
     if (saleDiscountBs === 0 && saleDiscountUsd === 0) {
-      throw new BadRequestException('La venta no tiene descuentos para autorizar');
+      throw new BadRequestException(
+        'La venta no tiene descuentos para autorizar',
+      );
     }
 
     // Verificar que los montos coinciden
@@ -172,7 +178,8 @@ export class DiscountAuthorizationsService {
 
       const authorizerId = auth.authorized_by;
       byAuthorizer[authorizerId] =
-        (byAuthorizer[authorizerId] || 0) + Number(auth.discount_amount_bs || 0);
+        (byAuthorizer[authorizerId] || 0) +
+        Number(auth.discount_amount_bs || 0);
     }
 
     return {
@@ -187,4 +194,3 @@ export class DiscountAuthorizationsService {
     };
   }
 }
-

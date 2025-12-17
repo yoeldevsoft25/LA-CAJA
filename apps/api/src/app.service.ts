@@ -36,10 +36,10 @@ export class AppService {
       health.database.status = 'error';
       health.database.connected = false;
       health.status = 'degraded';
-      health.database.error = error instanceof Error ? error.message : 'Unknown error';
+      health.database.error =
+        error instanceof Error ? error.message : 'Unknown error';
     }
 
     return health;
   }
 }
-

@@ -18,4 +18,3 @@ import { WarehousesModule } from '../warehouses/warehouses.module';
   exports: [TransfersService],
 })
 export class TransfersModule {}
-

@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Store } from './store.entity';
-import { Profile } from './profile.entity';
 
 export enum CashSessionStatus {
   OPEN = 'open',
@@ -53,4 +52,3 @@ export class CashSession {
   @Column({ type: 'text', nullable: true })
   note: string | null;
 }
-

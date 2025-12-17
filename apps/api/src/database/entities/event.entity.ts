@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
+import { Entity, Column, PrimaryColumn } from 'typeorm';
 
 @Entity('events')
 export class Event {
@@ -35,4 +35,3 @@ export class Event {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   received_at: Date;
 }
-

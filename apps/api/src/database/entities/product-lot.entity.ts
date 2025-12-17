@@ -68,4 +68,3 @@ export class ProductLot {
   @OneToMany(() => LotMovement, (movement) => movement.lot)
   movements: LotMovement[];
 }
-

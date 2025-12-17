@@ -61,4 +61,3 @@ export class CreateOrderDto {
   @IsOptional()
   items?: OrderItemDto[]; // Items iniciales (opcional)
 }
-

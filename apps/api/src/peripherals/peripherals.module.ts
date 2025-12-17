@@ -14,4 +14,3 @@ import { PeripheralConfig } from '../database/entities/peripheral-config.entity'
   exports: [PeripheralsService],
 })
 export class PeripheralsModule {}
-

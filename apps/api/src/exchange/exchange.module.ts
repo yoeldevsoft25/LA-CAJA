@@ -11,4 +11,3 @@ import { ExchangeRate } from '../database/entities/exchange-rate.entity';
   exports: [ExchangeService],
 })
 export class ExchangeModule {}
-

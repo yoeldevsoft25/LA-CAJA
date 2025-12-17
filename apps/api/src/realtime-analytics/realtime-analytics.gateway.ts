@@ -25,7 +25,9 @@ interface AuthenticatedSocket extends Socket {
   },
   namespace: '/realtime',
 })
-export class RealTimeAnalyticsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class RealTimeAnalyticsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -41,7 +43,9 @@ export class RealTimeAnalyticsGateway implements OnGatewayConnection, OnGatewayD
   async handleConnection(client: AuthenticatedSocket) {
     try {
       // Autenticar cliente mediante token JWT
-      const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.replace('Bearer ', '');
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace('Bearer ', '');
 
       if (!token) {
         this.logger.warn(`Cliente ${client.id} intentó conectar sin token`);
@@ -58,7 +62,9 @@ export class RealTimeAnalyticsGateway implements OnGatewayConnection, OnGatewayD
         client.join(`store:${client.storeId}`);
 
         this.connectedClients.set(client.id, client);
-        this.logger.log(`Cliente ${client.id} conectado (store: ${client.storeId})`);
+        this.logger.log(
+          `Cliente ${client.id} conectado (store: ${client.storeId})`,
+        );
 
         // Enviar estado inicial
         client.emit('connected', {
@@ -70,7 +76,10 @@ export class RealTimeAnalyticsGateway implements OnGatewayConnection, OnGatewayD
         client.disconnect();
       }
     } catch (error) {
-      this.logger.error(`Error en conexión de cliente ${client.id}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Error en conexión de cliente ${client.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       client.disconnect();
     }
   }
@@ -150,7 +159,10 @@ export class RealTimeAnalyticsGateway implements OnGatewayConnection, OnGatewayD
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error(`Error obteniendo métricas para cliente ${client.id}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Error obteniendo métricas para cliente ${client.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       client.emit('error', {
         message: 'Error obteniendo métricas',
       });
@@ -181,7 +193,10 @@ export class RealTimeAnalyticsGateway implements OnGatewayConnection, OnGatewayD
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error(`Error obteniendo alertas para cliente ${client.id}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Error obteniendo alertas para cliente ${client.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       client.emit('error', {
         message: 'Error obteniendo alertas',
       });
@@ -225,4 +240,3 @@ export class RealTimeAnalyticsGateway implements OnGatewayConnection, OnGatewayD
     });
   }
 }
-

@@ -72,4 +72,3 @@ export class TransfersController {
     return this.transfersService.cancel(storeId, id, userId);
   }
 }
-

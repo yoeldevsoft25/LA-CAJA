@@ -24,7 +24,9 @@ interface AuthenticatedSocket extends Socket {
   },
   namespace: '/notifications',
 })
-export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -38,7 +40,9 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.replace('Bearer ', '');
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace('Bearer ', '');
 
       if (!token) {
         this.logger.warn(`Cliente ${client.id} intentó conectar sin token`);
@@ -56,7 +60,9 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         client.join(`store:${client.storeId}`);
 
         this.connectedClients.set(client.id, client);
-        this.logger.log(`Cliente ${client.id} conectado (store: ${client.storeId}, user: ${client.userId})`);
+        this.logger.log(
+          `Cliente ${client.id} conectado (store: ${client.storeId}, user: ${client.userId})`,
+        );
 
         // Enviar estado inicial
         client.emit('connected', {
@@ -67,7 +73,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
         // Enviar badge actual
         if (client.storeId && client.userId) {
-          const badge = await this.notificationsService.getBadge(client.storeId, client.userId);
+          const badge = await this.notificationsService.getBadge(
+            client.storeId,
+            client.userId,
+          );
           client.emit('badge:update', {
             badge,
             timestamp: Date.now(),
@@ -78,7 +87,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         client.disconnect();
       }
     } catch (error) {
-      this.logger.error(`Error en conexión de cliente ${client.id}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Error en conexión de cliente ${client.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       client.disconnect();
     }
   }
@@ -131,7 +143,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error(`Error obteniendo notificaciones para cliente ${client.id}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Error obteniendo notificaciones para cliente ${client.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       client.emit('error', {
         message: 'Error obteniendo notificaciones',
       });
@@ -163,7 +178,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         timestamp: Date.now(),
       });
     } catch (error) {
-      this.logger.error(`Error obteniendo badge para cliente ${client.id}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Error obteniendo badge para cliente ${client.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       client.emit('error', {
         message: 'Error obteniendo badge',
       });
@@ -180,12 +198,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     });
 
     // Actualizar badge
-    this.notificationsService.getBadge(storeId, userId, notification.category).then((badge) => {
-      this.server.to(`user:${storeId}:${userId}`).emit('badge:update', {
-        badge,
-        timestamp: Date.now(),
+    this.notificationsService
+      .getBadge(storeId, userId, notification.category)
+      .then((badge) => {
+        this.server.to(`user:${storeId}:${userId}`).emit('badge:update', {
+          badge,
+          timestamp: Date.now(),
+        });
       });
-    });
   }
 
   /**
@@ -202,11 +222,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
    * Actualizar badge para usuario
    */
   async updateBadge(storeId: string, userId: string, category?: string) {
-    const badge = await this.notificationsService.getBadge(storeId, userId, category);
+    const badge = await this.notificationsService.getBadge(
+      storeId,
+      userId,
+      category,
+    );
     this.server.to(`user:${storeId}:${userId}`).emit('badge:update', {
       badge,
       timestamp: Date.now(),
     });
   }
 }
-

@@ -186,4 +186,3 @@ export class FiscalInvoice {
   @OneToMany(() => FiscalInvoiceItem, (item) => item.fiscal_invoice)
   items: FiscalInvoiceItem[];
 }
-

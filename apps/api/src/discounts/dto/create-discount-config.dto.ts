@@ -50,4 +50,3 @@ export class CreateDiscountConfigDto {
   @IsOptional()
   auto_approve_below_amount_bs?: number | null;
 }
-

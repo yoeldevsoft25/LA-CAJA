@@ -39,15 +39,14 @@ class PushNotificationsService {
       })
 
       // Convertir a formato para enviar al backend
+      const p256dhKey = subscription.getKey('p256dh')
+      const authKey = subscription.getKey('auth')
+      
       const pushSubscription: PushSubscription = {
         device_id: this.getDeviceId(),
         endpoint: subscription.endpoint,
-        p256dh_key: this.arrayBufferToBase64(
-          subscription.getKey('p256dh')?.buffer || new ArrayBuffer(0)
-        ),
-        auth_key: this.arrayBufferToBase64(
-          subscription.getKey('auth')?.buffer || new ArrayBuffer(0)
-        ),
+        p256dh_key: p256dhKey ? this.arrayBufferToBase64(p256dhKey) : '',
+        auth_key: authKey ? this.arrayBufferToBase64(authKey) : '',
         user_agent: navigator.userAgent,
       }
 
@@ -98,7 +97,7 @@ class PushNotificationsService {
   /**
    * Convierte VAPID key de base64 URL a Uint8Array
    */
-  private urlBase64ToUint8Array(base64String: string): Uint8Array {
+  private urlBase64ToUint8Array(base64String: string): BufferSource {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
     const rawData = window.atob(base64)

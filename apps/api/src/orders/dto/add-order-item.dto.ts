@@ -1,10 +1,4 @@
-import {
-  IsUUID,
-  IsNumber,
-  Min,
-  IsString,
-  IsOptional,
-} from 'class-validator';
+import { IsUUID, IsNumber, Min, IsString, IsOptional } from 'class-validator';
 
 /**
  * DTO para agregar un item a una orden
@@ -35,4 +29,3 @@ export class AddOrderItemDto {
   @IsOptional()
   note?: string | null; // Nota especial del item
 }
-

@@ -84,7 +84,12 @@ class ConnectionConfigDto {
 export class CreatePeripheralConfigDto {
   @IsString()
   @IsIn(['scanner', 'printer', 'drawer', 'scale', 'customer_display'])
-  peripheral_type: 'scanner' | 'printer' | 'drawer' | 'scale' | 'customer_display';
+  peripheral_type:
+    | 'scanner'
+    | 'printer'
+    | 'drawer'
+    | 'scale'
+    | 'customer_display';
 
   @IsString()
   @MaxLength(100, { message: 'El nombre no puede exceder 100 caracteres' })
@@ -111,4 +116,3 @@ export class CreatePeripheralConfigDto {
   @IsOptional()
   note?: string | null;
 }
-

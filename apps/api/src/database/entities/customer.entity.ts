@@ -28,4 +28,3 @@ export class Customer {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   updated_at: Date;
 }
-

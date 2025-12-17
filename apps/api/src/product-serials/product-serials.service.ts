@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
-import { ProductSerial, SerialStatus } from '../database/entities/product-serial.entity';
+import {
+  ProductSerial,
+  SerialStatus,
+} from '../database/entities/product-serial.entity';
 import { Product } from '../database/entities/product.entity';
 import { Sale } from '../database/entities/sale.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
@@ -188,9 +191,7 @@ export class ProductSerialsService {
     });
 
     // Verificar que pertenecen a la tienda
-    const validSerials = serials.filter(
-      (s) => s.product.store_id === storeId,
-    );
+    const validSerials = serials.filter((s) => s.product.store_id === storeId);
 
     if (validSerials.length < quantity) {
       throw new BadRequestException(
@@ -383,4 +384,3 @@ export class ProductSerialsService {
     });
   }
 }
-

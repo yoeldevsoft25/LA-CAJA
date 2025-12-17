@@ -3,7 +3,6 @@ import {
   IsEnum,
   IsOptional,
   IsUUID,
-  IsBoolean,
   IsDateString,
   IsArray,
   IsObject,
@@ -89,4 +88,3 @@ export class CreateNotificationDto {
   @IsDateString()
   expires_at?: string;
 }
-

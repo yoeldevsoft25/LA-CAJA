@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Sale } from '../database/entities/sale.entity';
@@ -63,7 +67,11 @@ export class SalesService {
     private fiscalInvoicesService: FiscalInvoicesService,
   ) {}
 
-  async create(storeId: string, dto: CreateSaleDto, userId?: string): Promise<Sale> {
+  async create(
+    storeId: string,
+    dto: CreateSaleDto,
+    userId?: string,
+  ): Promise<Sale> {
     // Validar que hay items
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('El carrito no puede estar vacío');
@@ -73,14 +81,19 @@ export class SalesService {
     const hasDiscounts = dto.items.some(
       (item) => (item.discount_bs || 0) > 0 || (item.discount_usd || 0) > 0,
     );
-    const hasCustomer = !!(dto.customer_id || dto.customer_name || dto.customer_document_id);
-
-    const fastCheckoutValidation = await this.fastCheckoutRulesService.validateFastCheckout(
-      storeId,
-      dto.items.length,
-      hasDiscounts,
-      hasCustomer,
+    const hasCustomer = !!(
+      dto.customer_id ||
+      dto.customer_name ||
+      dto.customer_document_id
     );
+
+    const fastCheckoutValidation =
+      await this.fastCheckoutRulesService.validateFastCheckout(
+        storeId,
+        dto.items.length,
+        hasDiscounts,
+        hasCustomer,
+      );
 
     if (!fastCheckoutValidation.valid) {
       throw new BadRequestException(fastCheckoutValidation.error);
@@ -92,12 +105,16 @@ export class SalesService {
     });
 
     if (!openSession) {
-      throw new BadRequestException('No hay una sesión de caja abierta. Abre caja para registrar ventas.');
+      throw new BadRequestException(
+        'No hay una sesión de caja abierta. Abre caja para registrar ventas.',
+      );
     }
 
     // Si se envía cash_session_id debe coincidir con la sesión abierta
     if (dto.cash_session_id && dto.cash_session_id !== openSession.id) {
-      throw new BadRequestException('La venta debe asociarse a la sesión de caja abierta actual.');
+      throw new BadRequestException(
+        'La venta debe asociarse a la sesión de caja abierta actual.',
+      );
     }
 
     // Forzar asociación a la sesión abierta (incluye casos en los que no se envió cash_session_id)
@@ -107,7 +124,7 @@ export class SalesService {
     return this.dataSource.transaction(async (manager) => {
       // Manejar información del cliente (opcional para todas las ventas)
       let finalCustomerId: string | null = null;
-      
+
       // Si se proporciona customer_id, usarlo directamente
       if (dto.customer_id) {
         const existingCustomer = await manager.findOne(Customer, {
@@ -116,27 +133,39 @@ export class SalesService {
         if (existingCustomer) {
           finalCustomerId = existingCustomer.id;
           // Opcionalmente actualizar datos si se proporcionan
-          if (dto.customer_name || dto.customer_phone !== undefined || dto.customer_note !== undefined) {
+          if (
+            dto.customer_name ||
+            dto.customer_phone !== undefined ||
+            dto.customer_note !== undefined
+          ) {
             if (dto.customer_name) existingCustomer.name = dto.customer_name;
-            if (dto.customer_phone !== undefined) existingCustomer.phone = dto.customer_phone || null;
-            if (dto.customer_note !== undefined) existingCustomer.note = dto.customer_note || null;
+            if (dto.customer_phone !== undefined)
+              existingCustomer.phone = dto.customer_phone || null;
+            if (dto.customer_note !== undefined)
+              existingCustomer.note = dto.customer_note || null;
             existingCustomer.updated_at = new Date();
             await manager.save(Customer, existingCustomer);
           }
         }
       }
       // Si se proporcionan datos de cliente (nombre, cédula, etc.) y NO hay customer_id
-      else if (dto.customer_name || dto.customer_document_id || dto.customer_phone) {
+      else if (
+        dto.customer_name ||
+        dto.customer_document_id ||
+        dto.customer_phone
+      ) {
         // Si hay nombre, la cédula es obligatoria
         if (dto.customer_name && !dto.customer_document_id) {
-          throw new BadRequestException('Si proporcionas el nombre del cliente, la cédula es obligatoria');
+          throw new BadRequestException(
+            'Si proporcionas el nombre del cliente, la cédula es obligatoria',
+          );
         }
 
         // Si hay cédula, buscar cliente existente
         let customer: Customer | null = null;
         if (dto.customer_document_id) {
           customer = await manager.findOne(Customer, {
-            where: { 
+            where: {
               store_id: storeId,
               document_id: dto.customer_document_id.trim(),
             },
@@ -147,8 +176,10 @@ export class SalesService {
         if (customer) {
           // Actualizar datos del cliente
           if (dto.customer_name) customer.name = dto.customer_name;
-          if (dto.customer_phone !== undefined) customer.phone = dto.customer_phone || null;
-          if (dto.customer_note !== undefined) customer.note = dto.customer_note || null;
+          if (dto.customer_phone !== undefined)
+            customer.phone = dto.customer_phone || null;
+          if (dto.customer_note !== undefined)
+            customer.note = dto.customer_note || null;
           customer.updated_at = new Date();
           customer = await manager.save(Customer, customer);
           finalCustomerId = customer.id;
@@ -171,7 +202,9 @@ export class SalesService {
         if (dto.customer_id) {
           finalCustomerId = dto.customer_id;
         } else {
-          throw new BadRequestException('FIAO requiere información del cliente (nombre y cédula) o un customer_id existente');
+          throw new BadRequestException(
+            'FIAO requiere información del cliente (nombre y cédula) o un customer_id existente',
+          );
         }
       }
       const saleId = randomUUID();
@@ -188,11 +221,17 @@ export class SalesService {
       // Procesar cada item del carrito
       for (const cartItem of dto.items) {
         const product = await manager.findOne(Product, {
-          where: { id: cartItem.product_id, store_id: storeId, is_active: true },
+          where: {
+            id: cartItem.product_id,
+            store_id: storeId,
+            is_active: true,
+          },
         });
 
         if (!product) {
-          throw new NotFoundException(`Producto ${cartItem.product_id} no encontrado o inactivo`);
+          throw new NotFoundException(
+            `Producto ${cartItem.product_id} no encontrado o inactivo`,
+          );
         }
 
         productMap.set(product.id, product);
@@ -383,11 +422,12 @@ export class SalesService {
         }
 
         // Calcular descuento de promoción
-        const promotionDiscount = this.promotionsService.calculatePromotionDiscount(
-          promotion,
-          subtotalBs,
-          subtotalUsd,
-        );
+        const promotionDiscount =
+          this.promotionsService.calculatePromotionDiscount(
+            promotion,
+            subtotalBs,
+            subtotalUsd,
+          );
 
         promotionDiscountBs = promotionDiscount.discount_bs;
         promotionDiscountUsd = promotionDiscount.discount_usd;
@@ -413,12 +453,13 @@ export class SalesService {
               ? (discountUsd / originalSubtotalUsd) * 100
               : 0;
 
-        const discountValidation = await this.discountRulesService.requiresAuthorization(
-          storeId,
-          discountBs,
-          discountUsd,
-          discountPercentage,
-        );
+        const discountValidation =
+          await this.discountRulesService.requiresAuthorization(
+            storeId,
+            discountBs,
+            discountUsd,
+            discountPercentage,
+          );
 
         // Si requiere autorización y no está auto-aprobado, lanzar error
         if (
@@ -435,10 +476,11 @@ export class SalesService {
       // Validar método de pago según configuración de topes
       if (dto.payment_method === 'SPLIT' && dto.split) {
         // Validar pago split
-        const splitValidation = await this.paymentRulesService.validateSplitPayment(
-          storeId,
-          dto.split,
-        );
+        const splitValidation =
+          await this.paymentRulesService.validateSplitPayment(
+            storeId,
+            dto.split,
+          );
         if (!splitValidation.valid) {
           throw new BadRequestException(splitValidation.error);
         }
@@ -463,10 +505,11 @@ export class SalesService {
       let invoiceFullNumber: string | null = null;
 
       try {
-        const invoiceData = await this.invoiceSeriesService.generateNextInvoiceNumber(
-          storeId,
-          dto.invoice_series_id,
-        );
+        const invoiceData =
+          await this.invoiceSeriesService.generateNextInvoiceNumber(
+            storeId,
+            dto.invoice_series_id,
+          );
         invoiceSeriesId = invoiceData.series.id;
         invoiceNumber = invoiceData.invoice_number;
         invoiceFullNumber = invoiceData.invoice_full_number;
@@ -512,7 +555,10 @@ export class SalesService {
       await manager.save(SaleItem, items);
 
       // Registrar uso de promoción si se aplicó
-      if (dto.promotion_id && (promotionDiscountBs > 0 || promotionDiscountUsd > 0)) {
+      if (
+        dto.promotion_id &&
+        (promotionDiscountBs > 0 || promotionDiscountUsd > 0)
+      ) {
         await this.promotionsService.recordPromotionUsage(
           dto.promotion_id,
           savedSale.id,
@@ -530,7 +576,8 @@ export class SalesService {
         warehouseId = dto.warehouse_id;
       } else {
         // Usar bodega por defecto si no se especifica
-        const defaultWarehouse = await this.warehousesService.getDefault(storeId);
+        const defaultWarehouse =
+          await this.warehousesService.getDefault(storeId);
         if (defaultWarehouse) {
           warehouseId = defaultWarehouse.id;
         }
@@ -627,8 +674,10 @@ export class SalesService {
           );
           saleWithDebt.debt.total_paid_bs = totalPaidBs;
           saleWithDebt.debt.total_paid_usd = totalPaidUsd;
-          saleWithDebt.debt.remaining_bs = Number(debtWithPayments.amount_bs) - totalPaidBs;
-          saleWithDebt.debt.remaining_usd = Number(debtWithPayments.amount_usd) - totalPaidUsd;
+          saleWithDebt.debt.remaining_bs =
+            Number(debtWithPayments.amount_bs) - totalPaidBs;
+          saleWithDebt.debt.remaining_usd =
+            Number(debtWithPayments.amount_usd) - totalPaidUsd;
         }
       }
 
@@ -670,7 +719,7 @@ export class SalesService {
         where: { debt_id: saleWithDebt.debt.id },
         select: ['amount_bs', 'amount_usd'],
       });
-      
+
       const totalPaidBs = payments.reduce(
         (sum: number, p: any) => sum + Number(p.amount_bs || 0),
         0,
@@ -681,13 +730,18 @@ export class SalesService {
       );
       saleWithDebt.debt.total_paid_bs = totalPaidBs;
       saleWithDebt.debt.total_paid_usd = totalPaidUsd;
-      saleWithDebt.debt.remaining_bs = Number(saleWithDebt.debt.amount_bs || 0) - totalPaidBs;
-      saleWithDebt.debt.remaining_usd = Number(saleWithDebt.debt.amount_usd || 0) - totalPaidUsd;
+      saleWithDebt.debt.remaining_bs =
+        Number(saleWithDebt.debt.amount_bs || 0) - totalPaidBs;
+      saleWithDebt.debt.remaining_usd =
+        Number(saleWithDebt.debt.amount_usd || 0) - totalPaidUsd;
     }
 
     // Agregar información de factura fiscal si existe
     try {
-      const fiscalInvoice = await this.fiscalInvoicesService.findBySale(storeId, saleId);
+      const fiscalInvoice = await this.fiscalInvoicesService.findBySale(
+        storeId,
+        saleId,
+      );
       if (fiscalInvoice) {
         saleWithDebt.fiscal_invoice = {
           id: fiscalInvoice.id,
@@ -781,8 +835,10 @@ export class SalesService {
         );
         saleWithDebt.debt.total_paid_bs = totalPaidBs;
         saleWithDebt.debt.total_paid_usd = totalPaidUsd;
-        saleWithDebt.debt.remaining_bs = Number(saleWithDebt.debt.amount_bs || 0) - totalPaidBs;
-        saleWithDebt.debt.remaining_usd = Number(saleWithDebt.debt.amount_usd || 0) - totalPaidUsd;
+        saleWithDebt.debt.remaining_bs =
+          Number(saleWithDebt.debt.amount_bs || 0) - totalPaidBs;
+        saleWithDebt.debt.remaining_usd =
+          Number(saleWithDebt.debt.amount_usd || 0) - totalPaidUsd;
       }
       return saleWithDebt;
     });
@@ -790,7 +846,10 @@ export class SalesService {
     return { sales: salesWithDebtInfo, total };
   }
 
-  private async getCurrentStock(storeId: string, productId: string): Promise<number> {
+  private async getCurrentStock(
+    storeId: string,
+    productId: string,
+  ): Promise<number> {
     const result = await this.movementRepository
       .createQueryBuilder('movement')
       .select('COALESCE(SUM(movement.qty_delta), 0)', 'stock')

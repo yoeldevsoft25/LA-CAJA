@@ -1,4 +1,12 @@
-import { IsDateString, IsIn, IsInt, IsOptional, IsPositive, IsString, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsPositive,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 const LICENSE_STATUSES = ['active', 'suspended', 'expired', 'trial'] as const;
 export type LicenseStatus = (typeof LICENSE_STATUSES)[number];

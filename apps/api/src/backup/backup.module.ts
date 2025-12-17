@@ -12,4 +12,3 @@ import { Customer } from '../database/entities/customer.entity';
   exports: [BackupService],
 })
 export class BackupModule {}
-

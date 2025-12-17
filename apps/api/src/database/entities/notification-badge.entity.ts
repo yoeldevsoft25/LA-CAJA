@@ -42,4 +42,3 @@ export class NotificationBadge {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

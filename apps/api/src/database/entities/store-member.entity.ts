@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
 
@@ -29,4 +36,3 @@ export class StoreMember {
   @JoinColumn({ name: 'user_id' })
   profile: Profile;
 }
-

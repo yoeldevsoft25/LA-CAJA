@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Store } from './store.entity';
 import { Shift } from './shift.entity';
 import { CashSession } from './cash-session.entity';
@@ -68,4 +75,3 @@ export class CashMovement {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   created_at: Date;
 }
-

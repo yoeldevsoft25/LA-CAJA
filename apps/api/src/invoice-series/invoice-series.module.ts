@@ -14,4 +14,3 @@ import { InvoiceSeries } from '../database/entities/invoice-series.entity';
   exports: [InvoiceSeriesService],
 })
 export class InvoiceSeriesModule {}
-

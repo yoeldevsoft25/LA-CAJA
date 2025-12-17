@@ -1,6 +1,6 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 import { ExchangeRate } from '../database/entities/exchange-rate.entity';
@@ -39,7 +39,7 @@ export class ExchangeService {
     this.axiosInstance = axios.create({
       timeout: 5000, // 5 segundos timeout
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
   }
@@ -92,7 +92,10 @@ export class ExchangeService {
    * Obtiene la tasa actual con fallback garantizado
    * Retorna siempre una tasa (usa fallback por defecto si es necesario)
    */
-  async getCurrentRate(storeId?: string, fallbackRate: number = 36): Promise<number> {
+  async getCurrentRate(
+    storeId?: string,
+    fallbackRate: number = 36,
+  ): Promise<number> {
     const rateData = await this.getBCVRate(storeId);
     if (rateData && rateData.rate > 0) {
       return rateData.rate;
@@ -114,18 +117,21 @@ export class ExchangeService {
           timestamp: new Date(),
         };
         this.logger.log(`Tasa BCV obtenida y cacheada: ${rate}`);
-        
+
         // Si hay storeId, guardar en BD como referencia
         if (storeId) {
-          await this.saveApiRate(storeId, rate).catch(err => {
+          await this.saveApiRate(storeId, rate).catch((err) => {
             this.logger.warn('Error al guardar tasa API en BD', err);
           });
         }
-        
+
         return this.cachedRate;
       }
     } catch (error) {
-      this.logger.warn('Error al obtener tasa del BCV', error instanceof Error ? error.message : String(error));
+      this.logger.warn(
+        'Error al obtener tasa del BCV',
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     // Si hay storeId, buscar última tasa manual como fallback
@@ -137,7 +143,9 @@ export class ExchangeService {
           source: 'manual',
           timestamp: lastManualRate.effective_from,
         };
-        this.logger.log(`Usando última tasa manual como fallback: ${lastManualRate.rate}`);
+        this.logger.log(
+          `Usando última tasa manual como fallback: ${lastManualRate.rate}`,
+        );
         return this.cachedRate;
       }
     }
@@ -159,9 +167,9 @@ export class ExchangeService {
   private async fetchFromBCVAPI(): Promise<number | null> {
     try {
       this.logger.log('Obteniendo tasa BCV desde DolarAPI...');
-      
+
       const response = await this.axiosInstance.get<DolarAPIOfficialResponse>(
-        this.DOLAR_API_URL
+        this.DOLAR_API_URL,
       );
 
       const data = response.data;
@@ -173,17 +181,19 @@ export class ExchangeService {
       }
 
       this.logger.log(
-        `Tasa BCV obtenida: ${data.promedio} (actualizada: ${data.fechaActualizacion})`
+        `Tasa BCV obtenida: ${data.promedio} (actualizada: ${data.fechaActualizacion})`,
       );
 
       return data.promedio;
     } catch (error: any) {
       if (error.response) {
         this.logger.error(
-          `Error HTTP al obtener tasa BCV: ${error.response.status} - ${error.response.statusText}`
+          `Error HTTP al obtener tasa BCV: ${error.response.status} - ${error.response.statusText}`,
         );
       } else if (error.request) {
-        this.logger.error('Error de conexión al obtener tasa BCV (sin respuesta)');
+        this.logger.error(
+          'Error de conexión al obtener tasa BCV (sin respuesta)',
+        );
       } else {
         this.logger.error(`Error al obtener tasa BCV: ${error.message}`);
       }
@@ -217,7 +227,7 @@ export class ExchangeService {
     }
 
     const now = new Date();
-    
+
     // Desactivar tasas manuales anteriores que se solapen
     if (effectiveFrom || effectiveUntil) {
       await this.exchangeRateRepository.update(
@@ -253,7 +263,9 @@ export class ExchangeService {
       timestamp: saved.effective_from,
     };
 
-    this.logger.log(`Tasa manual establecida en BD: ${rate} para store ${storeId}`);
+    this.logger.log(
+      `Tasa manual establecida en BD: ${rate} para store ${storeId}`,
+    );
     return saved;
   }
 
@@ -262,14 +274,17 @@ export class ExchangeService {
    */
   async getActiveManualRate(storeId: string): Promise<ExchangeRate | null> {
     const now = new Date();
-    
+
     return this.exchangeRateRepository
       .createQueryBuilder('rate')
       .where('rate.store_id = :storeId', { storeId })
       .andWhere('rate.source = :source', { source: 'manual' })
       .andWhere('rate.is_active = :isActive', { isActive: true })
       .andWhere('rate.effective_from <= :now', { now })
-      .andWhere('(rate.effective_until IS NULL OR rate.effective_until >= :now)', { now })
+      .andWhere(
+        '(rate.effective_until IS NULL OR rate.effective_until >= :now)',
+        { now },
+      )
       .orderBy('rate.effective_from', 'DESC')
       .getOne();
   }
@@ -292,9 +307,12 @@ export class ExchangeService {
   /**
    * Guarda una tasa obtenida de la API en BD (solo referencia)
    */
-  private async saveApiRate(storeId: string, rate: number): Promise<ExchangeRate> {
+  private async saveApiRate(
+    storeId: string,
+    rate: number,
+  ): Promise<ExchangeRate> {
     const now = new Date();
-    
+
     // Buscar si ya existe una tasa API para hoy
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);
@@ -358,4 +376,3 @@ export class ExchangeService {
     return null;
   }
 }
-

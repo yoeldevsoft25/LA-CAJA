@@ -35,4 +35,3 @@ export class FiscalConfigsController {
     return this.fiscalConfigsService.update(storeId, dto);
   }
 }
-

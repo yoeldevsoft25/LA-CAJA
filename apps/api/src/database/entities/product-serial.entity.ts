@@ -64,4 +64,3 @@ export class ProductSerial {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   updated_at: Date;
 }
-

@@ -5,7 +5,6 @@ import {
   Put,
   Body,
   Param,
-  Query,
   UseGuards,
   Request,
   HttpCode,
@@ -163,4 +162,3 @@ export class OrdersController {
     return this.ordersService.cancelOrder(storeId, id);
   }
 }
-

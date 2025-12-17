@@ -75,4 +75,3 @@ export class SuppliersController {
     return this.suppliersService.getPurchaseOrders(storeId, id, status);
   }
 }
-

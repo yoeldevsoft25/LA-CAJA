@@ -35,4 +35,3 @@ import { ReportsModule } from '../reports/reports.module';
   exports: [DashboardService],
 })
 export class DashboardModule {}
-

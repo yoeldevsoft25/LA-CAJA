@@ -63,4 +63,3 @@ export class ProductVariant {
   @OneToMany(() => InventoryMovement, (movement) => movement.variant)
   inventory_movements: InventoryMovement[];
 }
-

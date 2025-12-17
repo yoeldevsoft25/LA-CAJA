@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FiscalConfig } from '../database/entities/fiscal-config.entity';
@@ -108,7 +103,8 @@ export class FiscalConfigsService {
     }
 
     if (dto.tax_id !== undefined) config.tax_id = dto.tax_id;
-    if (dto.business_name !== undefined) config.business_name = dto.business_name;
+    if (dto.business_name !== undefined)
+      config.business_name = dto.business_name;
     if (dto.business_address !== undefined)
       config.business_address = dto.business_address;
     if (dto.business_phone !== undefined)
@@ -118,7 +114,8 @@ export class FiscalConfigsService {
     if (dto.default_tax_rate !== undefined)
       config.default_tax_rate = dto.default_tax_rate;
     if (dto.fiscal_authorization_number !== undefined)
-      config.fiscal_authorization_number = dto.fiscal_authorization_number || null;
+      config.fiscal_authorization_number =
+        dto.fiscal_authorization_number || null;
     if (dto.fiscal_authorization_date !== undefined)
       config.fiscal_authorization_date = dto.fiscal_authorization_date
         ? new Date(dto.fiscal_authorization_date)
@@ -135,4 +132,3 @@ export class FiscalConfigsService {
     return this.fiscalConfigRepository.save(config);
   }
 }
-

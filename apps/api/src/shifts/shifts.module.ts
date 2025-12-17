@@ -16,4 +16,3 @@ import { Sale } from '../database/entities/sale.entity';
   exports: [ShiftsService],
 })
 export class ShiftsModule {}
-

@@ -16,4 +16,3 @@ export class AuthorizeDiscountDto {
   @IsOptional()
   authorization_pin?: string; // PIN del supervisor/owner para autorizar
 }
-

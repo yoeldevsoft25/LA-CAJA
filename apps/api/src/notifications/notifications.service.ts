@@ -1,17 +1,19 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Notification } from '../database/entities/notification.entity';
 import { NotificationPreference } from '../database/entities/notification-preference.entity';
 import { NotificationSubscription } from '../database/entities/notification-subscription.entity';
-import { NotificationDelivery, DeliveryChannel, DeliveryStatus } from '../database/entities/notification-delivery.entity';
+import {
+  NotificationDelivery,
+  DeliveryChannel,
+} from '../database/entities/notification-delivery.entity';
 import { NotificationBadge } from '../database/entities/notification-badge.entity';
-import { CreateNotificationDto, NotificationType, NotificationPriority } from './dto/create-notification.dto';
+import {
+  CreateNotificationDto,
+  NotificationType,
+  NotificationPriority,
+} from './dto/create-notification.dto';
 import { GetNotificationsDto } from './dto/get-notifications.dto';
 import { UpdatePreferenceDto } from './dto/update-preference.dto';
 import { SubscribePushDto } from './dto/subscribe-push.dto';
@@ -46,14 +48,18 @@ export class NotificationsService {
   private initializeWebPush() {
     const publicKey = this.configService.get<string>('VAPID_PUBLIC_KEY');
     const privateKey = this.configService.get<string>('VAPID_PRIVATE_KEY');
-    const subject = this.configService.get<string>('VAPID_SUBJECT') || 'mailto:admin@la-caja.com';
+    const subject =
+      this.configService.get<string>('VAPID_SUBJECT') ||
+      'mailto:admin@la-caja.com';
 
     if (publicKey && privateKey) {
       webpush.setVapidDetails(subject, publicKey, privateKey);
       this.webPushInitialized = true;
       this.logger.log('Web Push inicializado correctamente');
     } else {
-      this.logger.warn('VAPID keys no configuradas. Las notificaciones push no funcionarán.');
+      this.logger.warn(
+        'VAPID keys no configuradas. Las notificaciones push no funcionarán.',
+      );
     }
   }
 
@@ -103,7 +109,9 @@ export class NotificationsService {
     const userId = notification.user_id;
 
     // Si es notificación global, obtener todos los usuarios del store
-    const targetUserIds = userId ? [userId] : await this.getStoreUserIds(storeId);
+    const targetUserIds = userId
+      ? [userId]
+      : await this.getStoreUserIds(storeId);
 
     for (const targetUserId of targetUserIds) {
       // Verificar preferencias
@@ -125,18 +133,27 @@ export class NotificationsService {
 
       // Verificar quiet hours
       if (preference && this.isQuietHours(preference)) {
-        this.logger.log(`Notificación omitida por quiet hours para usuario ${targetUserId}`);
+        this.logger.log(
+          `Notificación omitida por quiet hours para usuario ${targetUserId}`,
+        );
         continue;
       }
 
       // Entregar por cada canal habilitado
       for (const channel of channels) {
-        if (notification.delivery_channels && !notification.delivery_channels.includes(channel)) {
+        if (
+          notification.delivery_channels &&
+          !notification.delivery_channels.includes(channel)
+        ) {
           continue;
         }
 
         try {
-          await this.deliverByChannel(notification, targetUserId, channel as DeliveryChannel);
+          await this.deliverByChannel(
+            notification,
+            targetUserId,
+            channel as DeliveryChannel,
+          );
         } catch (error) {
           this.logger.error(
             `Error entregando notificación ${notification.id} por canal ${channel}`,
@@ -189,7 +206,8 @@ export class NotificationsService {
       delivery.delivered_at = new Date();
     } catch (error) {
       delivery.status = 'failed';
-      delivery.error_message = error instanceof Error ? error.message : String(error);
+      delivery.error_message =
+        error instanceof Error ? error.message : String(error);
       throw error;
     } finally {
       await this.deliveryRepository.save(delivery);
@@ -216,7 +234,9 @@ export class NotificationsService {
     });
 
     if (subscriptions.length === 0) {
-      this.logger.warn(`No hay suscripciones push activas para usuario ${userId}`);
+      this.logger.warn(
+        `No hay suscripciones push activas para usuario ${userId}`,
+      );
       return;
     }
 
@@ -305,7 +325,7 @@ export class NotificationsService {
   /**
    * Obtener IDs de usuarios del store
    */
-  private async getStoreUserIds(storeId: string): Promise<string[]> {
+  private async getStoreUserIds(_storeId: string): Promise<string[]> {
     // Implementar según tu modelo de usuarios
     // Por ahora retornar array vacío (se implementará con StoreMember)
     return [];
@@ -319,17 +339,25 @@ export class NotificationsService {
     userId: string,
     dto: GetNotificationsDto,
   ): Promise<Notification[]> {
-    const query = this.notificationRepository.createQueryBuilder('notification')
+    const query = this.notificationRepository
+      .createQueryBuilder('notification')
       .where('notification.store_id = :storeId', { storeId })
-      .andWhere('(notification.user_id = :userId OR notification.user_id IS NULL)', { userId })
+      .andWhere(
+        '(notification.user_id = :userId OR notification.user_id IS NULL)',
+        { userId },
+      )
       .orderBy('notification.created_at', 'DESC');
 
     if (dto.notification_type) {
-      query.andWhere('notification.notification_type = :type', { type: dto.notification_type });
+      query.andWhere('notification.notification_type = :type', {
+        type: dto.notification_type,
+      });
     }
 
     if (dto.category) {
-      query.andWhere('notification.category = :category', { category: dto.category });
+      query.andWhere('notification.category = :category', {
+        category: dto.category,
+      });
     }
 
     if (dto.is_read !== undefined) {
@@ -337,11 +365,15 @@ export class NotificationsService {
     }
 
     if (dto.start_date) {
-      query.andWhere('notification.created_at >= :startDate', { startDate: dto.start_date });
+      query.andWhere('notification.created_at >= :startDate', {
+        startDate: dto.start_date,
+      });
     }
 
     if (dto.end_date) {
-      query.andWhere('notification.created_at <= :endDate', { endDate: dto.end_date });
+      query.andWhere('notification.created_at <= :endDate', {
+        endDate: dto.end_date,
+      });
     }
 
     if (dto.limit) {
@@ -384,7 +416,11 @@ export class NotificationsService {
   /**
    * Marcar todas como leídas
    */
-  async markAllAsRead(storeId: string, userId: string, category?: string): Promise<void> {
+  async markAllAsRead(
+    storeId: string,
+    userId: string,
+    category?: string,
+  ): Promise<void> {
     const query = this.notificationRepository
       .createQueryBuilder()
       .update(Notification)
@@ -474,7 +510,10 @@ export class NotificationsService {
   /**
    * Obtener preferencias de notificación
    */
-  async getPreferences(storeId: string, userId: string): Promise<NotificationPreference[]> {
+  async getPreferences(
+    storeId: string,
+    userId: string,
+  ): Promise<NotificationPreference[]> {
     return this.preferenceRepository.find({
       where: {
         store_id: storeId,
@@ -625,15 +664,13 @@ export class NotificationsService {
   /**
    * Crear notificación desde alerta
    */
-  async createFromAlert(
-    storeId: string,
-    alert: any,
-  ): Promise<Notification> {
-    const priority = alert.severity === 'critical' 
-      ? NotificationPriority.URGENT
-      : alert.severity === 'high' 
-      ? NotificationPriority.HIGH
-      : NotificationPriority.NORMAL;
+  async createFromAlert(storeId: string, alert: any): Promise<Notification> {
+    const priority =
+      alert.severity === 'critical'
+        ? NotificationPriority.URGENT
+        : alert.severity === 'high'
+          ? NotificationPriority.HIGH
+          : NotificationPriority.NORMAL;
 
     return this.createNotification(storeId, {
       notification_type: NotificationType.ALERT,
@@ -644,9 +681,11 @@ export class NotificationsService {
       severity: alert.severity,
       entity_type: alert.entity_type,
       entity_id: alert.entity_id,
-      action_url: alert.entity_type && alert.entity_id ? `/${alert.entity_type}/${alert.entity_id}` : undefined,
+      action_url:
+        alert.entity_type && alert.entity_id
+          ? `/${alert.entity_type}/${alert.entity_id}`
+          : undefined,
       delivery_channels: ['push', 'websocket', 'in_app'],
     });
   }
 }
-

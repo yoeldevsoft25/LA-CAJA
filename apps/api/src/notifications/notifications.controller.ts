@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Put,
-  Delete,
   Body,
   Param,
   Query,
@@ -32,7 +31,10 @@ export class NotificationsController {
    * Obtener notificaciones
    */
   @Get()
-  async getNotifications(@Request() req: any, @Query() dto: GetNotificationsDto) {
+  async getNotifications(
+    @Request() req: any,
+    @Query() dto: GetNotificationsDto,
+  ) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     return this.notificationsService.getNotifications(storeId, userId, dto);
@@ -47,7 +49,10 @@ export class NotificationsController {
     @Body() dto: CreateNotificationDto,
   ) {
     const storeId = req.user.store_id;
-    const notification = await this.notificationsService.createNotification(storeId, dto);
+    const notification = await this.notificationsService.createNotification(
+      storeId,
+      dto,
+    );
 
     // Emitir vía WebSocket
     if (dto.user_id) {
@@ -67,7 +72,11 @@ export class NotificationsController {
   async markAsRead(@Request() req: any, @Param('id') notificationId: string) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
-    const notification = await this.notificationsService.markAsRead(storeId, userId, notificationId);
+    const notification = await this.notificationsService.markAsRead(
+      storeId,
+      userId,
+      notificationId,
+    );
 
     // Actualizar badge vía WebSocket
     await this.gateway.updateBadge(storeId, userId, notification.category);
@@ -140,20 +149,21 @@ export class NotificationsController {
   ) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
-    return this.notificationsService.updatePreference(storeId, userId, category, dto);
+    return this.notificationsService.updatePreference(
+      storeId,
+      userId,
+      category,
+      dto,
+    );
   }
 
   /**
    * Obtener badge (contador de no leídas)
    */
   @Get('badge')
-  async getBadge(
-    @Request() req: any,
-    @Query('category') category?: string,
-  ) {
+  async getBadge(@Request() req: any, @Query('category') category?: string) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     return this.notificationsService.getBadge(storeId, userId, category);
   }
 }
-

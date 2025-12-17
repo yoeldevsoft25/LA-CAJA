@@ -1,4 +1,3 @@
-
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -118,10 +117,12 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        throttlers: [{
-          ttl: configService.get<number>('THROTTLE_TTL') || 60000, // 1 minuto
-          limit: configService.get<number>('THROTTLE_LIMIT') || 100, // 100 requests por minuto
-        }],
+        throttlers: [
+          {
+            ttl: configService.get<number>('THROTTLE_TTL') || 60000, // 1 minuto
+            limit: configService.get<number>('THROTTLE_LIMIT') || 100, // 100 requests por minuto
+          },
+        ],
       }),
       inject: [ConfigService],
     }),
@@ -129,15 +130,16 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const databaseUrl = configService.get<string>('DATABASE_URL');
-        
+
         if (!databaseUrl) {
           throw new Error('DATABASE_URL no está configurada en .env');
         }
 
         // Parsear la URL manualmente
         const url = new URL(databaseUrl);
-        const isProduction = configService.get<string>('NODE_ENV') === 'production';
-        
+        const isProduction =
+          configService.get<string>('NODE_ENV') === 'production';
+
         return {
           type: 'postgres',
           host: url.hostname,
@@ -145,7 +147,68 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           username: url.username,
           password: decodeURIComponent(url.password), // Decodificar contraseña URL-encoded
           database: url.pathname.slice(1), // Remover el '/' inicial
-          entities: [Store, Profile, StoreMember, Product, ProductVariant, ProductLot, LotMovement, ProductSerial, InvoiceSeries, Table, Order, OrderItem, OrderPayment, PeripheralConfig, PriceList, PriceListItem, Promotion, PromotionProduct, PromotionUsage, InventoryMovement, Sale, SaleItem, CashSession, Shift, ShiftCut, PaymentMethodConfig, CashMovement, DiscountConfig, DiscountAuthorization, FastCheckoutConfig, QuickProduct, Customer, Debt, DebtPayment, ExchangeRate, Warehouse, WarehouseStock, Transfer, TransferItem, Supplier, PurchaseOrder, PurchaseOrderItem, FiscalInvoice, FiscalInvoiceItem, FiscalConfig, DemandPrediction, ProductRecommendation, DetectedAnomaly, MLModelMetric, RealTimeMetric, AlertThreshold, RealTimeAlert, SalesHeatmap, ComparativeMetric, Notification, NotificationPreference, NotificationSubscription, NotificationDelivery, NotificationBadge, Event],
+          entities: [
+            Store,
+            Profile,
+            StoreMember,
+            Product,
+            ProductVariant,
+            ProductLot,
+            LotMovement,
+            ProductSerial,
+            InvoiceSeries,
+            Table,
+            Order,
+            OrderItem,
+            OrderPayment,
+            PeripheralConfig,
+            PriceList,
+            PriceListItem,
+            Promotion,
+            PromotionProduct,
+            PromotionUsage,
+            InventoryMovement,
+            Sale,
+            SaleItem,
+            CashSession,
+            Shift,
+            ShiftCut,
+            PaymentMethodConfig,
+            CashMovement,
+            DiscountConfig,
+            DiscountAuthorization,
+            FastCheckoutConfig,
+            QuickProduct,
+            Customer,
+            Debt,
+            DebtPayment,
+            ExchangeRate,
+            Warehouse,
+            WarehouseStock,
+            Transfer,
+            TransferItem,
+            Supplier,
+            PurchaseOrder,
+            PurchaseOrderItem,
+            FiscalInvoice,
+            FiscalInvoiceItem,
+            FiscalConfig,
+            DemandPrediction,
+            ProductRecommendation,
+            DetectedAnomaly,
+            MLModelMetric,
+            RealTimeMetric,
+            AlertThreshold,
+            RealTimeAlert,
+            SalesHeatmap,
+            ComparativeMetric,
+            Notification,
+            NotificationPreference,
+            NotificationSubscription,
+            NotificationDelivery,
+            NotificationBadge,
+            Event,
+          ],
           synchronize: false, // Usamos migraciones SQL manuales
           logging: configService.get<string>('NODE_ENV') === 'development',
           // Configuración robusta del pool de conexiones para Render/Cloud
@@ -167,9 +230,11 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           // Manejo de errores de conexión
           autoLoadEntities: false, // Ya especificamos entities manualmente
           // SSL para producción (Render/Supabase)
-          ssl: isProduction ? {
-            rejectUnauthorized: false, // Necesario para Supabase y algunos servicios cloud
-          } : false,
+          ssl: isProduction
+            ? {
+                rejectUnauthorized: false, // Necesario para Supabase y algunos servicios cloud
+              }
+            : false,
         };
       },
       inject: [ConfigService],
@@ -180,35 +245,35 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     ProductsModule,
     InventoryModule,
     SalesModule,
-        CashModule,
-        ShiftsModule,
-        PaymentsModule,
-        DiscountsModule,
-        FastCheckoutModule,
-        ProductVariantsModule,
-        ProductLotsModule,
-        ProductSerialsModule,
-        InvoiceSeriesModule,
-        TablesModule,
-        OrdersModule,
-        PeripheralsModule,
-        PriceListsModule,
-        PromotionsModule,
-        CustomersModule,
-        DebtsModule,
-        ReportsModule,
-        BackupModule,
-        ExchangeModule,
-        WarehousesModule,
-        TransfersModule,
-        SuppliersModule,
-        PurchaseOrdersModule,
-        FiscalConfigsModule,
-        FiscalInvoicesModule,
-        DashboardModule,
-        MLModule,
-        RealTimeAnalyticsModule,
-        NotificationsModule,
+    CashModule,
+    ShiftsModule,
+    PaymentsModule,
+    DiscountsModule,
+    FastCheckoutModule,
+    ProductVariantsModule,
+    ProductLotsModule,
+    ProductSerialsModule,
+    InvoiceSeriesModule,
+    TablesModule,
+    OrdersModule,
+    PeripheralsModule,
+    PriceListsModule,
+    PromotionsModule,
+    CustomersModule,
+    DebtsModule,
+    ReportsModule,
+    BackupModule,
+    ExchangeModule,
+    WarehousesModule,
+    TransfersModule,
+    SuppliersModule,
+    PurchaseOrdersModule,
+    FiscalConfigsModule,
+    FiscalInvoicesModule,
+    DashboardModule,
+    MLModule,
+    RealTimeAnalyticsModule,
+    NotificationsModule,
   ],
   controllers: [AppController, AdminController],
   providers: [

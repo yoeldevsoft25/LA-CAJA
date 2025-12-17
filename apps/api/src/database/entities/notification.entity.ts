@@ -10,10 +10,22 @@ import {
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
 
-export type NotificationType = 'alert' | 'info' | 'warning' | 'success' | 'system';
+export type NotificationType =
+  | 'alert'
+  | 'info'
+  | 'warning'
+  | 'success'
+  | 'system';
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type NotificationSeverity = 'low' | 'medium' | 'high' | 'critical';
-export type EntityType = 'sale' | 'product' | 'inventory' | 'customer' | 'debt' | 'purchase' | 'alert';
+export type EntityType =
+  | 'sale'
+  | 'product'
+  | 'inventory'
+  | 'customer'
+  | 'debt'
+  | 'purchase'
+  | 'alert';
 
 @Entity('notifications')
 @Index(['store_id'])
@@ -107,4 +119,3 @@ export class Notification {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

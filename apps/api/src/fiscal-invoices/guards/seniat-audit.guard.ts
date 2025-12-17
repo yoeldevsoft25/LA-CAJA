@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Guard para autenticación de auditoría del SENIAT
- * 
+ *
  * Valida que las solicitudes de auditoría incluyan la clave correcta
  * en el header 'x-seniat-audit-key'.
  */
@@ -35,4 +35,3 @@ export class SeniatAuditGuard implements CanActivate {
     return true;
   }
 }
-

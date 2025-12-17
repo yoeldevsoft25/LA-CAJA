@@ -42,7 +42,9 @@ export class AdminController {
     @Query('plan') plan?: string,
     @Query('expiring_in_days') expiringInDays?: string,
   ) {
-    const qb = this.storeRepo.createQueryBuilder('s').orderBy('s.created_at', 'DESC');
+    const qb = this.storeRepo
+      .createQueryBuilder('s')
+      .orderBy('s.created_at', 'DESC');
 
     if (status) {
       qb.andWhere('s.license_status = :status', { status });
@@ -102,7 +104,10 @@ export class AdminController {
   }
 
   @Patch('stores/:id/license')
-  async updateLicense(@Param('id') storeId: string, @Body() dto: UpdateLicenseDto) {
+  async updateLicense(
+    @Param('id') storeId: string,
+    @Body() dto: UpdateLicenseDto,
+  ) {
     const store = await this.storeRepo.findOne({ where: { id: storeId } });
     if (!store) {
       throw new NotFoundException('Store no encontrada');
@@ -133,7 +138,8 @@ export class AdminController {
     }
 
     const days = dto.days ?? Number(process.env.LICENSE_TRIAL_DAYS ?? 14);
-    const grace = dto.grace_days ?? Number(process.env.LICENSE_GRACE_DEFAULT ?? 3);
+    const grace =
+      dto.grace_days ?? Number(process.env.LICENSE_GRACE_DEFAULT ?? 3);
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
     store.license_status = 'trial';
@@ -159,7 +165,8 @@ export class AdminController {
       license_status: dto.status ?? 'active',
       license_plan: dto.plan ?? null,
       license_expires_at: dto.expires_at ? new Date(dto.expires_at) : null,
-      license_grace_days: dto.grace_days ?? Number(process.env.LICENSE_GRACE_DEFAULT ?? 3),
+      license_grace_days:
+        dto.grace_days ?? Number(process.env.LICENSE_GRACE_DEFAULT ?? 3),
       license_notes: dto.notes ?? null,
     });
     const saved = await this.storeRepo.save(store);
@@ -198,7 +205,10 @@ export class AdminController {
   }
 
   @Post('stores/:id/users')
-  async createUser(@Param('id') storeId: string, @Body() dto: AdminCreateUserDto) {
+  async createUser(
+    @Param('id') storeId: string,
+    @Body() dto: AdminCreateUserDto,
+  ) {
     const store = await this.storeRepo.findOne({ where: { id: storeId } });
     if (!store) throw new NotFoundException('Store no encontrada');
 
@@ -227,7 +237,9 @@ export class AdminController {
       await this.profileRepo.save(profile);
     }
 
-    const existing = await this.memberRepo.findOne({ where: { store_id: storeId, user_id: userId } });
+    const existing = await this.memberRepo.findOne({
+      where: { store_id: storeId, user_id: userId },
+    });
     if (existing) {
       throw new ConflictException('El usuario ya pertenece a la tienda');
     }
@@ -251,9 +263,15 @@ export class AdminController {
   }
 
   @Delete('stores/:id/users/:userId')
-  async removeUser(@Param('id') storeId: string, @Param('userId') userId: string) {
-    const existing = await this.memberRepo.findOne({ where: { store_id: storeId, user_id: userId } });
-    if (!existing) throw new NotFoundException('Usuario no pertenece a la tienda');
+  async removeUser(
+    @Param('id') storeId: string,
+    @Param('userId') userId: string,
+  ) {
+    const existing = await this.memberRepo.findOne({
+      where: { store_id: storeId, user_id: userId },
+    });
+    if (!existing)
+      throw new NotFoundException('Usuario no pertenece a la tienda');
     await this.memberRepo.delete({ store_id: storeId, user_id: userId });
     return { ok: true };
   }

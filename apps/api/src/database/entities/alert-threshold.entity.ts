@@ -21,7 +21,11 @@ export type AlertType =
   | 'product_expiring'
   | 'custom';
 
-export type ComparisonOperator = 'less_than' | 'greater_than' | 'equals' | 'not_equals';
+export type ComparisonOperator =
+  | 'less_than'
+  | 'greater_than'
+  | 'equals'
+  | 'not_equals';
 export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 @Entity('alert_thresholds')
@@ -81,4 +85,3 @@ export class AlertThreshold {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

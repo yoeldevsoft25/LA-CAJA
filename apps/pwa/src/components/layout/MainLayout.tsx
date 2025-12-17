@@ -62,6 +62,7 @@ import { cashService } from '@/services/cash.service'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useNotificationsSync } from '@/hooks/useNotificationsSync'
 
 type NavItem = {
   path: string
@@ -158,8 +159,9 @@ export default function MainLayout() {
   const queryClient = useQueryClient()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { isOnline } = useOnline()
-  const { items: notifications, add, addUnique, markAsRead, markAllAsRead, clear } = useNotifications()
-  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications])
+  const { add, addUnique } = useNotifications()
+  // Usar el hook de sincronización que combina ambos sistemas
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationsSync()
   const storeId = user?.store_id
 
   // Licencia (solo lectura)
@@ -611,9 +613,6 @@ export default function MainLayout() {
                   <div className="flex gap-2">
                     <Button size="sm" variant="ghost" onClick={markAllAsRead}>
                       Marcar leídas
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={clear}>
-                      Limpiar
                     </Button>
                   </div>
                 </div>

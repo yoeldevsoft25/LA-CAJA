@@ -16,7 +16,9 @@ export class CreateProductLotDto {
   product_id: string;
 
   @IsString()
-  @MaxLength(100, { message: 'El número de lote no puede exceder 100 caracteres' })
+  @MaxLength(100, {
+    message: 'El número de lote no puede exceder 100 caracteres',
+  })
   lot_number: string;
 
   @IsNumber()
@@ -47,4 +49,3 @@ export class CreateProductLotDto {
   @IsOptional()
   note?: string | null;
 }
-

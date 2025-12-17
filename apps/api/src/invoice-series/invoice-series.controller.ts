@@ -29,10 +29,7 @@ export class InvoiceSeriesController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createSeries(
-    @Body() dto: CreateInvoiceSeriesDto,
-    @Request() req: any,
-  ) {
+  async createSeries(@Body() dto: CreateInvoiceSeriesDto, @Request() req: any) {
     const storeId = req.user.store_id;
     return this.seriesService.createSeries(storeId, dto);
   }
@@ -109,4 +106,3 @@ export class InvoiceSeriesController {
     return this.seriesService.resetSeriesNumber(storeId, id, body.new_number);
   }
 }
-

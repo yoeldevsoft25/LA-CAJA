@@ -6,4 +6,3 @@ export class CreateStoreDto {
   @MinLength(1)
   name: string;
 }
-

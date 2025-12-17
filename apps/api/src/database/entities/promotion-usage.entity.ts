@@ -48,4 +48,3 @@ export class PromotionUsage {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   used_at: Date;
 }
-

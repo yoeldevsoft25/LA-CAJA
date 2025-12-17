@@ -75,4 +75,3 @@ export class WarehousesController {
     return { message: 'Bodega eliminada correctamente' };
   }
 }
-

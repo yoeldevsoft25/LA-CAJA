@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { notificationsWebSocketService } from '@/services/notifications-websocket.service'
 import { notificationsService } from '@/services/notifications.service'

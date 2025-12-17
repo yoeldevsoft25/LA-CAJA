@@ -1,4 +1,15 @@
-import { IsArray, ValidateNested, IsString, IsNumber, IsUUID, IsOptional, IsIn, Min, ValidateIf, Matches } from 'class-validator';
+import {
+  IsArray,
+  ValidateNested,
+  IsString,
+  IsNumber,
+  IsUUID,
+  IsOptional,
+  IsIn,
+  Min,
+  ValidateIf,
+  Matches,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { CartItemDto } from './cart-item.dto';
 
@@ -17,7 +28,15 @@ export class CreateSaleDto {
   currency: 'BS' | 'USD' | 'MIXED';
 
   @IsString()
-  @IsIn(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER', 'SPLIT', 'FIAO'])
+  @IsIn([
+    'CASH_BS',
+    'CASH_USD',
+    'PAGO_MOVIL',
+    'TRANSFER',
+    'OTHER',
+    'SPLIT',
+    'FIAO',
+  ])
   payment_method: string;
 
   @IsOptional()
@@ -48,7 +67,12 @@ export class CreateSaleDto {
 
   @IsUUID()
   @IsOptional()
-  @ValidateIf((o) => o.payment_method === 'FIAO' && !o.customer_document_id && !o.customer_name)
+  @ValidateIf(
+    (o) =>
+      o.payment_method === 'FIAO' &&
+      !o.customer_document_id &&
+      !o.customer_name,
+  )
   customer_id?: string;
 
   // Campos opcionales para crear/actualizar cliente en cualquier venta
@@ -92,4 +116,3 @@ export class CreateSaleDto {
   @IsOptional()
   warehouse_id?: string; // Bodega de donde se vende (NULL = bodega por defecto)
 }
-

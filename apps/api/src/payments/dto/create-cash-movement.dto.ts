@@ -40,4 +40,3 @@ export class CreateCashMovementDto {
   @IsOptional()
   note?: string | null;
 }
-

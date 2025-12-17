@@ -44,10 +44,12 @@ export class DiscountConfigsService {
         existing.authorization_role = dto.authorization_role;
       }
       if (dto.auto_approve_below_percentage !== undefined) {
-        existing.auto_approve_below_percentage = dto.auto_approve_below_percentage;
+        existing.auto_approve_below_percentage =
+          dto.auto_approve_below_percentage;
       }
       if (dto.auto_approve_below_amount_bs !== undefined) {
-        existing.auto_approve_below_amount_bs = dto.auto_approve_below_amount_bs;
+        existing.auto_approve_below_amount_bs =
+          dto.auto_approve_below_amount_bs;
       }
       existing.updated_at = new Date();
 
@@ -79,4 +81,3 @@ export class DiscountConfigsService {
     });
   }
 }
-

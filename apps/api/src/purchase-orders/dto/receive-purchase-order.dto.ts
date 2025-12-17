@@ -1,4 +1,11 @@
-import { IsArray, ValidateNested, IsInt, Min, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  ValidateNested,
+  IsInt,
+  Min,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ReceivePurchaseOrderItemDto {
@@ -17,4 +24,3 @@ export class ReceivePurchaseOrderDto {
   @IsString()
   note?: string;
 }
-

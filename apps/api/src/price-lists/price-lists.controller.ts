@@ -73,4 +73,3 @@ export class PriceListsController {
     return this.priceListsService.addPriceListItem(storeId, id, dto);
   }
 }
-

@@ -21,4 +21,3 @@ export class SubscribePushDto {
   @IsOptional()
   user_agent?: string;
 }
-

@@ -12,4 +12,3 @@ import { Sale } from '../database/entities/sale.entity';
   exports: [CashService],
 })
 export class CashModule {}
-

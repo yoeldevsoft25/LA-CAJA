@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Store } from './store.entity';
 
 export type PaymentMethod =
@@ -51,4 +58,3 @@ export class PaymentMethodConfig {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   updated_at: Date;
 }
-

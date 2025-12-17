@@ -16,4 +16,3 @@ export class GetRecommendationsDto {
   @IsOptional()
   limit?: number = 10;
 }
-

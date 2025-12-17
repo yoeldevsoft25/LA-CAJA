@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -6,7 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { Store } from '../database/entities/store.entity';
 import { Profile } from '../database/entities/profile.entity';
-import { StoreMember, StoreRole } from '../database/entities/store-member.entity';
+import { StoreMember } from '../database/entities/store-member.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { CreateCashierDto } from './dto/create-cashier.dto';
 import { LoginDto } from './dto/login.dto';
@@ -24,14 +28,25 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  private getTrialExpiration(): { expiresAt: Date; plan: string; graceDays: number } {
+  private getTrialExpiration(): {
+    expiresAt: Date;
+    plan: string;
+    graceDays: number;
+  } {
     const trialDays = Number(process.env.LICENSE_TRIAL_DAYS ?? 14);
     const graceDays = Number(process.env.LICENSE_GRACE_DEFAULT ?? 3);
     const expiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
-    return { expiresAt, plan: 'trial', graceDays: Number.isFinite(graceDays) ? graceDays : 3 };
+    return {
+      expiresAt,
+      plan: 'trial',
+      graceDays: Number.isFinite(graceDays) ? graceDays : 3,
+    };
   }
 
-  async createStore(dto: CreateStoreDto, ownerUserId: string): Promise<{ store: Store; member: StoreMember }> {
+  async createStore(
+    dto: CreateStoreDto,
+    ownerUserId: string,
+  ): Promise<{ store: Store; member: StoreMember }> {
     // Crear tienda
     const trial = this.getTrialExpiration();
     const store = this.storeRepository.create({
@@ -46,7 +61,9 @@ export class AuthService {
     const savedStore = await this.storeRepository.save(store);
 
     // Asociar owner a la tienda (si no existe el profile, crearlo)
-    let profile = await this.profileRepository.findOne({ where: { id: ownerUserId } });
+    let profile = await this.profileRepository.findOne({
+      where: { id: ownerUserId },
+    });
     if (!profile) {
       profile = this.profileRepository.create({
         id: ownerUserId,
@@ -67,7 +84,10 @@ export class AuthService {
     return { store: savedStore, member: savedMember };
   }
 
-  async createCashier(dto: CreateCashierDto, ownerUserId: string): Promise<Profile> {
+  async createCashier(
+    dto: CreateCashierDto,
+    ownerUserId: string,
+  ): Promise<Profile> {
     // Verificar que el usuario es owner de la tienda
     const ownerMember = await this.storeMemberRepository.findOne({
       where: {
@@ -82,7 +102,9 @@ export class AuthService {
     }
 
     // Verificar que el store existe
-    const store = await this.storeRepository.findOne({ where: { id: dto.store_id } });
+    const store = await this.storeRepository.findOne({
+      where: { id: dto.store_id },
+    });
     if (!store) {
       throw new UnauthorizedException('Tienda no encontrada');
     }
@@ -131,7 +153,9 @@ export class AuthService {
     }
 
     // Validar licencia de la tienda
-    const store = await this.storeRepository.findOne({ where: { id: dto.store_id } });
+    const store = await this.storeRepository.findOne({
+      where: { id: dto.store_id },
+    });
     if (!store) {
       throw new UnauthorizedException('Tienda no encontrada');
     }
@@ -147,23 +171,33 @@ export class AuthService {
     }
 
     const now = Date.now();
-    const expires = store.license_expires_at ? store.license_expires_at.getTime() : null;
+    const expires = store.license_expires_at
+      ? store.license_expires_at.getTime()
+      : null;
     const graceMs = (store.license_grace_days ?? 0) * 24 * 60 * 60 * 1000;
 
     if (!store.license_status) {
-      throw new ForbiddenException('Licencia no configurada. Contacta al administrador.');
+      throw new ForbiddenException(
+        'Licencia no configurada. Contacta al administrador.',
+      );
     }
 
     if (!expires) {
-      throw new ForbiddenException('Licencia sin fecha de expiración. Contacta al administrador.');
+      throw new ForbiddenException(
+        'Licencia sin fecha de expiración. Contacta al administrador.',
+      );
     }
 
     if (store.license_status === 'suspended') {
-      throw new ForbiddenException('Licencia suspendida. Contacta al administrador.');
+      throw new ForbiddenException(
+        'Licencia suspendida. Contacta al administrador.',
+      );
     }
 
     if (expires && now > expires + graceMs) {
-      throw new ForbiddenException('Licencia expirada. Contacta al administrador.');
+      throw new ForbiddenException(
+        'Licencia expirada. Contacta al administrador.',
+      );
     }
 
     // Generar JWT
@@ -184,7 +218,14 @@ export class AuthService {
     };
   }
 
-  async getStores(): Promise<Array<{ id: string; name: string; license_status: string; license_expires_at: Date | null }>> {
+  async getStores(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      license_status: string;
+      license_expires_at: Date | null;
+    }>
+  > {
     const stores = await this.storeRepository.find({
       order: { created_at: 'DESC' },
     });
@@ -196,7 +237,11 @@ export class AuthService {
     }));
   }
 
-  async getCashiers(storeId: string): Promise<Array<{ user_id: string; full_name: string | null; role: string }>> {
+  async getCashiers(
+    storeId: string,
+  ): Promise<
+    Array<{ user_id: string; full_name: string | null; role: string }>
+  > {
     // Devolvemos todos los miembros (owner y cashier) para permitir login de owner con PIN
     const members = await this.storeMemberRepository.find({
       where: {
@@ -215,7 +260,10 @@ export class AuthService {
       }));
   }
 
-  async validateUser(userId: string, storeId: string): Promise<StoreMember | null> {
+  async validateUser(
+    userId: string,
+    storeId: string,
+  ): Promise<StoreMember | null> {
     return this.storeMemberRepository.findOne({
       where: {
         user_id: userId,

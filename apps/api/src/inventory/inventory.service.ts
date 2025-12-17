@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InventoryMovement, MovementType } from '../database/entities/inventory-movement.entity';
+import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { Product } from '../database/entities/product.entity';
 import { StockReceivedDto } from './dto/stock-received.dto';
 import { StockAdjustedDto } from './dto/stock-adjusted.dto';
@@ -128,7 +133,9 @@ export class InventoryService {
     if (dto.qty_delta < 0 && !warehouseId) {
       const currentStock = await this.getCurrentStock(storeId, dto.product_id);
       if (currentStock + dto.qty_delta < 0) {
-        throw new BadRequestException('No se puede ajustar el stock a negativo');
+        throw new BadRequestException(
+          'No se puede ajustar el stock a negativo',
+        );
       }
     }
 
@@ -251,9 +258,16 @@ export class InventoryService {
     };
   }
 
-  async approveReceivedMovement(storeId: string, movementId: string, approverId: string, role: string) {
+  async approveReceivedMovement(
+    storeId: string,
+    movementId: string,
+    approverId: string,
+    role: string,
+  ) {
     if (role !== 'owner') {
-      throw new ForbiddenException('Solo un owner puede aprobar entradas de stock');
+      throw new ForbiddenException(
+        'Solo un owner puede aprobar entradas de stock',
+      );
     }
 
     const movement = await this.movementRepository.findOne({

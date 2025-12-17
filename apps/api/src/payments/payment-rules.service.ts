@@ -1,7 +1,10 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentMethodConfig, PaymentMethod } from '../database/entities/payment-method-config.entity';
+import {
+  PaymentMethodConfig,
+  PaymentMethod,
+} from '../database/entities/payment-method-config.entity';
 
 export interface ValidationResult {
   valid: boolean;
@@ -83,14 +86,16 @@ export class PaymentRulesService {
     split: PaymentSplit,
   ): Promise<ValidationResult> {
     // Mapeo de campos del split a métodos de pago
-    const methodMap: Record<string, { method: string; currency: 'BS' | 'USD' }> =
-      {
-        cash_bs: { method: 'CASH_BS', currency: 'BS' },
-        cash_usd: { method: 'CASH_USD', currency: 'USD' },
-        pago_movil_bs: { method: 'PAGO_MOVIL', currency: 'BS' },
-        transfer_bs: { method: 'TRANSFER', currency: 'BS' },
-        other_bs: { method: 'OTHER', currency: 'BS' },
-      };
+    const methodMap: Record<
+      string,
+      { method: string; currency: 'BS' | 'USD' }
+    > = {
+      cash_bs: { method: 'CASH_BS', currency: 'BS' },
+      cash_usd: { method: 'CASH_USD', currency: 'USD' },
+      pago_movil_bs: { method: 'PAGO_MOVIL', currency: 'BS' },
+      transfer_bs: { method: 'TRANSFER', currency: 'BS' },
+      other_bs: { method: 'OTHER', currency: 'BS' },
+    };
 
     for (const [field, amount] of Object.entries(split)) {
       if (amount && amount > 0) {
@@ -151,4 +156,3 @@ export class PaymentRulesService {
     });
   }
 }
-

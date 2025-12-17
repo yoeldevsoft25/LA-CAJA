@@ -12,4 +12,3 @@ import { PurchaseOrder } from '../database/entities/purchase-order.entity';
   exports: [SuppliersService],
 })
 export class SuppliersModule {}
-

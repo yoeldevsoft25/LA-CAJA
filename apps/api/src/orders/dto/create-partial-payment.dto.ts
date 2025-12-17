@@ -31,4 +31,3 @@ export class CreatePartialPaymentDto {
   @IsOptional()
   customer_id?: string; // Cliente para la venta parcial
 }
-

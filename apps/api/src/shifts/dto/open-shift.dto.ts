@@ -16,4 +16,3 @@ export class OpenShiftDto {
   @IsOptional()
   note?: string;
 }
-

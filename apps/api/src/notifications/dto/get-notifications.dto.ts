@@ -1,4 +1,12 @@
-import { IsOptional, IsEnum, IsBoolean, IsInt, Min, IsDateString, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsInt,
+  Min,
+  IsDateString,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { NotificationType } from './create-notification.dto';
 
@@ -30,4 +38,3 @@ export class GetNotificationsDto {
   @Min(1)
   limit?: number = 50;
 }
-

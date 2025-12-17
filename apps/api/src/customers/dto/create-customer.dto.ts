@@ -16,4 +16,3 @@ export class CreateCustomerDto {
   @IsOptional()
   note?: string;
 }
-

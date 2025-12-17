@@ -52,12 +52,12 @@ export interface SeniatInvoiceData {
 
 /**
  * Servicio para integración con el SENIAT
- * 
+ *
  * Este servicio maneja la comunicación con la API del SENIAT para:
  * - Emitir facturas fiscales
  * - Obtener códigos de control fiscal
  * - Generar códigos QR de verificación
- * 
+ *
  * En modo desarrollo, genera códigos mock. En producción, se conecta a la API real del SENIAT.
  */
 @Injectable()
@@ -69,15 +69,18 @@ export class SeniatIntegrationService {
 
   constructor(private readonly configService: ConfigService) {
     this.seniatApiUrl = this.configService.get<string>('SENIAT_API_URL') || '';
-    this.seniatApiKey = this.configService.get<string>('SENIAT_API_KEY') || null;
+    this.seniatApiKey =
+      this.configService.get<string>('SENIAT_API_KEY') || null;
     // Modo mock si no hay configuración o si está explícitamente habilitado
-    this.isMockMode = 
-      !this.seniatApiUrl || 
+    this.isMockMode =
+      !this.seniatApiUrl ||
       !this.seniatApiKey ||
       this.configService.get<string>('SENIAT_MOCK_MODE') === 'true';
 
     if (this.isMockMode) {
-      this.logger.warn('⚠️  Modo MOCK activado para integración SENIAT. Los códigos fiscales serán generados localmente.');
+      this.logger.warn(
+        '⚠️  Modo MOCK activado para integración SENIAT. Los códigos fiscales serán generados localmente.',
+      );
     } else {
       this.logger.log('✅ Integración SENIAT configurada con API real');
     }
@@ -85,12 +88,12 @@ export class SeniatIntegrationService {
 
   /**
    * Emite una factura fiscal en el SENIAT
-   * 
+   *
    * Transmite los datos de la factura al SENIAT y obtiene:
    * - Número fiscal único
    * - Código de control fiscal
    * - Código QR para verificación
-   * 
+   *
    * @param invoice - Factura fiscal a emitir
    * @param fiscalConfig - Configuración fiscal de la tienda
    * @returns Datos fiscales generados por el SENIAT
@@ -121,7 +124,7 @@ export class SeniatIntegrationService {
    */
   private prepareInvoiceData(
     invoice: FiscalInvoice,
-    fiscalConfig: FiscalConfig,
+    _fiscalConfig: FiscalConfig,
   ): SeniatInvoiceData {
     return {
       invoice_number: invoice.invoice_number,
@@ -140,17 +143,18 @@ export class SeniatIntegrationService {
       total_usd: Number(invoice.total_usd),
       exchange_rate: Number(invoice.exchange_rate),
       currency: invoice.currency,
-      items: invoice.items?.map((item) => ({
-        product_name: item.product_name,
-        product_code: item.product_code,
-        quantity: item.quantity,
-        unit_price_bs: Number(item.unit_price_bs),
-        unit_price_usd: Number(item.unit_price_usd),
-        subtotal_bs: Number(item.subtotal_bs),
-        subtotal_usd: Number(item.subtotal_usd),
-        tax_amount_bs: Number(item.tax_amount_bs),
-        tax_amount_usd: Number(item.tax_amount_usd),
-      })) || [],
+      items:
+        invoice.items?.map((item) => ({
+          product_name: item.product_name,
+          product_code: item.product_code,
+          quantity: item.quantity,
+          unit_price_bs: Number(item.unit_price_bs),
+          unit_price_usd: Number(item.unit_price_usd),
+          subtotal_bs: Number(item.subtotal_bs),
+          subtotal_usd: Number(item.subtotal_usd),
+          tax_amount_bs: Number(item.tax_amount_bs),
+          tax_amount_usd: Number(item.tax_amount_usd),
+        })) || [],
       payment_method: invoice.payment_method,
       issued_at: invoice.issued_at || new Date(),
     };
@@ -158,7 +162,7 @@ export class SeniatIntegrationService {
 
   /**
    * Emite factura en modo MOCK (desarrollo/testing)
-   * 
+   *
    * Genera códigos fiscales simulados para desarrollo sin necesidad de conexión al SENIAT.
    */
   private async issueInvoiceMock(
@@ -171,7 +175,9 @@ export class SeniatIntegrationService {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 999999).toString().padStart(6, '0');
+    const random = Math.floor(Math.random() * 999999)
+      .toString()
+      .padStart(6, '0');
     const fiscalNumber = `${year}${month}${day}-${random}`;
 
     // Generar código de control fiscal (algoritmo simplificado)
@@ -186,7 +192,7 @@ export class SeniatIntegrationService {
       total_bs: invoiceData.total_bs,
       issued_at: invoiceData.issued_at.toISOString(),
     };
-    
+
     // Generar QR code como imagen base64
     let fiscalQrCode: string;
     try {
@@ -213,17 +219,19 @@ export class SeniatIntegrationService {
 
   /**
    * Emite factura en el SENIAT real
-   * 
+   *
    * Realiza la llamada HTTP a la API del SENIAT para emitir la factura.
-   * 
+   *
    * NOTA: Esta implementación es un template. Debe adaptarse según la documentación
    * oficial de la API del SENIAT cuando esté disponible.
    */
   private async issueInvoiceReal(
     invoiceData: SeniatInvoiceData,
-    fiscalConfig: FiscalConfig,
+    _fiscalConfig: FiscalConfig,
   ): Promise<SeniatIssueInvoiceResponse> {
-    this.logger.log(`Transmitiendo factura ${invoiceData.invoice_number} al SENIAT`);
+    this.logger.log(
+      `Transmitiendo factura ${invoiceData.invoice_number} al SENIAT`,
+    );
 
     // TODO: Implementar llamada real a la API del SENIAT
     // Ejemplo de estructura (adaptar según documentación oficial):
@@ -268,7 +276,7 @@ export class SeniatIntegrationService {
 
   /**
    * Genera un código de control fiscal (algoritmo simplificado para MOCK)
-   * 
+   *
    * En producción, el SENIAT genera este código. Aquí usamos un algoritmo
    * simplificado basado en los datos de la factura.
    */
@@ -285,7 +293,7 @@ export class SeniatIntegrationService {
     let hash = 0;
     for (let i = 0; i < data.length; i++) {
       const char = data.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convertir a 32bit integer
     }
 
@@ -314,4 +322,3 @@ export class SeniatIntegrationService {
     }
   }
 }
-

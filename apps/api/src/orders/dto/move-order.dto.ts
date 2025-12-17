@@ -8,4 +8,3 @@ export class MoveOrderDto {
   @IsOptional()
   table_id?: string | null; // NULL para orden sin mesa
 }
-

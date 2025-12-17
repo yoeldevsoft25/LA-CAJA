@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsBoolean, MaxLength, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateWarehouseDto {
   @IsOptional()
@@ -33,4 +39,3 @@ export class UpdateWarehouseDto {
   @IsString()
   note?: string;
 }
-

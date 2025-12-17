@@ -1,4 +1,11 @@
-import { IsUUID, IsNumber, IsString, IsOptional, IsObject, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsNumber,
+  IsString,
+  IsOptional,
+  IsObject,
+  Min,
+} from 'class-validator';
 
 export class StockReceivedDto {
   @IsUUID()
@@ -28,4 +35,3 @@ export class StockReceivedDto {
   @IsOptional()
   ref?: Record<string, any>;
 }
-

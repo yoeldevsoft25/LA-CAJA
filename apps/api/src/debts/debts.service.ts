@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Debt, DebtStatus } from '../database/entities/debt.entity';
@@ -74,184 +79,222 @@ export class DebtsService {
     debtId: string,
     dto: CreateDebtPaymentDto,
   ): Promise<{ debt: Debt; payment: DebtPayment }> {
-    this.logger.log(`addPayment - storeId: ${storeId}, debtId: ${debtId}, dto: ${JSON.stringify(dto)}`);
+    this.logger.log(
+      `addPayment - storeId: ${storeId}, debtId: ${debtId}, dto: ${JSON.stringify(dto)}`,
+    );
     try {
       return await this.dataSource.transaction(async (manager) => {
-      // NO cargar relaciones aquí para evitar que TypeORM intente sincronizarlas
-      const debt = await manager.findOne(Debt, {
-        where: { id: debtId, store_id: storeId },
-      });
+        // NO cargar relaciones aquí para evitar que TypeORM intente sincronizarlas
+        const debt = await manager.findOne(Debt, {
+          where: { id: debtId, store_id: storeId },
+        });
 
-      if (!debt) {
-        throw new NotFoundException('Deuda no encontrada');
-      }
-
-      if (debt.status === DebtStatus.PAID) {
-        throw new BadRequestException('La deuda ya está pagada completamente');
-      }
-
-      // Obtener tasa BCV actual para calcular el equivalente en Bs
-      let exchangeRate = 36; // Fallback por defecto
-      try {
-        const bcvRateData = await this.exchangeService.getBCVRate();
-        if (bcvRateData && bcvRateData.rate && bcvRateData.rate > 0) {
-          exchangeRate = bcvRateData.rate;
+        if (!debt) {
+          throw new NotFoundException('Deuda no encontrada');
         }
-      } catch (error) {
-        // Si falla obtener la tasa, usar el fallback
-        // No lanzar error, solo usar el valor por defecto
-      }
 
-      // Asegurar que el monto USD sea un número válido y redondear a 2 decimales
-      let paymentAmountUsd = Number(dto.amount_usd) || 0;
-      if (isNaN(paymentAmountUsd) || paymentAmountUsd <= 0) {
-        throw new BadRequestException('El monto en USD debe ser mayor a cero');
-      }
-      paymentAmountUsd = Math.round(paymentAmountUsd * 100) / 100;
+        if (debt.status === DebtStatus.PAID) {
+          throw new BadRequestException(
+            'La deuda ya está pagada completamente',
+          );
+        }
 
-      // Calcular el equivalente en Bs usando la tasa BCV actual y redondear a 2 decimales
-      // IGNORAR el amount_bs que viene del frontend, recalcularlo aquí
-      let paymentAmountBs = paymentAmountUsd * exchangeRate;
-      paymentAmountBs = Math.round(paymentAmountBs * 100) / 100;
+        // Obtener tasa BCV actual para calcular el equivalente en Bs
+        let exchangeRate = 36; // Fallback por defecto
+        try {
+          const bcvRateData = await this.exchangeService.getBCVRate();
+          if (bcvRateData && bcvRateData.rate && bcvRateData.rate > 0) {
+            exchangeRate = bcvRateData.rate;
+          }
+        } catch (error) {
+          // Si falla obtener la tasa, usar el fallback
+          // No lanzar error, solo usar el valor por defecto
+        }
 
-      const debtAmountBs = Number(debt.amount_bs) || 0;
-      const debtAmountUsd = Number(debt.amount_usd) || 0;
+        // Asegurar que el monto USD sea un número válido y redondear a 2 decimales
+        let paymentAmountUsd = Number(dto.amount_usd) || 0;
+        if (isNaN(paymentAmountUsd) || paymentAmountUsd <= 0) {
+          throw new BadRequestException(
+            'El monto en USD debe ser mayor a cero',
+          );
+        }
+        paymentAmountUsd = Math.round(paymentAmountUsd * 100) / 100;
 
-      // Obtener pagos existentes directamente sin usar la relación
-      const existingPayments = await manager.find(DebtPayment, {
-        where: { debt_id: debtId },
-      });
+        // Calcular el equivalente en Bs usando la tasa BCV actual y redondear a 2 decimales
+        // IGNORAR el amount_bs que viene del frontend, recalcularlo aquí
+        let paymentAmountBs = paymentAmountUsd * exchangeRate;
+        paymentAmountBs = Math.round(paymentAmountBs * 100) / 100;
 
-      // Calcular total pagado antes de este pago (redondeado)
-      const previousPaidBs = Math.round(
-        existingPayments.reduce(
-          (sum, p) => sum + Number(p.amount_bs || 0),
-          0,
-        ) * 100
-      ) / 100;
-      const previousPaidUsd = Math.round(
-        existingPayments.reduce(
-          (sum, p) => sum + Number(p.amount_usd || 0),
-          0,
-        ) * 100
-      ) / 100;
+        const debtAmountUsd = Number(debt.amount_usd) || 0;
 
-      // Calcular total pagado después de este pago
-      const totalPaidUsd = Math.round((previousPaidUsd + paymentAmountUsd) * 100) / 100;
+        // Obtener pagos existentes directamente sin usar la relación
+        const existingPayments = await manager.find(DebtPayment, {
+          where: { debt_id: debtId },
+        });
 
-      // IMPORTANTE: Solo validar por USD (moneda de referencia)
-      // El equivalente en Bs puede variar según la tasa BCV actual vs la tasa original
-      // La tasa puede subir o bajar, por lo que el equivalente en Bs puede ser diferente
-      const tolerance = 0.01;
-      if (totalPaidUsd > debtAmountUsd + tolerance) {
-        throw new BadRequestException(
-          `El pago excede el monto de la deuda. Monto adeudado: ${debtAmountUsd.toFixed(2)} USD. Ya pagado: ${previousPaidUsd.toFixed(2)} USD. Intenta pagar: ${paymentAmountUsd.toFixed(2)} USD`,
+        // Calcular total pagado antes de este pago (redondeado)
+        Math.round(
+          existingPayments.reduce(
+            (sum, p) => sum + Number(p.amount_bs || 0),
+            0,
+          ) * 100,
+        ) / 100;
+        const previousPaidUsd =
+          Math.round(
+            existingPayments.reduce(
+              (sum, p) => sum + Number(p.amount_usd || 0),
+              0,
+            ) * 100,
+          ) / 100;
+
+        // Calcular total pagado después de este pago
+        const totalPaidUsd =
+          Math.round((previousPaidUsd + paymentAmountUsd) * 100) / 100;
+
+        // IMPORTANTE: Solo validar por USD (moneda de referencia)
+        // El equivalente en Bs puede variar según la tasa BCV actual vs la tasa original
+        // La tasa puede subir o bajar, por lo que el equivalente en Bs puede ser diferente
+        const tolerance = 0.01;
+        if (totalPaidUsd > debtAmountUsd + tolerance) {
+          throw new BadRequestException(
+            `El pago excede el monto de la deuda. Monto adeudado: ${debtAmountUsd.toFixed(2)} USD. Ya pagado: ${previousPaidUsd.toFixed(2)} USD. Intenta pagar: ${paymentAmountUsd.toFixed(2)} USD`,
+          );
+        }
+
+        // Validar que los valores sean válidos antes de crear el pago
+        if (!paymentAmountUsd || paymentAmountUsd <= 0) {
+          throw new BadRequestException(
+            'El monto en USD debe ser mayor a cero',
+          );
+        }
+        if (!paymentAmountBs || paymentAmountBs < 0) {
+          throw new BadRequestException(
+            'Error al calcular el equivalente en Bs',
+          );
+        }
+        if (!dto.method) {
+          throw new BadRequestException('El método de pago es requerido');
+        }
+
+        // Crear el pago usando QueryBuilder para evitar problemas con relaciones
+        const paymentRepository = manager.getRepository(DebtPayment);
+
+        const paymentId = randomUUID();
+        const paidAt = new Date();
+
+        // Validar que debt_id no sea null antes de guardar
+        if (!debtId || !storeId) {
+          this.logger.error(`Error: debt_id=${debtId}, store_id=${storeId}`);
+          throw new BadRequestException(
+            'Error al crear el pago: datos inválidos',
+          );
+        }
+
+        // Validar una vez más antes de insertar
+        if (
+          !debtId ||
+          debtId.trim() === '' ||
+          debtId === 'null' ||
+          debtId === 'undefined'
+        ) {
+          this.logger.error(
+            `Error crítico: debtId inválido antes de insertar. debtId="${debtId}", tipo=${typeof debtId}, storeId=${storeId}`,
+          );
+          throw new BadRequestException(
+            `Error al crear el pago: debt_id inválido (${debtId})`,
+          );
+        }
+
+        if (
+          !storeId ||
+          storeId.trim() === '' ||
+          storeId === 'null' ||
+          storeId === 'undefined'
+        ) {
+          this.logger.error(
+            `Error crítico: storeId inválido antes de insertar. storeId="${storeId}", tipo=${typeof storeId}, debtId=${debtId}`,
+          );
+          throw new BadRequestException(
+            `Error al crear el pago: store_id inválido (${storeId})`,
+          );
+        }
+
+        this.logger.log(
+          `Insertando pago - paymentId: ${paymentId}, storeId: ${storeId}, debtId: ${debtId}, amount_usd: ${paymentAmountUsd}, amount_bs: ${paymentAmountBs}`,
         );
-      }
 
-      // Validar que los valores sean válidos antes de crear el pago
-      if (!paymentAmountUsd || paymentAmountUsd <= 0) {
-        throw new BadRequestException('El monto en USD debe ser mayor a cero');
-      }
-      if (!paymentAmountBs || paymentAmountBs < 0) {
-        throw new BadRequestException('Error al calcular el equivalente en Bs');
-      }
-      if (!dto.method) {
-        throw new BadRequestException('El método de pago es requerido');
-      }
+        // Preparar valores para el insert
+        this.logger.log(
+          `Valores a insertar - paymentId: ${paymentId}, storeId: ${storeId}, debtId: ${debtId}, paidAt: ${paidAt}, amount_usd: ${paymentAmountUsd}, amount_bs: ${paymentAmountBs}, method: ${dto.method}`,
+        );
 
-      // Crear el pago usando QueryBuilder para evitar problemas con relaciones
-      const paymentRepository = manager.getRepository(DebtPayment);
-      
-      const paymentId = randomUUID();
-      const paidAt = new Date();
-
-      // Validar que debt_id no sea null antes de guardar
-      if (!debtId || !storeId) {
-        this.logger.error(`Error: debt_id=${debtId}, store_id=${storeId}`);
-        throw new BadRequestException('Error al crear el pago: datos inválidos');
-      }
-
-      // Validar una vez más antes de insertar
-      if (!debtId || debtId.trim() === '' || debtId === 'null' || debtId === 'undefined') {
-        this.logger.error(`Error crítico: debtId inválido antes de insertar. debtId="${debtId}", tipo=${typeof debtId}, storeId=${storeId}`);
-        throw new BadRequestException(`Error al crear el pago: debt_id inválido (${debtId})`);
-      }
-
-      if (!storeId || storeId.trim() === '' || storeId === 'null' || storeId === 'undefined') {
-        this.logger.error(`Error crítico: storeId inválido antes de insertar. storeId="${storeId}", tipo=${typeof storeId}, debtId=${debtId}`);
-        throw new BadRequestException(`Error al crear el pago: store_id inválido (${storeId})`);
-      }
-
-      this.logger.log(`Insertando pago - paymentId: ${paymentId}, storeId: ${storeId}, debtId: ${debtId}, amount_usd: ${paymentAmountUsd}, amount_bs: ${paymentAmountBs}`);
-
-      // Preparar valores para el insert
-      this.logger.log(`Valores a insertar - paymentId: ${paymentId}, storeId: ${storeId}, debtId: ${debtId}, paidAt: ${paidAt}, amount_usd: ${paymentAmountUsd}, amount_bs: ${paymentAmountBs}, method: ${dto.method}`);
-
-      // Usar SQL directo para evitar problemas con relaciones TypeORM
-      await manager.query(
-        `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
+        // Usar SQL directo para evitar problemas con relaciones TypeORM
+        await manager.query(
+          `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          paymentId,
-          storeId,
-          debtId,
-          paidAt,
-          paymentAmountBs,
-          paymentAmountUsd,
-          dto.method,
-          dto.note || null,
-        ],
-      );
+          [
+            paymentId,
+            storeId,
+            debtId,
+            paidAt,
+            paymentAmountBs,
+            paymentAmountUsd,
+            dto.method,
+            dto.note || null,
+          ],
+        );
 
-      this.logger.log(`Insert completado usando SQL directo`);
-      
-      // Recargar el pago insertado
-      const savedPayment = await paymentRepository.findOne({
-        where: { id: paymentId },
-      });
+        this.logger.log(`Insert completado usando SQL directo`);
 
-      if (!savedPayment) {
-        throw new BadRequestException('Error al guardar el pago');
-      }
+        // Recargar el pago insertado
+        const savedPayment = await paymentRepository.findOne({
+          where: { id: paymentId },
+        });
 
-      // Actualizar estado de la deuda (solo considerar USD como moneda de referencia)
-      // El equivalente en Bs puede variar con la tasa, pero USD es la referencia
-      const isFullyPaid = totalPaidUsd >= debtAmountUsd;
-      const hasPartialPayment = totalPaidUsd > 0;
+        if (!savedPayment) {
+          throw new BadRequestException('Error al guardar el pago');
+        }
 
-      let newStatus: DebtStatus = debt.status;
-      if (isFullyPaid) {
-        newStatus = DebtStatus.PAID;
-      } else if (hasPartialPayment && debt.status === DebtStatus.OPEN) {
-        newStatus = DebtStatus.PARTIAL;
-      }
+        // Actualizar estado de la deuda (solo considerar USD como moneda de referencia)
+        // El equivalente en Bs puede variar con la tasa, pero USD es la referencia
+        const isFullyPaid = totalPaidUsd >= debtAmountUsd;
+        const hasPartialPayment = totalPaidUsd > 0;
 
-      // Actualizar solo el status usando QueryBuilder para evitar problemas con relaciones
-      if (newStatus !== debt.status) {
-        await manager
-          .createQueryBuilder()
-          .update(Debt)
-          .set({ status: newStatus })
-          .where('id = :debtId', { debtId })
-          .execute();
-      }
+        let newStatus: DebtStatus = debt.status;
+        if (isFullyPaid) {
+          newStatus = DebtStatus.PAID;
+        } else if (hasPartialPayment && debt.status === DebtStatus.OPEN) {
+          newStatus = DebtStatus.PARTIAL;
+        }
 
-      // Recargar la deuda con todos los pagos actualizados
-      const updatedDebt = await manager.findOne(Debt, {
-        where: { id: debtId },
-        relations: ['payments'],
-      });
+        // Actualizar solo el status usando QueryBuilder para evitar problemas con relaciones
+        if (newStatus !== debt.status) {
+          await manager
+            .createQueryBuilder()
+            .update(Debt)
+            .set({ status: newStatus })
+            .where('id = :debtId', { debtId })
+            .execute();
+        }
 
-      if (!updatedDebt) {
-        throw new NotFoundException('Error al actualizar la deuda');
-      }
+        // Recargar la deuda con todos los pagos actualizados
+        const updatedDebt = await manager.findOne(Debt, {
+          where: { id: debtId },
+          relations: ['payments'],
+        });
 
-      return { debt: updatedDebt, payment: savedPayment };
+        if (!updatedDebt) {
+          throw new NotFoundException('Error al actualizar la deuda');
+        }
+
+        return { debt: updatedDebt, payment: savedPayment };
       });
     } catch (error) {
       this.logger.error(`Error al agregar pago a deuda ${debtId}:`, error);
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
       throw new BadRequestException(
@@ -360,4 +403,3 @@ export class DebtsService {
     return debt;
   }
 }
-

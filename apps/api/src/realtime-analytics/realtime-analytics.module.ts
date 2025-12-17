@@ -13,6 +13,7 @@ import { Product } from '../database/entities/product.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -34,10 +35,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    NotificationsModule,
   ],
   controllers: [RealTimeAnalyticsController],
   providers: [RealTimeAnalyticsService, RealTimeAnalyticsGateway],
   exports: [RealTimeAnalyticsService, RealTimeAnalyticsGateway],
 })
 export class RealTimeAnalyticsModule {}
-

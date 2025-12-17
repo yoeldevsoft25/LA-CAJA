@@ -36,4 +36,3 @@ export class DebtPayment {
   @Column({ type: 'text', nullable: true })
   note: string | null;
 }
-

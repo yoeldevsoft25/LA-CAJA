@@ -9,7 +9,10 @@ import {
 } from 'typeorm';
 import { Store } from './store.entity';
 
-export type ModelType = 'demand_prediction' | 'recommendation' | 'anomaly_detection';
+export type ModelType =
+  | 'demand_prediction'
+  | 'recommendation'
+  | 'anomaly_detection';
 
 @Entity('ml_model_metrics')
 @Index(['store_id'])
@@ -47,4 +50,3 @@ export class MLModelMetric {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

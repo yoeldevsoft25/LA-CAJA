@@ -1,4 +1,12 @@
-import { IsUUID, IsString, IsNumber, IsOptional, IsBoolean, Min, MaxLength } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+  MaxLength,
+} from 'class-validator';
 
 /**
  * DTO para crear o actualizar producto rápido
@@ -20,4 +28,3 @@ export class CreateQuickProductDto {
   @IsOptional()
   is_active?: boolean;
 }
-

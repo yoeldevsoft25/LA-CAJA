@@ -15,4 +15,3 @@ export class AssignSerialsDto {
   @IsString({ each: true })
   serial_numbers: string[];
 }
-

@@ -28,4 +28,3 @@ import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
   exports: [FiscalInvoicesService, SeniatIntegrationService],
 })
 export class FiscalInvoicesModule {}
-

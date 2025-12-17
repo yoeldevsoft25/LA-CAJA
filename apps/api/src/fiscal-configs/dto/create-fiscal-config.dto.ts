@@ -2,7 +2,6 @@ import {
   IsString,
   IsOptional,
   IsNumber,
-  IsBoolean,
   IsDateString,
   MaxLength,
   Min,
@@ -59,4 +58,3 @@ export class CreateFiscalConfigDto {
   @IsString()
   note?: string;
 }
-

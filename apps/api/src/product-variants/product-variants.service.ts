@@ -98,7 +98,10 @@ export class ProductVariantsService {
       const newType = dto.variant_type ?? variant.variant_type;
       const newValue = dto.variant_value ?? variant.variant_value;
 
-      if (newType !== variant.variant_type || newValue !== variant.variant_value) {
+      if (
+        newType !== variant.variant_type ||
+        newValue !== variant.variant_value
+      ) {
         const existing = await this.variantRepository.findOne({
           where: {
             product_id: variant.product_id,
@@ -203,10 +206,7 @@ export class ProductVariantsService {
   /**
    * Obtiene el stock actual de una variante
    */
-  async getVariantStock(
-    storeId: string,
-    variantId: string,
-  ): Promise<number> {
+  async getVariantStock(storeId: string, variantId: string): Promise<number> {
     const variant = await this.getVariantById(storeId, variantId);
 
     // Calcular stock sumando todos los movimientos aprobados usando query builder
@@ -214,7 +214,9 @@ export class ProductVariantsService {
       .createQueryBuilder('movement')
       .select('COALESCE(SUM(movement.qty_delta), 0)', 'stock')
       .where('movement.store_id = :storeId', { storeId })
-      .andWhere('movement.product_id = :productId', { productId: variant.product_id })
+      .andWhere('movement.product_id = :productId', {
+        productId: variant.product_id,
+      })
       .andWhere('movement.variant_id = :variantId', { variantId })
       .andWhere('movement.approved = true')
       .getRawOne();
@@ -251,13 +253,15 @@ export class ProductVariantsService {
   ): Promise<Record<string, ProductVariant[]>> {
     const variants = await this.getVariantsByProduct(storeId, productId);
 
-    return variants.reduce((acc, variant) => {
-      if (!acc[variant.variant_type]) {
-        acc[variant.variant_type] = [];
-      }
-      acc[variant.variant_type].push(variant);
-      return acc;
-    }, {} as Record<string, ProductVariant[]>);
+    return variants.reduce(
+      (acc, variant) => {
+        if (!acc[variant.variant_type]) {
+          acc[variant.variant_type] = [];
+        }
+        acc[variant.variant_type].push(variant);
+        return acc;
+      },
+      {} as Record<string, ProductVariant[]>,
+    );
   }
 }
-

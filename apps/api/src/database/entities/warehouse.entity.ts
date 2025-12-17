@@ -64,4 +64,3 @@ export class Warehouse {
   @OneToMany(() => Transfer, (transfer) => transfer.to_warehouse)
   incoming_transfers: Transfer[];
 }
-

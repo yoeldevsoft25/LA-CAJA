@@ -19,4 +19,3 @@ export class StockAdjustedDto {
   @IsOptional()
   note?: string;
 }
-

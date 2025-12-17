@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { PurchaseOrder, PurchaseOrderStatus } from '../database/entities/purchase-order.entity';
+import {
+  PurchaseOrder,
+  PurchaseOrderStatus,
+} from '../database/entities/purchase-order.entity';
 import { PurchaseOrderItem } from '../database/entities/purchase-order-item.entity';
 import { Supplier } from '../database/entities/supplier.entity';
 import { Product } from '../database/entities/product.entity';
@@ -378,13 +381,7 @@ export class PurchaseOrdersService {
   async findOne(storeId: string, orderId: string): Promise<PurchaseOrder> {
     const order = await this.purchaseOrderRepository.findOne({
       where: { id: orderId, store_id: storeId },
-      relations: [
-        'items',
-        'supplier',
-        'warehouse',
-        'requester',
-        'receiver',
-      ],
+      relations: ['items', 'supplier', 'warehouse', 'requester', 'receiver'],
     });
 
     if (!order) {
@@ -394,4 +391,3 @@ export class PurchaseOrdersService {
     return order;
   }
 }
-

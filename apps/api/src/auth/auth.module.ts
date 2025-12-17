@@ -21,7 +21,7 @@ import { StoreMember } from '../database/entities/store-member.entity';
         if (!jwtSecret) {
           throw new Error(
             'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-            'En producción, esto es obligatorio por seguridad.',
+              'En producción, esto es obligatorio por seguridad.',
           );
         }
 
@@ -40,4 +40,3 @@ import { StoreMember } from '../database/entities/store-member.entity';
   exports: [AuthService],
 })
 export class AuthModule {}
-

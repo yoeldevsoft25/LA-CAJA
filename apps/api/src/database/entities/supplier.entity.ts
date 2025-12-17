@@ -66,4 +66,3 @@ export class Supplier {
   @OneToMany(() => PurchaseOrder, (order) => order.supplier)
   purchase_orders: PurchaseOrder[];
 }
-

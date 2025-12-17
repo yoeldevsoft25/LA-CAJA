@@ -10,4 +10,3 @@ export class LoginDto {
   @Length(4, 6)
   pin: string;
 }
-

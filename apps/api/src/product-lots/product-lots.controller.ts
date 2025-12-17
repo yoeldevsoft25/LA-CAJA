@@ -58,10 +58,7 @@ export class ProductLotsController {
    * Obtiene lotes próximos a vencer
    */
   @Get('expiring/soon')
-  async getLotsExpiringSoon(
-    @Query('days') days: string,
-    @Request() req: any,
-  ) {
+  async getLotsExpiringSoon(@Query('days') days: string, @Request() req: any) {
     const storeId = req.user.store_id;
     return this.lotsService.getLotsExpiringSoon(
       storeId,
@@ -100,4 +97,3 @@ export class ProductLotsController {
     return this.lotsService.getLotMovements(storeId, id);
   }
 }
-

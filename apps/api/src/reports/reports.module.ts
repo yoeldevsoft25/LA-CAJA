@@ -46,4 +46,3 @@ import { FiscalInvoiceItem } from '../database/entities/fiscal-invoice-item.enti
   exports: [ReportsService, PdfService],
 })
 export class ReportsModule {}
-

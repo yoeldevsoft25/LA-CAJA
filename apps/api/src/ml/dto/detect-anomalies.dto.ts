@@ -1,8 +1,27 @@
-import { IsOptional, IsIn, IsDateString, IsInt, Min, Max } from 'class-validator';
-import { AnomalyType, AnomalySeverity, EntityType } from '../../database/entities/detected-anomaly.entity';
+import {
+  IsOptional,
+  IsIn,
+  IsDateString,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
+import {
+  AnomalyType,
+  AnomalySeverity,
+  EntityType,
+} from '../../database/entities/detected-anomaly.entity';
 
 export class DetectAnomaliesDto {
-  @IsIn(['sale_amount', 'sale_frequency', 'product_movement', 'inventory_level', 'price_deviation', 'customer_behavior', 'payment_pattern'])
+  @IsIn([
+    'sale_amount',
+    'sale_frequency',
+    'product_movement',
+    'inventory_level',
+    'price_deviation',
+    'customer_behavior',
+    'payment_pattern',
+  ])
   @IsOptional()
   anomaly_type?: AnomalyType;
 
@@ -28,4 +47,3 @@ export class DetectAnomaliesDto {
   @IsOptional()
   limit?: number = 20;
 }
-

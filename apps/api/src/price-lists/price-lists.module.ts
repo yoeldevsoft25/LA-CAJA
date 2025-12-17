@@ -16,4 +16,3 @@ import { Product } from '../database/entities/product.entity';
   exports: [PriceListsService],
 })
 export class PriceListsModule {}
-

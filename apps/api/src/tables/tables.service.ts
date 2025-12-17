@@ -175,4 +175,3 @@ export class TablesService {
     await this.tableRepository.remove(table);
   }
 }
-

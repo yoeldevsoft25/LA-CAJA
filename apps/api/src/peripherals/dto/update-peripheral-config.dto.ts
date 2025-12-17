@@ -42,4 +42,3 @@ export class UpdatePeripheralConfigDto {
   @IsOptional()
   note?: string | null;
 }
-

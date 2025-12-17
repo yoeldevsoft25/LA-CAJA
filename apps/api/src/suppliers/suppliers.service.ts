@@ -64,7 +64,10 @@ export class SuppliersService {
   /**
    * Obtiene todos los proveedores de una tienda
    */
-  async findAll(storeId: string, includeInactive: boolean = false): Promise<Supplier[]> {
+  async findAll(
+    storeId: string,
+    includeInactive: boolean = false,
+  ): Promise<Supplier[]> {
     const where: any = { store_id: storeId };
     if (!includeInactive) {
       where.is_active = true;
@@ -117,12 +120,14 @@ export class SuppliersService {
     // Actualizar campos
     if (dto.name !== undefined) supplier.name = dto.name;
     if (dto.code !== undefined) supplier.code = dto.code;
-    if (dto.contact_name !== undefined) supplier.contact_name = dto.contact_name;
+    if (dto.contact_name !== undefined)
+      supplier.contact_name = dto.contact_name;
     if (dto.email !== undefined) supplier.email = dto.email;
     if (dto.phone !== undefined) supplier.phone = dto.phone;
     if (dto.address !== undefined) supplier.address = dto.address;
     if (dto.tax_id !== undefined) supplier.tax_id = dto.tax_id;
-    if (dto.payment_terms !== undefined) supplier.payment_terms = dto.payment_terms;
+    if (dto.payment_terms !== undefined)
+      supplier.payment_terms = dto.payment_terms;
     if (dto.is_active !== undefined) supplier.is_active = dto.is_active;
     if (dto.note !== undefined) supplier.note = dto.note;
 
@@ -233,4 +238,3 @@ export class SuppliersService {
     });
   }
 }
-

@@ -6,4 +6,3 @@ export class ResolveAnomalyDto {
   @MaxLength(1000)
   resolution_note?: string;
 }
-

@@ -18,4 +18,3 @@ import { ExchangeModule } from '../exchange/exchange.module';
   exports: [DebtsService],
 })
 export class DebtsModule {}
-

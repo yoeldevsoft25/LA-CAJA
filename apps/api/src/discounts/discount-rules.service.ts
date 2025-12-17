@@ -1,8 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DiscountConfig, AuthorizationRole } from '../database/entities/discount-config.entity';
+import {
+  DiscountConfig,
+  AuthorizationRole,
+} from '../database/entities/discount-config.entity';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 export interface DiscountValidationResult {
   requires_authorization: boolean;
@@ -53,7 +57,10 @@ export class DiscountRulesService {
     }
 
     // Verificar si excede límites máximos
-    if (config.max_percentage > 0 && discountPercentage > config.max_percentage) {
+    if (
+      config.max_percentage > 0 &&
+      discountPercentage > config.max_percentage
+    ) {
       return {
         requires_authorization: true,
         error: `El descuento (${discountPercentage.toFixed(2)}%) excede el máximo permitido (${config.max_percentage.toFixed(2)}%)`,
@@ -87,10 +94,7 @@ export class DiscountRulesService {
   /**
    * Valida si un usuario puede autorizar descuentos según su rol
    */
-  validateAuthorizationRole(
-    userRole: string,
-    config: DiscountConfig,
-  ): boolean {
+  validateAuthorizationRole(userRole: string, config: DiscountConfig): boolean {
     if (!config.authorization_role) {
       return true; // Sin restricción de rol
     }
@@ -137,7 +141,7 @@ export class DiscountRulesService {
     if (!config) {
       // Crear configuración por defecto
       config = this.configRepository.create({
-        id: require('crypto').randomUUID(),
+        id: randomUUID(),
         store_id: storeId,
         max_percentage: 0, // Sin límite por defecto
         max_amount_bs: null,
@@ -163,4 +167,3 @@ export class DiscountRulesService {
     });
   }
 }
-

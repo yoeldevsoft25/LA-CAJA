@@ -262,7 +262,9 @@ export class ProjectionsService {
           unit_cost_usd: 0,
           note: `Venta ${payload.sale_id}`,
           ref: { sale_id: payload.sale_id },
-          happened_at: payload.sold_at ? new Date(payload.sold_at) : event.created_at,
+          happened_at: payload.sold_at
+            ? new Date(payload.sold_at)
+            : event.created_at,
         });
 
         await this.movementRepository.save(movement);
@@ -284,7 +286,9 @@ export class ProjectionsService {
       id: payload.session_id,
       store_id: event.store_id,
       opened_by: event.actor_user_id,
-      opened_at: payload.opened_at ? new Date(payload.opened_at) : event.created_at,
+      opened_at: payload.opened_at
+        ? new Date(payload.opened_at)
+        : event.created_at,
       opening_amount_bs: Number(payload.opening_amount_bs || 0),
       opening_amount_usd: Number(payload.opening_amount_usd || 0),
       closed_at: null,
@@ -307,7 +311,9 @@ export class ProjectionsService {
       return; // Sesión no existe
     }
 
-    session.closed_at = payload.closed_at ? new Date(payload.closed_at) : event.created_at;
+    session.closed_at = payload.closed_at
+      ? new Date(payload.closed_at)
+      : event.created_at;
     session.closed_by = event.actor_user_id;
     session.expected = payload.expected || null;
     session.counted = payload.counted || null;
@@ -372,7 +378,9 @@ export class ProjectionsService {
       store_id: event.store_id,
       sale_id: payload.sale_id || null,
       customer_id: payload.customer_id,
-      created_at: payload.created_at ? new Date(payload.created_at) : event.created_at,
+      created_at: payload.created_at
+        ? new Date(payload.created_at)
+        : event.created_at,
       amount_bs: Number(payload.amount_bs) || 0,
       amount_usd: Number(payload.amount_usd) || 0,
       status: DebtStatus.OPEN,
@@ -383,21 +391,32 @@ export class ProjectionsService {
 
   private async projectDebtPaymentRecorded(event: Event): Promise<void> {
     const payload = event.payload as any;
-    
+
     // Validar campos requeridos
     if (!payload.payment_id) {
-      this.logger.error(`Error: payment_id faltante en evento ${event.event_id}`);
-      throw new Error(`payment_id es requerido en el payload del evento DebtPaymentRecorded`);
+      this.logger.error(
+        `Error: payment_id faltante en evento ${event.event_id}`,
+      );
+      throw new Error(
+        `payment_id es requerido en el payload del evento DebtPaymentRecorded`,
+      );
     }
 
     if (!payload.debt_id) {
-      this.logger.error(`Error: debt_id faltante en evento ${event.event_id}`, JSON.stringify(payload));
-      throw new Error(`debt_id es requerido en el payload del evento DebtPaymentRecorded. Evento: ${event.event_id}`);
+      this.logger.error(
+        `Error: debt_id faltante en evento ${event.event_id}`,
+        JSON.stringify(payload),
+      );
+      throw new Error(
+        `debt_id es requerido en el payload del evento DebtPaymentRecorded. Evento: ${event.event_id}`,
+      );
     }
 
     if (!payload.method) {
       this.logger.error(`Error: method faltante en evento ${event.event_id}`);
-      throw new Error(`method es requerido en el payload del evento DebtPaymentRecorded`);
+      throw new Error(
+        `method es requerido en el payload del evento DebtPaymentRecorded`,
+      );
     }
 
     // Verificar que el pago no existe ya (idempotencia)
@@ -415,22 +434,35 @@ export class ProjectionsService {
     });
 
     if (!debt) {
-      this.logger.error(`Deuda ${payload.debt_id} no encontrada para store ${event.store_id} en evento ${event.event_id}`);
-      throw new Error(`La deuda ${payload.debt_id} no existe para la tienda ${event.store_id}`);
+      this.logger.error(
+        `Deuda ${payload.debt_id} no encontrada para store ${event.store_id} en evento ${event.event_id}`,
+      );
+      throw new Error(
+        `La deuda ${payload.debt_id} no existe para la tienda ${event.store_id}`,
+      );
     }
 
     // Crear el pago usando SQL directo para evitar problemas con relaciones TypeORM
-    const paidAt = payload.paid_at ? new Date(payload.paid_at) : event.created_at;
+    const paidAt = payload.paid_at
+      ? new Date(payload.paid_at)
+      : event.created_at;
     const amountBs = Number(payload.amount_bs) || 0;
     const amountUsd = Number(payload.amount_usd) || 0;
 
     // Validar que debt_id no sea null antes de insertar
     if (!payload.debt_id) {
-      this.logger.error(`Error crítico: debt_id es null/undefined`, JSON.stringify(payload));
-      throw new Error(`debt_id es requerido y no puede ser null. Evento: ${event.event_id}`);
+      this.logger.error(
+        `Error crítico: debt_id es null/undefined`,
+        JSON.stringify(payload),
+      );
+      throw new Error(
+        `debt_id es requerido y no puede ser null. Evento: ${event.event_id}`,
+      );
     }
 
-    this.logger.debug(`Insertando pago - payment_id: ${payload.payment_id}, store_id: ${event.store_id}, debt_id: ${payload.debt_id}`);
+    this.logger.debug(
+      `Insertando pago - payment_id: ${payload.payment_id}, store_id: ${event.store_id}, debt_id: ${payload.debt_id}`,
+    );
 
     // Usar SQL directo para insertar (igual que en debts.service.ts)
     await this.dataSource.query(
@@ -448,7 +480,9 @@ export class ProjectionsService {
       ],
     );
 
-    this.logger.debug(`Pago insertado exitosamente - payment_id: ${payload.payment_id}`);
+    this.logger.debug(
+      `Pago insertado exitosamente - payment_id: ${payload.payment_id}`,
+    );
 
     // Actualizar estado de la deuda si está completamente pagada
     // Recargar la deuda con todos los pagos para calcular correctamente
@@ -480,4 +514,3 @@ export class ProjectionsService {
     }
   }
 }
-

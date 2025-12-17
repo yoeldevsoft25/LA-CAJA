@@ -101,7 +101,8 @@ export class TransfersService {
       const availableStock = stock.find(
         (s) =>
           s.product_id === item.product_id &&
-          (s.variant_id === item.variant_id || (!s.variant_id && !item.variant_id)),
+          (s.variant_id === item.variant_id ||
+            (!s.variant_id && !item.variant_id)),
       );
 
       if (!availableStock || availableStock.stock < item.quantity) {
@@ -277,7 +278,8 @@ export class TransfersService {
 
         // Si se recibió menos de lo enviado, ajustar stock en origen
         if (receivedDto.quantity_received < item.quantity_shipped) {
-          const difference = item.quantity_shipped - receivedDto.quantity_received;
+          const difference =
+            item.quantity_shipped - receivedDto.quantity_received;
           await this.warehousesService.updateStock(
             transfer.from_warehouse_id,
             item.product_id,
@@ -310,7 +312,11 @@ export class TransfersService {
   /**
    * Cancela una transferencia
    */
-  async cancel(storeId: string, transferId: string, userId: string): Promise<Transfer> {
+  async cancel(
+    storeId: string,
+    transferId: string,
+    userId: string,
+  ): Promise<Transfer> {
     const transfer = await this.transferRepository.findOne({
       where: { id: transferId, store_id: storeId },
       relations: ['items'],
@@ -321,7 +327,9 @@ export class TransfersService {
     }
 
     if (transfer.status === 'completed') {
-      throw new BadRequestException('No se puede cancelar una transferencia completada');
+      throw new BadRequestException(
+        'No se puede cancelar una transferencia completada',
+      );
     }
 
     if (transfer.status === 'cancelled') {
@@ -374,7 +382,14 @@ export class TransfersService {
   async findOne(storeId: string, transferId: string): Promise<Transfer> {
     const transfer = await this.transferRepository.findOne({
       where: { id: transferId, store_id: storeId },
-      relations: ['items', 'from_warehouse', 'to_warehouse', 'requester', 'shipper', 'receiver'],
+      relations: [
+        'items',
+        'from_warehouse',
+        'to_warehouse',
+        'requester',
+        'shipper',
+        'receiver',
+      ],
     });
 
     if (!transfer) {
@@ -384,4 +399,3 @@ export class TransfersService {
     return transfer;
   }
 }
-

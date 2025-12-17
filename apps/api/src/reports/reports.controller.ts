@@ -28,7 +28,9 @@ export class ReportsController {
 
     // Cuando llega en formato YYYY-MM-DD, `new Date(value)` se interpreta como UTC y
     // puede terminar en el día anterior/siguiente en hora local. Forzamos parse local.
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date(value);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? new Date(`${value}T12:00:00`)
+      : new Date(value);
 
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException(`Fecha inválida: ${value}`);
@@ -155,9 +157,16 @@ export class ReportsController {
     const storeId = req.user.store_id;
     const start = this.parseDateParam(startDate);
     const end = this.parseDateParam(endDate);
-    const pdf = await this.pdfService.generateSalesByDayPDF(storeId, start, end);
+    const pdf = await this.pdfService.generateSalesByDayPDF(
+      storeId,
+      start,
+      end,
+    );
     res?.setHeader('Content-Type', 'application/pdf');
-    res?.setHeader('Content-Disposition', 'attachment; filename=sales-by-day.pdf');
+    res?.setHeader(
+      'Content-Disposition',
+      'attachment; filename=sales-by-day.pdf',
+    );
     res?.send(pdf);
   }
 
@@ -174,9 +183,17 @@ export class ReportsController {
     const storeId = req.user.store_id;
     const start = this.parseDateParam(startDate);
     const end = this.parseDateParam(endDate);
-    const pdf = await this.pdfService.generateShiftsPDF(storeId, start, end, cashierId);
+    const pdf = await this.pdfService.generateShiftsPDF(
+      storeId,
+      start,
+      end,
+      cashierId,
+    );
     res?.setHeader('Content-Type', 'application/pdf');
-    res?.setHeader('Content-Disposition', 'attachment; filename=shifts-report.pdf');
+    res?.setHeader(
+      'Content-Disposition',
+      'attachment; filename=shifts-report.pdf',
+    );
     res?.send(pdf);
   }
 
@@ -194,7 +211,10 @@ export class ReportsController {
     const end = this.parseDateParam(endDate);
     const pdf = await this.pdfService.generateArqueosPDF(storeId, start, end);
     res?.setHeader('Content-Type', 'application/pdf');
-    res?.setHeader('Content-Disposition', 'attachment; filename=arqueos-report.pdf');
+    res?.setHeader(
+      'Content-Disposition',
+      'attachment; filename=arqueos-report.pdf',
+    );
     res?.send(pdf);
   }
 
@@ -208,9 +228,15 @@ export class ReportsController {
   ) {
     const storeId = req.user.store_id;
     const days = daysAhead ? parseInt(daysAhead, 10) : 30;
-    const pdf = await this.pdfService.generateExpiringProductsPDF(storeId, days);
+    const pdf = await this.pdfService.generateExpiringProductsPDF(
+      storeId,
+      days,
+    );
     res?.setHeader('Content-Type', 'application/pdf');
-    res?.setHeader('Content-Disposition', 'attachment; filename=expiring-products.pdf');
+    res?.setHeader(
+      'Content-Disposition',
+      'attachment; filename=expiring-products.pdf',
+    );
     res?.send(pdf);
   }
 
@@ -236,6 +262,11 @@ export class ReportsController {
     const storeId = req.user.store_id;
     const start = this.parseDateParam(startDate);
     const end = this.parseDateParam(endDate);
-    return this.reportsService.getFiscalInvoicesReport(storeId, start, end, status);
+    return this.reportsService.getFiscalInvoicesReport(
+      storeId,
+      start,
+      end,
+      status,
+    );
   }
 }

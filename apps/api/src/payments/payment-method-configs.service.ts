@@ -1,11 +1,10 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentMethodConfig, PaymentMethod } from '../database/entities/payment-method-config.entity';
+import {
+  PaymentMethodConfig,
+  PaymentMethod,
+} from '../database/entities/payment-method-config.entity';
 import { CreatePaymentMethodConfigDto } from './dto/create-payment-method-config.dto';
 import { randomUUID } from 'crypto';
 
@@ -100,4 +99,3 @@ export class PaymentMethodConfigsService {
     await this.configRepository.remove(config);
   }
 }
-

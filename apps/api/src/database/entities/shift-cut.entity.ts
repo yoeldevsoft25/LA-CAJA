@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { Shift } from './shift.entity';
 import { Profile } from './profile.entity';
 
@@ -60,4 +67,3 @@ export class ShiftCut {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   created_at: Date;
 }
-

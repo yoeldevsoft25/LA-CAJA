@@ -1,4 +1,13 @@
-import { IsArray, ValidateNested, IsUUID, IsOptional, IsString, IsInt, Min, IsNumber } from 'class-validator';
+import {
+  IsArray,
+  ValidateNested,
+  IsUUID,
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  IsNumber,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateTransferItemDto {
@@ -42,4 +51,3 @@ export class CreateTransferDto {
   @IsString()
   note?: string;
 }
-

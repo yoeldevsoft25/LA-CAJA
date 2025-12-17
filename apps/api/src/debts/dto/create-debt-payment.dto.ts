@@ -1,4 +1,4 @@
-import { IsNumber, IsString, IsIn, Min, IsOptional, ValidateIf } from 'class-validator';
+import { IsNumber, IsString, IsIn, Min, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateDebtPaymentDto {
@@ -22,7 +22,8 @@ export class CreateDebtPaymentDto {
 
   @IsString({ message: 'method debe ser una cadena de texto' })
   @IsIn(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER'], {
-    message: 'method debe ser uno de: CASH_BS, CASH_USD, PAGO_MOVIL, TRANSFER, OTHER',
+    message:
+      'method debe ser uno de: CASH_BS, CASH_USD, PAGO_MOVIL, TRANSFER, OTHER',
   })
   method: string;
 
@@ -34,4 +35,3 @@ export class CreateDebtPaymentDto {
   @IsString({ message: 'note debe ser una cadena de texto' })
   note?: string | null;
 }
-

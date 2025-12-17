@@ -24,4 +24,3 @@ import { Product } from '../database/entities/product.entity';
   exports: [FastCheckoutRulesService],
 })
 export class FastCheckoutModule {}
-

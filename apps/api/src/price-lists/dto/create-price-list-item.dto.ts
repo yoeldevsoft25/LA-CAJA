@@ -35,4 +35,3 @@ export class CreatePriceListItemDto {
   @IsOptional()
   note?: string | null;
 }
-

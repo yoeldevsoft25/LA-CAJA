@@ -1,4 +1,10 @@
-import { IsNumber, IsOptional, IsString, Min, IsDateString } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  IsDateString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SetManualRateDto {
@@ -19,4 +25,3 @@ export class SetManualRateDto {
   @IsString()
   note?: string;
 }
-

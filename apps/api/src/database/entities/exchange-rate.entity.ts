@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
 
@@ -6,7 +15,9 @@ export type ExchangeRateSource = 'api' | 'manual';
 
 @Entity('exchange_rates')
 @Index(['store_id'])
-@Index(['store_id', 'is_active', 'effective_from', 'effective_until'], { where: 'is_active = true' })
+@Index(['store_id', 'is_active', 'effective_from', 'effective_until'], {
+  where: 'is_active = true',
+})
 @Index(['store_id', 'effective_from'], { where: 'is_active = true' })
 export class ExchangeRate {
   @PrimaryColumn('uuid')
@@ -54,4 +65,3 @@ export class ExchangeRate {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

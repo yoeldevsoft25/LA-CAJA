@@ -93,10 +93,7 @@ export class PriceListsService {
   /**
    * Obtiene una lista por ID
    */
-  async getPriceListById(
-    storeId: string,
-    listId: string,
-  ): Promise<PriceList> {
+  async getPriceListById(storeId: string, listId: string): Promise<PriceList> {
     const list = await this.priceListRepository.findOne({
       where: { id: listId, store_id: storeId },
       relations: ['items', 'items.product', 'items.variant'],
@@ -117,7 +114,7 @@ export class PriceListsService {
     listId: string,
     dto: CreatePriceListItemDto,
   ): Promise<PriceListItem> {
-    const list = await this.getPriceListById(storeId, listId);
+    await this.getPriceListById(storeId, listId);
 
     // Verificar que el producto existe
     const product = await this.productRepository.findOne({
@@ -231,4 +228,3 @@ export class PriceListsService {
     return null;
   }
 }
-

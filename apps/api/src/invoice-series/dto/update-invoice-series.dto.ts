@@ -14,9 +14,12 @@ import {
 export class UpdateInvoiceSeriesDto {
   @IsString()
   @IsOptional()
-  @MaxLength(10, { message: 'El código de serie no puede exceder 10 caracteres' })
+  @MaxLength(10, {
+    message: 'El código de serie no puede exceder 10 caracteres',
+  })
   @Matches(/^[A-Z0-9]+$/, {
-    message: 'El código de serie solo puede contener letras mayúsculas y números',
+    message:
+      'El código de serie solo puede contener letras mayúsculas y números',
   })
   series_code?: string;
 
@@ -48,4 +51,3 @@ export class UpdateInvoiceSeriesDto {
   @IsOptional()
   note?: string | null;
 }
-

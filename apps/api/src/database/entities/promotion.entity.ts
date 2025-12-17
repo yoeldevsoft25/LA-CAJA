@@ -11,11 +11,17 @@ import { Store } from './store.entity';
 import { PromotionProduct } from './promotion-product.entity';
 import { PromotionUsage } from './promotion-usage.entity';
 
-export type PromotionType = 'percentage' | 'fixed_amount' | 'buy_x_get_y' | 'bundle';
+export type PromotionType =
+  | 'percentage'
+  | 'fixed_amount'
+  | 'buy_x_get_y'
+  | 'bundle';
 
 @Entity('promotions')
 @Index(['store_id'])
-@Index(['store_id', 'is_active', 'valid_from', 'valid_until'], { where: 'is_active = true' })
+@Index(['store_id', 'is_active', 'valid_from', 'valid_until'], {
+  where: 'is_active = true',
+})
 @Index(['store_id', 'code'], { where: 'code IS NOT NULL' })
 @Index(['store_id', 'valid_from', 'valid_until'])
 export class Promotion {
@@ -89,10 +95,11 @@ export class Promotion {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   updated_at: Date;
 
-  @OneToMany(() => PromotionProduct, (product) => product.promotion, { cascade: true })
+  @OneToMany(() => PromotionProduct, (product) => product.promotion, {
+    cascade: true,
+  })
   products: PromotionProduct[];
 
   @OneToMany(() => PromotionUsage, (usage) => usage.promotion)
   usages: PromotionUsage[];
 }
-

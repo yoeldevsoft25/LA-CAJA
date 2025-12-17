@@ -1,10 +1,4 @@
-import {
-  Entity,
-  Column,
-  PrimaryColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Promotion } from './promotion.entity';
 import { Product } from './product.entity';
 import { ProductVariant } from './product-variant.entity';
@@ -38,4 +32,3 @@ export class PromotionProduct {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   created_at: Date;
 }
-

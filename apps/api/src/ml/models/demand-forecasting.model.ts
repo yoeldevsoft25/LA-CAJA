@@ -33,7 +33,9 @@ export class DemandForecastingModel {
 
     // Inicializar estacionalidad con promedio de primeros ciclos
     for (let i = 0; i < seasonLength && i < data.length; i++) {
-      seasonal[i] = data[i] / (data.slice(0, seasonLength).reduce((a, b) => a + b, 0) / seasonLength);
+      seasonal[i] =
+        data[i] /
+        (data.slice(0, seasonLength).reduce((a, b) => a + b, 0) / seasonLength);
     }
 
     // Aplicar Holt-Winters
@@ -43,7 +45,9 @@ export class DemandForecastingModel {
       const prevSeasonal = seasonal[i % seasonLength];
 
       // Actualizar nivel
-      level = alpha * (data[i] / prevSeasonal) + (1 - alpha) * (prevLevel + prevTrend);
+      level =
+        alpha * (data[i] / prevSeasonal) +
+        (1 - alpha) * (prevLevel + prevTrend);
 
       // Actualizar tendencia
       trend = beta * (level - prevLevel) + (1 - beta) * prevTrend;
@@ -56,7 +60,12 @@ export class DemandForecastingModel {
     // Pronóstico
     const forecast = (level + trend) * seasonal[data.length % seasonLength];
 
-    return { forecast, level, trend, seasonal: seasonal[data.length % seasonLength] };
+    return {
+      forecast,
+      level,
+      trend,
+      seasonal: seasonal[data.length % seasonLength],
+    };
   }
 
   /**
@@ -96,7 +105,9 @@ export class DemandForecastingModel {
   ): number {
     if (data.length < Math.max(p, q) + d + 1) {
       // No hay suficientes datos, usar promedio
-      return data.length > 0 ? data.reduce((a, b) => a + b, 0) / data.length : 0;
+      return data.length > 0
+        ? data.reduce((a, b) => a + b, 0) / data.length
+        : 0;
     }
 
     // Diferenciación
@@ -113,9 +124,11 @@ export class DemandForecastingModel {
 
     // Componente MA simplificado (promedio móvil de errores)
     const errors = this.calculateErrors(differenced, arCoeffs);
-    const maComponent = errors.length > 0
-      ? errors.slice(-q).reduce((a, b) => a + b, 0) / Math.min(q, errors.length)
-      : 0;
+    const maComponent =
+      errors.length > 0
+        ? errors.slice(-q).reduce((a, b) => a + b, 0) /
+          Math.min(q, errors.length)
+        : 0;
 
     // Pronóstico en escala diferenciada
     const forecastDiff = arComponent + maComponent;
@@ -136,7 +149,11 @@ export class DemandForecastingModel {
       arima: 0.3,
       moving_avg: 0.3,
     },
-  ): { forecast: number; confidence: number; model_contributions: Record<string, number> } {
+  ): {
+    forecast: number;
+    confidence: number;
+    model_contributions: Record<string, number>;
+  } {
     const exponential = this.exponentialSmoothing(data);
     const arima = this.simpleARIMA(data);
     const movingAvg = this.calculateMovingAverage(data, 7);
@@ -150,7 +167,8 @@ export class DemandForecastingModel {
     const predictions = [exponential.forecast, arima, movingAvg];
     const mean = predictions.reduce((a, b) => a + b, 0) / predictions.length;
     const variance =
-      predictions.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / predictions.length;
+      predictions.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) /
+      predictions.length;
     const stdDev = Math.sqrt(variance);
     const confidence = Math.max(0, Math.min(100, 100 - (stdDev / mean) * 100));
 
@@ -179,7 +197,11 @@ export class DemandForecastingModel {
     return result;
   }
 
-  private integrate(original: number[], forecastDiff: number, order: number): number {
+  private integrate(
+    original: number[],
+    forecastDiff: number,
+    _order: number,
+  ): number {
     let result = forecastDiff;
     for (let i = original.length - 1; i >= 0; i--) {
       result = original[i] + result;
@@ -235,4 +257,3 @@ export class DemandForecastingModel {
     return recent.reduce((a, b) => a + b, 0) / recent.length;
   }
 }
-

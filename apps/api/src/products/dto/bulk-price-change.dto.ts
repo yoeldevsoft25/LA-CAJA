@@ -1,4 +1,12 @@
-import { IsArray, IsNumber, IsOptional, IsString, IsIn, Min, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsIn,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class BulkPriceChangeItemDto {
@@ -36,4 +44,3 @@ export class BulkPriceChangeDto {
   @IsOptional()
   rounding?: 'none' | '0.1' | '0.5' | '1';
 }
-

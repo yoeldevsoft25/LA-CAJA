@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Store } from '../database/entities/store.entity';
@@ -15,9 +20,13 @@ export class LicenseWatcherService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     const interval = Number(process.env.LICENSE_CRON_INTERVAL_MS ?? 3600_000); // 1h
-    this.runCheck().catch((err) => this.logger.error('Error en chequeo inicial', err.stack));
+    this.runCheck().catch((err) =>
+      this.logger.error('Error en chequeo inicial', err.stack),
+    );
     this.timer = setInterval(() => {
-      this.runCheck().catch((err) => this.logger.error('Error en chequeo programado', err.stack));
+      this.runCheck().catch((err) =>
+        this.logger.error('Error en chequeo programado', err.stack),
+      );
     }, interval);
     this.logger.log(`License watcher iniciado (intervalo ${interval}ms)`);
   }
@@ -49,24 +58,29 @@ export class LicenseWatcherService implements OnModuleInit, OnModuleDestroy {
 
       if (isExpired && store.license_status !== 'expired') {
         store.license_status = 'expired';
-        store.license_notes = store.license_notes ?? 'Expirada automáticamente por cron';
+        store.license_notes =
+          store.license_notes ?? 'Expirada automáticamente por cron';
         await this.storeRepo.save(store);
         expired++;
         updated++;
         continue;
       }
 
-      const expiringSoon = now > expires - 7 * 24 * 60 * 60 * 1000 && now <= expires + graceMs;
+      const expiringSoon =
+        now > expires - 7 * 24 * 60 * 60 * 1000 && now <= expires + graceMs;
       if (expiringSoon && store.license_status === 'active') {
         // No cambiamos el status, solo anotamos nota
-        store.license_notes = store.license_notes ?? 'Licencia por expirar (<7d)';
+        store.license_notes =
+          store.license_notes ?? 'Licencia por expirar (<7d)';
         await this.storeRepo.save(store);
         updated++;
       }
     }
 
     if (expired || updated) {
-      this.logger.log(`Chequeo licencias: ${expired} expiradas, ${updated} actualizadas`);
+      this.logger.log(
+        `Chequeo licencias: ${expired} expiradas, ${updated} actualizadas`,
+      );
     }
   }
 }

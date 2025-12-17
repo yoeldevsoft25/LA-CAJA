@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsBoolean, MaxLength, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateWarehouseDto {
   @IsString()
@@ -27,4 +33,3 @@ export class CreateWarehouseDto {
   @IsString()
   note?: string;
 }
-

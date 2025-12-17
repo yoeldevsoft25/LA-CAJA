@@ -13,7 +13,9 @@ import {
 export class UpdateTableDto {
   @IsString()
   @IsOptional()
-  @MaxLength(20, { message: 'El número de mesa no puede exceder 20 caracteres' })
+  @MaxLength(20, {
+    message: 'El número de mesa no puede exceder 20 caracteres',
+  })
   table_number?: string;
 
   @IsString()
@@ -29,10 +31,14 @@ export class UpdateTableDto {
   @IsString()
   @IsOptional()
   @IsIn(['available', 'occupied', 'reserved', 'cleaning', 'out_of_service'])
-  status?: 'available' | 'occupied' | 'reserved' | 'cleaning' | 'out_of_service';
+  status?:
+    | 'available'
+    | 'occupied'
+    | 'reserved'
+    | 'cleaning'
+    | 'out_of_service';
 
   @IsString()
   @IsOptional()
   note?: string | null;
 }
-

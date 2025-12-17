@@ -24,4 +24,3 @@ import { Sale } from '../database/entities/sale.entity';
   exports: [DiscountRulesService, DiscountAuthorizationsService],
 })
 export class DiscountsModule {}
-

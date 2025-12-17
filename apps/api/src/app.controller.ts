@@ -33,5 +33,3 @@ export class AppController {
     return this.ping();
   }
 }
-
-

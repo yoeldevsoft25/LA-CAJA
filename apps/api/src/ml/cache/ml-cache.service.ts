@@ -91,7 +91,11 @@ export class MLCacheService {
   /**
    * Genera una clave de caché para predicciones
    */
-  generatePredictionKey(storeId: string, productId: string, daysAhead: number): string {
+  generatePredictionKey(
+    storeId: string,
+    productId: string,
+    daysAhead: number,
+  ): string {
     return `prediction:${storeId}:${productId}:${daysAhead}`;
   }
 
@@ -128,4 +132,3 @@ export class MLCacheService {
     };
   }
 }
-

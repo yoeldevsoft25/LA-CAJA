@@ -36,7 +36,10 @@ export class MLController {
    * GET /ml/recommendations
    */
   @Get('recommendations')
-  async getRecommendations(@Query() dto: GetRecommendationsDto, @Request() req: any) {
+  async getRecommendations(
+    @Query() dto: GetRecommendationsDto,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
     return await this.mlService.getRecommendations(storeId, dto);
   }
@@ -63,7 +66,11 @@ export class MLController {
   ) {
     const storeId = req.user.store_id;
     const userId = req.user.sub;
-    return await this.mlService.resolveAnomaly(storeId, id, userId, dto.resolution_note);
+    return await this.mlService.resolveAnomaly(
+      storeId,
+      id,
+      userId,
+      dto.resolution_note,
+    );
   }
 }
-

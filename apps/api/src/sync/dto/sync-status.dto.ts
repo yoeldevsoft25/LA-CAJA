@@ -7,4 +7,3 @@ export class SyncStatusDto {
   last_sync_duration_ms: number | null;
   last_sync_error: string | null;
 }
-

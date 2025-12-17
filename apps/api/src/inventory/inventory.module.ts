@@ -16,4 +16,3 @@ import { WarehousesModule } from '../warehouses/warehouses.module';
   exports: [InventoryService],
 })
 export class InventoryModule {}
-

@@ -1,10 +1,4 @@
-import {
-  Entity,
-  Column,
-  PrimaryColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { PriceList } from './price-list.entity';
 import { Product } from './product.entity';
 import { ProductVariant } from './product-variant.entity';
@@ -53,4 +47,3 @@ export class PriceListItem {
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   updated_at: Date;
 }
-

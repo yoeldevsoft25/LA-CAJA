@@ -5,7 +5,6 @@ import {
   IsNumber,
   IsOptional,
   IsDateString,
-  Min,
 } from 'class-validator';
 
 export type LotMovementType =
@@ -40,4 +39,3 @@ export class CreateLotMovementDto {
   @IsOptional()
   note?: string | null;
 }
-

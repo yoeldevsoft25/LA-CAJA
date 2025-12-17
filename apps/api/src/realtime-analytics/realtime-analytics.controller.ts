@@ -70,10 +70,7 @@ export class RealTimeAnalyticsController {
    * Crear umbral de alerta
    */
   @Post('thresholds')
-  async createThreshold(
-    @Request() req: any,
-    @Body() dto: CreateThresholdDto,
-  ) {
+  async createThreshold(@Request() req: any, @Body() dto: CreateThresholdDto) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     return this.analyticsService.createThreshold(storeId, dto, userId);
@@ -114,11 +111,14 @@ export class RealTimeAnalyticsController {
     // Emitir alertas nuevas a través de WebSocket
     for (const alert of alerts) {
       this.gateway.emitNewAlert(storeId, alert);
-      
+
       // Crear notificación desde alerta
       try {
-        const notification = await this.notificationsService.createFromAlert(storeId, alert);
-        
+        const notification = await this.notificationsService.createFromAlert(
+          storeId,
+          alert,
+        );
+
         // Emitir vía WebSocket de notificaciones
         if (alert.entity_type && alert.entity_id) {
           // Notificación específica para el usuario relacionado
@@ -194,4 +194,3 @@ export class RealTimeAnalyticsController {
     );
   }
 }
-

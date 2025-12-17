@@ -11,4 +11,3 @@ export class Profile {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-

@@ -1,7 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CashMovement, CashMovementType } from '../database/entities/cash-movement.entity';
+import {
+  CashMovement,
+  CashMovementType,
+} from '../database/entities/cash-movement.entity';
 import { CreateCashMovementDto } from './dto/create-cash-movement.dto';
 import { randomUUID } from 'crypto';
 
@@ -131,4 +134,3 @@ export class CashMovementsService {
     };
   }
 }
-

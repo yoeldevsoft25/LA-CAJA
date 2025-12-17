@@ -40,7 +40,10 @@ export class TablesController {
    * Obtiene todas las mesas de la tienda
    */
   @Get()
-  async getTablesByStore(@Request() req: any, @Query('status') status?: TableStatus) {
+  async getTablesByStore(
+    @Request() req: any,
+    @Query('status') status?: TableStatus,
+  ) {
     const storeId = req.user.store_id;
     if (status) {
       return this.tablesService.getTablesByStatus(storeId, status);
@@ -93,4 +96,3 @@ export class TablesController {
     await this.tablesService.deleteTable(storeId, id);
   }
 }
-

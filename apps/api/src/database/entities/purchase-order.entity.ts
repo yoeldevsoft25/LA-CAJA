@@ -111,4 +111,3 @@ export class PurchaseOrder {
   @OneToMany(() => PurchaseOrderItem, (item) => item.purchase_order)
   items: PurchaseOrderItem[];
 }
-

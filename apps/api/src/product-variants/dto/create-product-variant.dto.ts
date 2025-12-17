@@ -18,11 +18,15 @@ export class CreateProductVariantDto {
   product_id: string;
 
   @IsString()
-  @MaxLength(50, { message: 'El tipo de variante no puede exceder 50 caracteres' })
+  @MaxLength(50, {
+    message: 'El tipo de variante no puede exceder 50 caracteres',
+  })
   variant_type: VariantType | string;
 
   @IsString()
-  @MaxLength(100, { message: 'El valor de la variante no puede exceder 100 caracteres' })
+  @MaxLength(100, {
+    message: 'El valor de la variante no puede exceder 100 caracteres',
+  })
   variant_value: string;
 
   @IsString()
@@ -47,4 +51,3 @@ export class CreateProductVariantDto {
   @IsOptional()
   is_active?: boolean;
 }
-

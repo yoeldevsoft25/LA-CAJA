@@ -1,4 +1,12 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
 import { ShiftCut } from './shift-cut.entity';
@@ -12,7 +20,7 @@ export enum ShiftStatus {
 @Entity('shifts')
 @Index(['store_id', 'opened_at'])
 @Index(['cashier_id'])
-@Index(['status'], { where: 'status = \'open\'' })
+@Index(['status'], { where: "status = 'open'" })
 export class Shift {
   @PrimaryColumn('uuid')
   id: string;
@@ -91,4 +99,3 @@ export class Shift {
   @OneToMany(() => ShiftCut, (cut) => cut.shift)
   cuts: ShiftCut[];
 }
-

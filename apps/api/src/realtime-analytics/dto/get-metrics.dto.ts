@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsEnum, IsDateString, IsInt, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  IsInt,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum MetricType {
@@ -47,4 +54,3 @@ export class GetMetricsDto {
   @Min(1)
   limit?: number = 100;
 }
-

@@ -17,9 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('purchase-orders')
 @UseGuards(JwtAuthGuard)
 export class PurchaseOrdersController {
-  constructor(
-    private readonly purchaseOrdersService: PurchaseOrdersService,
-  ) {}
+  constructor(private readonly purchaseOrdersService: PurchaseOrdersService) {}
 
   @Post()
   async create(@Body() dto: CreatePurchaseOrderDto, @Request() req: any) {
@@ -35,7 +33,11 @@ export class PurchaseOrdersController {
     @Request() req?: any,
   ) {
     const storeId = req.user.store_id;
-    return this.purchaseOrdersService.findAll(storeId, status as any, supplierId);
+    return this.purchaseOrdersService.findAll(
+      storeId,
+      status as any,
+      supplierId,
+    );
   }
 
   @Get(':id')
@@ -73,4 +75,3 @@ export class PurchaseOrdersController {
     return this.purchaseOrdersService.cancel(storeId, id);
   }
 }
-

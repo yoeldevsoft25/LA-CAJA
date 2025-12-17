@@ -1,4 +1,4 @@
-import { IsUUID, IsInt, IsOptional, Min, Max } from 'class-validator';
+import { IsUUID, IsInt, Min, Max } from 'class-validator';
 
 export class PredictDemandDto {
   @IsUUID()
@@ -9,4 +9,3 @@ export class PredictDemandDto {
   @Max(90) // Máximo 90 días hacia adelante
   days_ahead: number = 7;
 }
-

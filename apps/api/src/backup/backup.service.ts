@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Store } from '../database/entities/store.entity';
 import { Product } from '../database/entities/product.entity';
 import { Customer } from '../database/entities/customer.entity';
 
@@ -131,7 +130,9 @@ export class BackupService {
           }
           productsRestored++;
         } catch (error) {
-          errors.push(`Error restaurando producto ${productData.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+          errors.push(
+            `Error restaurando producto ${productData.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+          );
         }
       }
     }
@@ -166,7 +167,9 @@ export class BackupService {
           }
           customersRestored++;
         } catch (error) {
-          errors.push(`Error restaurando cliente ${customerData.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+          errors.push(
+            `Error restaurando cliente ${customerData.id}: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+          );
         }
       }
     }
@@ -180,4 +183,3 @@ export class BackupService {
     };
   }
 }
-

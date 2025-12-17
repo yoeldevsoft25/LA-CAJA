@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import {
+  Repository,
+  Between,
+  In,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+} from 'typeorm';
 import { Sale } from '../database/entities/sale.entity';
 import { Product } from '../database/entities/product.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
@@ -69,7 +75,10 @@ export class ReportsService {
     total_profit_bs: number;
     total_profit_usd: number;
     profit_margin: number;
-    by_payment_method: Record<string, { count: number; amount_bs: number; amount_usd: number }>;
+    by_payment_method: Record<
+      string,
+      { count: number; amount_bs: number; amount_usd: number }
+    >;
     daily: Array<{
       date: string;
       sales_count: number;
@@ -106,14 +115,20 @@ export class ReportsService {
     let total_cost_bs = 0;
     let total_cost_usd = 0;
 
-    const by_payment_method: Record<string, { count: number; amount_bs: number; amount_usd: number }> = {};
-    const dailyMap: Map<string, {
-      sales_count: number;
-      total_bs: number;
-      total_usd: number;
-      cost_bs: number;
-      cost_usd: number;
-    }> = new Map();
+    const by_payment_method: Record<
+      string,
+      { count: number; amount_bs: number; amount_usd: number }
+    > = {};
+    const dailyMap: Map<
+      string,
+      {
+        sales_count: number;
+        total_bs: number;
+        total_usd: number;
+        cost_bs: number;
+        cost_usd: number;
+      }
+    > = new Map();
 
     // Cache de productos para evitar múltiples consultas
     const productCache = new Map<string, Product>();
@@ -170,7 +185,13 @@ export class ReportsService {
       // Por día
       const dateKey = sale.sold_at.toISOString().split('T')[0];
       if (!dailyMap.has(dateKey)) {
-        dailyMap.set(dateKey, { sales_count: 0, total_bs: 0, total_usd: 0, cost_bs: 0, cost_usd: 0 });
+        dailyMap.set(dateKey, {
+          sales_count: 0,
+          total_bs: 0,
+          total_usd: 0,
+          cost_bs: 0,
+          cost_usd: 0,
+        });
       }
       const daily = dailyMap.get(dateKey)!;
       daily.sales_count++;
@@ -191,9 +212,8 @@ export class ReportsService {
 
     const total_profit_bs = total_amount_bs - total_cost_bs;
     const total_profit_usd = total_amount_usd - total_cost_usd;
-    const profit_margin = total_amount_usd > 0
-      ? (total_profit_usd / total_amount_usd) * 100
-      : 0;
+    const profit_margin =
+      total_amount_usd > 0 ? (total_profit_usd / total_amount_usd) * 100 : 0;
 
     return {
       total_sales,
@@ -214,18 +234,20 @@ export class ReportsService {
     limit: number = 10,
     startDate?: Date,
     endDate?: Date,
-  ): Promise<Array<{
-    product_id: string;
-    product_name: string;
-    quantity_sold: number;
-    revenue_bs: number;
-    revenue_usd: number;
-    cost_bs: number;
-    cost_usd: number;
-    profit_bs: number;
-    profit_usd: number;
-    profit_margin: number;
-  }>> {
+  ): Promise<
+    Array<{
+      product_id: string;
+      product_name: string;
+      quantity_sold: number;
+      revenue_bs: number;
+      revenue_usd: number;
+      cost_bs: number;
+      cost_usd: number;
+      profit_bs: number;
+      profit_usd: number;
+      profit_margin: number;
+    }>
+  > {
     const query = this.saleItemRepository
       .createQueryBuilder('item')
       .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
@@ -281,8 +303,12 @@ export class ReportsService {
 
       const productData = productMap.get(productId)!;
       productData.quantity_sold += item.qty;
-      productData.revenue_bs += Number(item.unit_price_bs || 0) * item.qty - Number(item.discount_bs || 0);
-      productData.revenue_usd += Number(item.unit_price_usd || 0) * item.qty - Number(item.discount_usd || 0);
+      productData.revenue_bs +=
+        Number(item.unit_price_bs || 0) * item.qty -
+        Number(item.discount_bs || 0);
+      productData.revenue_usd +=
+        Number(item.unit_price_usd || 0) * item.qty -
+        Number(item.discount_usd || 0);
       productData.cost_bs += Number(product?.cost_bs || 0) * item.qty;
       productData.cost_usd += Number(product?.cost_usd || 0) * item.qty;
     }
@@ -291,9 +317,8 @@ export class ReportsService {
       .map(([product_id, data]) => {
         const profit_bs = data.revenue_bs - data.cost_bs;
         const profit_usd = data.revenue_usd - data.cost_usd;
-        const profit_margin = data.revenue_usd > 0
-          ? (profit_usd / data.revenue_usd) * 100
-          : 0;
+        const profit_margin =
+          data.revenue_usd > 0 ? (profit_usd / data.revenue_usd) * 100 : 0;
         return {
           product_id,
           ...data,
@@ -306,9 +331,7 @@ export class ReportsService {
       .slice(0, limit);
   }
 
-  async getDebtSummary(
-    storeId: string,
-  ): Promise<{
+  async getDebtSummary(storeId: string): Promise<{
     total_debt_bs: number;
     total_debt_usd: number;
     total_paid_bs: number;
@@ -348,13 +371,16 @@ export class ReportsService {
     };
 
     // Obtener todos los customer_ids únicos
-    const customerIds = [...new Set(debts.map((d) => d.customer_id).filter(Boolean))];
-    const customers = customerIds.length > 0
-      ? await this.customerRepository.find({
-          where: { id: In(customerIds), store_id: storeId },
-          select: ['id', 'name'],
-        })
-      : [];
+    const customerIds = [
+      ...new Set(debts.map((d) => d.customer_id).filter(Boolean)),
+    ];
+    const customers =
+      customerIds.length > 0
+        ? await this.customerRepository.find({
+            where: { id: In(customerIds), store_id: storeId },
+            select: ['id', 'name'],
+          })
+        : [];
     const customerMapByName = new Map(customers.map((c) => [c.id, c.name]));
 
     const customerMap = new Map<
@@ -399,7 +425,9 @@ export class ReportsService {
       // Por cliente
       const customerId = debt.customer_id;
       if (!customerMap.has(customerId)) {
-        const customerName = customerMapByName.get(customerId) || `Cliente ${customerId.substring(0, 8)}`;
+        const customerName =
+          customerMapByName.get(customerId) ||
+          `Cliente ${customerId.substring(0, 8)}`;
         customerMap.set(customerId, {
           customer_name: customerName,
           total_debt_bs: 0,
@@ -464,7 +492,14 @@ export class ReportsService {
     const sales = await query.getMany();
 
     // Generar CSV
-    const headers = ['Fecha', 'ID Venta', 'Total BS', 'Total USD', 'Método de Pago', 'Items'];
+    const headers = [
+      'Fecha',
+      'ID Venta',
+      'Total BS',
+      'Total USD',
+      'Método de Pago',
+      'Items',
+    ];
     const rows: string[] = [headers.join(',')];
 
     // Obtener items para cada venta
@@ -591,7 +626,9 @@ export class ReportsService {
       const sales = await this.saleRepository
         .createQueryBuilder('sale')
         .where('sale.store_id = :storeId', { storeId })
-        .andWhere('sale.sold_by_user_id = :cashierId', { cashierId: shift.cashier_id })
+        .andWhere('sale.sold_by_user_id = :cashierId', {
+          cashierId: shift.cashier_id,
+        })
         .andWhere('sale.sold_at >= :openedAt', { openedAt: shift.opened_at })
         .getMany();
 
@@ -612,7 +649,9 @@ export class ReportsService {
       total_differences_bs += diffBs;
       total_differences_usd += diffUsd;
 
-      const cashierName = shift.cashier?.full_name || `Cajero ${shift.cashier_id.substring(0, 8)}`;
+      const cashierName =
+        shift.cashier?.full_name ||
+        `Cajero ${shift.cashier_id.substring(0, 8)}`;
 
       if (!cashierMap.has(shift.cashier_id)) {
         cashierMap.set(shift.cashier_id, {
@@ -652,10 +691,12 @@ export class ReportsService {
       total_sales_usd,
       total_differences_bs,
       total_differences_usd,
-      by_cashier: Array.from(cashierMap.entries()).map(([cashier_id, data]) => ({
-        cashier_id,
-        ...data,
-      })),
+      by_cashier: Array.from(cashierMap.entries()).map(
+        ([cashier_id, data]) => ({
+          cashier_id,
+          ...data,
+        }),
+      ),
       shifts: shiftsData,
     };
   }
@@ -772,7 +813,9 @@ export class ReportsService {
         shifts_without_differences++;
       }
 
-      const cashierName = shift.cashier?.full_name || `Cajero ${shift.cashier_id.substring(0, 8)}`;
+      const cashierName =
+        shift.cashier?.full_name ||
+        `Cajero ${shift.cashier_id.substring(0, 8)}`;
 
       if (!cashierMap.has(shift.cashier_id)) {
         cashierMap.set(shift.cashier_id, {
@@ -808,10 +851,12 @@ export class ReportsService {
       total_differences_usd,
       shifts_with_differences,
       shifts_without_differences,
-      by_cashier: Array.from(cashierMap.entries()).map(([cashier_id, data]) => ({
-        cashier_id,
-        ...data,
-      })),
+      by_cashier: Array.from(cashierMap.entries()).map(
+        ([cashier_id, data]) => ({
+          cashier_id,
+          ...data,
+        }),
+      ),
       arqueos: arqueosData,
     };
   }
@@ -850,7 +895,9 @@ export class ReportsService {
       .where('product.store_id = :storeId', { storeId })
       .andWhere('lot.expiration_date IS NOT NULL')
       .andWhere('lot.expiration_date <= :expirationLimit', { expirationLimit })
-      .andWhere('lot.expiration_date >= :now', { now: now.toISOString().split('T')[0] })
+      .andWhere('lot.expiration_date >= :now', {
+        now: now.toISOString().split('T')[0],
+      })
       .andWhere('lot.remaining_quantity > 0')
       .orderBy('lot.expiration_date', 'ASC')
       .getMany();
@@ -883,7 +930,8 @@ export class ReportsService {
       if (!product) continue;
 
       const daysUntilExpiration = Math.ceil(
-        (lot.expiration_date!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        (lot.expiration_date!.getTime() - now.getTime()) /
+          (1000 * 60 * 60 * 24),
       );
 
       if (!productMap.has(lot.product_id)) {
@@ -907,7 +955,8 @@ export class ReportsService {
 
       total_quantity += lot.remaining_quantity;
       total_value_bs += Number(lot.unit_cost_bs || 0) * lot.remaining_quantity;
-      total_value_usd += Number(lot.unit_cost_usd || 0) * lot.remaining_quantity;
+      total_value_usd +=
+        Number(lot.unit_cost_usd || 0) * lot.remaining_quantity;
     }
 
     return {
@@ -915,10 +964,12 @@ export class ReportsService {
       total_quantity,
       total_value_bs,
       total_value_usd,
-      by_product: Array.from(productMap.entries()).map(([product_id, data]) => ({
-        product_id,
-        ...data,
-      })),
+      by_product: Array.from(productMap.entries()).map(
+        ([product_id, data]) => ({
+          product_id,
+          ...data,
+        }),
+      ),
     };
   }
 
@@ -1037,10 +1088,12 @@ export class ReportsService {
       total_serials: serials.length,
       sold_serials,
       available_serials,
-      by_product: Array.from(productMap.entries()).map(([product_id, data]) => ({
-        product_id,
-        ...data,
-      })),
+      by_product: Array.from(productMap.entries()).map(
+        ([product_id, data]) => ({
+          product_id,
+          ...data,
+        }),
+      ),
       serials: serialsData,
     };
   }
@@ -1118,33 +1171,38 @@ export class ReportsService {
 
       const productData = productMap.get(item.product_id)!;
       productData.quantity_sold += item.qty;
-      productData.revenue_bs += Number(item.unit_price_bs || 0) * item.qty - Number(item.discount_bs || 0);
-      productData.revenue_usd += Number(item.unit_price_usd || 0) * item.qty - Number(item.discount_usd || 0);
+      productData.revenue_bs +=
+        Number(item.unit_price_bs || 0) * item.qty -
+        Number(item.discount_bs || 0);
+      productData.revenue_usd +=
+        Number(item.unit_price_usd || 0) * item.qty -
+        Number(item.discount_usd || 0);
       productData.cost_bs += Number(product.cost_bs || 0) * item.qty;
       productData.cost_usd += Number(product.cost_usd || 0) * item.qty;
     }
 
     return {
-      by_product: Array.from(productMap.entries()).map(([product_id, data]) => {
-        const profit_bs = data.revenue_bs - data.cost_bs;
-        const profit_usd = data.revenue_usd - data.cost_usd;
-        const profit_margin = data.revenue_usd > 0
-          ? (profit_usd / data.revenue_usd) * 100
-          : 0;
-        
-        // Rotación aproximada (ventas / 1, asumiendo stock promedio de 1)
-        // En producción, se debería calcular el stock promedio real
-        const rotation_rate = data.quantity_sold;
+      by_product: Array.from(productMap.entries())
+        .map(([product_id, data]) => {
+          const profit_bs = data.revenue_bs - data.cost_bs;
+          const profit_usd = data.revenue_usd - data.cost_usd;
+          const profit_margin =
+            data.revenue_usd > 0 ? (profit_usd / data.revenue_usd) * 100 : 0;
 
-        return {
-          product_id,
-          ...data,
-          profit_bs,
-          profit_usd,
-          profit_margin,
-          rotation_rate,
-        };
-      }).sort((a, b) => b.rotation_rate - a.rotation_rate),
+          // Rotación aproximada (ventas / 1, asumiendo stock promedio de 1)
+          // En producción, se debería calcular el stock promedio real
+          const rotation_rate = data.quantity_sold;
+
+          return {
+            product_id,
+            ...data,
+            profit_bs,
+            profit_usd,
+            profit_margin,
+            rotation_rate,
+          };
+        })
+        .sort((a, b) => b.rotation_rate - a.rotation_rate),
     };
   }
 
@@ -1229,7 +1287,9 @@ export class ReportsService {
 
       if (order.status === 'completed') {
         supplierData.completed_orders++;
-      } else if (['draft', 'sent', 'confirmed', 'partial'].includes(order.status)) {
+      } else if (
+        ['draft', 'sent', 'confirmed', 'partial'].includes(order.status)
+      ) {
         supplierData.pending_orders++;
       }
 
@@ -1291,7 +1351,9 @@ export class ReportsService {
     }
 
     // Solo facturas emitidas
-    query.andWhere('invoice.status = :issuedStatus', { issuedStatus: 'issued' });
+    query.andWhere('invoice.status = :issuedStatus', {
+      issuedStatus: 'issued',
+    });
 
     const invoices = await query.getMany();
 
@@ -1361,4 +1423,3 @@ export class ReportsService {
     };
   }
 }
-

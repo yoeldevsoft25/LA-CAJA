@@ -1,4 +1,10 @@
-import { IsUUID, IsString, IsNotEmpty, MinLength, Length } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsNotEmpty,
+  MinLength,
+  Length,
+} from 'class-validator';
 
 export class CreateCashierDto {
   @IsUUID()
@@ -13,4 +19,3 @@ export class CreateCashierDto {
   @Length(4, 6)
   pin: string;
 }
-

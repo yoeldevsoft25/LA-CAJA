@@ -28,7 +28,9 @@ export class FeatureEngineeringService {
 
     // Calcular semana del año
     const startOfYear = new Date(year, 0, 1);
-    const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    const days = Math.floor(
+      (date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000),
+    );
     const weekOfYear = Math.ceil((days + startOfYear.getDay() + 1) / 7);
 
     // Calcular trimestre
@@ -68,7 +70,9 @@ export class FeatureEngineeringService {
     lags: number[] = [1, 7, 14, 30],
   ): Map<string, number> {
     const features = new Map<string, number>();
-    const sortedData = [...data].sort((a, b) => a.date.getTime() - b.date.getTime());
+    const sortedData = [...data].sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    );
 
     if (sortedData.length === 0) {
       lags.forEach((lag) => {
@@ -84,7 +88,9 @@ export class FeatureEngineeringService {
       targetDate.setDate(targetDate.getDate() - lag);
 
       const lagData = sortedData.find(
-        (d) => d.date.toISOString().split('T')[0] === targetDate.toISOString().split('T')[0],
+        (d) =>
+          d.date.toISOString().split('T')[0] ===
+          targetDate.toISOString().split('T')[0],
       );
 
       features.set(`lag_${lag}`, lagData ? lagData.value : latestValue);
@@ -101,7 +107,9 @@ export class FeatureEngineeringService {
     windows: number[] = [7, 14, 30],
   ): Map<string, number> {
     const features = new Map<string, number>();
-    const sortedData = [...data].sort((a, b) => a.date.getTime() - b.date.getTime());
+    const sortedData = [...data].sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    );
 
     windows.forEach((window) => {
       const windowData = sortedData.slice(-window);
@@ -116,7 +124,8 @@ export class FeatureEngineeringService {
       const values = windowData.map((d) => d.value);
       const mean = values.reduce((a, b) => a + b, 0) / values.length;
       const variance =
-        values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / values.length;
+        values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) /
+        values.length;
       const stdDev = Math.sqrt(variance);
       const min = Math.min(...values);
       const max = Math.max(...values);
@@ -133,10 +142,14 @@ export class FeatureEngineeringService {
   /**
    * Genera características de tendencia
    */
-  generateTrendFeatures(
-    data: Array<{ date: Date; value: number }>,
-  ): { trend: number; acceleration: number; volatility: number } {
-    const sortedData = [...data].sort((a, b) => a.date.getTime() - b.date.getTime());
+  generateTrendFeatures(data: Array<{ date: Date; value: number }>): {
+    trend: number;
+    acceleration: number;
+    volatility: number;
+  } {
+    const sortedData = [...data].sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    );
 
     if (sortedData.length < 2) {
       return { trend: 0, acceleration: 0, volatility: 0 };
@@ -155,16 +168,20 @@ export class FeatureEngineeringService {
     const trend = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
 
     // Aceleración (cambio en la tendencia)
-    const recentTrend = sortedData.length >= 7
-      ? this.calculateTrend(sortedData.slice(-7))
-      : trend;
+    const recentTrend =
+      sortedData.length >= 7
+        ? this.calculateTrend(sortedData.slice(-7))
+        : trend;
     const acceleration = recentTrend - trend;
 
     // Volatilidad (desviación estándar de los cambios)
-    const changes = sortedData.slice(1).map((d, i) => d.value - sortedData[i].value);
+    const changes = sortedData
+      .slice(1)
+      .map((d, i) => d.value - sortedData[i].value);
     const meanChange = changes.reduce((a, b) => a + b, 0) / changes.length;
     const variance =
-      changes.reduce((acc, val) => acc + Math.pow(val - meanChange, 2), 0) / changes.length;
+      changes.reduce((acc, val) => acc + Math.pow(val - meanChange, 2), 0) /
+      changes.length;
     const volatility = Math.sqrt(variance);
 
     return { trend, acceleration, volatility };
@@ -194,4 +211,3 @@ export class FeatureEngineeringService {
     return (value - mean) / stdDev;
   }
 }
-

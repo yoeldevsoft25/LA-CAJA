@@ -1,4 +1,11 @@
-import { IsOptional, IsEnum, IsBoolean, IsInt, Min, IsDateString } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsInt,
+  Min,
+  IsDateString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { AlertType, AlertSeverity } from './create-threshold.dto';
 
@@ -30,4 +37,3 @@ export class GetAlertsDto {
   @Min(1)
   limit?: number = 50;
 }
-

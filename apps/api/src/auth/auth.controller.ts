@@ -1,4 +1,16 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Request, Get, Param, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Request,
+  Get,
+  Param,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -19,13 +31,21 @@ export class AuthController {
   }
 
   @Get('stores/:storeId/cashiers')
-  async getCashiers(@Request() req: any, @Param('storeId') storeId: string): Promise<Array<{ user_id: string; full_name: string | null; role: string }>> {
+  async getCashiers(
+    @Request() req: any,
+    @Param('storeId') storeId: string,
+  ): Promise<
+    Array<{ user_id: string; full_name: string | null; role: string }>
+  > {
     return this.authService.getCashiers(storeId);
   }
 
   @Post('stores')
   @HttpCode(HttpStatus.CREATED)
-  async createStore(@Body() dto: CreateStoreDto, @Request() req: any): Promise<{ store: any; member: any }> {
+  async createStore(
+    @Body() dto: CreateStoreDto,
+    @Request() req: any,
+  ): Promise<{ store: any; member: any }> {
     // TODO: En producción, obtener userId del token JWT
     // Por ahora usamos un UUID temporal para desarrollo
     const ownerUserId = req.user?.sub || '00000000-0000-0000-0000-000000000001';
@@ -35,7 +55,10 @@ export class AuthController {
   @Post('cashiers')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
-  async createCashier(@Body() dto: CreateCashierDto, @Request() req: any): Promise<any> {
+  async createCashier(
+    @Body() dto: CreateCashierDto,
+    @Request() req: any,
+  ): Promise<any> {
     const ownerUserId = req.user.sub;
     return this.authService.createCashier(dto, ownerUserId);
   }
@@ -54,23 +77,26 @@ export class AuthController {
         ].filter(Boolean),
       });
     }
-    
+
     // Normalizar y limpiar valores
     const dto: LoginDto = {
       store_id: String(body.store_id).trim(),
       pin: String(body.pin).trim(),
     };
-    
+
     this.logger.log(`Intento de login para tienda: ${dto.store_id}`);
-    
+
     try {
       const result = await this.authService.login(dto);
-      this.logger.log(`Login exitoso para usuario: ${result.user_id} en tienda: ${result.store_id}`);
+      this.logger.log(
+        `Login exitoso para usuario: ${result.user_id} en tienda: ${result.store_id}`,
+      );
       return result;
     } catch (error) {
-      this.logger.warn(`Login fallido para tienda: ${dto.store_id} - ${error.message}`);
+      this.logger.warn(
+        `Login fallido para tienda: ${dto.store_id} - ${error.message}`,
+      );
       throw error;
     }
   }
 }
-

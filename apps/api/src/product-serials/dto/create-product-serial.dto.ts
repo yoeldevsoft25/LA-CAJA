@@ -14,7 +14,9 @@ export class CreateProductSerialDto {
   product_id: string;
 
   @IsString()
-  @MaxLength(200, { message: 'El número de serie no puede exceder 200 caracteres' })
+  @MaxLength(200, {
+    message: 'El número de serie no puede exceder 200 caracteres',
+  })
   serial_number: string;
 
   @IsDateString()
@@ -24,4 +26,3 @@ export class CreateProductSerialDto {
   @IsOptional()
   note?: string | null;
 }
-

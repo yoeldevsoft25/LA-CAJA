@@ -11,12 +11,9 @@ import { SaleItem } from '../database/entities/sale-item.entity';
  * Módulo para gestión de seriales de productos
  */
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ProductSerial, Product, Sale, SaleItem]),
-  ],
+  imports: [TypeOrmModule.forFeature([ProductSerial, Product, Sale, SaleItem])],
   controllers: [ProductSerialsController],
   providers: [ProductSerialsService],
   exports: [ProductSerialsService],
 })
 export class ProductSerialsModule {}
-

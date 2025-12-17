@@ -1,5 +1,4 @@
 import { io, Socket } from 'socket.io-client'
-import type { Notification, NotificationBadge } from '@/types/notifications.types'
 
 /**
  * Servicio WebSocket para notificaciones en tiempo real
@@ -11,7 +10,7 @@ class NotificationsWebSocketService {
   /**
    * Conecta al WebSocket de notificaciones
    */
-  connect(storeId: string, userId: string): void {
+  connect(_storeId: string, _userId: string): void {
     if (this.socket?.connected) {
       return
     }

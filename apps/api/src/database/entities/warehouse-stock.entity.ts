@@ -50,4 +50,3 @@ export class WarehouseStock {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

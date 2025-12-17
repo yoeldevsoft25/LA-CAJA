@@ -59,4 +59,3 @@ export class CreateThresholdDto {
   @IsOptional()
   notification_channels?: string[] = ['in_app'];
 }
-

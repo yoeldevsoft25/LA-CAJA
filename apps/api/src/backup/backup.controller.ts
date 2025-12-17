@@ -42,4 +42,3 @@ export class BackupController {
     return JSON.stringify(backup, null, 2);
   }
 }
-

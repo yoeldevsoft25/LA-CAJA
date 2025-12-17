@@ -1,12 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: true }),
@@ -30,7 +33,11 @@ async function bootstrap() {
   const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
   const origins = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => origin.trim())
-    : ['http://localhost:5173', 'http://localhost:4173', 'http://localhost:3000']; // Defaults para desarrollo (5173) y preview (4173)
+    : [
+        'http://localhost:5173',
+        'http://localhost:4173',
+        'http://localhost:3000',
+      ]; // Defaults para desarrollo (5173) y preview (4173)
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -38,7 +45,7 @@ async function bootstrap() {
       if (!origin && configService.get<string>('NODE_ENV') !== 'production') {
         return callback(null, true);
       }
-      
+
       if (!origin || origins.includes(origin)) {
         callback(null, true);
       } else {
@@ -48,7 +55,12 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-seniat-audit-key'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-admin-key',
+      'x-seniat-audit-key',
+    ],
   });
 
   const port = configService.get<number>('PORT') || 3000;
@@ -58,4 +70,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-

@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Store } from './store.entity';
 
 @Entity('products')
@@ -70,4 +77,3 @@ export class Product {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

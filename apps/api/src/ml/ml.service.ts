@@ -2,9 +2,20 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { DemandPrediction } from '../database/entities/demand-prediction.entity';
-import { ProductRecommendation, RecommendationType } from '../database/entities/product-recommendation.entity';
-import { DetectedAnomaly, AnomalyType, AnomalySeverity, EntityType } from '../database/entities/detected-anomaly.entity';
-import { MLModelMetric, ModelType } from '../database/entities/ml-model-metric.entity';
+import {
+  ProductRecommendation,
+  RecommendationType,
+} from '../database/entities/product-recommendation.entity';
+import {
+  DetectedAnomaly,
+  AnomalyType,
+  AnomalySeverity,
+  EntityType,
+} from '../database/entities/detected-anomaly.entity';
+import {
+  MLModelMetric,
+  ModelType,
+} from '../database/entities/ml-model-metric.entity';
 import { Sale } from '../database/entities/sale.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
 import { Product } from '../database/entities/product.entity';
@@ -52,9 +63,12 @@ export class MLService {
     private cache: MLCacheService,
   ) {
     // Limpiar caché expirado cada 5 minutos
-    setInterval(() => {
-      this.cache.cleanExpired();
-    }, 1000 * 60 * 5);
+    setInterval(
+      () => {
+        this.cache.cleanExpired();
+      },
+      1000 * 60 * 5,
+    );
   }
 
   /**
@@ -80,7 +94,11 @@ export class MLService {
     };
   }> {
     // Verificar caché
-    const cacheKey = this.cache.generatePredictionKey(storeId, dto.product_id, dto.days_ahead);
+    const cacheKey = this.cache.generatePredictionKey(
+      storeId,
+      dto.product_id,
+      dto.days_ahead,
+    );
     const cached = this.cache.get<{
       product_id: string;
       predictions: Array<{
@@ -179,13 +197,17 @@ export class MLService {
       date.setDate(date.getDate() + i);
 
       // Generar características temporales
-      const temporalFeatures = this.featureEngineering.generateTemporalFeatures(date);
+      const temporalFeatures =
+        this.featureEngineering.generateTemporalFeatures(date);
 
       // Ajustar predicción base con características temporales
       let adjustedPrediction = ensembleResult.forecast;
 
       // Ajuste por día de la semana
-      const dayOfWeekAdjustment = this.getDayOfWeekAdjustment(dailyQuantities, temporalFeatures.day_of_week);
+      const dayOfWeekAdjustment = this.getDayOfWeekAdjustment(
+        dailyQuantities,
+        temporalFeatures.day_of_week,
+      );
       adjustedPrediction *= dayOfWeekAdjustment;
 
       // Ajuste por fin de mes (típicamente hay más ventas)
@@ -200,7 +222,10 @@ export class MLService {
 
       predictions.push({
         date: date.toISOString().split('T')[0],
-        predicted_quantity: Math.max(0, Math.round(adjustedPrediction * 100) / 100),
+        predicted_quantity: Math.max(
+          0,
+          Math.round(adjustedPrediction * 100) / 100,
+        ),
         confidence_score: Math.round(ensembleResult.confidence),
         model_used: 'ensemble',
       });
@@ -219,7 +244,10 @@ export class MLService {
     let metrics;
     if (dailyQuantities.length >= 30) {
       // Convertir a formato esperado por crossValidate
-      const dataForCV = dailyQuantities.map((d) => ({ date: d.date, value: d.quantity }));
+      const dataForCV = dailyQuantities.map((d) => ({
+        date: d.date,
+        value: d.quantity,
+      }));
 
       // Usar validación cruzada para evaluar el modelo
       const cvResult = this.evaluationService.crossValidate(
@@ -227,7 +255,8 @@ export class MLService {
         5,
         (train) => {
           const trainQuantities = train.map((d) => d.value);
-          return this.forecastingModel.ensembleForecast(trainQuantities).forecast;
+          return this.forecastingModel.ensembleForecast(trainQuantities)
+            .forecast;
         },
       );
 
@@ -239,7 +268,12 @@ export class MLService {
       };
 
       // Guardar métricas
-      await this.saveMetrics(storeId, 'demand_prediction', this.MODEL_VERSION, metrics);
+      await this.saveMetrics(
+        storeId,
+        'demand_prediction',
+        this.MODEL_VERSION,
+        metrics,
+      );
     }
 
     const result = {
@@ -273,7 +307,12 @@ export class MLService {
     const limit = dto.limit || 10;
 
     // Verificar caché
-    const cacheKey = this.cache.generateRecommendationKey(storeId, dto.source_product_id || null, type, limit);
+    const cacheKey = this.cache.generateRecommendationKey(
+      storeId,
+      dto.source_product_id || null,
+      type,
+      limit,
+    );
     const cached = this.cache.get<{
       recommendations: Array<{
         product_id: string;
@@ -298,7 +337,12 @@ export class MLService {
     }> = [];
 
     if (dto.source_product_id) {
-      recommendations = await this.getProductBasedRecommendations(storeId, dto.source_product_id, type, limit);
+      recommendations = await this.getProductBasedRecommendations(
+        storeId,
+        dto.source_product_id,
+        type,
+        limit,
+      );
     } else {
       recommendations = await this.getGeneralRecommendations(storeId, limit);
     }
@@ -355,25 +399,36 @@ export class MLService {
 
     // Detectar anomalías en montos de venta usando Isolation Forest
     if (!dto.anomaly_type || dto.anomaly_type === 'sale_amount') {
-      const saleAnomalies = await this.detectSaleAmountAnomaliesAdvanced(storeId, dto);
+      const saleAnomalies = await this.detectSaleAmountAnomaliesAdvanced(
+        storeId,
+        dto,
+      );
       anomalies.push(...saleAnomalies);
     }
 
     // Detectar anomalías en frecuencia de ventas
     if (!dto.anomaly_type || dto.anomaly_type === 'sale_frequency') {
-      const frequencyAnomalies = await this.detectSaleFrequencyAnomalies(storeId, dto);
+      const frequencyAnomalies = await this.detectSaleFrequencyAnomalies(
+        storeId,
+        dto,
+      );
       anomalies.push(...frequencyAnomalies);
     }
 
     // Detectar anomalías en movimiento de productos
     if (!dto.anomaly_type || dto.anomaly_type === 'product_movement') {
-      const movementAnomalies = await this.detectProductMovementAnomalies(storeId, dto);
+      const movementAnomalies = await this.detectProductMovementAnomalies(
+        storeId,
+        dto,
+      );
       anomalies.push(...movementAnomalies);
     }
 
     // Filtrar por severidad mínima
     const filteredAnomalies = dto.min_severity
-      ? anomalies.filter((a) => this.compareSeverity(a.severity, dto.min_severity!) >= 0)
+      ? anomalies.filter(
+          (a) => this.compareSeverity(a.severity, dto.min_severity!) >= 0,
+        )
       : anomalies;
 
     // Ordenar por score descendente y limitar
@@ -436,7 +491,10 @@ export class MLService {
 
   // ========== Métodos privados avanzados ==========
 
-  private async getCurrentStock(storeId: string, productId: string): Promise<number> {
+  private async getCurrentStock(
+    storeId: string,
+    productId: string,
+  ): Promise<number> {
     const result = await this.inventoryMovementRepository
       .createQueryBuilder('movement')
       .select('COALESCE(SUM(movement.qty_delta), 0)', 'stock')
@@ -536,7 +594,15 @@ export class MLService {
     sourceProductId: string,
     type: RecommendationType,
     limit: number,
-  ): Promise<Array<{ product_id: string; product_name: string; score: number; reason: string; recommendation_type: RecommendationType }>> {
+  ): Promise<
+    Array<{
+      product_id: string;
+      product_name: string;
+      score: number;
+      reason: string;
+      recommendation_type: RecommendationType;
+    }>
+  > {
     // Filtrado colaborativo mejorado con scoring avanzado
     const coOccurrence = await this.saleItemRepository
       .createQueryBuilder('item1')
@@ -561,9 +627,15 @@ export class MLService {
 
     // Calcular score mejorado (co-ocurrencia + cantidad promedio)
     const recommendations = coOccurrence.map((co) => {
-      const coOccurrenceScore = Math.min(100, (parseInt(co.co_occurrence_count) / 10) * 100);
-      const quantityScore = Math.min(50, (parseFloat(co.avg_quantity) / 5) * 50);
-      const score = Math.round((coOccurrenceScore * 0.7 + quantityScore * 0.3));
+      const coOccurrenceScore = Math.min(
+        100,
+        (parseInt(co.co_occurrence_count) / 10) * 100,
+      );
+      const quantityScore = Math.min(
+        50,
+        (parseFloat(co.avg_quantity) / 5) * 50,
+      );
+      const score = Math.round(coOccurrenceScore * 0.7 + quantityScore * 0.3);
 
       return {
         product_id: co.product_id,
@@ -580,7 +652,15 @@ export class MLService {
   private async getGeneralRecommendations(
     storeId: string,
     limit: number,
-  ): Promise<Array<{ product_id: string; product_name: string; score: number; reason: string; recommendation_type: RecommendationType }>> {
+  ): Promise<
+    Array<{
+      product_id: string;
+      product_name: string;
+      score: number;
+      reason: string;
+      recommendation_type: RecommendationType;
+    }>
+  > {
     const endDate = new Date();
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 30);
@@ -603,7 +683,8 @@ export class MLService {
       .limit(limit)
       .getRawMany();
 
-    const maxQuantity = topProducts.length > 0 ? parseFloat(topProducts[0].total_quantity) : 1;
+    const maxQuantity =
+      topProducts.length > 0 ? parseFloat(topProducts[0].total_quantity) : 1;
 
     return topProducts.map((p) => ({
       product_id: p.product_id,
@@ -621,7 +702,9 @@ export class MLService {
     const anomalies: DetectedAnomaly[] = [];
 
     const endDate = dto.end_date ? new Date(dto.end_date) : new Date();
-    const startDate = dto.start_date ? new Date(dto.start_date) : new Date(endDate);
+    const startDate = dto.start_date
+      ? new Date(dto.start_date)
+      : new Date(endDate);
     startDate.setDate(startDate.getDate() - 30);
 
     const sales = await this.saleRepository.find({
@@ -636,22 +719,36 @@ export class MLService {
     const amounts = sales.map((s) => Number(s.totals.total_bs));
 
     // Usar Isolation Forest para detección avanzada
-    const isolationResults = this.anomalyModel.isolationForest(amounts, 0.1, 100);
+    const isolationResults = this.anomalyModel.isolationForest(
+      amounts,
+      0.1,
+      100,
+    );
 
     // También usar detección estadística para comparar
-    const statisticalResults = this.anomalyModel.statisticalDetection(amounts, 'both');
+    const statisticalResults = this.anomalyModel.statisticalDetection(
+      amounts,
+      'both',
+    );
 
     // Combinar resultados (consenso de múltiples métodos)
     for (let i = 0; i < sales.length; i++) {
       const isolationScore = isolationResults[i]?.score || 0;
-      const statisticalScore = statisticalResults.find((r) => r.index === i)?.score || 0;
+      const statisticalScore =
+        statisticalResults.find((r) => r.index === i)?.score || 0;
 
       // Score combinado (promedio ponderado)
       const combinedScore = isolationScore * 0.6 + statisticalScore * 0.4;
 
       if (combinedScore > 50) {
         const severity: AnomalySeverity =
-          combinedScore > 80 ? 'critical' : combinedScore > 65 ? 'high' : combinedScore > 50 ? 'medium' : 'low';
+          combinedScore > 80
+            ? 'critical'
+            : combinedScore > 65
+              ? 'high'
+              : combinedScore > 50
+                ? 'medium'
+                : 'low';
         const amount = amounts[i];
 
         const anomaly = this.detectedAnomalyRepository.create({
@@ -681,16 +778,16 @@ export class MLService {
   }
 
   private async detectSaleFrequencyAnomalies(
-    storeId: string,
-    dto: DetectAnomaliesDto,
+    _storeId: string,
+    _dto: DetectAnomaliesDto,
   ): Promise<DetectedAnomaly[]> {
     // Implementación mejorada: detectar períodos anómalos de actividad
     return [];
   }
 
   private async detectProductMovementAnomalies(
-    storeId: string,
-    dto: DetectAnomaliesDto,
+    _storeId: string,
+    _dto: DetectAnomaliesDto,
   ): Promise<DetectedAnomaly[]> {
     // Implementación mejorada: detectar productos con movimiento inusual
     return [];

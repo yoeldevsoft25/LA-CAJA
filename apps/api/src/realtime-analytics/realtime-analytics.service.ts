@@ -6,12 +6,28 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { RealTimeMetric, MetricType, PeriodType } from '../database/entities/real-time-metric.entity';
-import { AlertThreshold, AlertType, ComparisonOperator, AlertSeverity } from '../database/entities/alert-threshold.entity';
+import {
+  RealTimeMetric,
+  MetricType,
+  PeriodType,
+} from '../database/entities/real-time-metric.entity';
+import {
+  AlertThreshold,
+  AlertType,
+  ComparisonOperator,
+  AlertSeverity,
+} from '../database/entities/alert-threshold.entity';
 import { RealTimeAlert } from '../database/entities/real-time-alert.entity';
 import { SalesHeatmap } from '../database/entities/sales-heatmap.entity';
-import { ComparativeMetric, Trend } from '../database/entities/comparative-metric.entity';
-import { GetMetricsDto, MetricType as DtoMetricType, PeriodType as DtoPeriodType } from './dto/get-metrics.dto';
+import {
+  ComparativeMetric,
+  Trend,
+} from '../database/entities/comparative-metric.entity';
+import {
+  GetMetricsDto,
+  MetricType as DtoMetricType,
+  PeriodType as DtoPeriodType,
+} from './dto/get-metrics.dto';
 import { CreateThresholdDto } from './dto/create-threshold.dto';
 import { GetAlertsDto } from './dto/get-alerts.dto';
 import { GetHeatmapDto } from './dto/get-heatmap.dto';
@@ -47,29 +63,43 @@ export class RealTimeAnalyticsService {
   /**
    * Obtener métricas en tiempo real
    */
-  async getMetrics(storeId: string, dto: GetMetricsDto): Promise<RealTimeMetric[]> {
-    const query = this.metricRepository.createQueryBuilder('metric')
+  async getMetrics(
+    storeId: string,
+    dto: GetMetricsDto,
+  ): Promise<RealTimeMetric[]> {
+    const query = this.metricRepository
+      .createQueryBuilder('metric')
       .where('metric.store_id = :storeId', { storeId })
       .orderBy('metric.created_at', 'DESC');
 
     if (dto.metric_type) {
-      query.andWhere('metric.metric_type = :metricType', { metricType: dto.metric_type });
+      query.andWhere('metric.metric_type = :metricType', {
+        metricType: dto.metric_type,
+      });
     }
 
     if (dto.metric_name) {
-      query.andWhere('metric.metric_name = :metricName', { metricName: dto.metric_name });
+      query.andWhere('metric.metric_name = :metricName', {
+        metricName: dto.metric_name,
+      });
     }
 
     if (dto.period_type) {
-      query.andWhere('metric.period_type = :periodType', { periodType: dto.period_type });
+      query.andWhere('metric.period_type = :periodType', {
+        periodType: dto.period_type,
+      });
     }
 
     if (dto.start_date) {
-      query.andWhere('metric.period_start >= :startDate', { startDate: dto.start_date });
+      query.andWhere('metric.period_start >= :startDate', {
+        startDate: dto.start_date,
+      });
     }
 
     if (dto.end_date) {
-      query.andWhere('metric.period_end <= :endDate', { endDate: dto.end_date });
+      query.andWhere('metric.period_end <= :endDate', {
+        endDate: dto.end_date,
+      });
     }
 
     if (dto.limit) {
@@ -96,8 +126,14 @@ export class RealTimeAnalyticsService {
       .andWhere('sale.status = :status', { status: 'completed' })
       .getMany();
 
-    const todayRevenueBs = todaySales.reduce((sum, sale) => sum + Number(sale.totals?.total_bs || 0), 0);
-    const todayRevenueUsd = todaySales.reduce((sum, sale) => sum + Number(sale.totals?.total_usd || 0), 0);
+    const todayRevenueBs = todaySales.reduce(
+      (sum, sale) => sum + Number(sale.totals?.total_bs || 0),
+      0,
+    );
+    const todayRevenueUsd = todaySales.reduce(
+      (sum, sale) => sum + Number(sale.totals?.total_usd || 0),
+      0,
+    );
     const todaySalesCount = todaySales.length;
 
     // Calcular métricas de ayer para comparación
@@ -109,20 +145,29 @@ export class RealTimeAnalyticsService {
       .andWhere('sale.status = :status', { status: 'completed' })
       .getMany();
 
-    const yesterdayRevenueBs = yesterdaySales.reduce((sum, sale) => sum + Number(sale.totals?.total_bs || 0), 0);
-    const yesterdayRevenueUsd = yesterdaySales.reduce((sum, sale) => sum + Number(sale.totals?.total_usd || 0), 0);
+    const yesterdayRevenueBs = yesterdaySales.reduce(
+      (sum, sale) => sum + Number(sale.totals?.total_bs || 0),
+      0,
+    );
+    const yesterdayRevenueUsd = yesterdaySales.reduce(
+      (sum, sale) => sum + Number(sale.totals?.total_usd || 0),
+      0,
+    );
     const yesterdaySalesCount = yesterdaySales.length;
 
     // Calcular cambios porcentuales
-    const revenueChangeBs = yesterdayRevenueBs > 0
-      ? ((todayRevenueBs - yesterdayRevenueBs) / yesterdayRevenueBs) * 100
-      : 0;
-    const revenueChangeUsd = yesterdayRevenueUsd > 0
-      ? ((todayRevenueUsd - yesterdayRevenueUsd) / yesterdayRevenueUsd) * 100
-      : 0;
-    const salesCountChange = yesterdaySalesCount > 0
-      ? ((todaySalesCount - yesterdaySalesCount) / yesterdaySalesCount) * 100
-      : 0;
+    const revenueChangeBs =
+      yesterdayRevenueBs > 0
+        ? ((todayRevenueBs - yesterdayRevenueBs) / yesterdayRevenueBs) * 100
+        : 0;
+    const revenueChangeUsd =
+      yesterdayRevenueUsd > 0
+        ? ((todayRevenueUsd - yesterdayRevenueUsd) / yesterdayRevenueUsd) * 100
+        : 0;
+    const salesCountChange =
+      yesterdaySalesCount > 0
+        ? ((todaySalesCount - yesterdaySalesCount) / yesterdaySalesCount) * 100
+        : 0;
 
     // Guardar métricas
     const metricsToSave: RealTimeMetric[] = [];
@@ -228,8 +273,12 @@ export class RealTimeAnalyticsService {
   /**
    * Obtener umbrales
    */
-  async getThresholds(storeId: string, activeOnly: boolean = false): Promise<AlertThreshold[]> {
-    const query = this.thresholdRepository.createQueryBuilder('threshold')
+  async getThresholds(
+    storeId: string,
+    activeOnly: boolean = false,
+  ): Promise<AlertThreshold[]> {
+    const query = this.thresholdRepository
+      .createQueryBuilder('threshold')
       .where('threshold.store_id = :storeId', { storeId });
 
     if (activeOnly) {
@@ -282,8 +331,15 @@ export class RealTimeAnalyticsService {
 
     for (const threshold of activeThresholds) {
       try {
-        const currentValue = await this.getCurrentMetricValue(storeId, threshold.metric_name);
-        const shouldAlert = this.evaluateThreshold(currentValue, threshold.threshold_value, threshold.comparison_operator);
+        const currentValue = await this.getCurrentMetricValue(
+          storeId,
+          threshold.metric_name,
+        );
+        const shouldAlert = this.evaluateThreshold(
+          currentValue,
+          threshold.threshold_value,
+          threshold.comparison_operator,
+        );
 
         if (shouldAlert) {
           // Verificar si ya existe una alerta no leída para este umbral
@@ -297,14 +353,20 @@ export class RealTimeAnalyticsService {
           });
 
           // Solo crear nueva alerta si no hay una reciente (última hora)
-          if (!existingAlert || (Date.now() - existingAlert.created_at.getTime()) > 3600000) {
+          if (
+            !existingAlert ||
+            Date.now() - existingAlert.created_at.getTime() > 3600000
+          ) {
             const alert = this.alertRepository.create({
               id: randomUUID(),
               store_id: storeId,
               threshold_id: threshold.id,
               alert_type: threshold.alert_type,
               severity: threshold.severity,
-              title: this.generateAlertTitle(threshold.alert_type, threshold.metric_name),
+              title: this.generateAlertTitle(
+                threshold.alert_type,
+                threshold.metric_name,
+              ),
               message: this.generateAlertMessage(threshold, currentValue),
               metric_name: threshold.metric_name,
               current_value: currentValue,
@@ -315,7 +377,10 @@ export class RealTimeAnalyticsService {
           }
         }
       } catch (error) {
-        this.logger.error(`Error verificando umbral ${threshold.id}`, error instanceof Error ? error.stack : String(error));
+        this.logger.error(
+          `Error verificando umbral ${threshold.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
       }
     }
 
@@ -325,7 +390,10 @@ export class RealTimeAnalyticsService {
   /**
    * Obtener valor actual de una métrica
    */
-  private async getCurrentMetricValue(storeId: string, metricName: string): Promise<number> {
+  private async getCurrentMetricValue(
+    storeId: string,
+    metricName: string,
+  ): Promise<number> {
     // Obtener la métrica más reciente
     const metric = await this.metricRepository.findOne({
       where: { store_id: storeId, metric_name: metricName },
@@ -356,7 +424,10 @@ export class RealTimeAnalyticsService {
         .andWhere('sale.status = :status', { status: 'completed' })
         .getMany();
 
-      return sales.reduce((sum, sale) => sum + Number(sale.totals?.total_bs || 0), 0);
+      return sales.reduce(
+        (sum, sale) => sum + Number(sale.totals?.total_bs || 0),
+        0,
+      );
     }
 
     return 0;
@@ -405,7 +476,10 @@ export class RealTimeAnalyticsService {
   /**
    * Generar mensaje de alerta
    */
-  private generateAlertMessage(threshold: AlertThreshold, currentValue: number): string {
+  private generateAlertMessage(
+    threshold: AlertThreshold,
+    currentValue: number,
+  ): string {
     const operatorText: Record<ComparisonOperator, string> = {
       less_than: 'menor que',
       greater_than: 'mayor que',
@@ -419,13 +493,19 @@ export class RealTimeAnalyticsService {
   /**
    * Obtener alertas
    */
-  async getAlerts(storeId: string, dto: GetAlertsDto): Promise<RealTimeAlert[]> {
-    const query = this.alertRepository.createQueryBuilder('alert')
+  async getAlerts(
+    storeId: string,
+    dto: GetAlertsDto,
+  ): Promise<RealTimeAlert[]> {
+    const query = this.alertRepository
+      .createQueryBuilder('alert')
       .where('alert.store_id = :storeId', { storeId })
       .orderBy('alert.created_at', 'DESC');
 
     if (dto.alert_type) {
-      query.andWhere('alert.alert_type = :alertType', { alertType: dto.alert_type });
+      query.andWhere('alert.alert_type = :alertType', {
+        alertType: dto.alert_type,
+      });
     }
 
     if (dto.severity) {
@@ -437,7 +517,9 @@ export class RealTimeAnalyticsService {
     }
 
     if (dto.start_date) {
-      query.andWhere('alert.created_at >= :startDate', { startDate: dto.start_date });
+      query.andWhere('alert.created_at >= :startDate', {
+        startDate: dto.start_date,
+      });
     }
 
     if (dto.end_date) {
@@ -454,7 +536,11 @@ export class RealTimeAnalyticsService {
   /**
    * Marcar alerta como leída
    */
-  async markAlertRead(storeId: string, alertId: string, userId: string): Promise<RealTimeAlert> {
+  async markAlertRead(
+    storeId: string,
+    alertId: string,
+    userId: string,
+  ): Promise<RealTimeAlert> {
     const alert = await this.alertRepository.findOne({
       where: { id: alertId, store_id: storeId },
     });
@@ -474,7 +560,11 @@ export class RealTimeAnalyticsService {
    * Actualizar heatmap de ventas
    */
   async updateSalesHeatmap(storeId: string, saleDate: Date): Promise<void> {
-    const date = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
+    const date = new Date(
+      saleDate.getFullYear(),
+      saleDate.getMonth(),
+      saleDate.getDate(),
+    );
     const hour = saleDate.getHours();
     const dayOfWeek = saleDate.getDay();
 
@@ -492,7 +582,10 @@ export class RealTimeAnalyticsService {
       .getMany();
 
     // Calcular agregaciones por hora
-    const hourlyData: Record<number, { count: number; totalBs: number; totalUsd: number }> = {};
+    const hourlyData: Record<
+      number,
+      { count: number; totalBs: number; totalUsd: number }
+    > = {};
 
     for (const sale of sales) {
       const saleHour = sale.sold_at.getHours();
@@ -516,7 +609,8 @@ export class RealTimeAnalyticsService {
         existing.total_amount_bs = data.totalBs;
         existing.total_amount_usd = data.totalUsd;
         existing.avg_ticket_bs = data.count > 0 ? data.totalBs / data.count : 0;
-        existing.avg_ticket_usd = data.count > 0 ? data.totalUsd / data.count : 0;
+        existing.avg_ticket_usd =
+          data.count > 0 ? data.totalUsd / data.count : 0;
         existing.day_of_week = dayOfWeek;
         await this.heatmapRepository.save(existing);
       } else {
@@ -540,12 +634,16 @@ export class RealTimeAnalyticsService {
   /**
    * Obtener heatmap de ventas
    */
-  async getSalesHeatmap(storeId: string, dto: GetHeatmapDto): Promise<SalesHeatmap[]> {
+  async getSalesHeatmap(
+    storeId: string,
+    dto: GetHeatmapDto,
+  ): Promise<SalesHeatmap[]> {
     const startDate = new Date(dto.start_date);
     const endDate = new Date(dto.end_date);
     endDate.setHours(23, 59, 59, 999);
 
-    const query = this.heatmapRepository.createQueryBuilder('heatmap')
+    const query = this.heatmapRepository
+      .createQueryBuilder('heatmap')
       .where('heatmap.store_id = :storeId', { storeId })
       .andWhere('heatmap.date >= :startDate', { startDate })
       .andWhere('heatmap.date <= :endDate', { endDate })
@@ -566,7 +664,9 @@ export class RealTimeAnalyticsService {
     storeId: string,
     dto: GetComparativeDto,
   ): Promise<ComparativeMetric> {
-    const referenceDate = dto.reference_date ? new Date(dto.reference_date) : new Date();
+    const referenceDate = dto.reference_date
+      ? new Date(dto.reference_date)
+      : new Date();
     let currentPeriodStart = new Date(referenceDate);
     let currentPeriodEnd = new Date(referenceDate);
     let previousPeriodStart = new Date(referenceDate);
@@ -596,11 +696,23 @@ export class RealTimeAnalyticsService {
       case ComparisonPeriod.MONTH:
         currentPeriodStart.setDate(1);
         currentPeriodStart.setHours(0, 0, 0, 0);
-        currentPeriodEnd = new Date(currentPeriodStart.getFullYear(), currentPeriodStart.getMonth() + 1, 0);
+        currentPeriodEnd = new Date(
+          currentPeriodStart.getFullYear(),
+          currentPeriodStart.getMonth() + 1,
+          0,
+        );
         currentPeriodEnd.setHours(23, 59, 59, 999);
-        previousPeriodStart = new Date(currentPeriodStart.getFullYear(), currentPeriodStart.getMonth() - 1, 1);
+        previousPeriodStart = new Date(
+          currentPeriodStart.getFullYear(),
+          currentPeriodStart.getMonth() - 1,
+          1,
+        );
         previousPeriodStart.setHours(0, 0, 0, 0);
-        previousPeriodEnd = new Date(previousPeriodStart.getFullYear(), previousPeriodStart.getMonth() + 1, 0);
+        previousPeriodEnd = new Date(
+          previousPeriodStart.getFullYear(),
+          previousPeriodStart.getMonth() + 1,
+          0,
+        );
         previousPeriodEnd.setHours(23, 59, 59, 999);
         break;
       case ComparisonPeriod.YEAR:
@@ -619,7 +731,10 @@ export class RealTimeAnalyticsService {
     let currentValue = 0;
     let previousValue = 0;
 
-    if (dto.metric_type === DtoMetricType.REVENUE || dto.metric_type === DtoMetricType.SALES) {
+    if (
+      dto.metric_type === DtoMetricType.REVENUE ||
+      dto.metric_type === DtoMetricType.SALES
+    ) {
       const currentSales = await this.saleRepository
         .createQueryBuilder('sale')
         .where('sale.store_id = :storeId', { storeId })
@@ -637,8 +752,14 @@ export class RealTimeAnalyticsService {
         .getMany();
 
       if (dto.metric_type === DtoMetricType.REVENUE) {
-        currentValue = currentSales.reduce((sum, sale) => sum + Number(sale.totals?.total_bs || 0), 0);
-        previousValue = previousSales.reduce((sum, sale) => sum + Number(sale.totals?.total_bs || 0), 0);
+        currentValue = currentSales.reduce(
+          (sum, sale) => sum + Number(sale.totals?.total_bs || 0),
+          0,
+        );
+        previousValue = previousSales.reduce(
+          (sum, sale) => sum + Number(sale.totals?.total_bs || 0),
+          0,
+        );
       } else {
         currentValue = currentSales.length;
         previousValue = previousSales.length;
@@ -646,15 +767,22 @@ export class RealTimeAnalyticsService {
     }
 
     const changeAmount = currentValue - previousValue;
-    const changePercentage = previousValue > 0 ? (changeAmount / previousValue) * 100 : 0;
-    const trend: Trend = changePercentage > 5 ? 'increasing' : changePercentage < -5 ? 'decreasing' : 'stable';
+    const changePercentage =
+      previousValue > 0 ? (changeAmount / previousValue) * 100 : 0;
+    const trend: Trend =
+      changePercentage > 5
+        ? 'increasing'
+        : changePercentage < -5
+          ? 'decreasing'
+          : 'stable';
 
     // Mapear el tipo de métrica del DTO al tipo de la entidad
-    const entityMetricType = dto.metric_type === DtoMetricType.SALES 
-      ? 'sales' as const
-      : dto.metric_type === DtoMetricType.REVENUE
-      ? 'revenue' as const
-      : 'sales' as const;
+    const entityMetricType =
+      dto.metric_type === DtoMetricType.SALES
+        ? ('sales' as const)
+        : dto.metric_type === DtoMetricType.REVENUE
+          ? ('revenue' as const)
+          : ('sales' as const);
 
     const metric = this.comparativeRepository.create({
       id: randomUUID(),
@@ -682,7 +810,8 @@ export class RealTimeAnalyticsService {
     metricType?: DtoMetricType,
     limit: number = 10,
   ): Promise<ComparativeMetric[]> {
-    const query = this.comparativeRepository.createQueryBuilder('metric')
+    const query = this.comparativeRepository
+      .createQueryBuilder('metric')
       .where('metric.store_id = :storeId', { storeId })
       .orderBy('metric.calculated_at', 'DESC')
       .limit(limit);
@@ -694,4 +823,3 @@ export class RealTimeAnalyticsService {
     return query.getMany();
   }
 }
-

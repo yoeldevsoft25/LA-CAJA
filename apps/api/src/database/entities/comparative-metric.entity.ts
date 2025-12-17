@@ -9,7 +9,12 @@ import {
 } from 'typeorm';
 import { Store } from './store.entity';
 
-export type MetricType = 'sales' | 'revenue' | 'profit' | 'customers' | 'products';
+export type MetricType =
+  | 'sales'
+  | 'revenue'
+  | 'profit'
+  | 'customers'
+  | 'products';
 export type Trend = 'increasing' | 'decreasing' | 'stable';
 
 @Entity('comparative_metrics')
@@ -63,4 +68,3 @@ export class ComparativeMetric {
   @CreateDateColumn({ type: 'timestamptz' })
   calculated_at: Date;
 }
-

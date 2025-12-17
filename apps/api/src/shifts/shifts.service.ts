@@ -141,7 +141,9 @@ export class ShiftsService {
       .andWhere('sale.payment IS NOT NULL');
 
     if (shift.closed_at) {
-      query.andWhere('sale.sold_at <= :closedAt', { closedAt: shift.closed_at });
+      query.andWhere('sale.sold_at <= :closedAt', {
+        closedAt: shift.closed_at,
+      });
     }
 
     const sales = await query.getMany();
@@ -150,8 +152,7 @@ export class ShiftsService {
     const expected = this.calculateExpectedTotals(shift, sales);
 
     // Calcular diferencias
-    const differenceBs =
-      Math.round((countedBs - expected.cash_bs) * 100) / 100;
+    const differenceBs = Math.round((countedBs - expected.cash_bs) * 100) / 100;
     const differenceUsd =
       Math.round((countedUsd - expected.cash_usd) * 100) / 100;
 
@@ -197,7 +198,10 @@ export class ShiftsService {
   /**
    * Calcula los totales esperados basados en las ventas del turno
    */
-  private calculateExpectedTotals(shift: Shift, sales: Sale[]): {
+  private calculateExpectedTotals(
+    shift: Shift,
+    sales: Sale[],
+  ): {
     cash_bs: number;
     cash_usd: number;
     pago_movil_bs: number;
@@ -231,8 +235,7 @@ export class ShiftsService {
       if (payment.method === 'CASH_BS') {
         if (payment.cash_payment_bs?.received_bs) {
           const receivedBs =
-            Math.round(Number(payment.cash_payment_bs.received_bs) * 100) /
-            100;
+            Math.round(Number(payment.cash_payment_bs.received_bs) * 100) / 100;
           cashBs = Math.round((cashBs + receivedBs) * 100) / 100;
 
           if (
@@ -240,8 +243,7 @@ export class ShiftsService {
             payment.cash_payment_bs.change_bs > 0
           ) {
             const changeBs =
-              Math.round(Number(payment.cash_payment_bs.change_bs) * 100) /
-              100;
+              Math.round(Number(payment.cash_payment_bs.change_bs) * 100) / 100;
             cashBs = Math.round((cashBs - changeBs) * 100) / 100;
           }
         } else {
@@ -279,10 +281,12 @@ export class ShiftsService {
         cashUsd = Math.round((cashUsd + splitCashUsd) * 100) / 100;
 
         if (payment.split.pago_movil_bs) {
-          pagoMovilBs += Math.round(Number(payment.split.pago_movil_bs) * 100) / 100;
+          pagoMovilBs +=
+            Math.round(Number(payment.split.pago_movil_bs) * 100) / 100;
         }
         if (payment.split.transfer_bs) {
-          transferBs += Math.round(Number(payment.split.transfer_bs) * 100) / 100;
+          transferBs +=
+            Math.round(Number(payment.split.transfer_bs) * 100) / 100;
         }
         if (payment.split.other_bs) {
           otherBs += Math.round(Number(payment.split.other_bs) * 100) / 100;
@@ -413,12 +417,16 @@ export class ShiftsService {
     const query = this.saleRepository
       .createQueryBuilder('sale')
       .where('sale.store_id = :storeId', { storeId: shift.store_id })
-      .andWhere('sale.sold_by_user_id = :cashierId', { cashierId: shift.cashier_id })
+      .andWhere('sale.sold_by_user_id = :cashierId', {
+        cashierId: shift.cashier_id,
+      })
       .andWhere('sale.sold_at >= :openedAt', { openedAt: shift.opened_at })
       .andWhere('sale.payment IS NOT NULL');
 
     if (isFinal && shift.closed_at) {
-      query.andWhere('sale.sold_at <= :closedAt', { closedAt: shift.closed_at });
+      query.andWhere('sale.sold_at <= :closedAt', {
+        closedAt: shift.closed_at,
+      });
     }
 
     const sales = await query.getMany();
@@ -580,4 +588,3 @@ export class ShiftsService {
     return { shifts, total };
   }
 }
-

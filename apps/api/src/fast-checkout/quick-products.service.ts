@@ -73,7 +73,8 @@ export class QuickProductsService {
     if (existingByProduct) {
       existingByProduct.quick_key = dto.quick_key;
       existingByProduct.position = dto.position ?? existingByProduct.position;
-      existingByProduct.is_active = dto.is_active ?? existingByProduct.is_active;
+      existingByProduct.is_active =
+        dto.is_active ?? existingByProduct.is_active;
       existingByProduct.updated_at = new Date();
 
       return this.quickProductRepository.save(existingByProduct);
@@ -171,7 +172,9 @@ export class QuickProductsService {
 
     // Actualizar posiciones
     for (let i = 0; i < quickProductIds.length; i++) {
-      const quickProduct = quickProducts.find((qp) => qp.id === quickProductIds[i]);
+      const quickProduct = quickProducts.find(
+        (qp) => qp.id === quickProductIds[i],
+      );
       if (quickProduct) {
         quickProduct.position = i;
         quickProduct.updated_at = new Date();
@@ -181,4 +184,3 @@ export class QuickProductsService {
     return this.quickProductRepository.save(quickProducts);
   }
 }
-

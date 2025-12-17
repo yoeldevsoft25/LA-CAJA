@@ -43,7 +43,10 @@ export class PeripheralsController {
    * Obtiene todas las configuraciones de periféricos
    */
   @Get()
-  async getConfigsByStore(@Request() req: any, @Query('type') type?: PeripheralType) {
+  async getConfigsByStore(
+    @Request() req: any,
+    @Query('type') type?: PeripheralType,
+  ) {
     const storeId = req.user.store_id;
     if (type) {
       return this.peripheralsService.getConfigsByType(storeId, type);
@@ -104,4 +107,3 @@ export class PeripheralsController {
     await this.peripheralsService.deleteConfig(storeId, id);
   }
 }
-

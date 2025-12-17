@@ -68,7 +68,10 @@ export class WarehousesService {
   /**
    * Obtiene todas las bodegas de una tienda
    */
-  async findAll(storeId: string, includeInactive: boolean = false): Promise<Warehouse[]> {
+  async findAll(
+    storeId: string,
+    includeInactive: boolean = false,
+  ): Promise<Warehouse[]> {
     const where: any = { store_id: storeId };
     if (!includeInactive) {
       where.is_active = true;
@@ -305,4 +308,3 @@ export class WarehousesService {
     await this.warehouseStockRepository.save(stock);
   }
 }
-

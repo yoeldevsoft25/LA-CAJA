@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsUUID, IsBoolean, IsInt, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsBoolean,
+  IsInt,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SearchProductsDto {
@@ -31,4 +38,3 @@ export class SearchProductsDto {
   @Type(() => Number)
   offset?: number;
 }
-

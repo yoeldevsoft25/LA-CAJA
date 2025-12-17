@@ -27,4 +27,3 @@ import { DebtPayment } from '../database/entities/debt-payment.entity';
   exports: [ProjectionsService],
 })
 export class ProjectionsModule {}
-

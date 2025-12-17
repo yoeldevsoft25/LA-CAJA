@@ -4,8 +4,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, IsNull, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { Promotion, PromotionType } from '../database/entities/promotion.entity';
+import {
+  Repository,
+  DataSource,
+  IsNull,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+} from 'typeorm';
+import {
+  Promotion,
+  PromotionType,
+} from '../database/entities/promotion.entity';
 import { PromotionProduct } from '../database/entities/promotion-product.entity';
 import { PromotionUsage } from '../database/entities/promotion-usage.entity';
 import { Product } from '../database/entities/product.entity';
@@ -203,8 +212,14 @@ export class PromotionsService {
     }
 
     // Verificar límite de usos totales
-    if (promotion.usage_limit && promotion.usage_count >= promotion.usage_limit) {
-      return { valid: false, error: 'La promoción ha alcanzado su límite de usos' };
+    if (
+      promotion.usage_limit &&
+      promotion.usage_count >= promotion.usage_limit
+    ) {
+      return {
+        valid: false,
+        error: 'La promoción ha alcanzado su límite de usos',
+      };
     }
 
     // Verificar límite por cliente
@@ -232,7 +247,10 @@ export class PromotionsService {
       };
     }
 
-    if (promotion.min_purchase_usd && subtotalUsd < promotion.min_purchase_usd) {
+    if (
+      promotion.min_purchase_usd &&
+      subtotalUsd < promotion.min_purchase_usd
+    ) {
       return {
         valid: false,
         error: `Compra mínima requerida: ${promotion.min_purchase_usd} USD`,
@@ -259,10 +277,16 @@ export class PromotionsService {
         discountUsd = (subtotalUsd * promotion.discount_percentage) / 100;
 
         // Aplicar descuento máximo si existe
-        if (promotion.max_discount_bs && discountBs > promotion.max_discount_bs) {
+        if (
+          promotion.max_discount_bs &&
+          discountBs > promotion.max_discount_bs
+        ) {
           discountBs = promotion.max_discount_bs;
         }
-        if (promotion.max_discount_usd && discountUsd > promotion.max_discount_usd) {
+        if (
+          promotion.max_discount_usd &&
+          discountUsd > promotion.max_discount_usd
+        ) {
           discountUsd = promotion.max_discount_usd;
         }
       }
@@ -306,12 +330,7 @@ export class PromotionsService {
       const savedUsage = await manager.save(PromotionUsage, usage);
 
       // Incrementar contador de usos
-      await manager.increment(
-        Promotion,
-        { id: promotionId },
-        'usage_count',
-        1,
-      );
+      await manager.increment(Promotion, { id: promotionId }, 'usage_count', 1);
 
       return savedUsage;
     });
@@ -370,4 +389,3 @@ export class PromotionsService {
     return applicablePromotions;
   }
 }
-

@@ -1,4 +1,15 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, UseGuards, Request, Query, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Request,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { SyncService } from './sync.service';
 import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
@@ -11,7 +22,10 @@ export class SyncController {
 
   @Post('push')
   @HttpCode(HttpStatus.OK)
-  async push(@Body() dto: PushSyncDto, @Request() req: any): Promise<PushSyncResponseDto> {
+  async push(
+    @Body() dto: PushSyncDto,
+    @Request() req: any,
+  ): Promise<PushSyncResponseDto> {
     // Validar que el store_id del request coincida con el del token
     const storeId = req.user.store_id;
     if (dto.store_id !== storeId) {
@@ -41,9 +55,10 @@ export class SyncController {
     if (!deviceId) {
       throw new BadRequestException('device_id es requerido');
     }
-    const lastSeq = await this.syncService.getLastProcessedSeq(storeId, deviceId);
+    const lastSeq = await this.syncService.getLastProcessedSeq(
+      storeId,
+      deviceId,
+    );
     return { last_seq: lastSeq };
   }
 }
-
-

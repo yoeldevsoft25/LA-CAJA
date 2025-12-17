@@ -65,4 +65,3 @@ export class TransferItem {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

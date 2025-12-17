@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Query, UseGuards, Body, Request, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  Body,
+  Request,
+} from '@nestjs/common';
 import { ExchangeService } from './exchange.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SetManualRateDto } from './dto/set-manual-rate.dto';
@@ -13,12 +21,9 @@ export class ExchangeController {
    * Prioriza: tasa manual activa > API > última tasa manual > fallback
    */
   @Get('bcv')
-  async getBCVRate(
-    @Query('force') force?: string,
-    @Request() req?: any,
-  ) {
+  async getBCVRate(@Query('force') force?: string, @Request() req?: any) {
     const storeId = req?.user?.store_id;
-    
+
     // Si force=true, ignorar cache
     if (force === 'true') {
       // Limpiar cache forzando nueva búsqueda
@@ -64,8 +69,11 @@ export class ExchangeController {
   ) {
     const storeId = req?.user?.store_id;
     const fallbackRate = fallback ? parseFloat(fallback) : 36;
-    const rate = await this.exchangeService.getCurrentRate(storeId, fallbackRate);
-    
+    const rate = await this.exchangeService.getCurrentRate(
+      storeId,
+      fallbackRate,
+    );
+
     return {
       rate,
       available: true,
@@ -76,15 +84,16 @@ export class ExchangeController {
    * Establece una tasa manual
    */
   @Post('bcv/manual')
-  async setManualRate(
-    @Body() dto: SetManualRateDto,
-    @Request() req: any,
-  ) {
+  async setManualRate(@Body() dto: SetManualRateDto, @Request() req: any) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
 
-    const effectiveFrom = dto.effective_from ? new Date(dto.effective_from) : undefined;
-    const effectiveUntil = dto.effective_until ? new Date(dto.effective_until) : undefined;
+    const effectiveFrom = dto.effective_from
+      ? new Date(dto.effective_from)
+      : undefined;
+    const effectiveUntil = dto.effective_until
+      ? new Date(dto.effective_until)
+      : undefined;
 
     const exchangeRate = await this.exchangeService.setManualRate(
       storeId,
@@ -118,10 +127,14 @@ export class ExchangeController {
     const limitNum = limit ? parseInt(limit, 10) : 50;
     const offsetNum = offset ? parseInt(offset, 10) : 0;
 
-    const result = await this.exchangeService.getRateHistory(storeId, limitNum, offsetNum);
+    const result = await this.exchangeService.getRateHistory(
+      storeId,
+      limitNum,
+      offsetNum,
+    );
 
     return {
-      rates: result.rates.map(rate => ({
+      rates: result.rates.map((rate) => ({
         id: rate.id,
         rate: Number(rate.rate),
         source: rate.source,
@@ -135,4 +148,3 @@ export class ExchangeController {
     };
   }
 }
-

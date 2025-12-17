@@ -218,7 +218,9 @@ export class DashboardService {
         .addSelect('COALESCE(SUM(movement.qty_delta), 0)', 'current_stock')
         .groupBy('product.id')
         .addGroupBy('product.low_stock_threshold')
-        .having('COALESCE(SUM(movement.qty_delta), 0) <= product.low_stock_threshold')
+        .having(
+          'COALESCE(SUM(movement.qty_delta), 0) <= product.low_stock_threshold',
+        )
         .getRawMany();
 
       lowStockCount = lowStockProducts.length;
@@ -546,4 +548,3 @@ export class DashboardService {
     };
   }
 }
-

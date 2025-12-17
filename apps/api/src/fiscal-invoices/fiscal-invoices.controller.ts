@@ -17,9 +17,7 @@ import { SeniatAuditGuard } from './guards/seniat-audit.guard';
 
 @Controller('fiscal-invoices')
 export class FiscalInvoicesController {
-  constructor(
-    private readonly fiscalInvoicesService: FiscalInvoicesService,
-  ) {}
+  constructor(private readonly fiscalInvoicesService: FiscalInvoicesService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -31,10 +29,7 @@ export class FiscalInvoicesController {
 
   @Post('from-sale/:saleId')
   @UseGuards(JwtAuthGuard)
-  async createFromSale(
-    @Param('saleId') saleId: string,
-    @Request() req: any,
-  ) {
+  async createFromSale(@Param('saleId') saleId: string, @Request() req: any) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     return this.fiscalInvoicesService.createFromSale(storeId, saleId, userId);
@@ -42,10 +37,7 @@ export class FiscalInvoicesController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async findAll(
-    @Query('status') status?: string,
-    @Request() req?: any,
-  ) {
+  async findAll(@Query('status') status?: string, @Request() req?: any) {
     const storeId = req.user.store_id;
     return this.fiscalInvoicesService.findAll(storeId, status as any);
   }
@@ -93,13 +85,13 @@ export class FiscalInvoicesController {
 
   /**
    * Endpoint de auditoría para el SENIAT
-   * 
+   *
    * Permite al SENIAT consultar facturas fiscales emitidas.
    * Requiere autenticación mediante clave de auditoría en header 'x-seniat-audit-key'.
-   * 
+   *
    * NOTA: Este endpoint NO requiere JWT de usuario normal, sino una clave especial
    * configurada en variables de entorno (SENIAT_AUDIT_KEY).
-   * 
+   *
    * El SENIAT debe enviar el store_id o RIF en el query parameter.
    */
   @Get('audit')
@@ -131,4 +123,3 @@ export class FiscalInvoicesController {
     return this.fiscalInvoicesService.audit(storeId, queryParams);
   }
 }
-

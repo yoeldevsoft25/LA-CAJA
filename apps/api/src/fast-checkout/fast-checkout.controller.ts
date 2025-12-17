@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   UseGuards,
   Request,
   HttpCode,
@@ -85,10 +84,7 @@ export class FastCheckoutController {
    * Obtiene un producto rápido por tecla
    */
   @Get('quick-products/key/:key')
-  async getQuickProductByKey(
-    @Param('key') key: string,
-    @Request() req: any,
-  ) {
+  async getQuickProductByKey(@Param('key') key: string, @Request() req: any) {
     const storeId = req.user.store_id;
     return this.quickProductsService.getQuickProductByKey(storeId, key);
   }
@@ -98,10 +94,7 @@ export class FastCheckoutController {
    */
   @Delete('quick-products/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteQuickProduct(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
+  async deleteQuickProduct(@Param('id') id: string, @Request() req: any) {
     const storeId = req.user.store_id;
     await this.quickProductsService.deleteQuickProduct(storeId, id);
   }
@@ -110,10 +103,7 @@ export class FastCheckoutController {
    * Desactiva un producto rápido
    */
   @Post('quick-products/:id/deactivate')
-  async deactivateQuickProduct(
-    @Param('id') id: string,
-    @Request() req: any,
-  ) {
+  async deactivateQuickProduct(@Param('id') id: string, @Request() req: any) {
     const storeId = req.user.store_id;
     return this.quickProductsService.deactivateQuickProduct(storeId, id);
   }
@@ -134,4 +124,3 @@ export class FastCheckoutController {
     );
   }
 }
-

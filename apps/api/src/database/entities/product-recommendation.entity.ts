@@ -18,9 +18,17 @@ export type RecommendationType = 'collaborative' | 'content_based' | 'hybrid';
 @Index(['source_product_id'])
 @Index(['recommended_product_id'])
 @Index(['recommendation_type'])
-@Index(['store_id', 'source_product_id', 'recommended_product_id', 'recommendation_type'], {
-  unique: true,
-})
+@Index(
+  [
+    'store_id',
+    'source_product_id',
+    'recommended_product_id',
+    'recommendation_type',
+  ],
+  {
+    unique: true,
+  },
+)
 export class ProductRecommendation {
   @PrimaryColumn('uuid')
   id: string;
@@ -68,4 +76,3 @@ export class ProductRecommendation {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

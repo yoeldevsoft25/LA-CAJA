@@ -114,4 +114,3 @@ export class CreatePromotionDto {
   @IsOptional()
   note?: string | null;
 }
-

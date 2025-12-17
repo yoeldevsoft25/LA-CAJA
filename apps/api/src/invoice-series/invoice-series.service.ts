@@ -70,7 +70,10 @@ export class InvoiceSeriesService {
   /**
    * Obtiene una serie por ID
    */
-  async getSeriesById(storeId: string, seriesId: string): Promise<InvoiceSeries> {
+  async getSeriesById(
+    storeId: string,
+    seriesId: string,
+  ): Promise<InvoiceSeries> {
     const series = await this.seriesRepository.findOne({
       where: { id: seriesId, store_id: storeId },
     });
@@ -124,7 +127,11 @@ export class InvoiceSeriesService {
   async generateNextInvoiceNumber(
     storeId: string,
     seriesId?: string,
-  ): Promise<{ series: InvoiceSeries; invoice_number: string; invoice_full_number: string }> {
+  ): Promise<{
+    series: InvoiceSeries;
+    invoice_number: string;
+    invoice_full_number: string;
+  }> {
     return this.dataSource.transaction(async (manager) => {
       // Si no se especifica serie, usar la serie por defecto
       let series: InvoiceSeries | null;
@@ -214,7 +221,8 @@ export class InvoiceSeriesService {
     if (dto.name !== undefined) series.name = dto.name;
     if (dto.prefix !== undefined) series.prefix = dto.prefix;
     if (dto.start_number !== undefined) series.start_number = dto.start_number;
-    if (dto.current_number !== undefined) series.current_number = dto.current_number;
+    if (dto.current_number !== undefined)
+      series.current_number = dto.current_number;
     if (dto.is_active !== undefined) series.is_active = dto.is_active;
     if (dto.note !== undefined) series.note = dto.note;
 
@@ -265,4 +273,3 @@ export class InvoiceSeriesService {
     return this.seriesRepository.save(series);
   }
 }
-

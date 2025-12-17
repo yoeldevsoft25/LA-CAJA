@@ -104,9 +104,7 @@ export class DiscountsController {
 
     // Validar autorización
     const config = await this.rulesService.getOrCreateConfig(storeId);
-    if (
-      !this.rulesService.validateAuthorizationRole(userRole, config)
-    ) {
+    if (!this.rulesService.validateAuthorizationRole(userRole, config)) {
       throw new BadRequestException(
         `Tu rol (${userRole}) no tiene permisos para autorizar descuentos. Se requiere rol: ${config.authorization_role || 'supervisor'}`,
       );
@@ -179,4 +177,3 @@ export class DiscountsController {
     );
   }
 }
-

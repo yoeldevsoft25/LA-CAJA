@@ -20,7 +20,7 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
         // Manejar errores de conexión de PostgreSQL
         if (error instanceof QueryFailedError) {
           const message = error.message;
-          
+
           // Errores de conexión terminada
           if (
             message.includes('Connection terminated unexpectedly') ||
@@ -32,10 +32,11 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
               `Error de conexión a la base de datos: ${message}`,
               error.stack,
             );
-            
+
             return throwError(() => ({
               statusCode: HttpStatus.SERVICE_UNAVAILABLE,
-              message: 'Error de conexión con la base de datos. Por favor, intenta nuevamente.',
+              message:
+                'Error de conexión con la base de datos. Por favor, intenta nuevamente.',
               error: 'Database Connection Error',
             }));
           }
@@ -50,19 +51,17 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
               `Timeout de conexión a la base de datos: ${message}`,
               error.stack,
             );
-            
+
             return throwError(() => ({
               statusCode: HttpStatus.REQUEST_TIMEOUT,
-              message: 'Timeout de conexión con la base de datos. Por favor, intenta nuevamente.',
+              message:
+                'Timeout de conexión con la base de datos. Por favor, intenta nuevamente.',
               error: 'Database Timeout Error',
             }));
           }
 
           // Otros errores de base de datos
-          this.logger.error(
-            `Error de base de datos: ${message}`,
-            error.stack,
-          );
+          this.logger.error(`Error de base de datos: ${message}`, error.stack);
         }
 
         // Errores de conexión de pg (driver de PostgreSQL)
@@ -71,10 +70,11 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
             `No se pudo conectar a la base de datos: ${error.message}`,
             error.stack,
           );
-          
+
           return throwError(() => ({
             statusCode: HttpStatus.SERVICE_UNAVAILABLE,
-            message: 'No se pudo conectar a la base de datos. Por favor, verifica la configuración.',
+            message:
+              'No se pudo conectar a la base de datos. Por favor, verifica la configuración.',
             error: 'Database Connection Refused',
           }));
         }
@@ -85,7 +85,3 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
     );
   }
 }
-
-
-
-

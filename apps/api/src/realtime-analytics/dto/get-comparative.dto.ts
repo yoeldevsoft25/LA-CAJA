@@ -19,4 +19,3 @@ export class GetComparativeDto {
   @IsOptional()
   reference_date?: string; // Si no se proporciona, usa la fecha actual
 }
-

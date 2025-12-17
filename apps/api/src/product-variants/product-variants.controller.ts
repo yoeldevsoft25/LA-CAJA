@@ -21,9 +21,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('product-variants')
 @UseGuards(JwtAuthGuard)
 export class ProductVariantsController {
-  constructor(
-    private readonly variantsService: ProductVariantsService,
-  ) {}
+  constructor(private readonly variantsService: ProductVariantsService) {}
 
   /**
    * Crea una nueva variante de producto
@@ -116,4 +114,3 @@ export class ProductVariantsController {
     await this.variantsService.deleteVariant(storeId, id);
   }
 }
-

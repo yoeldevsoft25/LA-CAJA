@@ -18,4 +18,3 @@ import { InventoryMovement } from '../database/entities/inventory-movement.entit
   exports: [ProductVariantsService],
 })
 export class ProductVariantsModule {}
-

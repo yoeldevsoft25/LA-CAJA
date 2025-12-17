@@ -12,4 +12,3 @@ import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
   exports: [WarehousesService],
 })
 export class WarehousesModule {}
-

@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsBoolean, MaxLength, MinLength, IsEmail } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  MaxLength,
+  MinLength,
+  IsEmail,
+} from 'class-validator';
 
 export class CreateSupplierDto {
   @IsString()
@@ -43,4 +50,3 @@ export class CreateSupplierDto {
   @IsString()
   note?: string;
 }
-

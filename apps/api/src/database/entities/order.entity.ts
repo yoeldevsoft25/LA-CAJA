@@ -91,4 +91,3 @@ export class Order {
   @OneToMany(() => OrderPayment, (payment) => payment.order, { cascade: true })
   payments: OrderPayment[];
 }
-

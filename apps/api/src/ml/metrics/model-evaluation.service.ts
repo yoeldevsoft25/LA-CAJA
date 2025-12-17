@@ -60,8 +60,14 @@ export class ModelEvaluationService {
     }
 
     const meanActual = actual.reduce((a, b) => a + b, 0) / actual.length;
-    const ssRes = actual.reduce((acc, a, i) => acc + Math.pow(a - predicted[i], 2), 0);
-    const ssTot = actual.reduce((acc, a) => acc + Math.pow(a - meanActual, 2), 0);
+    const ssRes = actual.reduce(
+      (acc, a, i) => acc + Math.pow(a - predicted[i], 2),
+      0,
+    );
+    const ssTot = actual.reduce(
+      (acc, a) => acc + Math.pow(a - meanActual, 2),
+      0,
+    );
 
     if (ssTot === 0) return 0;
 
@@ -71,7 +77,10 @@ export class ModelEvaluationService {
   /**
    * Calcula todas las métricas
    */
-  calculateAllMetrics(actual: number[], predicted: number[]): {
+  calculateAllMetrics(
+    actual: number[],
+    predicted: number[],
+  ): {
     mae: number;
     rmse: number;
     mape: number;
@@ -97,11 +106,19 @@ export class ModelEvaluationService {
     rmse: number;
     mape: number;
     r2: number;
-    fold_scores: Array<{ fold: number; mae: number; rmse: number; mape: number; r2: number }>;
+    fold_scores: Array<{
+      fold: number;
+      mae: number;
+      rmse: number;
+      mape: number;
+      r2: number;
+    }>;
   } {
     if (data.length < k) {
       // Si no hay suficientes datos, usar todos para entrenar y validar
-      const sorted = [...data].sort((a, b) => a.date.getTime() - b.date.getTime());
+      const sorted = [...data].sort(
+        (a, b) => a.date.getTime() - b.date.getTime(),
+      );
       const train = sorted.slice(0, Math.floor(sorted.length * 0.8));
       const test = sorted.slice(Math.floor(sorted.length * 0.8));
 
@@ -117,8 +134,16 @@ export class ModelEvaluationService {
     }
 
     const foldSize = Math.floor(data.length / k);
-    const sorted = [...data].sort((a, b) => a.date.getTime() - b.date.getTime());
-    const foldScores: Array<{ fold: number; mae: number; rmse: number; mape: number; r2: number }> = [];
+    const sorted = [...data].sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    );
+    const foldScores: Array<{
+      fold: number;
+      mae: number;
+      rmse: number;
+      mape: number;
+      r2: number;
+    }> = [];
 
     let totalMAE = 0;
     let totalRMSE = 0;
@@ -157,4 +182,3 @@ export class ModelEvaluationService {
     };
   }
 }
-

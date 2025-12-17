@@ -21,4 +21,3 @@ import { CashMovement } from '../database/entities/cash-movement.entity';
   exports: [PaymentRulesService, CashMovementsService],
 })
 export class PaymentsModule {}
-

@@ -14,7 +14,11 @@ import { Warehouse } from './warehouse.entity';
 import { Profile } from './profile.entity';
 import { TransferItem } from './transfer-item.entity';
 
-export type TransferStatus = 'pending' | 'in_transit' | 'completed' | 'cancelled';
+export type TransferStatus =
+  | 'pending'
+  | 'in_transit'
+  | 'completed'
+  | 'cancelled';
 
 @Entity('transfers')
 @Index(['store_id'])
@@ -99,4 +103,3 @@ export class Transfer {
   @OneToMany(() => TransferItem, (item) => item.transfer)
   items: TransferItem[];
 }
-

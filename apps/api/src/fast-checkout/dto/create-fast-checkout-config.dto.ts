@@ -42,4 +42,3 @@ export class CreateFastCheckoutConfigDto {
   @IsOptional()
   default_payment_method?: PaymentMethod | null;
 }
-

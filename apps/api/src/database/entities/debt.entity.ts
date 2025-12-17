@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { Store } from './store.entity';
 import { Customer } from './customer.entity';
 import { Sale } from './sale.entity';
@@ -51,4 +58,3 @@ export class Debt {
   @OneToMany(() => DebtPayment, (payment) => payment.debt, { cascade: true })
   payments: DebtPayment[];
 }
-

@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Store } from '../../database/entities/store.entity';
@@ -23,7 +28,9 @@ export class LicenseGuard implements CanActivate {
     }
 
     const status = store.license_status;
-    const expires = store.license_expires_at ? store.license_expires_at.getTime() : null;
+    const expires = store.license_expires_at
+      ? store.license_expires_at.getTime()
+      : null;
     const grace = store.license_grace_days ?? 0;
     const now = Date.now();
 
@@ -36,7 +43,9 @@ export class LicenseGuard implements CanActivate {
     }
 
     if (!expires) {
-      throw new ForbiddenException('Licencia no configurada o sin fecha de expiración');
+      throw new ForbiddenException(
+        'Licencia no configurada o sin fecha de expiración',
+      );
     }
 
     const graceMs = grace * 24 * 60 * 60 * 1000;

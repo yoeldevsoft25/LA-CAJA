@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, Between } from 'typeorm';
-import { Order, OrderStatus } from '../database/entities/order.entity';
+import { Order } from '../database/entities/order.entity';
 import { OrderItem } from '../database/entities/order-item.entity';
 import { OrderPayment } from '../database/entities/order-payment.entity';
 import { Table } from '../database/entities/table.entity';
@@ -204,7 +204,14 @@ export class OrdersService {
   async getOrderById(storeId: string, orderId: string): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId, store_id: storeId },
-      relations: ['table', 'customer', 'items', 'items.product', 'items.variant', 'payments'],
+      relations: [
+        'table',
+        'customer',
+        'items',
+        'items.product',
+        'items.variant',
+        'payments',
+      ],
     });
 
     if (!order) {
@@ -384,10 +391,7 @@ export class OrdersService {
   /**
    * Fusiona múltiples órdenes en una
    */
-  async mergeOrders(
-    storeId: string,
-    dto: MergeOrdersDto,
-  ): Promise<Order> {
+  async mergeOrders(storeId: string, dto: MergeOrdersDto): Promise<Order> {
     return this.dataSource.transaction(async (manager) => {
       // Verificar que todas las órdenes existan y pertenezcan a la tienda
       const orders = await manager.find(Order, {
@@ -451,7 +455,9 @@ export class OrdersService {
       });
 
       if (!updatedOrder) {
-        throw new NotFoundException('Orden destino no encontrada después de la fusión');
+        throw new NotFoundException(
+          'Orden destino no encontrada después de la fusión',
+        );
       }
 
       return updatedOrder;
@@ -515,10 +521,7 @@ export class OrdersService {
     const totals = await this.calculateOrderTotal(order);
 
     // Calcular total pagado hasta ahora
-    const totalPaidBs = order.payments.reduce(
-      (sum, p) => sum + p.amount_bs,
-      0,
-    );
+    const totalPaidBs = order.payments.reduce((sum, p) => sum + p.amount_bs, 0);
     const totalPaidUsd = order.payments.reduce(
       (sum, p) => sum + p.amount_usd,
       0,
@@ -665,4 +668,3 @@ export class OrdersService {
     });
   }
 }
-

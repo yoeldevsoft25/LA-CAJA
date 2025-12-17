@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { FiscalInvoice, FiscalInvoiceStatus } from '../database/entities/fiscal-invoice.entity';
+import {
+  FiscalInvoice,
+  FiscalInvoiceStatus,
+} from '../database/entities/fiscal-invoice.entity';
 import { FiscalInvoiceItem } from '../database/entities/fiscal-invoice-item.entity';
 import { FiscalConfig } from '../database/entities/fiscal-config.entity';
 import { Sale } from '../database/entities/sale.entity';
@@ -44,7 +47,7 @@ export class FiscalInvoicesService {
 
   /**
    * Valida que una factura pueda ser modificada
-   * 
+   *
    * Según normativa SENIAT, las facturas emitidas NO pueden modificarse.
    * Solo pueden corregirse mediante notas de crédito o débito.
    */
@@ -52,11 +55,13 @@ export class FiscalInvoicesService {
     if (invoice.status === 'issued') {
       throw new BadRequestException(
         'Las facturas emitidas no pueden modificarse. ' +
-        'Para corregir una factura emitida, debe crear una nota de crédito o débito.',
+          'Para corregir una factura emitida, debe crear una nota de crédito o débito.',
       );
     }
     if (invoice.status === 'cancelled') {
-      throw new BadRequestException('Las facturas canceladas no pueden modificarse');
+      throw new BadRequestException(
+        'Las facturas canceladas no pueden modificarse',
+      );
     }
   }
 
@@ -68,10 +73,11 @@ export class FiscalInvoicesService {
     seriesId?: string,
   ): Promise<string> {
     try {
-      const invoiceData = await this.invoiceSeriesService.generateNextInvoiceNumber(
-        storeId,
-        seriesId,
-      );
+      const invoiceData =
+        await this.invoiceSeriesService.generateNextInvoiceNumber(
+          storeId,
+          seriesId,
+        );
       return invoiceData.invoice_full_number;
     } catch (error) {
       // Si no hay series, generar número simple
@@ -131,9 +137,9 @@ export class FiscalInvoicesService {
       // Obtener información del cliente
       let customerName: string | null = null;
       let customerTaxId: string | null = null;
-      let customerAddress: string | null = null;
+      const customerAddress: string | null = null;
       let customerPhone: string | null = null;
-      let customerEmail: string | null = null;
+      const customerEmail: string | null = null;
 
       if (sale.customer_id) {
         const customer = await this.customerRepository.findOne({
@@ -148,8 +154,8 @@ export class FiscalInvoicesService {
 
       // Calcular totales con impuestos
       const taxRate = fiscalConfig.default_tax_rate;
-      let subtotalBs = sale.totals.subtotal_bs - sale.totals.discount_bs;
-      let subtotalUsd = sale.totals.subtotal_usd - sale.totals.discount_usd;
+      const subtotalBs = sale.totals.subtotal_bs - sale.totals.discount_bs;
+      const subtotalUsd = sale.totals.subtotal_usd - sale.totals.discount_usd;
       const taxAmountBs = (subtotalBs * taxRate) / 100;
       const taxAmountUsd = (subtotalUsd * taxRate) / 100;
       const totalBs = subtotalBs + taxAmountBs;
@@ -200,8 +206,10 @@ export class FiscalInvoicesService {
           where: { id: saleItem.product_id },
         });
 
-        const itemSubtotalBs = saleItem.unit_price_bs * saleItem.qty - (saleItem.discount_bs || 0);
-        const itemSubtotalUsd = saleItem.unit_price_usd * saleItem.qty - (saleItem.discount_usd || 0);
+        const itemSubtotalBs =
+          saleItem.unit_price_bs * saleItem.qty - (saleItem.discount_bs || 0);
+        const itemSubtotalUsd =
+          saleItem.unit_price_usd * saleItem.qty - (saleItem.discount_usd || 0);
         const itemTaxBs = (itemSubtotalBs * taxRate) / 100;
         const itemTaxUsd = (itemSubtotalUsd * taxRate) / 100;
 
@@ -361,8 +369,11 @@ export class FiscalInvoicesService {
           );
         }
 
-        const itemSubtotalBs = itemDto.unit_price_bs * itemDto.quantity - (itemDto.discount_bs || 0);
-        const itemSubtotalUsd = itemDto.unit_price_usd * itemDto.quantity - (itemDto.discount_usd || 0);
+        const itemSubtotalBs =
+          itemDto.unit_price_bs * itemDto.quantity - (itemDto.discount_bs || 0);
+        const itemSubtotalUsd =
+          itemDto.unit_price_usd * itemDto.quantity -
+          (itemDto.discount_usd || 0);
         const itemTaxRate = itemDto.tax_rate ?? taxRate;
         const itemTaxBs = (itemSubtotalBs * itemTaxRate) / 100;
         const itemTaxUsd = (itemSubtotalUsd * itemTaxRate) / 100;
@@ -399,7 +410,7 @@ export class FiscalInvoicesService {
 
   /**
    * Emite una factura fiscal (cambia estado de draft a issued)
-   * 
+   *
    * Transmite la factura al SENIAT y obtiene los códigos fiscales necesarios.
    * Una vez emitida, la factura no puede ser modificada (solo mediante notas de crédito/débito).
    */
@@ -452,10 +463,10 @@ export class FiscalInvoicesService {
 
   /**
    * Cancela una factura fiscal
-   * 
+   *
    * IMPORTANTE: Según normativa SENIAT, las facturas emitidas NO pueden cancelarse directamente.
    * Deben corregirse mediante notas de crédito o débito que preserven los datos originales.
-   * 
+   *
    * Este método permite cancelar facturas en borrador. Para facturas emitidas,
    * se debe crear una nota de crédito correspondiente.
    */
@@ -477,7 +488,7 @@ export class FiscalInvoicesService {
       // Deben corregirse mediante notas de crédito
       throw new BadRequestException(
         'Las facturas emitidas no pueden cancelarse directamente. ' +
-        'Debe crear una nota de crédito para anular la factura.',
+          'Debe crear una nota de crédito para anular la factura.',
       );
     }
 
@@ -600,10 +611,10 @@ export class FiscalInvoicesService {
 
   /**
    * Endpoint de auditoría para el SENIAT
-   * 
+   *
    * Permite al SENIAT consultar facturas fiscales emitidas para auditorías.
    * Requiere autenticación especial mediante clave de auditoría.
-   * 
+   *
    * @param storeId - ID de la tienda
    * @param queryParams - Parámetros de consulta (fiscal_number, invoice_number, date_range, etc.)
    * @returns Facturas fiscales que coinciden con los criterios
@@ -683,4 +694,3 @@ export class FiscalInvoicesService {
     };
   }
 }
-
