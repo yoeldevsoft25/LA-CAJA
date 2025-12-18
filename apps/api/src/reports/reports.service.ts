@@ -148,9 +148,43 @@ export class ReportsService {
       }
     > = new Map();
 
-    // Cache de productos para evitar múltiples consultas
-    const productCache = new Map<string, Product>();
+    // Optimización: Cargar todos los items de todas las ventas de una vez
+    const saleIds = sales.map((s) => s.id);
+    const allSaleItems =
+      saleIds.length > 0
+        ? await this.saleItemRepository.find({
+            where: { sale_id: In(saleIds) },
+          })
+        : [];
 
+    // Agrupar items por sale_id
+    const itemsBySaleId = new Map<string, SaleItem[]>();
+    for (const item of allSaleItems) {
+      if (!itemsBySaleId.has(item.sale_id)) {
+        itemsBySaleId.set(item.sale_id, []);
+      }
+      itemsBySaleId.get(item.sale_id)!.push(item);
+    }
+
+    // Optimización: Cargar todos los productos necesarios de una vez
+    const productIds = [
+      ...new Set(allSaleItems.map((item) => item.product_id)),
+    ];
+    const products =
+      productIds.length > 0
+        ? await this.productRepository.find({
+            where: { id: In(productIds), store_id: storeId },
+            select: ['id', 'cost_bs', 'cost_usd'],
+          })
+        : [];
+
+    // Crear mapa de productos para acceso rápido
+    const productMap = new Map<string, Product>();
+    for (const product of products) {
+      productMap.set(product.id, product);
+    }
+
+    // Procesar ventas
     for (const sale of sales) {
       const totals = sale.totals || {};
       const total_bs = Number(totals.total_bs || 0);
@@ -159,28 +193,15 @@ export class ReportsService {
       total_amount_bs += total_bs;
       total_amount_usd += total_usd;
 
-      // Obtener items de la venta para calcular costos
-      const saleItems = await this.saleItemRepository.find({
-        where: { sale_id: sale.id },
-      });
+      // Obtener items de la venta del mapa
+      const saleItems = itemsBySaleId.get(sale.id) || [];
 
       let saleCostBs = 0;
       let saleCostUsd = 0;
 
       for (const item of saleItems) {
-        // Obtener producto del cache o de la base de datos
-        let product = productCache.get(item.product_id);
-        if (!product) {
-          const foundProduct = await this.productRepository.findOne({
-            where: { id: item.product_id },
-            select: ['id', 'cost_bs', 'cost_usd'],
-          });
-          if (foundProduct) {
-            product = foundProduct;
-            productCache.set(item.product_id, foundProduct);
-          }
-        }
-
+        // Obtener producto del mapa
+        const product = productMap.get(item.product_id);
         if (product) {
           saleCostBs += Number(product.cost_bs || 0) * item.qty;
           saleCostUsd += Number(product.cost_usd || 0) * item.qty;
@@ -282,6 +303,22 @@ export class ReportsService {
 
     const items = await query.getMany();
 
+    // Optimización: Cargar todos los productos necesarios de una vez
+    const productIds = [...new Set(items.map((item) => item.product_id))];
+    const products =
+      productIds.length > 0
+        ? await this.productRepository.find({
+            where: { id: In(productIds), store_id: storeId },
+            select: ['id', 'name', 'cost_bs', 'cost_usd'],
+          })
+        : [];
+
+    // Crear mapa de productos para acceso rápido
+    const productsMap = new Map<string, Product>();
+    for (const product of products) {
+      productsMap.set(product.id, product);
+    }
+
     const productMap = new Map<
       string,
       {
@@ -296,12 +333,9 @@ export class ReportsService {
 
     for (const item of items) {
       const productId = item.product_id;
+      const product = productsMap.get(productId);
+
       if (!productMap.has(productId)) {
-        // Obtener datos del producto
-        const product = await this.productRepository.findOne({
-          where: { id: productId, store_id: storeId },
-          select: ['id', 'name', 'cost_bs', 'cost_usd'],
-        });
         productMap.set(productId, {
           product_name: product?.name || 'Producto desconocido',
           quantity_sold: 0,
@@ -311,11 +345,6 @@ export class ReportsService {
           cost_usd: 0,
         });
       }
-
-      const product = await this.productRepository.findOne({
-        where: { id: productId },
-        select: ['cost_bs', 'cost_usd'],
-      });
 
       const productData = productMap.get(productId)!;
       productData.quantity_sold += item.qty;

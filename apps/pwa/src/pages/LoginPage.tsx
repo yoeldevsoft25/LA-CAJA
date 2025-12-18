@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,11 +6,14 @@ import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
+import Particles from 'react-tsparticles'
+import { loadSlim } from 'tsparticles-slim'
+import type { Engine } from 'tsparticles-engine'
 import { useAuth } from '@/stores/auth.store'
-import { authService } from '@/services/auth.service'
+import { authService, type LoginResponse } from '@/services/auth.service'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchAllData } from '@/services/prefetch.service'
-import { syncService } from '@/services/sync.service' // Importar el servicio de sincronización
+import { syncService } from '@/services/sync.service'
 import { Loader2, Store, Lock, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +35,11 @@ export default function LoginPage() {
   const queryClient = useQueryClient()
   const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [selectedCashierId, setSelectedCashierId] = useState<string>('')
+
+  // Inicializar partículas
+  const particlesInit = useCallback(async (engine: Engine) => {
+    await loadSlim(engine)
+  }, [])
 
   const {
     register,
@@ -57,93 +65,189 @@ export default function LoginPage() {
     enabled: !!selectedStoreId,
   })
 
-  const loginMutation = useMutation({
-    mutationFn: authService.login,
-    onSuccess: async (data) => {
-      login(data.access_token, {
-        user_id: data.user_id,
-        store_id: data.store_id,
-        role: data.role,
-        full_name: data.full_name,
-        license_status: data.license_status,
-        license_expires_at: data.license_expires_at,
-      })
-      toast.success(`Bienvenido, ${data.full_name || 'Usuario'}`)
+
+  const mutation = useMutation({
+    mutationFn: (data: LoginForm) =>
+      authService.login({ store_id: data.store_id, pin: data.pin }),
+    onSuccess: async (response: LoginResponse) => {
+      console.log('[Login] ✅ Login exitoso', response)
       
-      // Inicializar servicio de sincronización para ventas offline
-      let deviceId = localStorage.getItem('device_id')
-      if (!deviceId) {
-        deviceId = crypto.randomUUID()
-        localStorage.setItem('device_id', deviceId)
+      // Convertir LoginResponse al formato que espera el store
+      const user = {
+        user_id: response.user_id,
+        store_id: response.store_id,
+        role: response.role,
+        full_name: response.full_name,
+        license_status: response.license_status,
+        license_expires_at: response.license_expires_at || null,
       }
-      syncService.initialize(data.store_id, deviceId).catch((error) => {
-        console.error('[SyncService] Error inicializando:', error)
-        // No bloquear el login si falla la inicialización
-      })
       
-      // Prefetch inteligente en background - no bloquea la navegación
-      prefetchAllData({
-        storeId: data.store_id,
-        queryClient,
-        onProgress: (progress) => {
-          // Log silencioso - no molestar al usuario
-          if (progress === 100) {
-            console.log('[Prefetch] ✅ Cacheo completo')
-          }
-        },
-      }).catch(() => {
-        // Silenciar errores - el prefetch es opcional
-      })
-      
-      navigate('/pos')
+      login(response.access_token, user)
+
+      try {
+        await syncService.ensureInitialized(response.store_id)
+        console.log('[Login] ✅ SyncService inicializado')
+      } catch (error) {
+        console.warn('[Login] ⚠️ Error al inicializar SyncService (no crítico):', error)
+      }
+
+      try {
+        await prefetchAllData({ storeId: response.store_id, queryClient })
+        console.log('[Prefetch] ✅ Cacheo completo')
+      } catch (error) {
+        console.warn('[Prefetch] ⚠️ Error al prefetch (no crítico):', error)
+      }
+
+      // Obtener primer nombre para el mensaje
+      const firstName = response.full_name?.split(' ')[0] || 'Usuario'
+      toast.success(`¡Bienvenido, ${firstName}!`)
+      navigate('/dashboard')
     },
-    onError: (error: any) => {
-      const serverMsg = error.response?.data?.message
-      const message = Array.isArray(serverMsg)
-        ? serverMsg.join(' · ')
-        : serverMsg || 'PIN incorrecto o cajero no encontrado'
-      toast.error(message)
+    onError: (error: Error) => {
+      console.error('[Login] ❌ Error en login:', error)
+      toast.error(error.message || 'Error al iniciar sesión')
     },
   })
 
-  const onSubmit = (data: LoginForm) => {
-    loginMutation.mutate(data)
-  }
-
-  const handleCashierSelect = (cashierId: string) => {
-    setSelectedCashierId(cashierId)
+  const onSubmit = async (data: LoginForm) => {
+    mutation.mutate(data)
   }
 
   const selectedCashierName = cashiers?.find((c) => c.user_id === selectedCashierId)?.full_name
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-muted/20 to-background flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative flex items-center justify-center p-6 overflow-hidden">
+      {/* Premium Particles Background - Optimized & Lightweight */}
+      <Particles
+        id="login-particles"
+        init={particlesInit}
+        options={{
+          background: {
+            color: { value: 'transparent' },
+          },
+          fpsLimit: 60, // Optimizado para rendimiento
+          particles: {
+            number: {
+              value: 45, // Cantidad óptima: visualmente rico pero liviano
+              density: {
+                enable: true,
+                area: 800,
+              },
+            },
+            color: {
+              value: ['#3b82f6', '#8b5cf6', '#60a5fa', '#a78bfa'], // Colores del tema
+            },
+            shape: {
+              type: 'circle', // Solo círculos para mejor rendimiento
+            },
+            opacity: {
+              value: { min: 0.3, max: 0.7 }, // Sutil y elegante
+              animation: {
+                enable: true,
+                speed: 0.5, // Animación lenta y suave
+                sync: false,
+              },
+            },
+            size: {
+              value: { min: 2, max: 4 }, // Tamaño pequeño y discreto
+              animation: {
+                enable: false, // Sin animación de tamaño para mejor rendimiento
+              },
+            },
+            links: {
+              enable: true, // Conexiones sutiles entre partículas
+              distance: 120, // Distancia moderada
+              color: '#3b82f6',
+              opacity: 0.2, // Muy sutil
+              width: 1,
+              triangles: {
+                enable: false, // Sin triángulos para mejor rendimiento
+              },
+            },
+            move: {
+              enable: true,
+              speed: 0.5, // Movimiento muy lento y elegante
+              direction: 'none',
+              random: false,
+              straight: false,
+              outModes: {
+                default: 'bounce',
+              },
+              attract: {
+                enable: false, // Sin atracción para mejor rendimiento
+              },
+            },
+          },
+          interactivity: {
+            detectsOn: 'window',
+            events: {
+              onHover: {
+                enable: true,
+                mode: 'grab', // Solo conexiones al hover (liviano)
+              },
+              onClick: {
+                enable: false, // Sin click para mejor rendimiento
+              },
+              resize: true,
+            },
+            modes: {
+              grab: {
+                distance: 140,
+                links: {
+                  opacity: 0.4, // Más visible al hover
+                  color: '#8b5cf6',
+                },
+              },
+            },
+          },
+          detectRetina: true,
+          smooth: true, // Animación suave
+        }}
+        className="absolute inset-0 w-full h-full"
+      />
+
+      {/* Content */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-10"
       >
         {/* Header */}
         <div className="text-center mb-12">
           <motion.div
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.1 }}
-            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-6"
+            initial={{ scale: 0.9, rotateY: -180 }}
+            animate={{ scale: 1, rotateY: 0 }}
+            transition={{
+              delay: 0.1,
+              type: 'spring',
+              stiffness: 200,
+            }}
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-6 shadow-xl"
+            style={{ transformStyle: 'preserve-3d' }}
           >
-            <Store className="w-7 h-7 text-primary-foreground" strokeWidth={2} />
+            <Store className="w-8 h-8 text-white" strokeWidth={2.5} />
           </motion.div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-2">
+          <motion.h1
+            className="text-4xl font-bold tracking-tight text-gray-900 mb-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             Bienvenido
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          </motion.h1>
+          <motion.p
+            className="text-base text-gray-600"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             Inicia sesión en tu punto de venta
-          </p>
+          </motion.p>
         </div>
 
         {/* Main Card */}
-        <Card className="border-border/50 shadow-lg">
+        <Card className="border-blue-200/50 shadow-2xl backdrop-blur-xl bg-white/80">
           <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
             {/* Selección de Tienda */}
             <div className="space-y-2">
@@ -203,46 +307,43 @@ export default function LoginPage() {
                       <span className="text-sm">Cargando empleados...</span>
                     </div>
                   ) : cashiers && cashiers.length > 0 ? (
-                    <div className="space-y-2">
-                      {cashiers.map((cashier) => {
-                        const isSelected = selectedCashierId === cashier.user_id
-                        return (
-                          <motion.button
-                            key={cashier.user_id}
-                            type="button"
-                            onClick={() => handleCashierSelect(cashier.user_id)}
-                            whileTap={{ scale: 0.98 }}
-                            className={cn(
-                              "w-full px-4 py-3 rounded-lg border text-left transition-all",
-                              isSelected
-                                ? "bg-primary border-primary text-primary-foreground"
-                                : "bg-background border-border hover:border-primary/50 hover:bg-accent/50"
-                            )}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {cashier.full_name || 'Cajero'}
-                                </p>
-                                <p className={cn(
-                                  "text-xs capitalize",
-                                  isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
-                                )}>
-                                  {cashier.role}
-                                </p>
-                              </div>
-                              {isSelected && (
-                                <ChevronRight className="w-4 h-4" />
-                              )}
-                            </div>
-                          </motion.button>
-                        )
-                      })}
+                    <div className="grid grid-cols-1 gap-2">
+                      {cashiers.map((cashier) => (
+                        <motion.button
+                          key={cashier.user_id}
+                          type="button"
+                          onClick={() => setSelectedCashierId(cashier.user_id)}
+                          className={cn(
+                            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all duration-200",
+                            selectedCashierId === cashier.user_id
+                              ? "border-primary bg-primary/5 shadow-md"
+                              : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className={cn(
+                            "w-2 h-2 rounded-full transition-all",
+                            selectedCashierId === cashier.user_id ? "bg-primary scale-125" : "bg-muted"
+                          )} />
+                          <div className="flex-1 text-left">
+                            <p className="text-sm font-medium text-foreground">
+                              {cashier.full_name || 'Sin nombre'}
+                            </p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {cashier.role === 'owner' ? 'Propietario' : 'Cajero'}
+                            </p>
+                          </div>
+                          {selectedCashierId === cashier.user_id && (
+                            <ChevronRight className="w-4 h-4 text-primary" />
+                          )}
+                        </motion.button>
+                      ))}
                     </div>
                   ) : (
-                    <div className="py-8 text-center text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground text-center py-4">
                       No hay empleados disponibles
-                    </div>
+                    </p>
                   )}
                 </motion.div>
               )}
@@ -250,7 +351,7 @@ export default function LoginPage() {
 
             {/* PIN Input */}
             <AnimatePresence mode="wait">
-              {selectedStoreId && selectedCashierId && (
+              {selectedCashierId && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -266,19 +367,9 @@ export default function LoginPage() {
                     id="pin"
                     placeholder="••••"
                     maxLength={6}
-                    autoComplete="off"
-                    className={cn(
-                      "h-11 text-center text-lg tracking-widest font-mono",
-                      "border-0",
-                      "focus-visible:ring-2 focus-visible:ring-offset-1"
-                    )}
-                    style={{
-                      border: 'none',
-                      boxShadow: errors.pin 
-                        ? 'inset 0 0 0 1px hsl(var(--destructive))'
-                        : 'inset 0 0 0 1px hsl(var(--input))',
-                    }}
+                    className={cn("h-11 text-center text-lg tracking-widest", errors.pin && "border-destructive")}
                     {...register('pin')}
+                    autoFocus
                   />
                   {errors.pin && (
                     <p className="text-xs text-destructive">{errors.pin.message}</p>
@@ -288,44 +379,25 @@ export default function LoginPage() {
             </AnimatePresence>
 
             {/* Submit Button */}
-            <AnimatePresence mode="wait">
-              {selectedStoreId && selectedCashierId && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Button
-                    type="submit"
-                    disabled={loginMutation.isPending}
-                    className="w-full h-11 text-sm font-medium"
-                  >
-                    {loginMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Iniciando sesión...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4 mr-2" />
-                        Iniciar Sesión
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-medium shadow-lg hover:shadow-xl transition-all"
+              disabled={mutation.isPending || !selectedCashierId}
+            >
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Iniciando sesión...
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Iniciar sesión
+                </>
               )}
-            </AnimatePresence>
+            </Button>
           </form>
         </Card>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          ¿Problemas para iniciar sesión?{' '}
-          <button className="text-foreground hover:underline font-medium">
-            Contacta al administrador
-          </button>
-        </p>
       </motion.div>
     </div>
   )

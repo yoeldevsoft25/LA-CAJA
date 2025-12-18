@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import SimpleLoader from './components/loader/SimpleLoader'
 import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import MainLayout from './components/layout/MainLayout'
@@ -45,9 +46,10 @@ import { realtimeWebSocketService } from './services/realtime-websocket.service'
 import { usePushNotifications } from './hooks/usePushNotifications'
 
 function App() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, showLoader: authShowLoader, setShowLoader } = useAuth()
   const { isOnline, wasOffline } = useOnline()
   const { isSupported, subscribe } = usePushNotifications()
+  const [isLoaderComplete, setIsLoaderComplete] = useState(false)
 
   // Rehidratar el sync service si hay sesión persistida
   useEffect(() => {
@@ -111,7 +113,36 @@ function App() {
     }
   }, [isAuthenticated, isSupported, subscribe])
 
+  // Set initial loader state
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Si no está autenticado, no mostrar loader
+      setIsLoaderComplete(true)
+    }
+  }, [isAuthenticated])
+
+  // Trigger loader when user logs in
+  useEffect(() => {
+    if (authShowLoader && isAuthenticated) {
+      setIsLoaderComplete(false)
+    }
+  }, [authShowLoader, isAuthenticated])
+
+  const handleLoaderComplete = () => {
+    setShowLoader(false)
+    setIsLoaderComplete(true)
+  }
+
   return (
+    <>
+      {authShowLoader && !isLoaderComplete && (
+        <SimpleLoader 
+          onComplete={handleLoaderComplete} 
+          duration={4000}
+          userName={user?.full_name}
+        />
+      )}
+      {(isLoaderComplete || !authShowLoader) && (
     <BrowserRouter>
       <Routes>
         <Route path="/landing" element={<LandingPage />} />
@@ -171,6 +202,8 @@ function App() {
         <Route path="*" element={<Navigate to="/landing" replace />} />
       </Routes>
     </BrowserRouter>
+      )}
+    </>
   )
 }
 

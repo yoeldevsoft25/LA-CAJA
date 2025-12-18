@@ -246,3 +246,4 @@ JWT_REFRESH_EXPIRES_IN_DAYS=30
 **Fecha:** 2024  
 **Basado en:** OWASP Top 10 2021, Best Practices de JWT
 
+

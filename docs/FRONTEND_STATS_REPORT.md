@@ -372,3 +372,4 @@ El frontend de LA-CAJA está en **excelente estado** con una puntuación de **96
 **Generado automáticamente el:** $(date)  
 **Versión del Reporte:** 1.0
 
+

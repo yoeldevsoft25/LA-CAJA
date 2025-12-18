@@ -627,3 +627,4 @@ curl -H "x-admin-key: test" http://localhost:3000/admin/stores
 
 **Documento generado por:** Security Engineer Agent
 
+

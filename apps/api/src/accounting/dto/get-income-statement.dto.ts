@@ -8,3 +8,4 @@ export class GetIncomeStatementDto {
   end_date: string;
 }
 
+

@@ -5,7 +5,14 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  In,
+  MoreThanOrEqual,
+  LessThanOrEqual,
+  Between,
+} from 'typeorm';
 import { Sale } from '../database/entities/sale.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
 import { Product } from '../database/entities/product.entity';
@@ -781,36 +788,70 @@ export class SalesService {
     dateFrom?: Date,
     dateTo?: Date,
   ): Promise<{ sales: Sale[]; total: number }> {
-    const query = this.saleRepository
+    // Query para contar total (sin joins para mejor rendimiento)
+    const countQuery = this.saleRepository
       .createQueryBuilder('sale')
-      .where('sale.store_id = :storeId', { storeId })
-      .orderBy('sale.sold_at', 'DESC');
+      .where('sale.store_id = :storeId', { storeId });
 
     if (dateFrom) {
-      query.andWhere('sale.sold_at >= :dateFrom', { dateFrom });
+      countQuery.andWhere('sale.sold_at >= :dateFrom', { dateFrom });
     }
 
     if (dateTo) {
-      query.andWhere('sale.sold_at <= :dateTo', { dateTo });
+      countQuery.andWhere('sale.sold_at <= :dateTo', { dateTo });
     }
 
-    const total = await query.getCount();
+    const total = await countQuery.getCount();
 
-    query.limit(limit).offset(offset);
+    // Query para obtener ventas con relaciones
+    // Usar find con relations para asegurar que los items se carguen correctamente
+    const whereConditions: any = { store_id: storeId };
+    
+    if (dateFrom && dateTo) {
+      whereConditions.sold_at = Between(dateFrom, dateTo);
+    } else if (dateFrom) {
+      whereConditions.sold_at = MoreThanOrEqual(dateFrom);
+    } else if (dateTo) {
+      whereConditions.sold_at = LessThanOrEqual(dateTo);
+    }
 
-    const sales = await query
-      .leftJoinAndSelect('sale.items', 'items')
-      .leftJoinAndSelect('items.product', 'product')
-      .leftJoinAndSelect('sale.sold_by_user', 'sold_by_user')
-      .leftJoinAndSelect('sale.customer', 'customer')
-      .leftJoin('debts', 'debt', 'debt.sale_id = sale.id')
-      .addSelect([
-        'debt.id',
-        'debt.status',
-        'debt.amount_bs',
-        'debt.amount_usd',
-      ])
-      .getMany();
+    const sales = await this.saleRepository.find({
+      where: whereConditions,
+      relations: ['items', 'items.product', 'sold_by_user', 'customer'],
+      order: { sold_at: 'DESC' },
+      take: limit,
+      skip: offset,
+    });
+
+    // Cargar deudas por separado para evitar problemas con el join
+    const saleIds = sales.map((s) => s.id);
+    const debts =
+      saleIds.length > 0
+        ? await this.debtRepository.find({
+            where: { sale_id: In(saleIds) },
+            select: ['id', 'sale_id', 'status', 'amount_bs', 'amount_usd'],
+          } as any)
+        : [];
+
+    // Mapear deudas por sale_id
+    const debtsBySaleId = new Map<string, any>();
+    for (const debt of debts) {
+      if (debt.sale_id) {
+        debtsBySaleId.set(debt.sale_id, debt);
+      }
+    }
+
+    // Asignar deudas a las ventas
+    for (const sale of sales) {
+      (sale as any).debt = debtsBySaleId.get(sale.id) || null;
+    }
+
+    // Asegurar que items siempre sea un array (incluso si está vacío)
+    for (const sale of sales) {
+      if (!sale.items) {
+        sale.items = [];
+      }
+    }
 
     // Optimización: Obtener todas las deudas con sus pagos en una sola query (evita N+1)
     const debtIds = sales

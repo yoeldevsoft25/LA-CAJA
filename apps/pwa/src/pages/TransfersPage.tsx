@@ -446,15 +446,16 @@ export default function TransfersPage() {
 
       {/* Modal de crear transferencia */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nueva Transferencia</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-lg sm:text-xl">Nueva Transferencia</DialogTitle>
             <DialogDescription>
               Crea una nueva transferencia de inventario entre bodegas
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitTransfer}>
-            <div className="space-y-4">
+          <form onSubmit={handleSubmitTransfer} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+              <div className="space-y-4 sm:space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="from_warehouse">Bodega Origen *</Label>
@@ -572,7 +573,8 @@ export default function TransfersPage() {
                 <Textarea id="note" name="note" rows={2} />
               </div>
             </div>
-            <DialogFooter className="mt-6">
+            </div>
+            <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
                 Cancelar
               </Button>
@@ -586,15 +588,16 @@ export default function TransfersPage() {
 
       {/* Modal de detalles */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-lg sm:text-xl">
               Transferencia {selectedTransfer?.transfer_number}
             </DialogTitle>
             <DialogDescription>Detalles de la transferencia</DialogDescription>
           </DialogHeader>
           {selectedTransfer && (
-            <div className="space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+              <div className="space-y-4 sm:space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Estado</Label>
@@ -659,22 +662,24 @@ export default function TransfersPage() {
                 </div>
               )}
             </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Modal de enviar */}
       <Dialog open={isShipOpen} onOpenChange={setIsShipOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-lg sm:text-xl">Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
               Indica las cantidades enviadas de cada producto
             </DialogDescription>
           </DialogHeader>
           {selectedTransfer && (
-            <form onSubmit={handleShipSubmit}>
-              <div className="space-y-4">
+            <form onSubmit={handleShipSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+                <div className="space-y-4 sm:space-y-5">
                 {selectedTransfer.items.map((item, index) => (
                   <div key={item.id} className="space-y-2">
                     <Label>
@@ -702,7 +707,8 @@ export default function TransfersPage() {
                   <Textarea id="ship_note" name="note" rows={2} />
                 </div>
               </div>
-              <DialogFooter className="mt-6">
+              </div>
+              <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
                 <Button type="button" variant="outline" onClick={() => setIsShipOpen(false)}>
                   Cancelar
                 </Button>
@@ -717,16 +723,17 @@ export default function TransfersPage() {
 
       {/* Modal de recibir */}
       <Dialog open={isReceiveOpen} onOpenChange={setIsReceiveOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-lg sm:text-xl">Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
               Indica las cantidades recibidas de cada producto
             </DialogDescription>
           </DialogHeader>
           {selectedTransfer && (
-            <form onSubmit={handleReceiveSubmit}>
-              <div className="space-y-4">
+            <form onSubmit={handleReceiveSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+                <div className="space-y-4 sm:space-y-5">
                 {selectedTransfer.items.map((item, index) => (
                   <div key={item.id} className="space-y-2">
                     <Label>
@@ -754,7 +761,8 @@ export default function TransfersPage() {
                   <Textarea id="receive_note" name="note" rows={2} />
                 </div>
               </div>
-              <DialogFooter className="mt-6">
+              </div>
+              <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
                 <Button type="button" variant="outline" onClick={() => setIsReceiveOpen(false)}>
                   Cancelar
                 </Button>

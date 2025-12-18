@@ -237,9 +237,9 @@ export default function WarehousesPage() {
 
       {/* Modal de formulario */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-lg sm:text-xl">
               {editingWarehouse ? 'Editar Bodega' : 'Nueva Bodega'}
             </DialogTitle>
             <DialogDescription>
@@ -248,8 +248,9 @@ export default function WarehousesPage() {
                 : 'Crea una nueva bodega/almacén para gestionar inventario'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+              <div className="space-y-4 sm:space-y-5">
               <div>
                 <Label htmlFor="name">Nombre *</Label>
                 <Input
@@ -329,7 +330,8 @@ export default function WarehousesPage() {
                 />
               </div>
             </div>
-            <DialogFooter className="mt-6">
+            </div>
+            <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
               <Button type="button" variant="outline" onClick={handleCloseForm}>
                 Cancelar
               </Button>

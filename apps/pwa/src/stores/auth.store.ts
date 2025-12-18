@@ -14,9 +14,11 @@ interface AuthState {
   user: AuthUser | null
   token: string | null
   isAuthenticated: boolean
+  showLoader: boolean
   login: (token: string, user: AuthUser) => void
   logout: () => void
   setUser: (user: AuthUser) => void
+  setShowLoader: (show: boolean) => void
 }
 
 export const useAuth = create<AuthState>()(
@@ -25,15 +27,18 @@ export const useAuth = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      showLoader: false,
       login: (token, user) => {
         localStorage.setItem('auth_token', token)
-        set({ token, user, isAuthenticated: true })
+        set({ token, user, isAuthenticated: true, showLoader: true })
       },
       logout: () => {
         localStorage.removeItem('auth_token')
-        set({ token: null, user: null, isAuthenticated: false })
+        sessionStorage.removeItem('hasSeenLoader')
+        set({ token: null, user: null, isAuthenticated: false, showLoader: false })
       },
       setUser: (user) => set({ user }),
+      setShowLoader: (show) => set({ showLoader: show }),
     }),
     {
       name: 'auth-storage',

@@ -35,3 +35,4 @@ COMMENT ON COLUMN security_audit_log.status IS 'Estado del evento: success, fail
 COMMENT ON COLUMN security_audit_log.details IS 'Información adicional del evento en formato JSON';
 COMMENT ON COLUMN security_audit_log.ip_address IS 'Dirección IP del cliente (INET para soporte IPv4/IPv6)';
 
+

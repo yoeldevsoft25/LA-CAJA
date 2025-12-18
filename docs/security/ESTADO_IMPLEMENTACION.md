@@ -202,3 +202,4 @@ ADMIN_SECRET=<mínimo 16 caracteres>
 
 **Documento generado por:** Security Engineer Agent
 
+

@@ -6,3 +6,4 @@ export class GetBalanceSheetDto {
   as_of_date?: string; // Fecha de corte (default: hoy)
 }
 
+

@@ -247,3 +247,4 @@ psql -d la_caja -c "SELECT * FROM security_audit_log ORDER BY created_at DESC LI
 **Fecha:** 2024  
 **Basado en:** OWASP Top 10 2021
 
+

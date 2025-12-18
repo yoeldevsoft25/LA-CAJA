@@ -517,3 +517,4 @@ Para preguntas sobre planes y precios:
 **Última actualización:** Enero 2025  
 **Próxima revisión:** Abril 2025
 
+
