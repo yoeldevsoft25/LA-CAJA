@@ -151,6 +151,22 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
         const url = new URL(databaseUrl);
         const isProduction =
           configService.get<string>('NODE_ENV') === 'production';
+        
+        // Detectar si es un servicio cloud que usa certificados autofirmados
+        const isCloudDatabase =
+          url.hostname.includes('supabase.co') ||
+          url.hostname.includes('render.com') ||
+          url.hostname.includes('aws') ||
+          url.hostname.includes('azure') ||
+          url.hostname.includes('gcp') ||
+          configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'false';
+        
+        // Configuración SSL: en producción, usar SSL pero permitir certificados autofirmados
+        // para servicios cloud (Render, Supabase, etc.)
+        // Se puede override con DB_SSL_REJECT_UNAUTHORIZED=true para forzar verificación estricta
+        const sslRejectUnauthorized =
+          configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'true' ||
+          (!isCloudDatabase && isProduction);
 
         return {
           type: 'postgres',
@@ -251,10 +267,11 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           // Manejo de errores de conexión
           autoLoadEntities: false, // Ya especificamos entities manualmente
           // SSL para producción (Render/Supabase)
-          // NOTA: Si Supabase requiere rejectUnauthorized: false, considerar usar certificado CA específico
+          // NOTA: Servicios cloud como Render/Supabase usan certificados autofirmados
+          // Se puede forzar verificación estricta con DB_SSL_REJECT_UNAUTHORIZED=true
           ssl: isProduction
             ? {
-                rejectUnauthorized: true, // ✅ Habilitar verificación SSL por seguridad
+                rejectUnauthorized: sslRejectUnauthorized,
               }
             : false,
         };
