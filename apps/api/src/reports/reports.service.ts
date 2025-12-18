@@ -27,6 +27,28 @@ import { FiscalInvoiceItem } from '../database/entities/fiscal-invoice-item.enti
 
 @Injectable()
 export class ReportsService {
+  /**
+   * Normaliza una fecha al inicio del día en hora local
+   * Evita problemas de zona horaria al comparar con TIMESTAMPTZ
+   */
+  private normalizeStartDate(date: Date): Date {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    return new Date(year, month, day, 0, 0, 0, 0);
+  }
+
+  /**
+   * Normaliza una fecha al final del día en hora local
+   * Evita problemas de zona horaria al comparar con TIMESTAMPTZ
+   */
+  private normalizeEndDate(date: Date): Date {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    return new Date(year, month, day, 23, 59, 59, 999);
+  }
+
   constructor(
     @InjectRepository(Sale)
     private saleRepository: Repository<Sale>,
@@ -95,15 +117,11 @@ export class ReportsService {
       .where('sale.store_id = :storeId', { storeId });
 
     if (startDate) {
-      // Asegurar que la fecha de inicio sea al inicio del día en hora local
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('sale.sold_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      // Asegurar que la fecha de fin sea al final del día
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('sale.sold_at <= :endDate', { endDate: end });
     }
 
@@ -254,13 +272,11 @@ export class ReportsService {
       .where('sale.store_id = :storeId', { storeId });
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('sale.sold_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('sale.sold_at <= :endDate', { endDate: end });
     }
 
@@ -477,13 +493,11 @@ export class ReportsService {
       .where('sale.store_id = :storeId', { storeId });
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('sale.sold_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('sale.sold_at <= :endDate', { endDate: end });
     }
 
@@ -573,13 +587,11 @@ export class ReportsService {
       .where('shift.store_id = :storeId', { storeId });
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('shift.opened_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('shift.opened_at <= :endDate', { endDate: end });
     }
     if (cashierId) {
@@ -741,13 +753,11 @@ export class ReportsService {
       .andWhere('shift.closed_at IS NOT NULL');
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('shift.closed_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('shift.closed_at <= :endDate', { endDate: end });
     }
 
@@ -1007,13 +1017,11 @@ export class ReportsService {
       .where('product.store_id = :storeId', { storeId });
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('serial.sold_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('serial.sold_at <= :endDate', { endDate: end });
     }
 
@@ -1126,13 +1134,11 @@ export class ReportsService {
       .where('sale.store_id = :storeId', { storeId });
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('sale.sold_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('sale.sold_at <= :endDate', { endDate: end });
     }
 
@@ -1234,13 +1240,11 @@ export class ReportsService {
       .where('order.store_id = :storeId', { storeId });
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('order.created_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('order.created_at <= :endDate', { endDate: end });
     }
 
@@ -1337,13 +1341,11 @@ export class ReportsService {
       .where('invoice.store_id = :storeId', { storeId });
 
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const start = this.normalizeStartDate(new Date(startDate));
       query.andWhere('invoice.issued_at >= :startDate', { startDate: start });
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const end = this.normalizeEndDate(new Date(endDate));
       query.andWhere('invoice.issued_at <= :endDate', { endDate: end });
     }
     if (status) {

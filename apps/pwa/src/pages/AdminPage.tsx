@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { toast } from 'react-hot-toast'
 import { addDays, format, formatDistanceToNowStrict, isAfter, parseISO } from 'date-fns'
-import { MoreHorizontal, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react'
+import { MoreHorizontal, ShieldCheck, ShieldOff, Sparkles, CreditCard, Calendar } from 'lucide-react'
 
 function formatDate(value: string | null) {
   if (!value) return '—'
@@ -60,6 +60,9 @@ export default function AdminPage() {
   const [expiringIn, setExpiringIn] = useState<string>('none')
   const [adminKey, setAdminKey] = useState<string>(() => adminService.getKey() || '')
   const [userSheetStore, setUserSheetStore] = useState<AdminStore | null>(null)
+  const [planSheetStore, setPlanSheetStore] = useState<AdminStore | null>(null)
+  const [newPlan, setNewPlan] = useState<string>('')
+  const [planExpiryDays, setPlanExpiryDays] = useState<string>('')
   const [newUser, setNewUser] = useState<{ full_name: string; role: 'owner' | 'cashier'; pin: string }>({
     full_name: '',
     role: 'cashier',
@@ -282,9 +285,10 @@ export default function AdminPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 text-slate-100 border-slate-800">
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="starter">Starter</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                  <SelectItem value="freemium">🆓 Freemium</SelectItem>
+                  <SelectItem value="basico">💼 Básico</SelectItem>
+                  <SelectItem value="profesional">🚀 Profesional</SelectItem>
+                  <SelectItem value="empresarial">🏢 Empresarial</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={expiringIn} onValueChange={setExpiringIn}>
@@ -419,9 +423,22 @@ export default function AdminPage() {
                           </td>
                           <td className="px-3 py-3">{statusBadge(store)}</td>
                           <td className="px-3 py-3">
-                            <Badge variant="outline" className="border-slate-700 text-slate-200">
-                              {store.license_plan || 'Sin plan'}
-                            </Badge>
+                            {(() => {
+                              const plan = store.license_plan || 'sin-plan'
+                              const planLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+                                'freemium': { label: '🆓 Freemium', variant: 'outline' },
+                                'basico': { label: '💼 Básico', variant: 'secondary' },
+                                'profesional': { label: '🚀 Profesional', variant: 'default' },
+                                'empresarial': { label: '🏢 Empresarial', variant: 'default' },
+                                'sin-plan': { label: 'Sin plan', variant: 'outline' },
+                              }
+                              const planInfo = planLabels[plan] || planLabels['sin-plan']
+                              return (
+                                <Badge variant={planInfo.variant} className="border-slate-700 text-slate-200">
+                                  {planInfo.label}
+                                </Badge>
+                              )
+                            })()}
                           </td>
                           <td className="px-3 py-3">
                             <div className="text-slate-100">{formatDate(store.license_expires_at)}</div>
@@ -510,6 +527,17 @@ export default function AdminPage() {
                                     Suspender
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-slate-800" />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setPlanSheetStore(store)
+                                      setNewPlan(store.license_plan || 'freemium')
+                                      setPlanExpiryDays('')
+                                    }}
+                                    disabled={mutation.isPending}
+                                  >
+                                    <CreditCard className="h-4 w-4 mr-2" />
+                                    Cambiar plan
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() =>
                                       mutation.mutate({
@@ -645,6 +673,101 @@ export default function AdminPage() {
                 Crear usuario
               </Button>
             </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Sheet para cambiar plan */}
+      <Sheet open={!!planSheetStore} onOpenChange={(open) => !open && setPlanSheetStore(null)}>
+        <SheetContent className="bg-slate-900 text-slate-100 border-slate-800 w-[420px]">
+          <SheetHeader>
+            <SheetTitle className="text-white">Cambiar Plan - {planSheetStore?.name || ''}</SheetTitle>
+            <SheetDescription className="text-slate-400">
+              Actualiza el plan de suscripción de esta tienda.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-slate-200">Plan Actual</Label>
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
+                <Badge variant="outline" className="border-slate-700 text-slate-200">
+                  {planSheetStore?.license_plan || 'Sin plan'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-200">Nuevo Plan</Label>
+              <Select value={newPlan} onValueChange={setNewPlan}>
+                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
+                  <SelectValue placeholder="Selecciona un plan" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-800 text-slate-100">
+                  <SelectItem value="freemium">🆓 Freemium - GRATIS</SelectItem>
+                  <SelectItem value="basico">💼 Básico - $29/mes</SelectItem>
+                  <SelectItem value="profesional">🚀 Profesional - $79/mes</SelectItem>
+                  <SelectItem value="empresarial">🏢 Empresarial - $199/mes</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                {newPlan === 'freemium' && 'Gratis para siempre - Ideal para empezar'}
+                {newPlan === 'basico' && '$29/mes - Perfecto para pequeños negocios'}
+                {newPlan === 'profesional' && '$79/mes - Para negocios en crecimiento'}
+                {newPlan === 'empresarial' && '$199/mes - Solución completa empresarial'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-200">Fecha de Expiración (opcional)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Días desde hoy"
+                  value={planExpiryDays}
+                  onChange={(e) => setPlanExpiryDays(e.target.value)}
+                  className="bg-slate-950 border-slate-800 text-slate-100"
+                />
+                {planExpiryDays && (
+                  <div className="text-xs text-slate-400 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {formatDate(
+                      new Date(Date.now() + Number(planExpiryDays) * 86400000).toISOString()
+                    )}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                Deja vacío para mantener la fecha actual. Ingresa días para extender desde hoy.
+              </p>
+            </div>
+
+            <Separator className="bg-slate-800" />
+
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => {
+                if (!planSheetStore) return
+                const expiresAt = planExpiryDays
+                  ? new Date(Date.now() + Number(planExpiryDays) * 86400000).toISOString()
+                  : undefined
+
+                mutation.mutate({
+                  storeId: planSheetStore.id,
+                  data: {
+                    plan: newPlan,
+                    expires_at: expiresAt,
+                    status: 'active',
+                  },
+                })
+                setPlanSheetStore(null)
+                setNewPlan('')
+                setPlanExpiryDays('')
+              }}
+              disabled={mutation.isPending || !newPlan || newPlan === planSheetStore?.license_plan}
+            >
+              {mutation.isPending ? 'Actualizando...' : 'Actualizar Plan'}
+            </Button>
           </div>
         </SheetContent>
       </Sheet>

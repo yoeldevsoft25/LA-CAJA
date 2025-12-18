@@ -35,6 +35,7 @@ import AnomaliesPage from './pages/AnomaliesPage'
 import RealtimeAnalyticsPage from './pages/RealtimeAnalyticsPage'
 import LicenseBlockedPage from './pages/LicenseBlockedPage'
 import AdminPage from './pages/AdminPage'
+import LandingPage from './pages/LandingPage'
 import AccountingPage from './pages/AccountingPage'
 import { useOnline } from './hooks/use-online'
 import { useAuth } from './stores/auth.store'
@@ -113,6 +114,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/license"
@@ -166,7 +168,7 @@ function App() {
           <Route path="accounting" element={<AccountingPage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/landing" replace />} />
       </Routes>
     </BrowserRouter>
   )

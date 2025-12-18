@@ -26,12 +26,16 @@ export class ReportsController {
   private parseDateParam(value?: string): Date | undefined {
     if (!value) return undefined;
 
-    // Cuando llega en formato YYYY-MM-DD, `new Date(value)` se interpreta como UTC y
-    // puede terminar en el día anterior/siguiente en hora local. Forzamos parse local.
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
-      ? new Date(`${value}T12:00:00`)
-      : new Date(value);
+    // Cuando llega en formato YYYY-MM-DD, parsear como fecha local (no UTC)
+    // para evitar problemas de zona horaria al comparar con TIMESTAMPTZ
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-').map(Number);
+      // Crear fecha en hora local (no UTC) para evitar cambios de día
+      const date = new Date(year, month - 1, day, 12, 0, 0, 0);
+      return date;
+    }
 
+    const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException(`Fecha inválida: ${value}`);
     }
