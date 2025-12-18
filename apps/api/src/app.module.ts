@@ -44,75 +44,9 @@ import { SecurityModule } from './security/security.module';
 import { AdminController } from './admin/admin.controller';
 import { AdminApiGuard } from './admin/admin-api.guard';
 import { LicenseWatcherService } from './admin/license-watcher.service';
-import { Store } from './database/entities/store.entity';
-import { Profile } from './database/entities/profile.entity';
-import { StoreMember } from './database/entities/store-member.entity';
-import { Product } from './database/entities/product.entity';
-import { InventoryMovement } from './database/entities/inventory-movement.entity';
-import { Sale } from './database/entities/sale.entity';
-import { SaleItem } from './database/entities/sale-item.entity';
-import { CashSession } from './database/entities/cash-session.entity';
-import { Shift } from './database/entities/shift.entity';
-import { ShiftCut } from './database/entities/shift-cut.entity';
-import { PaymentMethodConfig } from './database/entities/payment-method-config.entity';
-import { CashMovement } from './database/entities/cash-movement.entity';
-import { DiscountConfig } from './database/entities/discount-config.entity';
-import { DiscountAuthorization } from './database/entities/discount-authorization.entity';
-import { FastCheckoutConfig } from './database/entities/fast-checkout-config.entity';
-import { QuickProduct } from './database/entities/quick-product.entity';
-import { ProductVariant } from './database/entities/product-variant.entity';
-import { ProductLot } from './database/entities/product-lot.entity';
-import { LotMovement } from './database/entities/lot-movement.entity';
-import { ProductSerial } from './database/entities/product-serial.entity';
-import { InvoiceSeries } from './database/entities/invoice-series.entity';
-import { Table } from './database/entities/table.entity';
-import { Order } from './database/entities/order.entity';
-import { OrderItem } from './database/entities/order-item.entity';
-import { OrderPayment } from './database/entities/order-payment.entity';
-import { PeripheralConfig } from './database/entities/peripheral-config.entity';
-import { PriceList } from './database/entities/price-list.entity';
-import { PriceListItem } from './database/entities/price-list-item.entity';
-import { Promotion } from './database/entities/promotion.entity';
-import { PromotionProduct } from './database/entities/promotion-product.entity';
-import { PromotionUsage } from './database/entities/promotion-usage.entity';
-import { Customer } from './database/entities/customer.entity';
-import { Debt } from './database/entities/debt.entity';
-import { DebtPayment } from './database/entities/debt-payment.entity';
-import { ExchangeRate } from './database/entities/exchange-rate.entity';
-import { Warehouse } from './database/entities/warehouse.entity';
-import { WarehouseStock } from './database/entities/warehouse-stock.entity';
-import { Transfer } from './database/entities/transfer.entity';
-import { TransferItem } from './database/entities/transfer-item.entity';
-import { Supplier } from './database/entities/supplier.entity';
-import { PurchaseOrder } from './database/entities/purchase-order.entity';
-import { PurchaseOrderItem } from './database/entities/purchase-order-item.entity';
-import { FiscalInvoice } from './database/entities/fiscal-invoice.entity';
-import { FiscalInvoiceItem } from './database/entities/fiscal-invoice-item.entity';
-import { FiscalConfig } from './database/entities/fiscal-config.entity';
-import { DemandPrediction } from './database/entities/demand-prediction.entity';
-import { ProductRecommendation } from './database/entities/product-recommendation.entity';
-import { DetectedAnomaly } from './database/entities/detected-anomaly.entity';
-import { MLModelMetric } from './database/entities/ml-model-metric.entity';
-import { RealTimeMetric } from './database/entities/real-time-metric.entity';
-import { AlertThreshold } from './database/entities/alert-threshold.entity';
-import { RealTimeAlert } from './database/entities/real-time-alert.entity';
-import { SalesHeatmap } from './database/entities/sales-heatmap.entity';
-import { ComparativeMetric } from './database/entities/comparative-metric.entity';
-import { Notification } from './database/entities/notification.entity';
-import { NotificationPreference } from './database/entities/notification-preference.entity';
-import { NotificationSubscription } from './database/entities/notification-subscription.entity';
-import { NotificationDelivery } from './database/entities/notification-delivery.entity';
-import { NotificationBadge } from './database/entities/notification-badge.entity';
-import { ChartOfAccount } from './database/entities/chart-of-accounts.entity';
-import { JournalEntry } from './database/entities/journal-entry.entity';
-import { JournalEntryLine } from './database/entities/journal-entry-line.entity';
-import { AccountingAccountMapping } from './database/entities/accounting-account-mapping.entity';
-import { AccountBalance } from './database/entities/account-balance.entity';
-import { AccountingExport } from './database/entities/accounting-export.entity';
-import { AccountingERPSync } from './database/entities/accounting-erp-sync.entity';
-import { Event } from './database/entities/event.entity';
-import { SecurityAuditLog } from './database/entities/security-audit-log.entity';
-import { RefreshToken } from './database/entities/refresh-token.entity';
+// Importar todas las entidades desde el índice centralizado
+// Esto reduce el tamaño del objeto serializado y mejora el rendimiento del bootstrap
+import { ALL_ENTITIES, Store, StoreMember, Profile } from './database/entities';
 import { LicenseGuard } from './auth/guards/license.guard';
 import { DatabaseErrorInterceptor } from './common/interceptors/database-error.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -175,77 +109,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           username: url.username,
           password: decodeURIComponent(url.password), // Decodificar contraseña URL-encoded
           database: url.pathname.slice(1), // Remover el '/' inicial
-          entities: [
-            Store,
-            Profile,
-            StoreMember,
-            Product,
-            ProductVariant,
-            ProductLot,
-            LotMovement,
-            ProductSerial,
-            InvoiceSeries,
-            Table,
-            Order,
-            OrderItem,
-            OrderPayment,
-            PeripheralConfig,
-            PriceList,
-            PriceListItem,
-            Promotion,
-            PromotionProduct,
-            PromotionUsage,
-            InventoryMovement,
-            Sale,
-            SaleItem,
-            CashSession,
-            Shift,
-            ShiftCut,
-            PaymentMethodConfig,
-            CashMovement,
-            DiscountConfig,
-            DiscountAuthorization,
-            FastCheckoutConfig,
-            QuickProduct,
-            Customer,
-            Debt,
-            DebtPayment,
-            ExchangeRate,
-            Warehouse,
-            WarehouseStock,
-            Transfer,
-            TransferItem,
-            Supplier,
-            PurchaseOrder,
-            PurchaseOrderItem,
-            FiscalInvoice,
-            FiscalInvoiceItem,
-            FiscalConfig,
-            DemandPrediction,
-            ProductRecommendation,
-            DetectedAnomaly,
-            MLModelMetric,
-            RealTimeMetric,
-            AlertThreshold,
-            RealTimeAlert,
-            SalesHeatmap,
-            ComparativeMetric,
-            Notification,
-            NotificationPreference,
-            NotificationSubscription,
-            NotificationDelivery,
-            NotificationBadge,
-            ChartOfAccount,
-            JournalEntry,
-            JournalEntryLine,
-            AccountingAccountMapping,
-            AccountBalance,
-            AccountingExport,
-            AccountingERPSync,
-            Event,
-            SecurityAuditLog,
-            RefreshToken,
-          ],
+          // Usar array centralizado de entidades para reducir serialización
+          entities: ALL_ENTITIES,
           synchronize: false, // Usamos migraciones SQL manuales
           logging: configService.get<string>('NODE_ENV') === 'development',
           // Configuración robusta del pool de conexiones para Render/Cloud
