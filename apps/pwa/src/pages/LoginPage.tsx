@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,9 +6,6 @@ import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import Particles from 'react-tsparticles'
-import { loadSlim } from 'tsparticles-slim'
-import type { Engine } from 'tsparticles-engine'
 import { useAuth } from '@/stores/auth.store'
 import { authService, type LoginResponse } from '@/services/auth.service'
 import { useQueryClient } from '@tanstack/react-query'
@@ -35,11 +32,6 @@ export default function LoginPage() {
   const queryClient = useQueryClient()
   const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [selectedCashierId, setSelectedCashierId] = useState<string>('')
-
-  // Inicializar partículas
-  const particlesInit = useCallback(async (engine: Engine) => {
-    await loadSlim(engine)
-  }, [])
 
   const {
     register,
@@ -117,94 +109,30 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative flex items-center justify-center p-6 overflow-hidden">
-      {/* Premium Particles Background - Optimized & Lightweight */}
-      <Particles
-        id="login-particles"
-        init={particlesInit}
-        options={{
-          background: {
-            color: { value: 'transparent' },
-          },
-          fpsLimit: 60, // Optimizado para rendimiento
-          particles: {
-            number: {
-              value: 45, // Cantidad óptima: visualmente rico pero liviano
-              density: {
-                enable: true,
-                area: 800,
-              },
-            },
-            color: {
-              value: ['#3b82f6', '#8b5cf6', '#60a5fa', '#a78bfa'], // Colores del tema
-            },
-            shape: {
-              type: 'circle', // Solo círculos para mejor rendimiento
-            },
-            opacity: {
-              value: { min: 0.3, max: 0.7 }, // Sutil y elegante
-              animation: {
-                enable: true,
-                speed: 0.5, // Animación lenta y suave
-                sync: false,
-              },
-            },
-            size: {
-              value: { min: 2, max: 4 }, // Tamaño pequeño y discreto
-              animation: {
-                enable: false, // Sin animación de tamaño para mejor rendimiento
-              },
-            },
-            links: {
-              enable: true, // Conexiones sutiles entre partículas
-              distance: 120, // Distancia moderada
-              color: '#3b82f6',
-              opacity: 0.2, // Muy sutil
-              width: 1,
-              triangles: {
-                enable: false, // Sin triángulos para mejor rendimiento
-              },
-            },
-            move: {
-              enable: true,
-              speed: 0.5, // Movimiento muy lento y elegante
-              direction: 'none',
-              random: false,
-              straight: false,
-              outModes: {
-                default: 'bounce',
-              },
-              attract: {
-                enable: false, // Sin atracción para mejor rendimiento
-              },
-            },
-          },
-          interactivity: {
-            detectsOn: 'window',
-            events: {
-              onHover: {
-                enable: true,
-                mode: 'grab', // Solo conexiones al hover (liviano)
-              },
-              onClick: {
-                enable: false, // Sin click para mejor rendimiento
-              },
-              resize: true,
-            },
-            modes: {
-              grab: {
-                distance: 140,
-                links: {
-                  opacity: 0.4, // Más visible al hover
-                  color: '#8b5cf6',
-                },
-              },
-            },
-          },
-          detectRetina: true,
-          smooth: true, // Animación suave
-        }}
-        className="absolute inset-0 w-full h-full"
-      />
+      {/* Partículas decorativas minimalistas usando CSS */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(45)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, (Math.random() - 0.5) * 30, 0],
+              opacity: [0.3, 0.7, 0.3],
+              scale: [1, 1.3, 1],
+            }}
+            transition={{
+              duration: 4 + Math.random() * 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+              ease: 'easeInOut',
+            }}
+          />
+        ))}
+      </div>
 
       {/* Content */}
       <motion.div

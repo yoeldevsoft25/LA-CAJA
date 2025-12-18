@@ -1,9 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Store } from 'lucide-react'
-import { useEffect, useState, useCallback } from 'react'
-import Particles from 'react-tsparticles'
-import { loadSlim } from 'tsparticles-slim'
-import type { Engine } from 'tsparticles-engine'
+import { useEffect, useState } from 'react'
 
 interface SimpleLoaderProps {
   onComplete?: () => void
@@ -28,11 +25,6 @@ export default function SimpleLoader({
   }
 
   const firstName = getFirstName(userName)
-
-  // Inicializar partículas
-  const particlesInit = useCallback(async (engine: Engine) => {
-    await loadSlim(engine)
-  }, [])
   const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
@@ -53,97 +45,31 @@ export default function SimpleLoader({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
-          {/* Partículas avanzadas ligeras */}
-          <Particles
-            id="loader-particles"
-            init={particlesInit}
-            options={{
-              background: {
-                color: { value: 'transparent' },
-              },
-              fpsLimit: 60,
-              particles: {
-                number: {
-                  value: 60, // Cantidad optimizada para efecto avanzado pero ligero
-                  density: {
-                    enable: true,
-                    area: 800,
-                  },
-                },
-                color: {
-                  value: ['#3b82f6', '#8b5cf6', '#60a5fa', '#a78bfa'],
-                },
-                shape: {
-                  type: 'circle', // Solo círculos para mejor rendimiento
-                },
-                opacity: {
-                  value: { min: 0.2, max: 0.6 },
-                  animation: {
-                    enable: true,
-                    speed: 0.3,
-                    sync: false,
-                  },
-                },
-                size: {
-                  value: { min: 1.5, max: 3.5 },
-                  animation: {
-                    enable: true,
-                    speed: 1,
-                    sync: false,
-                  },
-                },
-                links: {
-                  enable: true,
-                  distance: 100,
-                  color: '#3b82f6',
-                  opacity: 0.15,
-                  width: 0.8,
-                  triangles: {
-                    enable: false, // Sin triángulos para mejor rendimiento
-                  },
-                },
-                move: {
-                  enable: true,
-                  speed: 0.8,
-                  direction: 'none',
-                  random: false,
-                  straight: false,
-                  outModes: {
-                    default: 'bounce',
-                  },
-                  attract: {
-                    enable: false,
-                  },
-                },
-              },
-              interactivity: {
-                detectsOn: 'window',
-                events: {
-                  onHover: {
-                    enable: true,
-                    mode: 'grab',
-                  },
-                  onClick: {
-                    enable: false,
-                  },
-                  resize: true,
-                },
-                modes: {
-                  grab: {
-                    distance: 120,
-                    links: {
-                      opacity: 0.3,
-                      color: '#8b5cf6',
-                    },
-                  },
-                },
-              },
-              detectRetina: true,
-              smooth: true,
-            }}
-            className="absolute inset-0 w-full h-full"
-          />
-          {/* Logo animado - sobre las partículas */}
+          {/* Partículas decorativas minimalistas usando CSS */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(60)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                }}
+                animate={{
+                  y: [0, (Math.random() - 0.5) * 40, 0],
+                  opacity: [0.2, 0.6, 0.2],
+                  scale: [1, 1.5, 1],
+                }}
+                transition={{
+                  duration: 3 + Math.random() * 3,
+                  repeat: Infinity,
+                  delay: Math.random() * 3,
+                  ease: 'easeInOut',
+                }}
+              />
+            ))}
+          </div>
+          {/* Logo animado */}
           <motion.div
             className="flex flex-col items-center gap-4 relative z-10"
             initial={{ scale: 0.8, opacity: 0 }}
