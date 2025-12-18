@@ -24,6 +24,8 @@ import { CreateJournalEntryDto } from './dto/create-journal-entry.dto';
 import { GetJournalEntriesDto } from './dto/get-journal-entries.dto';
 import { CreateAccountMappingDto } from './dto/create-account-mapping.dto';
 import { ExportAccountingDto } from './dto/export-accounting.dto';
+import { GetBalanceSheetDto } from './dto/get-balance-sheet.dto';
+import { GetIncomeStatementDto } from './dto/get-income-statement.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccountingAccountMapping } from '../database/entities/accounting-account-mapping.entity';
@@ -242,6 +244,35 @@ export class AccountingController {
       accountId,
       new Date(startDate),
       new Date(endDate),
+    );
+  }
+
+  /**
+   * Balance General
+   */
+  @Get('reports/balance-sheet')
+  async getBalanceSheet(
+    @Request() req: any,
+    @Query() dto: GetBalanceSheetDto,
+  ) {
+    const storeId = req.user.store_id;
+    const asOfDate = dto.as_of_date ? new Date(dto.as_of_date) : new Date();
+    return this.accountingService.getBalanceSheet(storeId, asOfDate);
+  }
+
+  /**
+   * Estado de Resultados (Pérdidas y Ganancias)
+   */
+  @Get('reports/income-statement')
+  async getIncomeStatement(
+    @Request() req: any,
+    @Query() dto: GetIncomeStatementDto,
+  ) {
+    const storeId = req.user.store_id;
+    return this.accountingService.getIncomeStatement(
+      storeId,
+      new Date(dto.start_date),
+      new Date(dto.end_date),
     );
   }
 }

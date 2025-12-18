@@ -8,16 +8,32 @@ class PushNotificationsService {
   private readonly VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
 
   /**
+   * Verifica si las push notifications están disponibles y configuradas
+   */
+  isAvailable(): boolean {
+    return (
+      ('serviceWorker' in navigator) &&
+      ('PushManager' in window) &&
+      !!this.VAPID_PUBLIC_KEY
+    )
+  }
+
+  /**
    * Solicita permiso y suscribe a push notifications
    */
   async requestPermissionAndSubscribe(): Promise<PushSubscription | null> {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.warn('[PushNotifications] Push notifications no soportadas')
+      if (import.meta.env.DEV) {
+        console.debug('[PushNotifications] Push notifications no soportadas en este navegador')
+      }
       return null
     }
 
     if (!this.VAPID_PUBLIC_KEY) {
-      console.warn('[PushNotifications] VAPID_PUBLIC_KEY no configurada')
+      // En desarrollo, solo mostrar como debug para no saturar la consola
+      if (import.meta.env.DEV) {
+        console.debug('[PushNotifications] VAPID_PUBLIC_KEY no configurada (opcional en desarrollo)')
+      }
       return null
     }
 

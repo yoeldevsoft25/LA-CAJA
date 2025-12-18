@@ -24,6 +24,7 @@ import PromotionsPage from './pages/PromotionsPage'
 import WarehousesPage from './pages/WarehousesPage'
 import TransfersPage from './pages/TransfersPage'
 import SuppliersPage from './pages/SuppliersPage'
+import PurchaseOrdersPage from './pages/PurchaseOrdersPage'
 import FiscalConfigPage from './pages/FiscalConfigPage'
 import FiscalInvoicesPage from './pages/FiscalInvoicesPage'
 import FiscalInvoiceDetailPage from './pages/FiscalInvoiceDetailPage'
@@ -93,10 +94,13 @@ function App() {
         .then(() => {
           console.log('[PushNotifications] Service worker registrado')
           // Intentar suscribirse automáticamente después de un pequeño delay
-          // para dar tiempo a que el service worker esté listo
+          // solo si las push notifications están disponibles y configuradas
           setTimeout(() => {
             subscribe().catch((error) => {
-              console.error('[PushNotifications] Error al suscribirse:', error)
+              // Solo mostrar error si no es por falta de configuración (ya se maneja internamente)
+              if (import.meta.env.DEV && error?.message && !error.message.includes('VAPID')) {
+                console.error('[PushNotifications] Error al suscribirse:', error)
+              }
             })
           }, 2000)
         })
@@ -148,6 +152,7 @@ function App() {
           <Route path="warehouses" element={<WarehousesPage />} />
           <Route path="transfers" element={<TransfersPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
           <Route path="fiscal-config" element={<FiscalConfigPage />} />
           <Route path="fiscal-invoices" element={<FiscalInvoicesPage />} />
           <Route path="fiscal-invoices/:id" element={<FiscalInvoiceDetailPage />} />

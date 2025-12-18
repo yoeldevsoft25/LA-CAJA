@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit, Trash2, Truck, BarChart3, Package, Phone, Mail } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Plus, Edit, Trash2, Truck, BarChart3, Package, Phone, Mail, ShoppingBag } from 'lucide-react'
 import { suppliersService, Supplier } from '@/services/suppliers.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +33,7 @@ const supplierSchema = z.object({
 type SupplierFormData = z.infer<typeof supplierSchema>
 
 export default function SuppliersPage() {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
@@ -509,10 +511,19 @@ export default function SuppliersPage() {
           <TabsContent value="orders" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  Órdenes de Compra de {selectedSupplier.name}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="w-5 h-5" />
+                    Órdenes de Compra de {selectedSupplier.name}
+                  </CardTitle>
+                  <Button
+                    onClick={() => navigate(`/purchase-orders?supplier_id=${selectedSupplier.id}`)}
+                    size="sm"
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-2" />
+                    Nueva Orden
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {purchaseOrders.length === 0 ? (

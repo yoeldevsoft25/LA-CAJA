@@ -118,9 +118,22 @@ class NotificationsWebSocketService {
     })
 
     this.socket.on('error', (error: any) => {
+      // No mostrar errores de autenticación como errores críticos (son esperados cuando no hay token o el servidor no está disponible)
       const errorMessage = error?.message || error?.toString() || 'Error desconocido'
-      const errorDetails = error?.data || error
-      console.error('[NotificationsWS] Error:', errorMessage, errorDetails)
+      if (errorMessage.includes('autenticado') || errorMessage.includes('auth')) {
+        // Solo mostrar como warning, no como error crítico
+        console.debug('[NotificationsWS] Autenticación requerida o servidor no disponible')
+        return
+      }
+      console.error('[NotificationsWS] Error:', errorMessage, error?.data)
+    })
+
+    // Manejar errores de conexión
+    this.socket.on('connect_error', (error: any) => {
+      // Solo mostrar como debug en desarrollo, no inundar la consola
+      if (import.meta.env.DEV) {
+        console.debug('[NotificationsWS] Error de conexión (esperado si el backend no está corriendo):', error.message)
+      }
     })
   }
 }

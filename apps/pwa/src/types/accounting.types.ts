@@ -26,6 +26,9 @@ export interface ChartOfAccount {
   is_detail: boolean
   status: AccountStatus
   description: string | null
+  allows_entries?: boolean // Si permite asientos directos
+  is_active?: boolean // Estado activo/inactivo
+  metadata?: Record<string, any> // Metadatos adicionales
   created_at: string
   updated_at: string
   // Campos calculados
@@ -55,6 +58,7 @@ export enum EntryStatus {
 export interface EntryLine {
   id: string
   entry_id: string
+  account_id: string
   account_code: string
   account_name: string
   description: string | null
@@ -62,6 +66,10 @@ export interface EntryLine {
   credit_amount_bs: number | string
   debit_amount_usd: number | string
   credit_amount_usd: number | string
+  cost_center?: string | null
+  project_code?: string | null
+  tax_code?: string | null
+  metadata?: Record<string, any> | null
 }
 
 export interface AccountingEntry {
@@ -76,12 +84,18 @@ export interface AccountingEntry {
   total_debit_usd: number | string
   total_credit_usd: number | string
   status: EntryStatus
-  source_entity_type: string | null
-  source_entity_id: string | null
+  source_type?: string | null // Tipo de fuente (sale, purchase, etc.)
+  source_id?: string | null // ID de la entidad fuente
+  reference_number?: string | null
+  exchange_rate?: number | null
+  currency?: 'BS' | 'USD' | 'MIXED' | null
+  is_auto_generated?: boolean // Si fue generado automáticamente
+  metadata?: Record<string, any> | null
   created_at: string
   updated_at: string
   posted_at: string | null
   cancelled_at: string | null
+  cancelled_reason?: string | null
   lines: EntryLine[]
 }
 
@@ -152,7 +166,11 @@ export interface CreateAccountDto {
   name: string
   account_type: AccountType
   parent_id?: string | null
+  level?: number // 1-5
+  is_active?: boolean
+  allows_entries?: boolean
   description?: string | null
+  metadata?: Record<string, any>
 }
 
 export interface UpdateAccountDto {
@@ -164,15 +182,27 @@ export interface UpdateAccountDto {
 export interface CreateEntryDto {
   entry_date: string
   entry_type: EntryType
+  source_type?: string
+  source_id?: string
   description: string
+  reference_number?: string
+  exchange_rate?: number
+  currency?: 'BS' | 'USD' | 'MIXED'
   lines: Array<{
+    account_id: string
     account_code: string
+    account_name: string
     description?: string | null
-    debit_amount_bs?: number
-    credit_amount_bs?: number
-    debit_amount_usd?: number
-    credit_amount_usd?: number
+    debit_amount_bs: number
+    credit_amount_bs: number
+    debit_amount_usd: number
+    credit_amount_usd: number
+    cost_center?: string
+    project_code?: string
+    tax_code?: string
+    metadata?: Record<string, any>
   }>
+  metadata?: Record<string, any>
 }
 
 export interface CreateMappingDto {
@@ -189,9 +219,53 @@ export interface UpdateMappingDto {
 }
 
 export interface CreateExportDto {
-  format: ExportFormat
-  standard?: AccountingStandard | null
+  export_type: ExportFormat // Cambiado de 'format' a 'export_type'
+  format_standard?: AccountingStandard | null // Cambiado de 'standard' a 'format_standard'
   start_date: string
   end_date: string
+  entry_types?: string[]
+  account_codes?: string[]
+}
+
+// Tipos para reportes
+export interface BalanceSheetAccount {
+  account_code: string
+  account_name: string
+  balance_bs: number
+  balance_usd: number
+}
+
+export interface BalanceSheetReport {
+  assets: BalanceSheetAccount[]
+  liabilities: BalanceSheetAccount[]
+  equity: BalanceSheetAccount[]
+  totals: {
+    total_assets_bs: number
+    total_assets_usd: number
+    total_liabilities_bs: number
+    total_liabilities_usd: number
+    total_equity_bs: number
+    total_equity_usd: number
+  }
+}
+
+export interface IncomeStatementAccount {
+  account_code: string
+  account_name: string
+  amount_bs: number
+  amount_usd: number
+}
+
+export interface IncomeStatementReport {
+  revenues: IncomeStatementAccount[]
+  expenses: IncomeStatementAccount[]
+  totals: {
+    total_revenue_bs: number
+    total_revenue_usd: number
+    total_expenses_bs: number
+    total_expenses_usd: number
+    net_income_bs: number
+    net_income_usd: number
+  }
 }
 

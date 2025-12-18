@@ -91,8 +91,8 @@ export default function ExportFormModal({
 
   const onSubmit = (data: ExportFormData) => {
     const createData: CreateExportDto = {
-      format: data.format as ExportFormat,
-      standard: (data.standard || null) as AccountingStandard | null,
+      export_type: data.format as ExportFormat,
+      format_standard: (data.standard || null) as AccountingStandard | null,
       start_date: format(data.start_date, 'yyyy-MM-dd'),
       end_date: format(data.end_date, 'yyyy-MM-dd'),
     }

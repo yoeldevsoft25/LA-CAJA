@@ -13,9 +13,11 @@ import MappingFormModal from '@/components/accounting/MappingFormModal'
 import ExportsList from '@/components/accounting/ExportsList'
 import ExportFormModal from '@/components/accounting/ExportFormModal'
 import AccountBalanceView from '@/components/accounting/AccountBalanceView'
+import BalanceSheetReport from '@/components/accounting/BalanceSheetReport'
+import IncomeStatementReport from '@/components/accounting/IncomeStatementReport'
 import { chartOfAccountsService, accountMappingsService } from '@/services/accounting.service'
 import type { AccountingEntry, AccountMapping } from '@/types/accounting.types'
-import { FileText, BookOpen, Download, Settings, TrendingUp, Plus } from 'lucide-react'
+import { FileText, BookOpen, Download, Settings, TrendingUp, Plus, BarChart3 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 /**
@@ -112,6 +114,10 @@ export default function AccountingPage() {
             <TrendingUp className="w-4 h-4 mr-2" />
             Balance
           </TabsTrigger>
+          <TabsTrigger value="reports">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Reportes
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-4">
@@ -190,6 +196,21 @@ export default function AccountingPage() {
 
         <TabsContent value="balance" className="space-y-4">
           <AccountBalanceView />
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          <Tabs defaultValue="balance-sheet" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="balance-sheet">Balance General</TabsTrigger>
+              <TabsTrigger value="income-statement">Estado de Resultados</TabsTrigger>
+            </TabsList>
+            <TabsContent value="balance-sheet">
+              <BalanceSheetReport />
+            </TabsContent>
+            <TabsContent value="income-statement">
+              <IncomeStatementReport />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 

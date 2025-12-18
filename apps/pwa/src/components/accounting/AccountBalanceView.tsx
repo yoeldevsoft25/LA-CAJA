@@ -26,8 +26,8 @@ export default function AccountBalanceView() {
     queryKey: ['accounting', 'balance', selectedAccountId, startDate, endDate],
     queryFn: () =>
       accountBalanceService.getBalance(selectedAccountId, {
-        start_date: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
-        end_date: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
+        start_date: format(startDate!, 'yyyy-MM-dd'),
+        end_date: format(endDate!, 'yyyy-MM-dd'),
       }),
     enabled: !!selectedAccountId && !!startDate && !!endDate,
   })

@@ -14,6 +14,8 @@ import type {
   CreateExportDto,
   EntryType,
   EntryStatus,
+  BalanceSheetReport,
+  IncomeStatementReport,
 } from '@/types/accounting.types'
 
 /**
@@ -23,8 +25,8 @@ export const chartOfAccountsService = {
   /**
    * Obtiene todas las cuentas
    */
-  async getAll(): Promise<ChartOfAccount[]> {
-    const response = await api.get<ChartOfAccount[]>('/accounting/accounts')
+  async getAll(params?: { active_only?: boolean }): Promise<ChartOfAccount[]> {
+    const response = await api.get<ChartOfAccount[]>('/accounting/accounts', { params })
     return response.data
   },
 
@@ -124,8 +126,8 @@ export const accountingEntriesService = {
   /**
    * Cancela un asiento
    */
-  async cancel(id: string): Promise<AccountingEntry> {
-    const response = await api.post<AccountingEntry>(`/accounting/entries/${id}/cancel`)
+  async cancel(id: string, reason: string): Promise<AccountingEntry> {
+    const response = await api.post<AccountingEntry>(`/accounting/entries/${id}/cancel`, { reason })
     return response.data
   },
 }
@@ -182,6 +184,7 @@ export const accountingExportsService = {
    * Crea una nueva exportación
    */
   async create(data: CreateExportDto): Promise<AccountingExport> {
+    // El backend espera export_type, pero mantenemos compatibilidad
     const response = await api.post<AccountingExport>('/accounting/export', data)
     return response.data
   },
@@ -222,12 +225,40 @@ export const accountBalanceService = {
    */
   async getBalance(
     accountId: string,
-    params?: {
-      start_date?: string
-      end_date?: string
+    params: {
+      start_date: string
+      end_date: string
     }
   ): Promise<AccountBalance> {
     const response = await api.get<AccountBalance>(`/accounting/balance/${accountId}`, {
+      params,
+    })
+    return response.data
+  },
+}
+
+/**
+ * Servicio para Reportes Contables
+ */
+export const accountingReportsService = {
+  /**
+   * Obtiene el Balance General
+   */
+  async getBalanceSheet(params?: { as_of_date?: string }): Promise<BalanceSheetReport> {
+    const response = await api.get<BalanceSheetReport>('/accounting/reports/balance-sheet', {
+      params,
+    })
+    return response.data
+  },
+
+  /**
+   * Obtiene el Estado de Resultados
+   */
+  async getIncomeStatement(params: {
+    start_date: string
+    end_date: string
+  }): Promise<IncomeStatementReport> {
+    const response = await api.get<IncomeStatementReport>('/accounting/reports/income-statement', {
       params,
     })
     return response.data

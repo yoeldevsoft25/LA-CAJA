@@ -12,8 +12,11 @@ import { AccountBalance } from '../database/entities/account-balance.entity';
 import { AccountingExport } from '../database/entities/accounting-export.entity';
 import { AccountingERPSync } from '../database/entities/accounting-erp-sync.entity';
 import { Sale } from '../database/entities/sale.entity';
+import { SaleItem } from '../database/entities/sale-item.entity';
 import { PurchaseOrder } from '../database/entities/purchase-order.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
+import { InventoryMovement } from '../database/entities/inventory-movement.entity';
+import { ProductLot } from '../database/entities/product-lot.entity';
 
 @Module({
   imports: [
@@ -26,8 +29,11 @@ import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
       AccountingExport,
       AccountingERPSync,
       Sale,
+      SaleItem,
       PurchaseOrder,
       FiscalInvoice,
+      InventoryMovement,
+      ProductLot,
     ]),
   ],
   controllers: [AccountingController],

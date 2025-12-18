@@ -9,10 +9,11 @@ export function usePushNotifications() {
   const [isSupported, setIsSupported] = useState(false)
 
   useEffect(() => {
-    setIsSupported(
-      'serviceWorker' in navigator && 'PushManager' in window
-    )
-    pushNotificationsService.isSubscribed().then(setIsSubscribed)
+    const supported = pushNotificationsService.isAvailable()
+    setIsSupported(supported)
+    if (supported) {
+      pushNotificationsService.isSubscribed().then(setIsSubscribed)
+    }
   }, [])
 
   const subscribe = async () => {

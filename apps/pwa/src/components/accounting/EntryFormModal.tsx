@@ -20,18 +20,29 @@ import toast from 'react-hot-toast'
 
 const entryLineSchema = z.object({
   account_code: z.string().min(1, 'Cuenta requerida'),
+  account_id: z.string().optional(), // Para enviar al backend
+  account_name: z.string().optional(), // Para enviar al backend
   description: z.string().nullable().optional(),
-  debit_amount_bs: z.number().min(0).optional(),
-  credit_amount_bs: z.number().min(0).optional(),
-  debit_amount_usd: z.number().min(0).optional(),
-  credit_amount_usd: z.number().min(0).optional(),
+  debit_amount_bs: z.number().min(0),
+  credit_amount_bs: z.number().min(0),
+  debit_amount_usd: z.number().min(0),
+  credit_amount_usd: z.number().min(0),
 }).refine(
   (data) => {
-    const hasDebit = (data.debit_amount_bs && data.debit_amount_bs > 0) || (data.debit_amount_usd && data.debit_amount_usd > 0)
-    const hasCredit = (data.credit_amount_bs && data.credit_amount_bs > 0) || (data.credit_amount_usd && data.credit_amount_usd > 0)
-    return hasDebit !== hasCredit // Debe tener débito o crédito, pero no ambos
+    // No puede tener débito y crédito simultáneos en BS
+    const hasDebitBs = data.debit_amount_bs > 0
+    const hasCreditBs = data.credit_amount_bs > 0
+    if (hasDebitBs && hasCreditBs) return false
+    
+    // No puede tener débito y crédito simultáneos en USD
+    const hasDebitUsd = data.debit_amount_usd > 0
+    const hasCreditUsd = data.credit_amount_usd > 0
+    if (hasDebitUsd && hasCreditUsd) return false
+    
+    // Debe tener al menos un monto mayor a 0
+    return hasDebitBs || hasCreditBs || hasDebitUsd || hasCreditUsd
   },
-  { message: 'Cada línea debe tener débito o crédito, pero no ambos' }
+  { message: 'Cada línea debe tener débito o crédito (pero no ambos), y al menos un monto > 0' }
 )
 
 const entrySchema = z.object({
@@ -192,14 +203,22 @@ export default function EntryFormModal({
       entry_date: format(data.entry_date, 'yyyy-MM-dd'),
       entry_type: data.entry_type as EntryType,
       description: data.description,
-      lines: data.lines.map((line) => ({
-        account_code: line.account_code,
-        description: line.description || null,
-        debit_amount_bs: line.debit_amount_bs || 0,
-        credit_amount_bs: line.credit_amount_bs || 0,
-        debit_amount_usd: line.debit_amount_usd || 0,
-        credit_amount_usd: line.credit_amount_usd || 0,
-      })),
+      lines: data.lines.map((line) => {
+        const account = accounts?.find(acc => acc.code === line.account_code)
+        if (!account) {
+          throw new Error(`Cuenta ${line.account_code} no encontrada`)
+        }
+        return {
+          account_id: account.id,
+          account_code: line.account_code,
+          account_name: account.name,
+          description: line.description || null,
+          debit_amount_bs: line.debit_amount_bs || 0,
+          credit_amount_bs: line.credit_amount_bs || 0,
+          debit_amount_usd: line.debit_amount_usd || 0,
+          credit_amount_usd: line.credit_amount_usd || 0,
+        }
+      }),
     }
 
     createMutation.mutate(createData)
@@ -326,7 +345,14 @@ export default function EntryFormModal({
                           <td className="p-2">
                             <Select
                               value={watch(`lines.${index}.account_code`) || undefined}
-                              onValueChange={(value) => setValue(`lines.${index}.account_code`, value)}
+                              onValueChange={(value) => {
+                                const selectedAccount = accounts?.find(acc => acc.code === value)
+                                if (selectedAccount) {
+                                  setValue(`lines.${index}.account_code`, selectedAccount.code)
+                                  setValue(`lines.${index}.account_id`, selectedAccount.id, { shouldValidate: false })
+                                  setValue(`lines.${index}.account_name`, selectedAccount.name, { shouldValidate: false })
+                                }
+                              }}
                             >
                               <SelectTrigger className="w-[200px]">
                                 <SelectValue placeholder="Seleccionar" />

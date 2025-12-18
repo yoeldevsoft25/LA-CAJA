@@ -11,29 +11,65 @@
 
 **Última actualización:** Enero 2025
 
-### ✅ Completado (Backend)
-- **Fase 1: Paridad Funcional** - ✅ 100% completada
-  - Turnos y cortes X/Z
-  - Multipagos con topes
-  - Descuentos con autorización
-  - Modo caja rápida
-- **Fase 2: Funcionalidades Avanzadas** - ✅ 100% completada
-  - Variantes de productos
-  - Lotes y vencimientos
-  - Seriales
-  - Múltiples consecutivos de factura
-  - Cuentas abiertas (mesas y órdenes)
-  - Periféricos y productos con peso
-  - Listas de precio y promociones (integración end-to-end)
+### ✅ Completado (Backend) - 100%
+
+#### Fase 1: Paridad Funcional - ✅ 100% completada
+- ✅ Turnos y cortes X/Z (Migración: `13_shifts_and_cuts.sql`)
+- ✅ Multipagos con topes (Migración: `14_payment_methods_and_cash_movements.sql`)
+- ✅ Descuentos con autorización (Migración: `15_discounts_and_authorizations.sql`)
+- ✅ Modo caja rápida (Migración: `16_fast_checkout_configs.sql`)
+
+#### Fase 2: Funcionalidades Avanzadas - ✅ 100% completada
+- ✅ Variantes de productos (Migración: `17_product_variants.sql`)
+- ✅ Lotes y vencimientos (Migración: `18_product_lots.sql`)
+- ✅ Seriales (Migración: `19_product_serials.sql`)
+- ✅ Múltiples consecutivos de factura (Migración: `20_invoice_series.sql`)
+- ✅ Cuentas abiertas (mesas y órdenes) (Migración: `21_tables_and_orders.sql`)
+- ✅ Periféricos y productos con peso (Migración: `22_peripherals_and_weight.sql`)
+- ✅ Listas de precio y promociones (Migración: `23_price_lists_and_promotions.sql`)
+
+#### Fase 3: Integraciones y Sistemas Avanzados - ✅ 100% completada
+- ✅ Tasa BCV + fallback manual (Migración: `24_exchange_rates.sql`)
+- ✅ Multi-bodega y transferencias (Migración: `25_warehouses_and_transfers.sql`)
+- ✅ Órdenes de compra y recepción (Migración: `26_suppliers_and_purchase_orders.sql`)
+- ✅ Facturación fiscal/tributaria (Migración: `27_fiscal_invoices.sql`)
+- ✅ IA/ML para predicciones y recomendaciones (Migración: `28_ml_features.sql`)
+- ✅ Analytics avanzados en tiempo real (Migración: `29_realtime_analytics.sql`)
+- ✅ Notificaciones push inteligentes (Migración: `30_notifications.sql`)
+- ✅ Integración con sistemas contables (Migración: `31_accounting_integration.sql`)
+
+#### Fase 4: Reportes y Analytics - ✅ 100% completada
+- ✅ Reportes avanzados (ventas, productos, deudas, turnos, arqueos, vencimientos, seriales, rotación, compras, facturas fiscales)
+- ✅ Exportación PDF (todos los reportes)
+- ✅ Dashboard ejecutivo con KPIs
+
+**Total:** 31 migraciones SQL, 40+ módulos backend implementados
 
 **Ver detalles completos:** `docs/ESTADO_IMPLEMENTACION_ACTUAL.md`
 
-### 🔄 Pendiente
-- Frontend para todas las funcionalidades
-- Integración frontend con periféricos (balanzas, impresoras, scanners)
-- Reportes avanzados y exportación PDF
-- Tasa BCV + fallback manual
-- IA/ML y Analytics avanzados
+### 🔄 Pendiente (Frontend)
+
+**Ver documento completo:** `docs/FRONTEND_PENDIENTE.md`
+
+#### Prioridad Alta
+- UI para módulo contable (plan de cuentas, asientos, reportes)
+- UI para multi-bodega y transferencias
+- UI para órdenes de compra y proveedores
+- UI para facturación fiscal
+- UI para dashboard ejecutivo y analytics en tiempo real
+- UI para notificaciones push
+
+#### Prioridad Media
+- Integración frontend con periféricos:
+  - Balanzas (Web Serial API)
+  - Impresoras (ESC/POS)
+  - Scanners (Web Serial/HID)
+- Mejoras de UX/UI en funcionalidades existentes
+
+#### Prioridad Baja
+- Testing E2E
+- Optimizaciones de performance
+- Documentación de usuario
 
 ---
 
@@ -80,7 +116,7 @@
 
 ### 1.2 Gaps Identificados vs Competencia
 
-#### Funcionalidades Básicas Faltantes
+#### Funcionalidades Básicas - ✅ 100% Completadas (Backend)
 - ✅ **COMPLETADO** Turnos de cajeros con corte X/Z (Migración: `13_shifts_and_cuts.sql`)
 - ✅ **COMPLETADO** Multipagos con topes y restricciones (Migración: `14_payment_methods_and_cash_movements.sql`)
 - ✅ **COMPLETADO** Descuentos con autorización por PIN/rol (Migración: `15_discounts_and_authorizations.sql`)
@@ -92,20 +128,24 @@
 - ✅ **COMPLETADO** Cuentas abiertas (mesas para restaurantes) (Migración: `21_tables_and_orders.sql`)
 - ✅ **COMPLETADO** Configuración de periféricos (scanner, impresoras, gavetas, balanzas) (Migración: `22_peripherals_and_weight.sql`)
 - ✅ **COMPLETADO** Listas de precio y ofertas con vigencia (Migración: `23_price_lists_and_promotions.sql`)
+- ✅ **COMPLETADO** Tasa BCV + fallback manual (Migración: `24_exchange_rates.sql`)
+- ✅ **COMPLETADO** Reportes avanzados y exportación PDF (Módulo: `apps/api/src/reports/`)
+
+#### Funcionalidades Avanzadas - ✅ 100% Completadas (Backend)
+- ✅ **COMPLETADO** Multi-bodega y transferencias (Migración: `25_warehouses_and_transfers.sql`)
+- ✅ **COMPLETADO** Órdenes de compra y recepción (Migración: `26_suppliers_and_purchase_orders.sql`)
+- ✅ **COMPLETADO** Facturación fiscal/tributaria (Migración: `27_fiscal_invoices.sql`)
+- ✅ **COMPLETADO** IA/ML para predicciones y recomendaciones (Migración: `28_ml_features.sql`)
+- ✅ **COMPLETADO** Analytics avanzados en tiempo real (Migración: `29_realtime_analytics.sql`)
+- ✅ **COMPLETADO** Notificaciones push inteligentes (Migración: `30_notifications.sql`)
+- ✅ **COMPLETADO** Dashboard ejecutivo con KPIs (Módulo: `apps/api/src/dashboard/`)
+- ✅ **COMPLETADO** Integración con sistemas contables (Migración: `31_accounting_integration.sql`)
+
+#### Pendiente (Frontend)
 - 🔄 Integración frontend con balanzas (Web Serial API) - Pendiente
 - 🔄 Integración frontend con impresoras (ESC/POS) - Pendiente
 - 🔄 Integración frontend con scanners (Web Serial/HID) - Pendiente
-- ❌ Reportes avanzados y exportación PDF - Pendiente
-
-#### Funcionalidades Avanzadas Faltantes
-- ❌ IA/ML para predicciones y recomendaciones
-- ❌ Analytics avanzados en tiempo real
-- ❌ Dashboard ejecutivo con KPIs
-- ❌ Notificaciones push inteligentes
-- ❌ Integración con sistemas contables
-- ❌ Facturación fiscal/tributaria
-- ❌ Multi-bodega y transferencias
-- ❌ Órdenes de compra y recepción
+- 🔄 UI para todas las funcionalidades avanzadas - Ver `docs/FRONTEND_PENDIENTE.md`
 
 ---
 
@@ -739,20 +779,29 @@
 10. ✅ **COMPLETADO** Periféricos y productos con peso (Migración: `22_peripherals_and_weight.sql`)
 11. ✅ **COMPLETADO** Listas de precio y promociones (Migración: `23_price_lists_and_promotions.sql`)
 
+#### ✅ Completado (Backend) - 100%
+12. ✅ **COMPLETADO** Tasa BCV + fallback manual (Migración: `24_exchange_rates.sql`)
+13. ✅ **COMPLETADO** Multi-bodega y transferencias (Migración: `25_warehouses_and_transfers.sql`)
+14. ✅ **COMPLETADO** Órdenes de compra y proveedores (Migración: `26_suppliers_and_purchase_orders.sql`)
+15. ✅ **COMPLETADO** Facturación fiscal/tributaria (Migración: `27_fiscal_invoices.sql`)
+16. ✅ **COMPLETADO** IA/ML avanzado (Migración: `28_ml_features.sql`)
+17. ✅ **COMPLETADO** Analytics en tiempo real (Migración: `29_realtime_analytics.sql`)
+18. ✅ **COMPLETADO** Notificaciones push inteligentes (Migración: `30_notifications.sql`)
+19. ✅ **COMPLETADO** Sistema contable integrado (Migración: `31_accounting_integration.sql`)
+20. ✅ **COMPLETADO** Reportes avanzados y exportación PDF (Módulo: `apps/api/src/reports/`)
+21. ✅ **COMPLETADO** Dashboard ejecutivo con KPIs (Módulo: `apps/api/src/dashboard/`)
+
 #### 🔄 Pendiente (Frontend)
-- UI para todas las funcionalidades implementadas
-- Integración frontend con balanzas (Web Serial API)
-- Integración frontend con impresoras (ESC/POS)
-- Integración frontend con scanners (Web Serial/HID)
+**Ver documento completo:** `docs/FRONTEND_PENDIENTE.md`
 
-#### 🔄 Pendiente (Backend)
-- Tasa BCV + fallback manual
-- Reportes avanzados (por turno/cajero, margen, rotación, etc.)
-- Exportación PDF
-
-#### 🔄 Pendiente (Futuro)
-- IA/ML básico (predicciones, recomendaciones)
-- Analytics avanzados y dashboard ejecutivo
+**Resumen:**
+- UI para módulo contable (plan de cuentas, asientos, reportes)
+- UI para multi-bodega y transferencias
+- UI para órdenes de compra y proveedores
+- UI para facturación fiscal
+- UI para dashboard ejecutivo y analytics en tiempo real
+- UI para notificaciones push
+- Integración frontend con periféricos (balanzas, impresoras, scanners)
 
 ### 10.4 Recomendaciones Estratégicas
 

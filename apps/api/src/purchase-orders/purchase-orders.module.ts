@@ -9,6 +9,8 @@ import { Product } from '../database/entities/product.entity';
 import { Warehouse } from '../database/entities/warehouse.entity';
 import { InventoryModule } from '../inventory/inventory.module';
 import { WarehousesModule } from '../warehouses/warehouses.module';
+import { AccountingModule } from '../accounting/accounting.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { WarehousesModule } from '../warehouses/warehouses.module';
     ]),
     InventoryModule,
     WarehousesModule,
+    forwardRef(() => AccountingModule),
   ],
   controllers: [PurchaseOrdersController],
   providers: [PurchaseOrdersService],

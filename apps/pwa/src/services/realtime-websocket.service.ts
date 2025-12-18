@@ -78,8 +78,10 @@ class RealtimeWebSocketService {
       console.log('[RealtimeWS] Desconectado')
     })
 
-    this.socket.on('connected', (data: { message: string }) => {
-      console.log('[RealtimeWS]', data.message)
+    this.socket.on('connected', (data?: { message?: string }) => {
+      if (data?.message) {
+        console.log('[RealtimeWS]', data.message)
+      }
     })
 
     this.socket.on('subscribed', (data: { channel: string }) => {
@@ -98,9 +100,23 @@ class RealtimeWebSocketService {
       this.heatmapUpdateCallbacks.forEach((callback) => callback(data))
     })
 
-    this.socket.on('error', (error: { message: string }) => {
-      console.error('[RealtimeWS] Error:', error.message)
-      this.errorCallbacks.forEach((callback) => callback(error.message))
+    this.socket.on('error', (error: { message?: string }) => {
+      const errorMessage = error?.message || 'Error desconocido'
+      // No mostrar errores de autenticación como errores críticos
+      if (errorMessage.includes('autenticado') || errorMessage.includes('auth')) {
+        console.debug('[RealtimeWS] Autenticación requerida o servidor no disponible')
+        return
+      }
+      console.error('[RealtimeWS] Error:', errorMessage)
+      this.errorCallbacks.forEach((callback) => callback(errorMessage))
+    })
+
+    // Manejar errores de conexión
+    this.socket.on('connect_error', (error: any) => {
+      // Solo mostrar como debug en desarrollo, no inundar la consola
+      if (import.meta.env.DEV) {
+        console.debug('[RealtimeWS] Error de conexión (esperado si el backend no está corriendo):', error.message)
+      }
     })
   }
 

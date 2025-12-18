@@ -18,6 +18,7 @@ import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
+import { AccountingService } from '../accounting/accounting.service';
 import { randomUUID } from 'crypto';
 
 /**
@@ -40,6 +41,7 @@ export class PurchaseOrdersService {
     private warehouseRepository: Repository<Warehouse>,
     private inventoryService: InventoryService,
     private warehousesService: WarehousesService,
+    private accountingService: AccountingService,
     private dataSource: DataSource,
   ) {}
 
@@ -322,7 +324,22 @@ export class PurchaseOrdersService {
         order.note = (order.note ? order.note + '\n' : '') + dto.note;
       }
 
-      return manager.save(PurchaseOrder, order);
+      const savedOrder = await manager.save(PurchaseOrder, order);
+
+      // Generar asiento contable automático si la orden está completada
+      if (savedOrder.status === 'completed') {
+        try {
+          await this.accountingService.generateEntryFromPurchaseOrder(storeId, savedOrder);
+        } catch (error) {
+          // Log error pero no fallar la recepción
+          this.logger.error(
+            `Error generando asiento contable para orden ${savedOrder.id}`,
+            error instanceof Error ? error.stack : String(error),
+          );
+        }
+      }
+
+      return savedOrder;
     });
   }
 

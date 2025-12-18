@@ -6,13 +6,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { LoginRateLimitGuard } from './guards/login-rate-limit.guard';
 import { Store } from '../database/entities/store.entity';
 import { Profile } from '../database/entities/profile.entity';
 import { StoreMember } from '../database/entities/store-member.entity';
+import { RefreshToken } from '../database/entities/refresh-token.entity';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Store, Profile, StoreMember]),
+    TypeOrmModule.forFeature([Store, Profile, StoreMember, RefreshToken]),
+    SecurityModule, // ✅ Módulo de seguridad para auditoría
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -25,10 +29,12 @@ import { StoreMember } from '../database/entities/store-member.entity';
           );
         }
 
+        // Access tokens cortos (15 min) para mayor seguridad
+        // Refresh tokens se manejan en AuthService
         return {
           secret: jwtSecret,
           signOptions: {
-            expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
+            expiresIn: '15m', // ✅ Access tokens cortos
           },
         };
       },
@@ -36,7 +42,7 @@ import { StoreMember } from '../database/entities/store-member.entity';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, LoginRateLimitGuard],
   exports: [AuthService],
 })
 export class AuthModule {}

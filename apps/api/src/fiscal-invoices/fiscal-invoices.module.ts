@@ -10,6 +10,8 @@ import { Sale } from '../database/entities/sale.entity';
 import { Customer } from '../database/entities/customer.entity';
 import { Product } from '../database/entities/product.entity';
 import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
+import { AccountingModule } from '../accounting/accounting.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
       Product,
     ]),
     InvoiceSeriesModule,
+    forwardRef(() => AccountingModule),
   ],
   controllers: [FiscalInvoicesController],
   providers: [FiscalInvoicesService, SeniatIntegrationService],

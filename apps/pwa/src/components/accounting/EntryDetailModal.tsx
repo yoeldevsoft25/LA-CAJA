@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -66,11 +70,16 @@ export default function EntryDetailModal({
     },
   })
 
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+
   const cancelMutation = useMutation({
-    mutationFn: (id: string) => accountingEntriesService.cancel(id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => accountingEntriesService.cancel(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting', 'entries'] })
       toast.success('Asiento cancelado exitosamente')
+      setShowCancelDialog(false)
+      setCancelReason('')
       onSuccess?.()
       onClose()
     },
@@ -181,10 +190,10 @@ export default function EntryDetailModal({
                   <p>{format(new Date(entry.cancelled_at), 'dd/MM/yyyy HH:mm')}</p>
                 </div>
               )}
-              {entry.source_entity_type && (
+              {entry.source_type && (
                 <div>
                   <p className="text-muted-foreground">Origen</p>
-                  <p>{entry.source_entity_type}: {entry.source_entity_id}</p>
+                  <p>{entry.source_type}: {entry.source_id}</p>
                 </div>
               )}
             </div>
@@ -204,11 +213,7 @@ export default function EntryDetailModal({
           {canCancel && (
             <Button
               variant="destructive"
-              onClick={() => {
-                if (window.confirm('¿Estás seguro de cancelar este asiento?')) {
-                  cancelMutation.mutate(entry.id)
-                }
-              }}
+              onClick={() => setShowCancelDialog(true)}
               disabled={cancelMutation.isPending}
             >
               <XCircle className="w-4 h-4 mr-2" />
@@ -220,6 +225,45 @@ export default function EntryDetailModal({
           </Button>
         </div>
       </DialogContent>
+
+      {/* Dialog para solicitar razón de cancelación */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Asiento</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de cancelar este asiento? Por favor, proporciona una razón para la cancelación.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason">Razón de cancelación *</Label>
+              <Input
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Ej: Error en los datos, transacción revertida, etc."
+                autoFocus
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCancelReason('')}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!cancelReason.trim()) {
+                  toast.error('Por favor, proporciona una razón para la cancelación')
+                  return
+                }
+                cancelMutation.mutate({ id: entry.id, reason: cancelReason.trim() })
+              }}
+              disabled={cancelMutation.isPending || !cancelReason.trim()}
+            >
+              Confirmar Cancelación
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

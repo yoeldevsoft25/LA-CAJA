@@ -40,7 +40,9 @@ import { MLModule } from './ml/ml.module';
 import { RealTimeAnalyticsModule } from './realtime-analytics/realtime-analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AccountingModule } from './accounting/accounting.module';
+import { SecurityModule } from './security/security.module';
 import { AdminController } from './admin/admin.controller';
+import { AdminApiGuard } from './admin/admin-api.guard';
 import { LicenseWatcherService } from './admin/license-watcher.service';
 import { Store } from './database/entities/store.entity';
 import { Profile } from './database/entities/profile.entity';
@@ -109,6 +111,8 @@ import { AccountBalance } from './database/entities/account-balance.entity';
 import { AccountingExport } from './database/entities/accounting-export.entity';
 import { AccountingERPSync } from './database/entities/accounting-erp-sync.entity';
 import { Event } from './database/entities/event.entity';
+import { SecurityAuditLog } from './database/entities/security-audit-log.entity';
+import { RefreshToken } from './database/entities/refresh-token.entity';
 import { LicenseGuard } from './auth/guards/license.guard';
 import { DatabaseErrorInterceptor } from './common/interceptors/database-error.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -223,6 +227,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
             AccountingExport,
             AccountingERPSync,
             Event,
+            SecurityAuditLog,
+            RefreshToken,
           ],
           synchronize: false, // Usamos migraciones SQL manuales
           logging: configService.get<string>('NODE_ENV') === 'development',
@@ -245,9 +251,10 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           // Manejo de errores de conexión
           autoLoadEntities: false, // Ya especificamos entities manualmente
           // SSL para producción (Render/Supabase)
+          // NOTA: Si Supabase requiere rejectUnauthorized: false, considerar usar certificado CA específico
           ssl: isProduction
             ? {
-                rejectUnauthorized: false, // Necesario para Supabase y algunos servicios cloud
+                rejectUnauthorized: true, // ✅ Habilitar verificación SSL por seguridad
               }
             : false,
         };
@@ -286,16 +293,17 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     FiscalConfigsModule,
     FiscalInvoicesModule,
     DashboardModule,
-        MLModule,
-        RealTimeAnalyticsModule,
-        NotificationsModule,
-        AccountingModule,
-        AccountingModule,
+    MLModule,
+    RealTimeAnalyticsModule,
+    NotificationsModule,
+    AccountingModule,
+    SecurityModule, // ✅ Módulo de seguridad y auditoría
   ],
   controllers: [AppController, AdminController],
   providers: [
     AppService,
     LicenseWatcherService,
+    AdminApiGuard, // ✅ Guard administrativo con auditoría
     // Aplicar rate limiting globalmente
     {
       provide: APP_GUARD,

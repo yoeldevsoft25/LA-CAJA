@@ -18,6 +18,7 @@ import { Product } from '../database/entities/product.entity';
 import { InvoiceSeriesService } from '../invoice-series/invoice-series.service';
 import { CreateFiscalInvoiceDto } from './dto/create-fiscal-invoice.dto';
 import { SeniatIntegrationService } from './seniat-integration.service';
+import { AccountingService } from '../accounting/accounting.service';
 import { randomUUID } from 'crypto';
 
 /**
@@ -42,6 +43,7 @@ export class FiscalInvoicesService {
     private productRepository: Repository<Product>,
     private invoiceSeriesService: InvoiceSeriesService,
     private seniatIntegrationService: SeniatIntegrationService,
+    private accountingService: AccountingService,
     private dataSource: DataSource,
   ) {}
 
@@ -458,7 +460,20 @@ export class FiscalInvoicesService {
     invoice.fiscal_qr_code = seniatResponse.fiscal_qr_code;
     invoice.fiscal_authorization_number = seniatResponse.authorization_number;
 
-    return this.fiscalInvoiceRepository.save(invoice);
+    const savedInvoice = await this.fiscalInvoiceRepository.save(invoice);
+
+    // Generar asiento contable automático
+    try {
+      await this.accountingService.generateEntryFromFiscalInvoice(storeId, savedInvoice);
+    } catch (error) {
+      // Log error pero no fallar la emisión
+      this.logger.error(
+        `Error generando asiento contable para factura fiscal ${savedInvoice.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    return savedInvoice;
   }
 
   /**

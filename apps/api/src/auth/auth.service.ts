@@ -2,22 +2,31 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
+import { createHash } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import { Store } from '../database/entities/store.entity';
 import { Profile } from '../database/entities/profile.entity';
 import { StoreMember } from '../database/entities/store-member.entity';
+import { RefreshToken } from '../database/entities/refresh-token.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { CreateCashierDto } from './dto/create-cashier.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { RefreshTokenResponseDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly ACCESS_TOKEN_EXPIRES_IN = 15 * 60; // 15 minutos en segundos
+  private readonly REFRESH_TOKEN_EXPIRES_IN_DAYS = 30; // 30 días
+
   constructor(
     @InjectRepository(Store)
     private storeRepository: Repository<Store>,
@@ -25,7 +34,10 @@ export class AuthService {
     private profileRepository: Repository<Profile>,
     @InjectRepository(StoreMember)
     private storeMemberRepository: Repository<StoreMember>,
+    @InjectRepository(RefreshToken)
+    private refreshTokenRepository: Repository<RefreshToken>,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   private getTrialExpiration(): {
@@ -132,7 +144,11 @@ export class AuthService {
     return profile;
   }
 
-  async login(dto: LoginDto): Promise<AuthResponseDto> {
+  async login(
+    dto: LoginDto,
+    deviceId?: string,
+    ipAddress?: string,
+  ): Promise<AuthResponseDto> {
     // Buscar store members por store_id (owner o cashier)
     const members = await this.storeMemberRepository.find({
       where: { store_id: dto.store_id },
@@ -200,22 +216,183 @@ export class AuthService {
       );
     }
 
-    // Generar JWT
+    // Generar access token (corto: 15 minutos)
     const payload = {
       sub: validMember.user_id,
       store_id: dto.store_id,
       role: validMember.role,
     };
 
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: `${this.ACCESS_TOKEN_EXPIRES_IN}s`,
+    });
+
+    // Generar refresh token (largo: 30 días)
+    const refreshTokenValue = randomUUID();
+    const refreshTokenHash = createHash('sha256')
+      .update(refreshTokenValue)
+      .digest('hex');
+
+    const refreshTokenExpiresAt = new Date();
+    refreshTokenExpiresAt.setDate(
+      refreshTokenExpiresAt.getDate() + this.REFRESH_TOKEN_EXPIRES_IN_DAYS,
+    );
+
+    // Guardar refresh token en base de datos
+    const refreshToken = this.refreshTokenRepository.create({
+      token: refreshTokenHash,
+      user_id: validMember.user_id,
+      store_id: dto.store_id,
+      device_id: deviceId || null,
+      device_info: null, // Se puede mejorar con más info del dispositivo
+      ip_address: ipAddress || null,
+      expires_at: refreshTokenExpiresAt,
+    });
+
+    await this.refreshTokenRepository.save(refreshToken);
+
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: accessToken,
+      refresh_token: refreshTokenValue, // Enviar el valor original, no el hash
       user_id: validMember.user_id,
       store_id: dto.store_id,
       role: validMember.role,
       full_name: validMember.profile.full_name,
       license_status: store.license_status,
       license_expires_at: store.license_expires_at,
+      expires_in: this.ACCESS_TOKEN_EXPIRES_IN,
     };
+  }
+
+  /**
+   * Refresca un access token usando un refresh token válido
+   */
+  async refreshToken(
+    refreshTokenValue: string,
+    deviceId?: string,
+    ipAddress?: string,
+  ): Promise<RefreshTokenResponseDto> {
+    // Hashear el token recibido para buscar en DB
+    const refreshTokenHash = createHash('sha256')
+      .update(refreshTokenValue)
+      .digest('hex');
+
+    // Buscar refresh token
+    const refreshToken = await this.refreshTokenRepository.findOne({
+      where: { token: refreshTokenHash },
+      relations: ['store'],
+    });
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token inválido');
+    }
+
+    // Verificar que esté activo
+    if (!refreshToken.isActive()) {
+      throw new UnauthorizedException('Refresh token expirado o revocado');
+    }
+
+    // Verificar licencia de la tienda
+    const store = refreshToken.store;
+    if (!store) {
+      throw new UnauthorizedException('Tienda no encontrada');
+    }
+
+    const now = Date.now();
+    const expires = store.license_expires_at
+      ? store.license_expires_at.getTime()
+      : null;
+    const graceMs = (store.license_grace_days ?? 0) * 24 * 60 * 60 * 1000;
+
+    if (
+      !store.license_status ||
+      store.license_status === 'suspended' ||
+      (expires && now > expires + graceMs)
+    ) {
+      throw new ForbiddenException('Licencia inválida o expirada');
+    }
+
+    // Obtener información del usuario
+    const member = await this.storeMemberRepository.findOne({
+      where: {
+        user_id: refreshToken.user_id,
+        store_id: refreshToken.store_id,
+      },
+    });
+
+    if (!member) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Generar nuevo access token
+    const payload = {
+      sub: refreshToken.user_id,
+      store_id: refreshToken.store_id,
+      role: member.role,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: `${this.ACCESS_TOKEN_EXPIRES_IN}s`,
+    });
+
+    // Actualizar last_used_at del refresh token
+    refreshToken.last_used_at = new Date();
+    if (deviceId) {
+      refreshToken.device_id = deviceId;
+    }
+    if (ipAddress) {
+      refreshToken.ip_address = ipAddress;
+    }
+    await this.refreshTokenRepository.save(refreshToken);
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshTokenValue, // Devolver el mismo refresh token
+      expires_in: this.ACCESS_TOKEN_EXPIRES_IN,
+    };
+  }
+
+  /**
+   * Revoca un refresh token (logout)
+   */
+  async revokeRefreshToken(
+    refreshTokenValue: string,
+    reason: string = 'logout',
+  ): Promise<void> {
+    const refreshTokenHash = createHash('sha256')
+      .update(refreshTokenValue)
+      .digest('hex');
+
+    const refreshToken = await this.refreshTokenRepository.findOne({
+      where: { token: refreshTokenHash },
+    });
+
+    if (refreshToken && refreshToken.isActive()) {
+      refreshToken.revoked_at = new Date();
+      refreshToken.revoked_reason = reason;
+      await this.refreshTokenRepository.save(refreshToken);
+    }
+  }
+
+  /**
+   * Revoca todos los refresh tokens de un usuario (logout de todos los dispositivos)
+   */
+  async revokeAllUserTokens(
+    userId: string,
+    storeId: string,
+    reason: string = 'logout_all',
+  ): Promise<void> {
+    await this.refreshTokenRepository.update(
+      {
+        user_id: userId,
+        store_id: storeId,
+        revoked_at: IsNull(), // Solo tokens activos
+      },
+      {
+        revoked_at: new Date(),
+        revoked_reason: reason,
+      },
+    );
   }
 
   async getStores(): Promise<
