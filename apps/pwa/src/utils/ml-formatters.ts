@@ -107,3 +107,4 @@ export function getRecommendationScoreColor(score: number): string {
   return 'text-gray-600 bg-gray-100'
 }
 
+

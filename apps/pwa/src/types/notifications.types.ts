@@ -80,3 +80,4 @@ export interface PushSubscription {
   auth_key: string
   user_agent?: string
 }
+

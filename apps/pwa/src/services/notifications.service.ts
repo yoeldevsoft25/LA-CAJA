@@ -85,3 +85,4 @@ export const notificationsService = {
     return response.data
   },
 }
+

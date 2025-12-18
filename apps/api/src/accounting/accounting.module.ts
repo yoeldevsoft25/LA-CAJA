@@ -1,0 +1,39 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ChartOfAccountsService } from './chart-of-accounts.service';
+import { AccountingService } from './accounting.service';
+import { AccountingExportService } from './accounting-export.service';
+import { AccountingController } from './accounting.controller';
+import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
+import { JournalEntry } from '../database/entities/journal-entry.entity';
+import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
+import { AccountingAccountMapping } from '../database/entities/accounting-account-mapping.entity';
+import { AccountBalance } from '../database/entities/account-balance.entity';
+import { AccountingExport } from '../database/entities/accounting-export.entity';
+import { AccountingERPSync } from '../database/entities/accounting-erp-sync.entity';
+import { Sale } from '../database/entities/sale.entity';
+import { PurchaseOrder } from '../database/entities/purchase-order.entity';
+import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      ChartOfAccount,
+      JournalEntry,
+      JournalEntryLine,
+      AccountingAccountMapping,
+      AccountBalance,
+      AccountingExport,
+      AccountingERPSync,
+      Sale,
+      PurchaseOrder,
+      FiscalInvoice,
+    ]),
+  ],
+  controllers: [AccountingController],
+  providers: [ChartOfAccountsService, AccountingService, AccountingExportService],
+  exports: [ChartOfAccountsService, AccountingService, AccountingExportService],
+})
+export class AccountingModule {}
+
+

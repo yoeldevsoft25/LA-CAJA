@@ -118,7 +118,9 @@ class NotificationsWebSocketService {
     })
 
     this.socket.on('error', (error: any) => {
-      console.error('[NotificationsWS] Error:', error)
+      const errorMessage = error?.message || error?.toString() || 'Error desconocido'
+      const errorDetails = error?.data || error
+      console.error('[NotificationsWS] Error:', errorMessage, errorDetails)
     })
   }
 }

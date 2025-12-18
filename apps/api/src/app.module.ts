@@ -39,6 +39,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { MLModule } from './ml/ml.module';
 import { RealTimeAnalyticsModule } from './realtime-analytics/realtime-analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AccountingModule } from './accounting/accounting.module';
 import { AdminController } from './admin/admin.controller';
 import { LicenseWatcherService } from './admin/license-watcher.service';
 import { Store } from './database/entities/store.entity';
@@ -100,6 +101,13 @@ import { NotificationPreference } from './database/entities/notification-prefere
 import { NotificationSubscription } from './database/entities/notification-subscription.entity';
 import { NotificationDelivery } from './database/entities/notification-delivery.entity';
 import { NotificationBadge } from './database/entities/notification-badge.entity';
+import { ChartOfAccount } from './database/entities/chart-of-accounts.entity';
+import { JournalEntry } from './database/entities/journal-entry.entity';
+import { JournalEntryLine } from './database/entities/journal-entry-line.entity';
+import { AccountingAccountMapping } from './database/entities/accounting-account-mapping.entity';
+import { AccountBalance } from './database/entities/account-balance.entity';
+import { AccountingExport } from './database/entities/accounting-export.entity';
+import { AccountingERPSync } from './database/entities/accounting-erp-sync.entity';
 import { Event } from './database/entities/event.entity';
 import { LicenseGuard } from './auth/guards/license.guard';
 import { DatabaseErrorInterceptor } from './common/interceptors/database-error.interceptor';
@@ -207,6 +215,13 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
             NotificationSubscription,
             NotificationDelivery,
             NotificationBadge,
+            ChartOfAccount,
+            JournalEntry,
+            JournalEntryLine,
+            AccountingAccountMapping,
+            AccountBalance,
+            AccountingExport,
+            AccountingERPSync,
             Event,
           ],
           synchronize: false, // Usamos migraciones SQL manuales
@@ -271,9 +286,11 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     FiscalConfigsModule,
     FiscalInvoicesModule,
     DashboardModule,
-    MLModule,
-    RealTimeAnalyticsModule,
-    NotificationsModule,
+        MLModule,
+        RealTimeAnalyticsModule,
+        NotificationsModule,
+        AccountingModule,
+        AccountingModule,
   ],
   controllers: [AppController, AdminController],
   providers: [

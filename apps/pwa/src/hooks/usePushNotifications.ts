@@ -33,3 +33,4 @@ export function usePushNotifications() {
     unsubscribe,
   }
 }
+

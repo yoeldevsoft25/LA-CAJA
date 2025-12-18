@@ -3,3 +3,4 @@
  */
 export { NotificationsPanel } from './NotificationsPanel'
 export { NotificationBell } from './NotificationBell'
+

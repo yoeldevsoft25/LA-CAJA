@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
@@ -32,9 +33,12 @@ import { PriceListsService } from '../price-lists/price-lists.service';
 import { PromotionsService } from '../promotions/promotions.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
+import { AccountingService } from '../accounting/accounting.service';
 
 @Injectable()
 export class SalesService {
+  private readonly logger = new Logger(SalesService.name);
+
   constructor(
     @InjectRepository(Sale)
     private saleRepository: Repository<Sale>,
@@ -65,6 +69,7 @@ export class SalesService {
     private promotionsService: PromotionsService,
     private warehousesService: WarehousesService,
     private fiscalInvoicesService: FiscalInvoicesService,
+    private accountingService: AccountingService,
   ) {}
 
   async create(
@@ -684,6 +689,17 @@ export class SalesService {
       // Agregar información de factura fiscal si existe (después de la transacción)
       // Nota: La factura fiscal se crea después de la venta, así que aquí será null
       saleWithDebt.fiscal_invoice = null;
+
+      // Generar asiento contable automático
+      try {
+        await this.accountingService.generateEntryFromSale(storeId, savedSaleWithItems);
+      } catch (error) {
+        // Log error pero no fallar la venta
+        this.logger.error(
+          `Error generando asiento contable para venta ${saleId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
 
       return saleWithDebt;
     });

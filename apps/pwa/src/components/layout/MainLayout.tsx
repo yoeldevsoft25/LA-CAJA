@@ -119,6 +119,7 @@ const navSections: NavSection[] = [
       { path: '/fiscal-config', label: 'Configuración Fiscal', icon: FileText, badge: null },
       { path: '/fiscal-invoices', label: 'Facturas Fiscales', icon: ReceiptText, badge: null },
       { path: '/peripherals', label: 'Periféricos', icon: Cpu, badge: null },
+      { path: '/accounting', label: 'Contabilidad', icon: FileText, badge: null },
     ],
   },
   {

@@ -48,3 +48,4 @@ export function useNotificationBadge(category?: string) {
     unreadCount: badge?.unread_count || 0,
   }
 }
+
