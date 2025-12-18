@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
@@ -126,7 +126,6 @@ export default function DashboardPage() {
     data: kpis,
     isLoading: kpisLoading,
     isFetching: kpisFetching,
-    refetch: refetchKPIs,
     dataUpdatedAt: kpisUpdatedAt,
   } = useQuery({
     queryKey: ['dashboard', 'kpis', startDate, endDate],
