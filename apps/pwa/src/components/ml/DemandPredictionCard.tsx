@@ -9,6 +9,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TrendingUp, RefreshCw, AlertCircle } from 'lucide-react'
 import { formatConfidenceScore, getConfidenceColor } from '@/utils/ml-formatters'
 import { format } from 'date-fns'
+import {
+  Line,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine,
+  ComposedChart,
+} from 'recharts'
 
 interface DemandPredictionCardProps {
   productId: string
@@ -49,10 +61,71 @@ export default function DemandPredictionCard({
   }
 
   const predictions = data?.predictions || []
+  
+  // Preparar datos para el gráfico con formato para recharts
+  const chartData = predictions.map((prediction) => ({
+    date: format(new Date(prediction.date), 'dd/MM'),
+    fullDate: prediction.date,
+    cantidad: Math.round(prediction.predicted_quantity * 100) / 100,
+    confianza: Math.round(prediction.confidence_score),
+    cantidadFormateada: prediction.predicted_quantity.toFixed(0),
+  }))
+
   const maxQuantity = Math.max(
+    ...predictions.map((p) => p.predicted_quantity),
+    1,
+  )
+  const minQuantity = Math.min(
     ...predictions.map((p) => p.predicted_quantity),
     0,
   )
+
+  // Custom tooltip para mostrar información detallada
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+          <p className="font-semibold text-sm mb-2">{data.fullDate}</p>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground text-xs">Predicción:</span>
+              <span className="font-semibold text-sm">{data.cantidadFormateada} unidades</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground text-xs">Confianza:</span>
+              <Badge
+                variant="secondary"
+                className={`text-xs ${getConfidenceColor(data.confianza)}`}
+              >
+                {data.confianza}%
+              </Badge>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
+  // Custom label para el eje X
+  const CustomXAxisLabel = (props: any) => {
+    const { x, y, payload } = props
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={16}
+          textAnchor="middle"
+          fill="hsl(var(--muted-foreground))"
+          className="text-xs"
+        >
+          {payload.value}
+        </text>
+      </g>
+    )
+  }
 
   return (
     <Card>
@@ -99,39 +172,123 @@ export default function DemandPredictionCard({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Gráfico simple de barras */}
+            {/* Gráfico avanzado con recharts */}
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Predicciones</h4>
-              <div className="h-64 flex items-end justify-between gap-1 overflow-x-auto pb-4">
-                {predictions.map((prediction, index) => {
-                  const height = maxQuantity > 0 ? (prediction.predicted_quantity / maxQuantity) * 100 : 0
-                  const confidenceColor = getConfidenceColor(prediction.confidence_score)
-                  return (
-                    <div
-                      key={index}
-                      className="flex-1 flex flex-col items-center min-w-[60px]"
-                    >
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Predicciones de Demanda</h4>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-primary/80"></div>
+                    <span>Predicción</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-primary/20"></div>
+                    <span>Área de confianza</span>
+                  </div>
+                </div>
+              </div>
+              <div className="h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart
+                    data={chartData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                      opacity={0.3}
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tick={<CustomXAxisLabel />}
+                      stroke="hsl(var(--muted-foreground))"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      style={{ fontSize: '12px' }}
+                      label={{
+                        value: 'Unidades',
+                        angle: -90,
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))', fontSize: '12px' },
+                      }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend
+                      wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
+                      iconType="line"
+                    />
+                    {/* Área con gradiente para visualización suave */}
+                    <Area
+                      type="monotone"
+                      dataKey="cantidad"
+                      stroke="none"
+                      fill="url(#colorArea)"
+                      fillOpacity={0.4}
+                    />
+                    {/* Línea principal de predicción */}
+                    <Line
+                      type="monotone"
+                      dataKey="cantidad"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={3}
+                      dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 5, stroke: 'hsl(var(--background))' }}
+                      activeDot={{ r: 7, strokeWidth: 2 }}
+                      name="Predicción"
+                    />
+                    {/* Línea de referencia para promedio si hay variación */}
+                    {maxQuantity !== minQuantity && (
+                      <ReferenceLine
+                        y={(maxQuantity + minQuantity) / 2}
+                        stroke="hsl(var(--muted-foreground))"
+                        strokeDasharray="5 5"
+                        strokeOpacity={0.5}
+                        label={{ value: 'Promedio', position: 'right', fill: 'hsl(var(--muted-foreground))', fontSize: '10px' }}
+                      />
+                    )}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              
+              {/* Indicadores de confianza por día */}
+              <div className="border-t pt-4">
+                <h5 className="text-xs font-semibold mb-2 text-muted-foreground">Nivel de Confianza por Día</h5>
+                <div className="flex gap-1 justify-between items-end h-16">
+                  {chartData.map((item, index) => {
+                    const height = (item.confianza / 100) * 64
+                    return (
                       <div
-                        className="w-full bg-primary rounded-t hover:bg-primary/80 transition-colors cursor-pointer relative group"
-                        style={{ height: `${height}%` }}
-                        title={`${format(new Date(prediction.date), 'dd/MM/yyyy')}: ${prediction.predicted_quantity.toFixed(0)} unidades`}
+                        key={index}
+                        className="flex-1 flex flex-col items-center group cursor-pointer"
+                        title={`${item.date}: ${item.confianza}% confianza`}
                       >
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                          {prediction.predicted_quantity.toFixed(0)} unidades
+                        <div
+                          className="w-full rounded-t transition-all hover:opacity-80 relative"
+                          style={{
+                            height: `${height}px`,
+                            backgroundColor: `hsl(var(--primary))`,
+                            opacity: item.confianza / 100,
+                          }}
+                        >
+                          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                              {item.confianza}%
+                            </div>
+                          </div>
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1">{item.date}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2 text-center">
-                        {format(new Date(prediction.date), 'dd/MM')}
-                      </p>
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs mt-1 ${confidenceColor}`}
-                      >
-                        {Math.round(prediction.confidence_score)}%
-                      </Badge>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
@@ -173,7 +330,13 @@ export default function DemandPredictionCard({
               </div>
               <div className="flex items-center justify-between text-sm mt-2">
                 <span className="text-muted-foreground">Modelo usado:</span>
-                <span className="font-semibold">{predictions[0]?.model_used || 'N/A'}</span>
+                <span className="font-semibold">
+                  {predictions[0]?.model_used === 'fallback' 
+                    ? 'Promedio Simple (datos insuficientes)' 
+                    : predictions[0]?.model_used === 'ensemble'
+                    ? 'Ensemble (Exponential Smoothing + ARIMA)'
+                    : predictions[0]?.model_used || 'N/A'}
+                </span>
               </div>
             </div>
           </div>

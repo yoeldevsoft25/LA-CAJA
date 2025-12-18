@@ -111,16 +111,17 @@ export default function PurchaseOrderReceptionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Recibir Orden de Compra {order.order_number}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-lg sm:text-xl">Recibir Orden de Compra {order.order_number}</DialogTitle>
           <DialogDescription>
             Indica las cantidades recibidas de cada producto
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+            <div className="space-y-4 sm:space-y-5">
             {order.items.map((item) => {
               const pending = item.quantity - item.quantity_received
               const received = receivedQuantities[item.id] || 0
@@ -196,20 +197,20 @@ export default function PurchaseOrderReceptionModal({
                 </Card>
               )
             })}
-          </div>
 
-          <div>
-            <Label htmlFor="reception_note">Notas de Recepción</Label>
-            <Textarea
-              id="reception_note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-              placeholder="Notas adicionales sobre la recepción..."
-            />
+            <div>
+              <Label htmlFor="reception_note">Notas de Recepción</Label>
+              <Textarea
+                id="reception_note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="Notas adicionales sobre la recepción..."
+              />
+            </div>
+            </div>
           </div>
-
-          <DialogFooter>
+          <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>

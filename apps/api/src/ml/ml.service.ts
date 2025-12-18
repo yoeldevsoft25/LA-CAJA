@@ -146,10 +146,30 @@ export class MLService {
       quantity: parseFloat(s.total_qty) || 0,
     }));
 
-    // Si no hay datos históricos suficientes
+    // Log para diagnóstico
+    this.logger.debug(
+      `Producto ${dto.product_id}: ${dailyQuantities.length} días con ventas en los últimos 180 días`,
+    );
+
+    // Si no hay datos históricos suficientes (menos de 7 días distintos con ventas)
     if (dailyQuantities.length < 7) {
-      const currentStock = await this.getCurrentStock(storeId, dto.product_id);
-      const avgQuantity = currentStock > 0 ? currentStock / 7 : 1;
+      this.logger.warn(
+        `Producto ${dto.product_id}: Solo ${dailyQuantities.length} días con ventas. Usando modelo fallback.`,
+      );
+
+      // Calcular promedio basado en datos disponibles si hay alguno
+      let avgQuantity = 1;
+      if (dailyQuantities.length > 0) {
+        const totalQuantity = dailyQuantities.reduce(
+          (sum, d) => sum + d.quantity,
+          0,
+        );
+        avgQuantity = totalQuantity / dailyQuantities.length;
+      } else {
+        // Si no hay ventas, usar stock actual como referencia
+        const currentStock = await this.getCurrentStock(storeId, dto.product_id);
+        avgQuantity = currentStock > 0 ? currentStock / 7 : 1;
+      }
 
       const predictions: Array<{
         date: string;
@@ -164,7 +184,7 @@ export class MLService {
         predictions.push({
           date: date.toISOString().split('T')[0],
           predicted_quantity: avgQuantity,
-          confidence_score: 30,
+          confidence_score: dailyQuantities.length > 0 ? 40 : 20, // Mayor confianza si hay al menos algunos datos
           model_used: 'fallback',
         });
       }

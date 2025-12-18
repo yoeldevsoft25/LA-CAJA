@@ -278,8 +278,29 @@ export default function MainLayout() {
     }
   }, [currentCash, addUnique])
 
-  const isActive = (path: string) =>
-    location.pathname === path || location.pathname.startsWith(path + '/')
+  // Función mejorada para determinar si una ruta está activa
+  // Solo activa la ruta más específica que coincida
+  const isActive = (path: string) => {
+    const currentPath = location.pathname
+    
+    // Coincidencia exacta
+    if (currentPath === path) return true
+    
+    // Si la ruta actual empieza con este path, verificar que no haya una ruta más específica
+    if (currentPath.startsWith(path + '/')) {
+      // Buscar en todas las secciones si hay alguna ruta más específica que también coincida
+      const allPaths = navSections.flatMap(section => section.items.map(item => item.path))
+      const hasMoreSpecificMatch = allPaths.some(itemPath => 
+        itemPath !== path && 
+        currentPath.startsWith(itemPath + '/') &&
+        itemPath.startsWith(path + '/')
+      )
+      // Solo estar activo si no hay una coincidencia más específica
+      return !hasMoreSpecificMatch
+    }
+    
+    return false
+  }
 
   // Encontrar la sección que contiene la ruta activa
   const activeSectionId = useMemo(() => {

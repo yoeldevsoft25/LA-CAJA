@@ -261,9 +261,9 @@ export default function PurchaseOrderFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-lg sm:text-xl">
             {isEditing ? 'Editar Orden de Compra' : 'Nueva Orden de Compra'}
           </DialogTitle>
           <DialogDescription>
@@ -273,7 +273,9 @@ export default function PurchaseOrderFormModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+            <div className="space-y-4 sm:space-y-5">
           {/* Proveedor y Bodega */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -304,14 +306,14 @@ export default function PurchaseOrderFormModal({
             <div>
               <Label htmlFor="warehouse">Bodega</Label>
               <Select
-                value={selectedWarehouseId}
-                onValueChange={setSelectedWarehouseId}
+                value={selectedWarehouseId || undefined}
+                onValueChange={(value) => setSelectedWarehouseId(value === 'none' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona una bodega (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ninguna</SelectItem>
+                  <SelectItem value="none">Ninguna</SelectItem>
                   {warehouses
                     .filter((w) => w.is_active)
                     .map((warehouse) => (
@@ -488,8 +490,9 @@ export default function PurchaseOrderFormModal({
               placeholder="Notas adicionales sobre la orden..."
             />
           </div>
-
-          <DialogFooter>
+            </div>
+          </div>
+          <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>

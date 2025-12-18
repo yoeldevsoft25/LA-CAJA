@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -141,13 +142,14 @@ export default function PurchaseOrderDetailModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Orden de Compra {order.order_number}</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-lg sm:text-xl">Orden de Compra {order.order_number}</DialogTitle>
             <DialogDescription>Detalles de la orden de compra</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
+            <div className="space-y-4 sm:space-y-5">
             {/* Información general */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -293,8 +295,11 @@ export default function PurchaseOrderDetailModal({
               </div>
             )}
 
-            {/* Acciones */}
-            <div className="flex gap-2 pt-4 border-t">
+            </div>
+          </div>
+          {/* Acciones */}
+          <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
+            <div className="flex gap-2 w-full">
               {canEdit && (
                 <Button
                   variant="outline"
@@ -349,7 +354,7 @@ export default function PurchaseOrderDetailModal({
                 </Button>
               )}
             </div>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

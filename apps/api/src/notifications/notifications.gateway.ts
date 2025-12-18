@@ -52,7 +52,8 @@ export class NotificationsGateway
 
       try {
         const payload = this.jwtService.verify(token);
-        client.userId = payload.user_id;
+        // El JWT usa 'sub' para el user_id, no 'user_id'
+        client.userId = payload.sub || payload.user_id;
         client.storeId = payload.store_id;
 
         // Unirse a la sala del usuario
