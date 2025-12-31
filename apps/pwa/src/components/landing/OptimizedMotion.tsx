@@ -1,4 +1,4 @@
-import { motion, MotionProps } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { ComponentProps, forwardRef } from 'react'
 
@@ -55,7 +55,7 @@ type OptimizedMotionSectionProps = ComponentProps<typeof motion.section> & {
  */
 export const OptimizedMotionSection = forwardRef<HTMLElement, OptimizedMotionSectionProps>(
   ({ reduceComplexity = true, children, whileInView, viewport, ...props }, ref) => {
-    const { shouldReduceMotion, isMobile } = useReducedMotion()
+    const { shouldReduceMotion } = useReducedMotion()
 
     // En mobile con complejidad reducida, solo fade in simple
     if (shouldReduceMotion && reduceComplexity) {

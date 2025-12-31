@@ -23,7 +23,9 @@
       "Bash(export PATH:*)",
       "Bash(sdkmanager:*)",
       "Bash(yes:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm run build:*)",
+      "Bash(sdk use java:*)"
     ]
   },
   "enabledMcpjsonServers": [
