@@ -2,6 +2,8 @@
 
 **Fecha:** 2025-12-31
 **Versión:** 4.0.1
+**APK:** LA-CAJA-v4.0.1-signed.apk (2.6 MB)
+**MD5:** 7a7794c4128dbbe8ac57db17366586e6
 
 ## 📋 Problemas Resueltos
 
