@@ -17,8 +17,8 @@
   "maskableIconUrl": "https://la-caja.netlify.app/icon-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "/Users/yoeldev/Documents/GitHub/LA-CAJA/android.keystore",
-    "alias": "android"
+    "path": "/Users/yoeldev/Documents/GitHub/LA-CAJA/lacaja-release.keystore",
+    "alias": "lacajakey"
   },
   "appVersionName": "3",
   "appVersionCode": 3,
@@ -42,7 +42,7 @@
   "orientation": "default",
   "fingerprints": [
     {
-      "sha256": "7C:06:0A:EA:D3:FB:A2:29:D0:6F:B3:9F:1B:76:56:77:02:4C:E5:7D:8C:FB:C3:AC:2D:9F:34:F5:45:EC:56:E9"
+      "sha256": "30:58:70:2E:F7:0D:46:C6:D8:D0:5C:63:52:FC:0F:14:3F:D9:97:60:AE:54:14:D4:E8:FC:E3:51:C5:1B:E7:E9"
     }
   ],
   "additionalTrustedOrigins": [],
