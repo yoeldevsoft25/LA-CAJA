@@ -89,28 +89,24 @@ function App() {
     }
   }, [isOnline, wasOffline])
 
-  // Registrar service worker y suscribirse a push notifications
+  // Suscribirse a push notifications usando el SW de VitePWA
   useEffect(() => {
     if (isAuthenticated && isSupported && 'serviceWorker' in navigator) {
-      // Registrar el service worker para push notifications
-      navigator.serviceWorker
-        .register('/sw-push.js')
-        .then(() => {
-          console.log('[PushNotifications] Service worker registrado')
-          // Intentar suscribirse automáticamente después de un pequeño delay
-          // solo si las push notifications están disponibles y configuradas
-          setTimeout(() => {
-            subscribe().catch((error) => {
-              // Solo mostrar error si no es por falta de configuración (ya se maneja internamente)
-              if (import.meta.env.DEV && error?.message && !error.message.includes('VAPID')) {
-                console.error('[PushNotifications] Error al suscribirse:', error)
-              }
-            })
-          }, 2000)
-        })
-        .catch((error) => {
-          console.error('[PushNotifications] Error registrando service worker:', error)
-        })
+      // Usar el service worker ya registrado por VitePWA
+      navigator.serviceWorker.ready.then(() => {
+        console.log('[PushNotifications] Usando Service Worker de VitePWA')
+        // Intentar suscribirse después de un pequeño delay
+        setTimeout(() => {
+          subscribe().catch((error) => {
+            // Solo mostrar error si no es por falta de configuración
+            if (import.meta.env.DEV && error?.message && !error.message.includes('VAPID')) {
+              console.error('[PushNotifications] Error al suscribirse:', error)
+            }
+          })
+        }, 2000)
+      }).catch((error) => {
+        console.error('[PushNotifications] Service Worker no disponible:', error)
+      })
     }
   }, [isAuthenticated, isSupported, subscribe])
 
