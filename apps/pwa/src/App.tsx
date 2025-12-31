@@ -36,7 +36,7 @@ import AnomaliesPage from './pages/AnomaliesPage'
 import RealtimeAnalyticsPage from './pages/RealtimeAnalyticsPage'
 import LicenseBlockedPage from './pages/LicenseBlockedPage'
 import AdminPage from './pages/AdminPage'
-import LandingPage from './pages/LandingPage'
+import LandingPageEnhanced from './pages/LandingPageEnhanced'
 import AccountingPage from './pages/AccountingPage'
 import { useOnline } from './hooks/use-online'
 import { useAuth } from './stores/auth.store'
@@ -77,14 +77,15 @@ function App() {
   useEffect(() => {
     if (!isOnline) {
       offlineIndicator.showOffline();
-    } else {
+      return;
+    }
+
+    if (wasOffline) {
       offlineIndicator.showOnline();
       // Intentar sincronizar cuando se recupera la conexión
-      if (wasOffline) {
-        syncService.syncNow().catch(() => {
-          // Silenciar errores, el sync periódico lo intentará de nuevo
-        });
-      }
+      syncService.syncNow().catch(() => {
+        // Silenciar errores, el sync periódico lo intentará de nuevo
+      });
     }
   }, [isOnline, wasOffline])
 
@@ -145,7 +146,9 @@ function App() {
       {(isLoaderComplete || !authShowLoader) && (
     <BrowserRouter>
       <Routes>
-        <Route path="/landing" element={<LandingPage />} />
+        {/* Public routes */}
+        <Route path="/" element={<LandingPageEnhanced />} />
+        <Route path="/landing" element={<LandingPageEnhanced />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/license"
@@ -157,15 +160,17 @@ function App() {
         />
         {/* Panel admin: acceso directo con admin key, no requiere sesión */}
         <Route path="/admin" element={<AdminPage />} />
+
+        {/* Protected routes */}
         <Route
-          path="/"
+          path="/app"
           element={
             <ProtectedRoute>
               <MainLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="pos" element={<POSPage />} />
           <Route path="products" element={<ProductsPage />} />
@@ -199,7 +204,7 @@ function App() {
           <Route path="accounting" element={<AccountingPage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/landing" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
       )}

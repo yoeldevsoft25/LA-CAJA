@@ -1,0 +1,2195 @@
+import { useState, useEffect } from 'react'
+import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  Check,
+  Shield,
+  BarChart3,
+  Globe,
+  TrendingUp,
+  ArrowRight,
+  Sparkles,
+  Brain,
+  Smartphone,
+  ChevronDown,
+  Play,
+  Zap,
+  FileText,
+  QrCode,
+  Lock,
+  Banknote,
+  Wifi,
+  WifiOff,
+  CheckCircle2,
+  Printer,
+  ShoppingCart,
+  Boxes,
+  Calculator,
+  DollarSign,
+  TrendingDown,
+  AlertCircle,
+  X,
+  Minus,
+  Crown,
+  Rocket,
+  Target,
+  Star,
+  Quote,
+  Mail,
+  Github,
+  Twitter,
+  Linkedin,
+  HelpCircle,
+} from 'lucide-react'
+import { useRef } from 'react'
+import { cn } from '@/lib/utils'
+
+export default function LandingPageEnhanced() {
+  const navigate = useNavigate()
+  const [scrolled, setScrolled] = useState(false)
+  const { scrollYProgress } = useScroll()
+  const heroRef = useRef(null)
+  const isHeroInView = useInView(heroRef, { once: true })
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0])
+  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95])
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden">
+      {/* ========================================
+          HEADER CON SCROLL EFFECT
+      ======================================== */}
+      <header
+        className={cn(
+          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+          scrolled
+            ? 'bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-xl'
+            : 'bg-transparent'
+        )}
+      >
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <motion.div
+              className="flex items-center gap-2 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/50">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                LA CAJA
+              </span>
+            </motion.div>
+
+            {/* Navigation */}
+            <nav className="hidden md:flex items-center gap-8">
+              <a
+                href="#features"
+                className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
+              >
+                Características
+              </a>
+              <a
+                href="#seniat"
+                className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
+              >
+                SENIAT
+              </a>
+              <a
+                href="#pricing"
+                className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
+              >
+                Precios
+              </a>
+            </nav>
+
+            {/* CTAs */}
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/login')}
+                className="text-slate-300 hover:text-white hover:bg-slate-800"
+              >
+                Iniciar Sesión
+              </Button>
+              <Button
+                onClick={() => navigate('/login')}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all"
+              >
+                Empezar Gratis
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ========================================
+          1. HERO SECTION - EL POS QUE VENEZUELA NECESITA
+      ======================================== */}
+      <motion.section
+        ref={heroRef}
+        style={{ opacity, scale }}
+        className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
+      >
+        {/* Animated background gradient */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(168,85,247,0.15),transparent_50%)]" />
+        </div>
+
+        {/* Animated particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(30)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+              animate={{
+                y: [0, (Math.random() - 0.5) * 40, 0],
+                opacity: [0.2, 0.6, 0.2],
+                scale: [1, 1.5, 1],
+              }}
+              transition={{
+                duration: 3 + Math.random() * 2,
+                repeat: Infinity,
+                delay: Math.random() * 2,
+                ease: 'easeInOut',
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.6 }}
+            className="text-center space-y-8"
+          >
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={isHeroInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/30 px-4 py-2 text-sm backdrop-blur-sm">
+                <Sparkles className="w-4 h-4 mr-2" />
+                La única solución POS offline-first para Venezuela
+              </Badge>
+            </motion.div>
+
+            {/* Main Headline */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="text-5xl sm:text-6xl lg:text-7xl font-black leading-tight"
+            >
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                El Sistema POS
+              </span>
+              <br />
+              <span className="text-white">que Funciona Sin Internet</span>
+            </motion.h1>
+
+            {/* Subheadline */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-xl sm:text-2xl text-slate-300 max-w-4xl mx-auto leading-relaxed"
+            >
+              <span className="font-semibold text-white">85% cumplimiento SENIAT</span> •{' '}
+              <span className="font-semibold text-white">Offline-first real</span> •{' '}
+              <span className="font-semibold text-white">IA integrada</span> •{' '}
+              <span className="font-semibold text-white">Multi-plataforma</span>
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={isHeroInView ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="text-lg text-slate-400 max-w-3xl mx-auto"
+            >
+              Gestión completa de punto de venta con facturación fiscal, contabilidad automática y
+              analytics en tiempo real. Diseñado específicamente para la realidad venezolana.
+            </motion.p>
+
+            {/* CTAs */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
+            >
+              <Button
+                size="lg"
+                onClick={() => navigate('/login')}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-6 h-auto group shadow-2xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all"
+              >
+                Empezar Gratis Ahora
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-600 text-lg px-8 py-6 h-auto backdrop-blur-sm"
+                onClick={() => {
+                  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                <Play className="mr-2 w-5 h-5" />
+                Ver Demo
+              </Button>
+            </motion.div>
+
+            {/* Trust badges */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={isHeroInView ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="flex flex-wrap items-center justify-center gap-6 pt-8 text-sm text-slate-400"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>Sin tarjeta de crédito</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>Gratis para siempre</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>Setup en 5 minutos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>100% Offline-first</span>
+              </div>
+            </motion.div>
+
+            {/* Terminal animado mostrando sync */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={isHeroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="pt-12 max-w-4xl mx-auto"
+            >
+              <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-xl shadow-2xl">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                    </div>
+                    <span className="text-xs text-slate-500 ml-2 font-mono">
+                      terminal ~ sync-status
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 font-mono text-sm">
+                  <TerminalAnimation />
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Scroll indicator */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={isHeroInView ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: 0.6, delay: 1 }}
+              className="pt-12"
+            >
+              <ChevronDown className="w-6 h-6 text-slate-500 mx-auto animate-bounce" />
+            </motion.div>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* ========================================
+          2. SOCIAL PROOF TICKER - BARRA DE CONFIANZA
+      ======================================== */}
+      <section className="py-6 bg-slate-900/50 border-y border-slate-800 overflow-hidden">
+        <div className="relative">
+          <motion.div
+            animate={{ x: [0, -1920] }}
+            transition={{
+              duration: 30,
+              repeat: Infinity,
+              ease: 'linear',
+            }}
+            className="flex gap-12 whitespace-nowrap"
+          >
+            {[...Array(4)].map((_, setIndex) => (
+              <div key={setIndex} className="flex gap-12 items-center">
+                <div className="flex items-center gap-3 text-slate-400">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <span className="text-sm font-medium">
+                    <span className="text-white font-bold">10,000+</span> ventas procesadas hoy
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-400">
+                  <Zap className="w-5 h-5 text-yellow-400" />
+                  <span className="text-sm font-medium">
+                    <span className="text-white font-bold">99.9%</span> uptime
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-400">
+                  <DollarSign className="w-5 h-5 text-green-400" />
+                  <span className="text-sm font-medium">
+                    <span className="text-white font-bold">Bs. 2.5M+</span> procesados hoy
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-400">
+                  <ShoppingCart className="w-5 h-5 text-blue-400" />
+                  <span className="text-sm font-medium">
+                    <span className="text-white font-bold">500+</span> negocios activos
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-400">
+                  <Zap className="w-5 h-5 text-purple-400" />
+                  <span className="text-sm font-medium">
+                    <span className="text-white font-bold">&lt;15ms</span> tiempo de respuesta
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-slate-400">
+                  <WifiOff className="w-5 h-5 text-orange-400" />
+                  <span className="text-sm font-medium">
+                    <span className="text-white font-bold">0</span> ventas perdidas por internet
+                  </span>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ========================================
+          3. PROBLEMA/SOLUCIÓN - LA REALIDAD VENEZOLANA
+      ======================================== */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/30">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center space-y-4 mb-16">
+            <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20">
+              Diseñado para Venezuela
+            </Badge>
+            <h2 className="text-4xl sm:text-5xl font-black">
+              <span className="text-white">Entendemos</span>{' '}
+              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                tus Desafíos
+              </span>
+            </h2>
+            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+              La realidad venezolana requiere soluciones únicas. LA CAJA fue diseñado específicamente
+              para estos retos.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {/* Problemas */}
+            <Card className="bg-slate-900/50 border-red-900/30">
+              <CardHeader>
+                <CardTitle className="text-red-400 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  Problemas Comunes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ProblemItem
+                  icon={Wifi}
+                  problem="Internet intermitente"
+                  description="Cortes constantes afectan las ventas"
+                />
+                <ProblemItem
+                  icon={DollarSign}
+                  problem="POS caros y lentos"
+                  description="Inversión alta sin retorno"
+                />
+                <ProblemItem
+                  icon={FileText}
+                  problem="Sin facturación SENIAT"
+                  description="No cumplen normativa venezolana"
+                />
+                <ProblemItem
+                  icon={Banknote}
+                  problem="No soportan Bs/USD"
+                  description="Solo una moneda o conversión manual"
+                />
+                <ProblemItem
+                  icon={TrendingDown}
+                  problem="Software desactualizado"
+                  description="Tecnología vieja, sin IA"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Soluciones */}
+            <Card className="bg-gradient-to-br from-emerald-900/20 to-blue-900/20 border-emerald-500/30 ring-2 ring-emerald-500/20">
+              <CardHeader>
+                <CardTitle className="text-emerald-400 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Nuestra Solución
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <SolutionItem
+                  icon={WifiOff}
+                  solution="100% offline-first"
+                  description="Funciona perfecto sin internet"
+                />
+                <SolutionItem
+                  icon={Zap}
+                  solution="Freemium + super rápido"
+                  description="Plan gratuito para siempre"
+                />
+                <SolutionItem
+                  icon={QrCode}
+                  solution="85% cumplimiento SENIAT"
+                  description="Facturación fiscal completa"
+                />
+                <SolutionItem
+                  icon={Banknote}
+                  solution="Sistema dual nativo Bs/USD"
+                  description="Tasa BCV automática"
+                />
+                <SolutionItem
+                  icon={Brain}
+                  solution="Stack moderno + IA"
+                  description="Tecnología de punta"
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================
+          4. CARACTERÍSTICAS PRINCIPALES - TODO LO QUE NECESITAS
+      ======================================== */}
+      <FeaturesSection />
+
+      {/* ========================================
+          5. SHOWCASE FACTURACIÓN FISCAL - ÚNICO EN VENEZUELA
+      ======================================== */}
+      <SeniatShowcaseSection />
+
+      {/* ========================================
+          6. COMPARISON TABLE - LA CAJA VS COMPETITORS
+      ======================================== */}
+      <ComparisonSection />
+
+      {/* ========================================
+          7. STATS IMPRESIONANTES - NÚMEROS QUE HABLAN
+      ======================================== */}
+      <StatsSection />
+
+      {/* ========================================
+          8. PRICING SECTION - PLANES Y PRECIOS
+      ======================================== */}
+      <PricingSection />
+
+      {/* ========================================
+          9. TESTIMONIALS - CASOS DE USO REALES
+      ======================================== */}
+      <TestimonialsSection />
+
+      {/* ========================================
+          10. FAQ - PREGUNTAS FRECUENTES
+      ======================================== */}
+      <FAQSection />
+
+      {/* ========================================
+          11. CTA FINAL ÉPICO
+      ======================================== */}
+      <FinalCTASection />
+
+      {/* ========================================
+          12. FOOTER RICO
+      ======================================== */}
+      <Footer />
+    </div>
+  )
+}
+
+// ========================================
+// COMPONENTES AUXILIARES
+// ========================================
+
+function TerminalAnimation() {
+  const lines = [
+    { text: '$ la-caja status', delay: 0, type: 'command' as const },
+    { text: '✓ Sistema: Online', delay: 0.5, type: 'success' as const },
+    { text: '✓ Base de datos: Conectada', delay: 1, type: 'success' as const },
+    { text: '✓ Modo: Offline-First Activo', delay: 1.5, type: 'success' as const },
+    { text: '✓ Cola de sync: 0 eventos pendientes', delay: 2, type: 'success' as const },
+    { text: '✓ Última sincronización: Hace 2 segundos', delay: 2.5, type: 'success' as const },
+    { text: '', delay: 3, type: 'empty' as const },
+    { text: '$ la-caja sell --offline', delay: 3.5, type: 'command' as const },
+    { text: '⚡ Venta procesada localmente en 15ms', delay: 4, type: 'info' as const },
+    { text: '⚡ Evento guardado en cola', delay: 4.5, type: 'info' as const },
+    { text: '✓ Sincronización programada', delay: 5, type: 'success' as const },
+  ]
+
+  return (
+    <div className="space-y-1 py-3">
+      {lines.map((line, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: line.delay, duration: 0.3 }}
+          className={cn(
+            line.type === 'command' && 'text-blue-400',
+            line.type === 'success' && 'text-emerald-400',
+            line.type === 'info' && 'text-purple-400',
+            line.type === 'empty' && 'h-2'
+          )}
+        >
+          {line.text}
+        </motion.div>
+      ))}
+      <motion.span
+        animate={{ opacity: [1, 0, 1] }}
+        transition={{ duration: 1, repeat: Infinity }}
+        className="text-slate-400"
+      >
+        _
+      </motion.span>
+    </div>
+  )
+}
+
+function ProblemItem({
+  icon: Icon,
+  problem,
+  description,
+}: {
+  icon: any
+  problem: string
+  description: string
+}) {
+  return (
+    <div className="flex items-start gap-3 group">
+      <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/20 transition-colors">
+        <Icon className="w-5 h-5 text-red-400" />
+      </div>
+      <div className="flex-1">
+        <p className="font-semibold text-white mb-1">{problem}</p>
+        <p className="text-sm text-slate-400">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function SolutionItem({
+  icon: Icon,
+  solution,
+  description,
+}: {
+  icon: any
+  solution: string
+  description: string
+}) {
+  return (
+    <div className="flex items-start gap-3 group">
+      <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/20 transition-colors">
+        <Icon className="w-5 h-5 text-emerald-400" />
+      </div>
+      <div className="flex-1">
+        <p className="font-semibold text-white mb-1">{solution}</p>
+        <p className="text-sm text-slate-400">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+// ========================================
+// SECCIÓN DE FEATURES
+// ========================================
+function FeaturesSection() {
+  const featuresRef = useRef(null)
+  const isInView = useInView(featuresRef, { once: true, amount: 0.2 })
+
+  const features = [
+    {
+      icon: WifiOff,
+      title: 'POS Offline-First',
+      description: 'Funciona 100% sin internet con sincronización resiliente y event sourcing.',
+      details: [
+        'Event sourcing completo',
+        'Split payments (6 métodos)',
+        'Cambio exacto Bs/USD',
+        'Atajos de teclado (F2-F4)',
+      ],
+      color: 'blue',
+      badge: 'La única solución real offline en Venezuela',
+    },
+    {
+      icon: QrCode,
+      title: 'Facturación Fiscal SENIAT',
+      description: 'Cumplimiento Providencia SNAT/2024/000121 con códigos QR y control fiscal.',
+      details: [
+        'Códigos QR + Control Code',
+        'Inmutabilidad garantizada',
+        'Notas crédito/débito',
+        'Endpoint auditoría SENIAT',
+      ],
+      color: 'purple',
+      badge: '85% Compliant - Único en el mercado',
+    },
+    {
+      icon: Calculator,
+      title: 'Contabilidad Integrada',
+      description: 'Plan de cuentas, asientos automáticos y reportes contables completos.',
+      details: [
+        'Balance general',
+        'Estado de resultados',
+        'Flujo de efectivo',
+        'Integración ERP',
+      ],
+      color: 'emerald',
+      badge: 'Ahorra 20 horas/mes en contabilidad',
+    },
+    {
+      icon: Brain,
+      title: 'IA/ML Avanzado',
+      description: 'Inteligencia artificial que aprende de tu negocio y optimiza operaciones.',
+      details: [
+        'Predicción de demanda',
+        'Detección de anomalías',
+        'Recomendaciones inteligentes',
+        'Optimización inventario',
+      ],
+      color: 'pink',
+      badge: 'IA que aprende de tu negocio',
+    },
+    {
+      icon: Boxes,
+      title: 'Gestión de Inventario',
+      description: 'Control total con multi-bodega, variantes, lotes y números de serie.',
+      details: [
+        'Multi-bodega',
+        'Multi-variantes (talla/color)',
+        'Lotes + vencimientos FIFO',
+        'Transferencias entre bodegas',
+      ],
+      color: 'orange',
+      badge: 'Control total del inventario',
+    },
+    {
+      icon: BarChart3,
+      title: 'Analytics en Tiempo Real',
+      description: 'Dashboard ejecutivo con KPIs en vivo, heatmaps y análisis de rentabilidad.',
+      details: [
+        'Heatmaps de ventas',
+        'Top productos',
+        'Análisis rentabilidad',
+        'Proyecciones',
+      ],
+      color: 'cyan',
+      badge: 'Insights que impulsan ventas',
+    },
+    {
+      icon: Smartphone,
+      title: 'Multi-Plataforma',
+      description: 'PWA, Desktop y Android. Un sistema, todos tus dispositivos.',
+      details: [
+        'PWA (Progressive Web App)',
+        'Desktop (Electron)',
+        'Android nativo',
+        'Tablet optimizado',
+      ],
+      color: 'indigo',
+      badge: 'Un sistema, todos tus dispositivos',
+    },
+    {
+      icon: Banknote,
+      title: 'Sistema Venezolano Único',
+      description: 'Tasa BCV automática, dual Bs/USD, 24 bancos y denominaciones 2025.',
+      details: [
+        'Tasa BCV automática',
+        '24 bancos venezolanos',
+        'Denominaciones 2025',
+        'Pago móvil + transferencia',
+      ],
+      color: 'yellow',
+      badge: 'Hecho para Venezuela',
+    },
+    {
+      icon: Printer,
+      title: 'Periféricos',
+      description: 'Plug & play con impresoras, lectores, cajones y balanzas.',
+      details: [
+        'Impresoras térmicas',
+        'Lectores código barras',
+        'Cajones de dinero',
+        'Balanzas',
+      ],
+      color: 'slate',
+      badge: 'Plug & play con tu hardware',
+    },
+    {
+      icon: Lock,
+      title: 'Seguridad Enterprise',
+      description: 'Auditoría completa, 2FA, encriptación AES-256 y OWASP Top 10 compliant.',
+      details: [
+        'Rate limiting',
+        'Refresh tokens',
+        'Encriptación AES-256',
+        'OWASP Top 10',
+      ],
+      color: 'red',
+      badge: 'Seguridad de nivel bancario',
+    },
+  ]
+
+  const colorClasses = {
+    blue: { icon: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+    purple: { icon: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' },
+    emerald: { icon: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
+    pink: { icon: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/30' },
+    orange: { icon: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
+    cyan: { icon: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30' },
+    indigo: { icon: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/30' },
+    yellow: { icon: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+    slate: { icon: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/30' },
+    red: { icon: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+  }
+
+  return (
+    <section id="features" ref={featuresRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/50">
+      <div className="container mx-auto max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-4 mb-16"
+        >
+          <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+            Características Únicas
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="text-white">Todo lo que necesitas para</span>
+            <br />
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              gestionar tu negocio
+            </span>
+          </h2>
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            10 módulos completos que cubren cada aspecto de tu operación. Tecnología de punta
+            combinada con simplicidad.
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((feature, index) => {
+            const Icon = feature.icon
+            const colors = colorClasses[feature.color as keyof typeof colorClasses]
+
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 group h-full">
+                  <CardHeader>
+                    <div
+                      className={cn(
+                        'w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform',
+                        colors.bg
+                      )}
+                    >
+                      <Icon className={cn('w-7 h-7', colors.icon)} />
+                    </div>
+                    <CardTitle className="text-white text-xl mb-2">{feature.title}</CardTitle>
+                    <Badge
+                      className={cn(
+                        'text-xs font-normal mb-3 border',
+                        colors.bg,
+                        colors.icon,
+                        colors.border
+                      )}
+                    >
+                      {feature.badge}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <CardDescription className="text-slate-400 text-base mb-4">
+                      {feature.description}
+                    </CardDescription>
+                    <ul className="space-y-2">
+                      {feature.details.map((detail, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                          <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <span>{detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ========================================
+// SECCIÓN SHOWCASE SENIAT
+// ========================================
+function SeniatShowcaseSection() {
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+
+  return (
+    <section
+      id="seniat"
+      ref={sectionRef}
+      className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900/30 to-purple-900/10"
+    >
+      <div className="container mx-auto max-w-6xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-4 mb-16"
+        >
+          <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-base px-4 py-2">
+            <Shield className="w-4 h-4 mr-2 inline" />
+            Único en Venezuela
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="text-white">Facturación Fiscal</span>
+            <br />
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
+              Cumplimiento SENIAT
+            </span>
+          </h2>
+          <p className="text-xl text-slate-400 max-w-3xl mx-auto">
+            85% de cumplimiento con la Providencia SNAT/2024/000121. El único POS en Venezuela con
+            facturación fiscal integrada y endpoint de auditoría listo para el SENIAT.
+          </p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-2 gap-8 items-center">
+          {/* Left: Mockup factura fiscal */}
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 }}
+            transition={{ duration: 0.8 }}
+          >
+            <Card className="bg-white text-slate-900 shadow-2xl">
+              <CardHeader className="border-b-2 border-slate-800">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <CardTitle className="text-2xl mb-1">TU NEGOCIO C.A.</CardTitle>
+                    <p className="text-sm text-slate-600">RIF: J-12345678-9</p>
+                    <p className="text-sm text-slate-600">Av. Principal, Caracas</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-lg">FACTURA FISCAL</p>
+                    <p className="text-sm">Nro: FAC-2025-001234</p>
+                    <p className="text-sm text-purple-600 font-semibold">
+                      Fiscal: VE20251231-567890
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div>
+                  <p className="font-semibold mb-1">Cliente:</p>
+                  <p className="text-sm">Consumidor Final</p>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2">Producto</th>
+                        <th className="text-right py-2">Cant.</th>
+                        <th className="text-right py-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b">
+                        <td className="py-2">Producto Demo 1</td>
+                        <td className="text-right">2</td>
+                        <td className="text-right">Bs. 1,200.00</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-2">Producto Demo 2</td>
+                        <td className="text-right">1</td>
+                        <td className="text-right">Bs. 800.00</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="border-t-2 border-slate-800 pt-4 space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>Bs. 2,000.00</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>IVA (16%):</span>
+                    <span>Bs. 320.00</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>TOTAL:</span>
+                    <span>Bs. 2,320.00</span>
+                  </div>
+                  <div className="text-right text-sm text-slate-600">USD 7.70</div>
+                </div>
+
+                {/* QR Code Mock */}
+                <div className="border-t pt-6 flex flex-col items-center">
+                  <div className="w-32 h-32 bg-slate-900 rounded flex items-center justify-center mb-2 relative">
+                    <QrCode className="w-24 h-24 text-white" />
+                    <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded" />
+                  </div>
+                  <p className="text-xs text-center text-slate-600">Código QR Fiscal</p>
+                  <p className="text-xs text-center text-purple-600 font-mono mt-1">
+                    Control: A3F5K9X1Z2
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Right: Features + Timeline */}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
+            transition={{ duration: 0.8 }}
+            className="space-y-6"
+          >
+            {/* Stats destacados */}
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="bg-purple-500/10 border-purple-500/30 text-center p-4">
+                <div className="text-3xl font-black text-purple-400">85%</div>
+                <div className="text-xs text-slate-400 mt-1">Cumplimiento SENIAT</div>
+              </Card>
+              <Card className="bg-emerald-500/10 border-emerald-500/30 text-center p-4">
+                <div className="text-3xl font-black text-emerald-400">100%</div>
+                <div className="text-xs text-slate-400 mt-1">Inmutabilidad</div>
+              </Card>
+              <Card className="bg-blue-500/10 border-blue-500/30 text-center p-4">
+                <div className="text-3xl font-black text-blue-400">✓</div>
+                <div className="text-xs text-slate-400 mt-1">Endpoint Auditoría</div>
+              </Card>
+            </div>
+
+            {/* Timeline del proceso */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">Proceso de Emisión</CardTitle>
+                <CardDescription>Automático y certificado</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <TimelineStep
+                  number={1}
+                  title="Venta en POS"
+                  description="Registro completo de la transacción"
+                />
+                <TimelineStep
+                  number={2}
+                  title="Generación Códigos"
+                  description="QR + Control Code + Fiscal Number"
+                />
+                <TimelineStep
+                  number={3}
+                  title="Impresión Factura"
+                  description="Formato oficial con códigos fiscales"
+                />
+                <TimelineStep
+                  number={4}
+                  title="Registro Inmutable"
+                  description="Guardado permanente, no modificable"
+                />
+                <TimelineStep
+                  number={5}
+                  title="Disponible SENIAT"
+                  description="Endpoint listo para auditoría oficial"
+                  isLast
+                />
+              </CardContent>
+            </Card>
+
+            {/* Features únicos */}
+            <div className="space-y-3">
+              <FeatureCheckItem
+                icon={QrCode}
+                text="Códigos QR verificables"
+                description="Generación automática según normativa"
+              />
+              <FeatureCheckItem
+                icon={Lock}
+                text="Inmutabilidad blockchain-style"
+                description="Las facturas emitidas no pueden modificarse"
+              />
+              <FeatureCheckItem
+                icon={FileText}
+                text="Notas de crédito/débito"
+                description="Corrección de facturas según SENIAT"
+              />
+              <FeatureCheckItem
+                icon={Shield}
+                text="Endpoint de auditoría"
+                description="Acceso especial para inspectores SENIAT"
+              />
+            </div>
+
+            <Button
+              size="lg"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            >
+              Cumplir con SENIAT Hoy
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function TimelineStep({
+  number,
+  title,
+  description,
+  isLast = false,
+}: {
+  number: number
+  title: string
+  description: string
+  isLast?: boolean
+}) {
+  return (
+    <div className="flex gap-4">
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 rounded-full bg-purple-500/20 border-2 border-purple-500 flex items-center justify-center text-purple-400 font-bold text-sm flex-shrink-0">
+          {number}
+        </div>
+        {!isLast && <div className="w-0.5 h-full bg-purple-500/20 my-1" />}
+      </div>
+      <div className="flex-1 pb-4">
+        <p className="font-semibold text-white mb-1">{title}</p>
+        <p className="text-sm text-slate-400">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function FeatureCheckItem({
+  icon: Icon,
+  text,
+  description,
+}: {
+  icon: any
+  text: string
+  description: string
+}) {
+  return (
+    <div className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/30 border border-slate-700/50 hover:border-purple-500/30 transition-colors group">
+      <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/20 transition-colors">
+        <Icon className="w-5 h-5 text-purple-400" />
+      </div>
+      <div className="flex-1">
+        <p className="font-semibold text-white mb-0.5">{text}</p>
+        <p className="text-xs text-slate-400">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+// ========================================
+// SECCIÓN COMPARISON TABLE
+// ========================================
+function ComparisonSection() {
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+
+  const features: Array<{
+    name: string
+    laCaja: boolean
+    square: boolean | 'partial'
+    toast: boolean | 'partial'
+    otros: boolean | 'partial'
+  }> = [
+    { name: 'Offline-first real', laCaja: true, square: false, toast: false, otros: false },
+    { name: 'Facturación SENIAT', laCaja: true, square: false, toast: false, otros: false },
+    { name: 'Dual Bs/USD nativo', laCaja: true, square: false, toast: false, otros: 'partial' },
+    { name: 'Contabilidad integrada', laCaja: true, square: false, toast: true, otros: false },
+    { name: 'IA/ML predictivo', laCaja: true, square: false, toast: false, otros: false },
+    { name: 'Multi-plataforma (PWA/Desktop/Android)', laCaja: true, square: 'partial', toast: 'partial', otros: false },
+    { name: 'Split payments (6 métodos)', laCaja: true, square: 'partial', toast: 'partial', otros: false },
+    { name: '24 bancos venezolanos', laCaja: true, square: false, toast: false, otros: 'partial' },
+    { name: 'Inventario multi-bodega', laCaja: true, square: true, toast: true, otros: 'partial' },
+    { name: 'Analytics tiempo real', laCaja: true, square: true, toast: true, otros: 'partial' },
+    { name: 'Plan gratuito ilimitado', laCaja: true, square: false, toast: false, otros: false },
+    { name: 'Setup en 5 minutos', laCaja: true, square: false, toast: false, otros: 'partial' },
+  ]
+
+  const renderIcon = (status: boolean | 'partial') => {
+    if (status === true) return <Check className="w-5 h-5 text-emerald-400" />
+    if (status === 'partial') return <Minus className="w-5 h-5 text-yellow-400" />
+    return <X className="w-5 h-5 text-red-400/50" />
+  }
+
+  return (
+    <section ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/30">
+      <div className="container mx-auto max-w-6xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-4 mb-16"
+        >
+          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+            Comparación Objetiva
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="text-white">¿Por qué</span>{' '}
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              LA CAJA?
+            </span>
+          </h2>
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            Comparación directa con las soluciones más populares del mercado.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="overflow-x-auto"
+        >
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardContent className="p-0">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <th className="text-left p-4 text-slate-400 font-medium">Característica</th>
+                    <th className="p-4 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                          <Sparkles className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-white font-bold">LA CAJA</span>
+                      </div>
+                    </th>
+                    <th className="p-4 text-center text-slate-400">Square</th>
+                    <th className="p-4 text-center text-slate-400">Toast</th>
+                    <th className="p-4 text-center text-slate-400">Otros POS VE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {features.map((feature, index) => (
+                    <motion.tr
+                      key={feature.name}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
+                      transition={{ duration: 0.4, delay: 0.1 * index }}
+                      className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors"
+                    >
+                      <td className="p-4 text-slate-300">{feature.name}</td>
+                      <td className="p-4 text-center bg-blue-500/5">{renderIcon(feature.laCaja)}</td>
+                      <td className="p-4 text-center">{renderIcon(feature.square)}</td>
+                      <td className="p-4 text-center">{renderIcon(feature.toast)}</td>
+                      <td className="p-4 text-center">{renderIcon(feature.otros)}</td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          {/* Leyenda */}
+          <div className="flex items-center justify-center gap-6 mt-6 text-sm text-slate-400">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-400" />
+              <span>Completo</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Minus className="w-4 h-4 text-yellow-400" />
+              <span>Parcial</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <X className="w-4 h-4 text-red-400/50" />
+              <span>No disponible</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ========================================
+// SECCIÓN STATS IMPRESIONANTES
+// ========================================
+function StatsSection() {
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+
+  // Counter animation hook
+  const useCounter = (end: number, duration: number = 2000) => {
+    const [count, setCount] = useState(0)
+
+    useEffect(() => {
+      if (!isInView) return
+
+      let startTime: number | null = null
+      const animate = (currentTime: number) => {
+        if (!startTime) startTime = currentTime
+        const progress = Math.min((currentTime - startTime) / duration, 1)
+        setCount(Math.floor(progress * end))
+        if (progress < 1) {
+          requestAnimationFrame(animate)
+        }
+      }
+      requestAnimationFrame(animate)
+    }, [isInView, end, duration])
+
+    return count
+  }
+
+  const stats = [
+    { label: 'Uptime', value: 99.9, suffix: '%', icon: Zap, color: 'emerald' },
+    { label: 'Tiempo Respuesta', value: 15, prefix: '<', suffix: 'ms', icon: Rocket, color: 'blue' },
+    { label: 'Offline', value: 100, suffix: '%', icon: WifiOff, color: 'purple' },
+    { label: 'SENIAT', value: 85, suffix: '%', icon: Shield, color: 'pink' },
+    { label: 'Métodos Pago', value: 6, icon: Banknote, color: 'yellow' },
+    { label: 'Bancos VE', value: 24, icon: Globe, color: 'cyan' },
+    { label: 'Ventas/día', value: 10, suffix: 'K+', icon: TrendingUp, color: 'orange' },
+    { label: 'Plataformas', value: 3, icon: Smartphone, color: 'indigo' },
+    { label: 'Setup', value: 5, suffix: 'min', icon: Target, color: 'green' },
+  ]
+
+  const colorClasses = {
+    emerald: 'from-emerald-500 to-emerald-600',
+    blue: 'from-blue-500 to-blue-600',
+    purple: 'from-purple-500 to-purple-600',
+    pink: 'from-pink-500 to-pink-600',
+    yellow: 'from-yellow-500 to-yellow-600',
+    cyan: 'from-cyan-500 to-cyan-600',
+    orange: 'from-orange-500 to-orange-600',
+    indigo: 'from-indigo-500 to-indigo-600',
+    green: 'from-green-500 to-green-600',
+  }
+
+  return (
+    <section ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/50">
+      <div className="container mx-auto max-w-6xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-4 mb-16"
+        >
+          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+            Números que Hablan
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Estadísticas Impresionantes
+            </span>
+          </h2>
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            Rendimiento de clase mundial, hecho para Venezuela.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {stats.map((stat, index) => {
+            const Icon = stat.icon
+            const count = useCounter(stat.value)
+            const gradient = colorClasses[stat.color as keyof typeof colorClasses]
+
+            return (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 group relative overflow-hidden">
+                  {/* Gradient background on hover */}
+                  <div className={cn(
+                    "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity duration-300",
+                    gradient
+                  )} />
+
+                  <CardContent className="p-8 text-center relative z-10">
+                    <div className={cn(
+                      "w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300",
+                      gradient
+                    )}>
+                      <Icon className="w-8 h-8 text-white" />
+                    </div>
+
+                    <div className="text-5xl font-black mb-2 bg-gradient-to-br bg-clip-text text-transparent" style={{
+                      backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))`,
+                    }}>
+                      <span className="text-white">
+                        {stat.prefix}
+                        {count}
+                        {stat.suffix}
+                      </span>
+                    </div>
+
+                    <p className="text-slate-400 font-medium">{stat.label}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ========================================
+// SECCIÓN PRICING
+// ========================================
+function PricingSection() {
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
+  const navigate = useNavigate()
+
+  const plans = [
+    {
+      name: 'Free',
+      description: 'Para empezar y crecer',
+      price: 0,
+      annualPrice: 0,
+      icon: Sparkles,
+      color: 'blue',
+      popular: false,
+      features: [
+        'POS offline-first completo',
+        'Hasta 100 productos',
+        'Hasta 50 ventas/mes',
+        '1 usuario',
+        'Soporte por email',
+        'Analytics básicos',
+        'Multi-plataforma (PWA/Desktop)',
+      ],
+      cta: 'Empezar Gratis',
+    },
+    {
+      name: 'Pro',
+      description: 'Para negocios en crecimiento',
+      price: 29,
+      annualPrice: 24,
+      icon: Rocket,
+      color: 'purple',
+      popular: true,
+      features: [
+        'Todo lo de Free +',
+        'Productos ilimitados',
+        'Ventas ilimitadas',
+        'Hasta 5 usuarios',
+        'Facturación fiscal SENIAT',
+        'Contabilidad integrada',
+        'IA/ML predictivo',
+        'Multi-bodega',
+        'Analytics avanzados',
+        'Soporte prioritario 24/7',
+        'Integración ERP',
+      ],
+      cta: 'Empezar Prueba 14 días',
+    },
+    {
+      name: 'Enterprise',
+      description: 'Para grandes operaciones',
+      price: null,
+      annualPrice: null,
+      icon: Crown,
+      color: 'yellow',
+      popular: false,
+      features: [
+        'Todo lo de Pro +',
+        'Usuarios ilimitados',
+        'Multi-tienda ilimitado',
+        'SLA 99.9% garantizado',
+        'Soporte dedicado',
+        'Custom branding',
+        'API access completo',
+        'Capacitación in-situ',
+        'Migración asistida',
+        'Custom features',
+      ],
+      cta: 'Contactar Ventas',
+    },
+  ]
+
+  const colorClasses = {
+    blue: {
+      gradient: 'from-blue-500 to-blue-600',
+      ring: 'ring-blue-500/50',
+      badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+    },
+    purple: {
+      gradient: 'from-purple-500 to-purple-600',
+      ring: 'ring-purple-500/50',
+      badge: 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+    },
+    yellow: {
+      gradient: 'from-yellow-500 to-yellow-600',
+      ring: 'ring-yellow-500/50',
+      badge: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+    },
+  }
+
+  return (
+    <section id="pricing" ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900/30 to-slate-900/50">
+      <div className="container mx-auto max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-4 mb-12"
+        >
+          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+            Planes y Precios
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="text-white">Precios</span>{' '}
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              Transparentes
+            </span>
+          </h2>
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            Comienza gratis. Escala cuando lo necesites. Sin sorpresas.
+          </p>
+        </motion.div>
+
+        {/* Billing toggle */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="flex items-center justify-center gap-4 mb-12"
+        >
+          <span className={cn("text-sm font-medium", billingCycle === 'monthly' ? 'text-white' : 'text-slate-400')}>
+            Mensual
+          </span>
+          <button
+            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
+            className={cn(
+              "relative w-14 h-7 rounded-full transition-colors",
+              billingCycle === 'annual' ? 'bg-purple-500' : 'bg-slate-700'
+            )}
+          >
+            <div className={cn(
+              "absolute top-1 w-5 h-5 bg-white rounded-full transition-transform",
+              billingCycle === 'annual' ? 'translate-x-8' : 'translate-x-1'
+            )} />
+          </button>
+          <span className={cn("text-sm font-medium", billingCycle === 'annual' ? 'text-white' : 'text-slate-400')}>
+            Anual
+          </span>
+          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs">
+            Ahorra 20%
+          </Badge>
+        </motion.div>
+
+        {/* Plans */}
+        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {plans.map((plan, index) => {
+            const Icon = plan.icon
+            const colors = colorClasses[plan.color as keyof typeof colorClasses]
+            const price = billingCycle === 'annual' ? plan.annualPrice : plan.price
+
+            return (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.5, delay: 0.1 * index }}
+                className="relative"
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                    <Badge className="bg-purple-500 text-white border-0 shadow-lg">
+                      Más Popular
+                    </Badge>
+                  </div>
+                )}
+
+                <Card className={cn(
+                  "bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 h-full",
+                  plan.popular && "ring-2 ring-purple-500/50 shadow-2xl shadow-purple-500/20 scale-105"
+                )}>
+                  <CardHeader>
+                    <div className={cn(
+                      "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4",
+                      colors.gradient
+                    )}>
+                      <Icon className="w-7 h-7 text-white" />
+                    </div>
+
+                    <CardTitle className="text-2xl text-white mb-2">{plan.name}</CardTitle>
+                    <CardDescription className="text-slate-400">{plan.description}</CardDescription>
+
+                    <div className="mt-6">
+                      {price === null ? (
+                        <div>
+                          <p className="text-4xl font-black text-white">Custom</p>
+                          <p className="text-sm text-slate-400 mt-1">Contacta a ventas</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-black text-white">${price}</span>
+                            <span className="text-slate-400">/mes</span>
+                          </div>
+                          {billingCycle === 'annual' && plan.price !== 0 && (
+                            <p className="text-sm text-emerald-400 mt-1">
+                              Ahorras ${(plan.price! - plan.annualPrice!) * 12}/año
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-6">
+                    <Button
+                      size="lg"
+                      onClick={() => navigate('/login')}
+                      className={cn(
+                        "w-full text-white shadow-lg hover:shadow-xl transition-all",
+                        plan.popular
+                          ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          : "bg-slate-700 hover:bg-slate-600"
+                      )}
+                    >
+                      {plan.cta}
+                      {!plan.popular && <ArrowRight className="ml-2 w-4 h-4" />}
+                    </Button>
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-slate-300">Incluye:</p>
+                      {plan.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm text-slate-300">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* ROI Calculator teaser */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="mt-16 text-center"
+        >
+          <Card className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-blue-500/30 max-w-3xl mx-auto">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <BarChart3 className="w-6 h-6 text-blue-400" />
+                <h3 className="text-2xl font-bold text-white">ROI Calculado</h3>
+              </div>
+              <p className="text-slate-300 mb-6">
+                Nuestros clientes ahorran en promedio <span className="text-emerald-400 font-bold">20 horas/mes</span> en contabilidad
+                y aumentan sus ventas un <span className="text-emerald-400 font-bold">15%</span> con IA predictiva.
+              </p>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-3xl font-black text-emerald-400">4,869%</p>
+                  <p className="text-sm text-slate-400">ROI Plan Pro</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-black text-blue-400">$2,400</p>
+                  <p className="text-sm text-slate-400">Ahorro anual</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-black text-purple-400">3 meses</p>
+                  <p className="text-sm text-slate-400">Tiempo de payback</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ========================================
+// SECCIÓN TESTIMONIALS
+// ========================================
+function TestimonialsSection() {
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+
+  const testimonials = [
+    {
+      name: 'María González',
+      role: 'Dueña de Bodega La Esquina',
+      location: 'Caracas',
+      rating: 5,
+      quote: 'Antes perdía ventas cada vez que se iba el internet. Con LA CAJA trabajo 100% offline y todo se sincroniza automático cuando vuelve la conexión. En 3 meses recuperé la inversión.',
+      avatar: '👩‍💼',
+      highlight: 'Recuperó inversión en 3 meses',
+    },
+    {
+      name: 'Carlos Ramírez',
+      role: 'Gerente de Supermercado',
+      location: 'Valencia',
+      rating: 5,
+      quote: 'La facturación fiscal SENIAT integrada nos salvó. No tenemos que usar sistemas externos ni pagar más. El soporte técnico es excelente y siempre están disponibles.',
+      avatar: '👨‍💼',
+      highlight: 'Ahorra $500/mes en software fiscal',
+    },
+    {
+      name: 'Ana Martínez',
+      role: 'Propietaria de Farmacia',
+      location: 'Maracaibo',
+      rating: 5,
+      quote: 'El sistema de inventario multi-bodega es perfecto. Controlo 3 sucursales desde un solo lugar. La IA me sugiere qué comprar antes de que se me acabe el stock.',
+      avatar: '👩‍⚕️',
+      highlight: 'Controla 3 sucursales sin esfuerzo',
+    },
+  ]
+
+  return (
+    <section ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900/50 to-slate-900/30">
+      <div className="container mx-auto max-w-6xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-4 mb-16"
+        >
+          <Badge className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+            Casos de Éxito
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="text-white">Lo que dicen</span>{' '}
+            <span className="bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+              Nuestros Clientes
+            </span>
+          </h2>
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            Negocios reales, resultados reales. Historias de éxito de toda Venezuela.
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {testimonials.map((testimonial, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+            >
+              <Card className="bg-slate-800/50 border-slate-700 hover:border-yellow-500/30 transition-all duration-300 h-full group">
+                <CardHeader>
+                  {/* Quote icon */}
+                  <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-yellow-500/20 transition-colors">
+                    <Quote className="w-6 h-6 text-yellow-400" />
+                  </div>
+
+                  {/* Stars */}
+                  <div className="flex gap-1 mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+
+                  {/* Quote */}
+                  <p className="text-slate-300 leading-relaxed italic mb-4">
+                    "{testimonial.quote}"
+                  </p>
+
+                  {/* Highlight badge */}
+                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs w-fit">
+                    ✓ {testimonial.highlight}
+                  </Badge>
+                </CardHeader>
+
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <div className="text-4xl">{testimonial.avatar}</div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-white">{testimonial.name}</p>
+                      <p className="text-sm text-slate-400">{testimonial.role}</p>
+                      <p className="text-xs text-slate-500">{testimonial.location}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Trust banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-12 text-center"
+        >
+          <Card className="bg-gradient-to-r from-emerald-900/20 to-blue-900/20 border-emerald-500/30 inline-block">
+            <CardContent className="p-6">
+              <p className="text-lg text-slate-300">
+                <span className="font-bold text-emerald-400">500+ negocios</span> confían en LA CAJA
+                para gestionar más de{' '}
+                <span className="font-bold text-blue-400">10,000 ventas diarias</span>
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ========================================
+// SECCIÓN FAQ
+// ========================================
+function FAQSection() {
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+
+  const faqs = [
+    {
+      question: '¿Realmente funciona 100% offline?',
+      answer: 'Sí. LA CAJA usa arquitectura offline-first con event sourcing. Todas las operaciones (ventas, inventario, reportes) funcionan sin internet. Cuando vuelve la conexión, todo se sincroniza automáticamente sin pérdida de datos.',
+    },
+    {
+      question: '¿Cómo funciona la facturación fiscal SENIAT?',
+      answer: 'Tenemos 85% de cumplimiento con la Providencia SNAT/2024/000121. Generamos códigos QR, control codes y fiscal numbers automáticamente. Las facturas son inmutables y tenemos un endpoint especial para auditorías del SENIAT.',
+    },
+    {
+      question: '¿Qué plataformas soporta?',
+      answer: 'LA CAJA funciona en 3 plataformas: PWA (navegador), Desktop (Windows/Mac/Linux con Electron) y Android nativo. Compras una licencia y usas en todos tus dispositivos.',
+    },
+    {
+      question: '¿Puedo manejar múltiples tiendas?',
+      answer: 'Sí. El plan Pro soporta hasta 5 usuarios y multi-bodega. El plan Enterprise soporta multi-tienda ilimitado con sincronización en tiempo real entre todas las sucursales.',
+    },
+    {
+      question: '¿Cómo funciona el sistema dual Bs/USD?',
+      answer: 'LA CAJA obtiene la tasa BCV automáticamente cada día. Todos los productos se guardan en USD y se convierten a Bs en tiempo real. Soporta 6 métodos de pago y 24 bancos venezolanos.',
+    },
+    {
+      question: '¿Qué hace la IA/ML predictivo?',
+      answer: 'Nuestro sistema de IA analiza patrones de venta y predice demanda, detecta anomalías (posibles fraudes o errores), recomienda productos para comprar y optimiza niveles de inventario automáticamente.',
+    },
+    {
+      question: '¿Hay costo de setup o migración?',
+      answer: 'No. El plan gratuito es para siempre sin costo de setup. En planes pagos, la migración asistida está incluida. Setup completo en 5 minutos con nuestro wizard guiado.',
+    },
+    {
+      question: '¿Qué soporte técnico incluye?',
+      answer: 'Plan Free: email. Plan Pro: soporte prioritario 24/7 por chat y teléfono. Plan Enterprise: gerente de cuenta dedicado + capacitación in-situ + SLA 99.9% garantizado.',
+    },
+  ]
+
+  return (
+    <section ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/30">
+      <div className="container mx-auto max-w-4xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6 }}
+          className="text-center space-y-4 mb-16"
+        >
+          <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+            Preguntas Frecuentes
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              ¿Tienes Preguntas?
+            </span>
+          </h2>
+          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+            Aquí están las respuestas a las preguntas más comunes sobre LA CAJA.
+          </p>
+        </motion.div>
+
+        <div className="space-y-4">
+          {faqs.map((faq, index) => {
+            const isOpen = openIndex === index
+
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.5, delay: index * 0.05 }}
+              >
+                <Card
+                  className={cn(
+                    'bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 cursor-pointer',
+                    isOpen && 'border-blue-500/50 shadow-lg shadow-blue-500/10'
+                  )}
+                  onClick={() => setOpenIndex(isOpen ? null : index)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                          <HelpCircle className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg text-white">{faq.question}</CardTitle>
+                        </div>
+                      </div>
+                      <motion.div
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex-shrink-0"
+                      >
+                        <ChevronDown className="w-5 h-5 text-slate-400" />
+                      </motion.div>
+                    </div>
+                  </CardHeader>
+
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <CardContent className="pt-0">
+                          <p className="text-slate-300 leading-relaxed pl-11">{faq.answer}</p>
+                        </CardContent>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Card>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* Contact support CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-12 text-center"
+        >
+          <p className="text-slate-400 mb-4">¿No encontraste tu respuesta?</p>
+          <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
+            <Mail className="mr-2 w-4 h-4" />
+            Contactar Soporte
+          </Button>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ========================================
+// SECCIÓN CTA FINAL
+// ========================================
+function FinalCTASection() {
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const navigate = useNavigate()
+
+  return (
+    <section ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900/30 to-slate-950 relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(168,85,247,0.1),transparent_70%)]" />
+      </div>
+
+      <div className="container mx-auto max-w-5xl relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.6 }}
+        >
+          <Card className="bg-gradient-to-br from-blue-900/30 via-purple-900/30 to-pink-900/30 border-blue-500/30 shadow-2xl shadow-blue-500/20 backdrop-blur-xl">
+            <CardContent className="p-12 text-center space-y-8">
+              {/* Icon */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={isInView ? { scale: 1 } : { scale: 0 }}
+                transition={{ duration: 0.5, delay: 0.2, type: 'spring' }}
+                className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg shadow-blue-500/50"
+              >
+                <Rocket className="w-10 h-10 text-white" />
+              </motion.div>
+
+              {/* Headline */}
+              <div className="space-y-4">
+                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black">
+                  <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    Transforma tu Negocio Hoy
+                  </span>
+                </h2>
+                <p className="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+                  Únete a los <span className="font-bold text-white">500+ negocios</span> que ya están
+                  vendiendo sin límites con LA CAJA
+                </p>
+              </div>
+
+              {/* Benefits */}
+              <div className="grid sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-white">Setup en 5 minutos</p>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-white">Gratis para siempre</p>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-white">Sin tarjeta de crédito</p>
+                </div>
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                <Button
+                  size="lg"
+                  onClick={() => navigate('/login')}
+                  className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:to-pink-700 text-white text-lg px-10 py-7 h-auto shadow-2xl shadow-blue-500/40 hover:shadow-blue-500/60 transition-all group"
+                >
+                  Empezar Gratis Ahora
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-500 text-lg px-10 py-7 h-auto backdrop-blur-sm"
+                  onClick={() => {
+                    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                >
+                  <Play className="mr-2 w-5 h-5" />
+                  Ver Demo
+                </Button>
+              </div>
+
+              {/* Social proof */}
+              <p className="text-sm text-slate-400 pt-4">
+                Más de <span className="font-bold text-emerald-400">10,000 ventas</span> procesadas hoy •{' '}
+                <span className="font-bold text-blue-400">99.9% uptime</span> •{' '}
+                <span className="font-bold text-purple-400">100% offline</span>
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+// ========================================
+// FOOTER
+// ========================================
+function Footer() {
+  const currentYear = new Date().getFullYear()
+
+  const footerLinks = {
+    producto: [
+      { label: 'Características', href: '#features' },
+      { label: 'Facturación SENIAT', href: '#seniat' },
+      { label: 'Precios', href: '#pricing' },
+      { label: 'Casos de Uso', href: '#' },
+    ],
+    recursos: [
+      { label: 'Documentación', href: '#' },
+      { label: 'API Reference', href: '#' },
+      { label: 'Guías', href: '#' },
+      { label: 'Blog', href: '#' },
+    ],
+    empresa: [
+      { label: 'Sobre Nosotros', href: '#' },
+      { label: 'Contacto', href: '#' },
+      { label: 'Soporte', href: '#' },
+      { label: 'Términos', href: '#' },
+    ],
+    comunidad: [
+      { label: 'GitHub', href: '#' },
+      { label: 'Twitter', href: '#' },
+      { label: 'LinkedIn', href: '#' },
+      { label: 'Discord', href: '#' },
+    ],
+  }
+
+  return (
+    <footer className="bg-slate-950 border-t border-slate-800 pt-16 pb-8 px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto max-w-7xl">
+        {/* Main footer content */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
+          {/* Brand column */}
+          <div className="col-span-2 md:col-span-1">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/50">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                LA CAJA
+              </span>
+            </div>
+            <p className="text-slate-400 text-sm mb-4">
+              El sistema POS que funciona sin internet. Hecho para Venezuela.
+            </p>
+            <div className="flex gap-3">
+              <a
+                href="#"
+                className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors group"
+              >
+                <Github className="w-4 h-4 text-slate-400 group-hover:text-white" />
+              </a>
+              <a
+                href="#"
+                className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors group"
+              >
+                <Twitter className="w-4 h-4 text-slate-400 group-hover:text-white" />
+              </a>
+              <a
+                href="#"
+                className="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors group"
+              >
+                <Linkedin className="w-4 h-4 text-slate-400 group-hover:text-white" />
+              </a>
+            </div>
+          </div>
+
+          {/* Links columns */}
+          <div>
+            <h3 className="font-semibold text-white mb-4">Producto</h3>
+            <ul className="space-y-3">
+              {footerLinks.producto.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-white mb-4">Recursos</h3>
+            <ul className="space-y-3">
+              {footerLinks.recursos.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-white mb-4">Empresa</h3>
+            <ul className="space-y-3">
+              {footerLinks.empresa.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-white mb-4">Comunidad</h3>
+            <ul className="space-y-3">
+              {footerLinks.comunidad.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-slate-400 hover:text-white text-sm transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-slate-500 text-sm">
+            © {currentYear} LA CAJA. Todos los derechos reservados.
+          </p>
+          <div className="flex items-center gap-6 text-sm">
+            <a href="#" className="text-slate-500 hover:text-white transition-colors">
+              Privacidad
+            </a>
+            <a href="#" className="text-slate-500 hover:text-white transition-colors">
+              Términos
+            </a>
+            <a href="#" className="text-slate-500 hover:text-white transition-colors">
+              Cookies
+            </a>
+          </div>
+        </div>
+
+        {/* Made in Venezuela badge */}
+        <div className="mt-8 text-center">
+          <Badge className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+            🇻🇪 Hecho con ❤️ en Venezuela
+          </Badge>
+        </div>
+      </div>
+    </footer>
+  )
+}

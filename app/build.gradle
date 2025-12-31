@@ -57,8 +57,8 @@ android {
         applicationId "com.lacaja.app"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 3
-        versionName "3"
+        versionCode 4
+        versionName "4.0"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -156,8 +156,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     lintOptions {
         checkReleaseBuilds false

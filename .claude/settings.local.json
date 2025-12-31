@@ -4,7 +4,26 @@
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest init:*)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(xargs:*)",
+      "Bash(./gradlew:*)",
+      "Bash(java -version:*)",
+      "Bash(javac:*)",
+      "Bash(/usr/libexec/java_home:*)",
+      "Bash(brew install:*)",
+      "Bash(curl:*)",
+      "Bash(bash)",
+      "Bash(source:*)",
+      "Bash(sdk version:*)",
+      "Bash(sdk list:*)",
+      "Bash(export SDKMAN_DIR=\"$HOME/.sdkman\")",
+      "Bash(bash -c:*)",
+      "Bash(echo:*)",
+      "Bash(export ANDROID_HOME=$HOME/Library/Android/sdk)",
+      "Bash(export PATH:*)",
+      "Bash(sdkmanager:*)",
+      "Bash(yes:*)",
+      "Bash(ls:*)"
     ]
   },
   "enabledMcpjsonServers": [

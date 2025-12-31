@@ -3,7 +3,7 @@
  * Proporciona estado reactivo de conectividad y eventos de cambio
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface OnlineStatus {
   isOnline: boolean;
@@ -13,19 +13,36 @@ export interface OnlineStatus {
 export function useOnline(): OnlineStatus {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [wasOffline, setWasOffline] = useState(false);
+  const wasOfflineTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setWasOffline(true);
-      // Resetear después de un tiempo
-      setTimeout(() => setWasOffline(false), 3000);
+    const setOnlineState = (online: boolean) => {
+      setIsOnline((prev) => {
+        if (prev === online) return prev;
+
+        if (online) {
+          setWasOffline(true);
+          if (wasOfflineTimeoutRef.current) {
+            window.clearTimeout(wasOfflineTimeoutRef.current);
+          }
+          wasOfflineTimeoutRef.current = window.setTimeout(() => {
+            setWasOffline(false);
+            wasOfflineTimeoutRef.current = null;
+          }, 3000);
+        } else {
+          setWasOffline(false);
+          if (wasOfflineTimeoutRef.current) {
+            window.clearTimeout(wasOfflineTimeoutRef.current);
+            wasOfflineTimeoutRef.current = null;
+          }
+        }
+
+        return online;
+      });
     };
 
-    const handleOffline = () => {
-      setIsOnline(false);
-      setWasOffline(false);
-    };
+    const handleOnline = () => setOnlineState(true);
+    const handleOffline = () => setOnlineState(false);
 
     // Escuchar eventos de conectividad
     window.addEventListener('online', handleOnline);
@@ -33,25 +50,20 @@ export function useOnline(): OnlineStatus {
 
     // También verificar periódicamente (por si los eventos no se disparan)
     const intervalId = setInterval(() => {
-      const currentOnline = navigator.onLine;
-      if (currentOnline !== isOnline) {
-        if (currentOnline) {
-          handleOnline();
-        } else {
-          handleOffline();
-        }
-      }
+      setOnlineState(navigator.onLine);
     }, 5000); // Verificar cada 5 segundos
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(intervalId);
+      if (wasOfflineTimeoutRef.current) {
+        window.clearTimeout(wasOfflineTimeoutRef.current);
+        wasOfflineTimeoutRef.current = null;
+      }
     };
-  }, [isOnline]);
+  }, []);
 
   return { isOnline, wasOffline };
 }
-
-
 

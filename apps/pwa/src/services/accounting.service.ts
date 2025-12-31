@@ -264,4 +264,3 @@ export const accountingReportsService = {
     return response.data
   },
 }
-
