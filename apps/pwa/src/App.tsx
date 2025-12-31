@@ -147,9 +147,19 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<LandingPageEnhanced />} />
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? <Navigate to="/app/dashboard" replace /> : <LandingPageEnhanced />
+          }
+        />
         <Route path="/landing" element={<LandingPageEnhanced />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? <Navigate to="/app/dashboard" replace /> : <LoginPage />
+          }
+        />
         <Route
           path="/license"
           element={

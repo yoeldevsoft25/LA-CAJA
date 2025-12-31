@@ -93,7 +93,7 @@ export default function LoginPage() {
       // Obtener primer nombre para el mensaje
       const firstName = response.full_name?.split(' ')[0] || 'Usuario'
       toast.success(`¡Bienvenido, ${firstName}!`)
-      navigate('/dashboard')
+      navigate('/app/dashboard')
     },
     onError: (error: Error) => {
       console.error('[Login] ❌ Error en login:', error)

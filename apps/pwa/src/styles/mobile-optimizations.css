@@ -1,0 +1,217 @@
+/**
+ * Optimizaciones específicas para dispositivos móviles y Android
+ */
+
+/* Desactivar animaciones complejas en mobile para mejor rendimiento */
+@media (max-width: 768px) {
+  /* Reducir o eliminar transforms pesados */
+  * {
+    will-change: auto !important;
+  }
+
+  /* Desactivar parallax y efectos de scroll en mobile */
+  [style*="transform: scale"],
+  [style*="transform: translateY"] {
+    transform: none !important;
+  }
+
+  /* Optimizar scroll en Android */
+  * {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Acelerar animaciones para que sean más suaves */
+  * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+}
+
+/* Detectar preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ========================================
+   CORRECCIONES DE BOTONES PARA ANDROID
+   ======================================== */
+
+/* Forzar tamaños consistentes de botones */
+button,
+.button,
+[role="button"] {
+  min-height: 44px !important; /* Tamaño mínimo táctil recomendado */
+  min-width: 44px !important;
+  padding: 0.75rem 1.5rem !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Botones pequeños (iconos) */
+button.btn-sm,
+button[aria-label]:not([aria-label=""]) {
+  min-height: 36px !important;
+  min-width: 36px !important;
+  padding: 0.5rem !important;
+}
+
+/* Botones grandes (primarios) */
+button.btn-lg,
+button[type="submit"] {
+  min-height: 52px !important;
+  padding: 1rem 2rem !important;
+  font-size: 1.125rem !important;
+}
+
+/* PROBLEMA: Botones con texto claro sobre fondo claro */
+/* Asegurar contraste mínimo en todos los estados */
+
+/* Botones primarios */
+button[class*="primary"],
+button[class*="bg-blue"],
+button[class*="bg-purple"] {
+  background-color: rgb(59 130 246) !important; /* blue-500 */
+  color: white !important;
+  border: none !important;
+}
+
+button[class*="primary"]:hover,
+button[class*="bg-blue"]:hover,
+button[class*="bg-purple"]:hover {
+  background-color: rgb(37 99 235) !important; /* blue-600 */
+  color: white !important;
+}
+
+/* Botones secundarios */
+button[class*="secondary"],
+button[class*="outline"],
+button[class*="ghost"] {
+  background-color: transparent !important;
+  color: rgb(59 130 246) !important; /* blue-500 */
+  border: 2px solid rgb(59 130 246) !important;
+}
+
+button[class*="secondary"]:hover,
+button[class*="outline"]:hover,
+button[class*="ghost"]:hover {
+  background-color: rgb(59 130 246) !important; /* blue-500 */
+  color: white !important;
+  border-color: rgb(37 99 235) !important; /* blue-600 */
+}
+
+/* Botones de texto claro - FORZAR visibilidad SIEMPRE */
+button[class*="text-white"],
+button[class*="text-gray-100"],
+button[class*="text-gray-200"] {
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.1);
+}
+
+/* Cuando el botón tiene background claro, forzar texto oscuro */
+button[class*="bg-white"]:not(:hover),
+button[class*="bg-gray-100"]:not(:hover),
+button[class*="bg-gray-200"]:not(:hover) {
+  color: rgb(17 24 39) !important; /* gray-900 */
+  background-color: white !important;
+  border: 2px solid rgb(209 213 219) !important; /* gray-300 */
+}
+
+/* Links que parecen botones */
+a[class*="button"],
+a[class*="btn"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 44px !important;
+  padding: 0.75rem 1.5rem !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+}
+
+/* Botones en la landing page específicamente */
+.landing-page button,
+.landing-page a[class*="button"] {
+  font-weight: 600 !important;
+  letter-spacing: 0.025em !important;
+}
+
+/* Forzar outline visible en focus para accesibilidad */
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgb(59 130 246) !important;
+  outline-offset: 2px !important;
+}
+
+/* ========================================
+   OPTIMIZACIONES DE RENDIMIENTO
+   ======================================== */
+
+/* Usar GPU acceleration solo donde sea necesario */
+.transform-gpu {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Lazy loading de imágenes */
+img[loading="lazy"] {
+  content-visibility: auto;
+}
+
+/* Optimizar renders de elementos fuera de viewport */
+@media (max-width: 768px) {
+  section:not([data-visible="true"]) {
+    content-visibility: auto;
+    contain-intrinsic-size: 1000px;
+  }
+}
+
+/* Mejorar scroll performance */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 768px) {
+  .scroll-smooth {
+    scroll-behavior: auto; /* Desactivar smooth scroll en mobile */
+  }
+}
+
+/* ========================================
+   ANDROID ESPECÍFICO
+   ======================================== */
+
+/* Desactivar el tap highlight que puede causar confusión */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mejorar el tap en Android */
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
+  touch-action: manipulation;
+}
+
+/* Prevenir zoom en inputs en iOS/Android */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* Mejorar fonts en Android */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
