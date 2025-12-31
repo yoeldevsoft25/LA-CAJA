@@ -25,7 +25,15 @@
       "Bash(yes:*)",
       "Bash(ls:*)",
       "Bash(npm run build:*)",
-      "Bash(sdk use java:*)"
+      "Bash(sdk use java:*)",
+      "Bash(jarsigner:*)",
+      "Bash(zipalign:*)",
+      "Bash($HOME/Library/Android/sdk/build-tools/35.0.0/zipalign:*)",
+      "Bash(~/Library/Android/sdk/build-tools/35.0.0/zipalign:*)",
+      "Bash(md5:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enabledMcpjsonServers": [
