@@ -77,14 +77,19 @@ function App() {
   // Manejar cambios de conectividad
   useEffect(() => {
     if (!isOnline) {
+      console.log('[App] 📵 Conexión perdida');
       offlineIndicator.showOffline();
       return;
     }
 
     if (wasOffline) {
+      console.log('[App] 🌐 Conexión recuperada, sincronizando...');
       offlineIndicator.showOnline();
       // Intentar sincronizar cuando se recupera la conexión
-      syncService.syncNow().catch(() => {
+      syncService.syncNow().then(() => {
+        console.log('[App] ✅ Sincronización manual completada');
+      }).catch((err) => {
+        console.warn('[App] ⚠️ Error en sincronización manual (se reintentará):', err?.message || err);
         // Silenciar errores, el sync periódico lo intentará de nuevo
       });
     }

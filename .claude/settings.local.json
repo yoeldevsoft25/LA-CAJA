@@ -41,7 +41,9 @@
       "Bash(npm run test:*)",
       "Bash(cat:*)",
       "Bash(PGPASSWORD='@bC154356' psql:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(npx cap sync android)",
+      "Bash(npm run cap:sync:*)"
     ]
   },
   "enabledMcpjsonServers": [

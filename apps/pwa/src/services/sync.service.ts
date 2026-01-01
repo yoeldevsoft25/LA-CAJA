@@ -79,20 +79,23 @@ class SyncServiceClass {
   private setupConnectivityListeners(): void {
     this.onlineListener = () => {
       // Cuando vuelve la conexión, sincronizar inmediatamente
+      console.log('[SyncService] 🌐 Conexión recuperada, sincronizando eventos pendientes...');
       if (this.isInitialized && this.syncQueue) {
-        console.log('[SyncService] online -> flush queue');
         this.syncQueue.flush().then(() => {
-          console.log('[SyncService] flush complete (online event)');
+          console.log('[SyncService] ✅ Sincronización completada después de recuperar conexión');
         }).catch((err: any) => {
-          console.error('[SyncService] flush error (online event)', err);
+          console.error('[SyncService] ❌ Error sincronizando después de recuperar conexión:', err?.message || err);
           // Silenciar errores, el sync periódico lo intentará de nuevo
         });
+      } else {
+        console.warn('[SyncService] ⚠️ Servicio no inicializado al recuperar conexión');
       }
     };
 
     this.offlineListener = () => {
       // Cuando se pierde la conexión, pausar sincronización periódica
       // Los eventos seguirán guardándose localmente
+      console.log('[SyncService] 📵 Conexión perdida, eventos se guardarán localmente');
     };
 
     window.addEventListener('online', this.onlineListener);
@@ -126,8 +129,16 @@ class SyncServiceClass {
    */
   async initialize(storeId: string, deviceId: string, config?: SyncQueueConfig): Promise<void> {
     if (this.isInitialized && this.storeId === storeId && this.syncQueue) {
+      console.log('[SyncService] ℹ️ Ya está inicializado para este store/device');
       return;
     }
+
+    console.log('[SyncService] 🚀 Inicializando servicio de sincronización...', {
+      storeId,
+      deviceId,
+      isOnline: navigator.onLine,
+    });
+
     this.storeId = storeId;
     this.deviceId = deviceId;
 
@@ -138,10 +149,10 @@ class SyncServiceClass {
     try {
       const resetCount = await db.resetFailedEventsToPending();
       if (resetCount > 0) {
-        console.log('[SyncService] resetFailedEventsToPending', { count: resetCount });
+        console.log('[SyncService] 🔄 Eventos fallidos reseteados a pendiente:', resetCount);
       }
     } catch (error) {
-      console.warn('[SyncService] No se pudieron resetear eventos fallidos', error);
+      console.warn('[SyncService] ⚠️ No se pudieron resetear eventos fallidos:', error);
     }
 
     // Crear la cola de sincronización con callback personalizado
@@ -162,6 +173,7 @@ class SyncServiceClass {
     this.startPeriodicSync();
 
     this.isInitialized = true;
+    console.log('[SyncService] ✅ Servicio de sincronización inicializado correctamente');
   }
 
   /**
@@ -527,19 +539,36 @@ class SyncServiceClass {
     if (!this.syncQueue) return;
 
     try {
-      const pendingEvents = await db.getPendingEvents(100); // Cargar hasta 100 eventos
+      // Cargar TODOS los eventos pendientes, no solo 100
+      const pendingEvents = await db.getPendingEvents(1000); // Aumentado a 1000
       const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
 
       if (baseEvents.length > 0) {
-        console.log('[SyncService] Cargando pendientes desde DB', {
+        console.log('[SyncService] ✅ Cargando eventos pendientes desde IndexedDB', {
           count: baseEvents.length,
-          first_event: baseEvents[0],
+          first_event_id: baseEvents[0].event_id,
+          first_event_type: baseEvents[0].type,
+          store_id: this.storeId,
+          device_id: this.deviceId,
         });
         this.syncQueue.enqueueBatch(baseEvents);
+
+        // Intentar sincronizar inmediatamente si hay conexión
+        if (navigator.onLine) {
+          console.log('[SyncService] 📤 Conexión disponible, iniciando sincronización inmediata...');
+          this.syncQueue.flush().then(() => {
+            console.log('[SyncService] ✅ Sincronización inicial completada');
+          }).catch((err) => {
+            console.warn('[SyncService] ⚠️ Error en sincronización inicial (se reintentará):', err?.message || err);
+          });
+        } else {
+          console.log('[SyncService] ⏸️ Sin conexión, esperando para sincronizar');
+        }
+      } else {
+        console.log('[SyncService] ℹ️ No hay eventos pendientes de sincronización');
       }
     } catch (error) {
-      // Silenciar errores de carga, se reintentará en la próxima inicialización
-      console.error('Error cargando eventos pendientes:', error);
+      console.error('[SyncService] ❌ Error cargando eventos pendientes:', error);
     }
   }
 
@@ -598,15 +627,27 @@ class SyncServiceClass {
       clearInterval(this.syncIntervalId);
     }
 
+    console.log('[SyncService] ⏰ Sincronización periódica iniciada (cada 30 segundos)');
+
     this.syncIntervalId = setInterval(() => {
       // Solo sincronizar si hay conexión
       if (navigator.onLine && this.syncQueue) {
-        this.syncQueue.flush().then(() => {
-          console.log('[SyncService] flush complete (interval)');
-        }).catch((err: any) => {
-          console.error('[SyncService] flush error (interval)', err);
-          // Silenciar errores, se reintentará en el siguiente intervalo
-        });
+        const stats = this.syncQueue.getStats();
+        if (stats.pending > 0) {
+          console.log('[SyncService] 🔄 Sincronización periódica: ' + stats.pending + ' eventos pendientes');
+          this.syncQueue.flush().then(() => {
+            const newStats = this.syncQueue?.getStats();
+            console.log('[SyncService] ✅ Sincronización periódica completada', {
+              pending: newStats?.pending || 0,
+              synced: newStats?.synced || 0,
+            });
+          }).catch((err: any) => {
+            console.error('[SyncService] ❌ Error en sincronización periódica:', err?.message || err);
+            // Silenciar errores, se reintentará en el siguiente intervalo
+          });
+        }
+      } else if (!navigator.onLine) {
+        console.log('[SyncService] ⏸️ Sincronización periódica omitida (sin conexión)');
       }
     }, this.SYNC_INTERVAL_MS);
   }
