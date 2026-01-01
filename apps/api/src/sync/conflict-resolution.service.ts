@@ -17,7 +17,7 @@ export interface ConflictDetectionResult {
   hasConflict: boolean;
   relation: CausalRelation;
   requiresResolution: boolean;
-  strategy?: 'lww' | 'awset' | 'mvr' | 'manual';
+  strategy?: 'lww' | 'awset' | 'mvr' | 'gcounter' | 'manual';
 }
 
 export interface ConflictResolutionResult {
@@ -120,7 +120,7 @@ export class ConflictResolutionService {
       device_id: string;
       vector_clock: VectorClock;
     }>,
-    strategy?: 'lww' | 'awset' | 'mvr' | 'manual',
+    strategy?: 'lww' | 'awset' | 'mvr' | 'gcounter' | 'manual',
   ): Promise<ConflictResolutionResult> {
     if (conflictingEvents.length < 2) {
       throw new Error('Need at least 2 events to resolve conflict');
@@ -141,6 +141,10 @@ export class ConflictResolutionService {
 
         case 'mvr':
           return this.resolveWithMVR(conflictingEvents);
+
+        case 'gcounter':
+          // Para G-Counter, usar AWSet ya que es similar (acumulativo)
+          return this.resolveWithAWSet(conflictingEvents);
 
         case 'manual':
           return this.createManualConflict(conflictingEvents);
