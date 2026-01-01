@@ -4,7 +4,14 @@
  */
 
 import { BaseEvent } from '@la-caja/domain';
-import { SyncQueue, SyncQueueConfig, SyncMetricsCollector } from '@la-caja/sync';
+import {
+  SyncQueue,
+  SyncQueueConfig,
+  SyncMetricsCollector,
+  VectorClockManager,
+  CircuitBreaker,
+  // CacheManager, // TODO: Implementar cache L1/L2/L3
+} from '@la-caja/sync';
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
 
@@ -18,8 +25,17 @@ export interface PushSyncDto {
 export interface PushSyncResponseDto {
   accepted: Array<{ event_id: string; seq: number }>;
   rejected: Array<{ event_id: string; seq: number; code: string; message: string }>;
+  conflicted?: Array<{
+    event_id: string;
+    seq: number;
+    conflict_id: string;
+    reason: string;
+    requires_manual_review: boolean;
+    conflicting_with?: string[];
+  }>;
   server_time: number;
   last_processed_seq: number;
+  server_vector_clock?: Record<string, number>;
 }
 
 export interface SyncStatus {
@@ -44,8 +60,16 @@ class SyncServiceClass {
   private onlineListener: (() => void) | null = null;
   private offlineListener: (() => void) | null = null;
 
+  // ===== OFFLINE-FIRST COMPONENTS =====
+  private vectorClockManager: VectorClockManager | null = null;
+  private circuitBreaker: CircuitBreaker;
+  // TODO: Implementar cache L1/L2/L3 para productos/clientes
+  // private cacheManager: CacheManager;
+
   constructor() {
     this.metrics = new SyncMetricsCollector();
+    this.circuitBreaker = new CircuitBreaker();
+    // this.cacheManager = new CacheManager('la-caja-cache');
     this.setupConnectivityListeners();
   }
 
@@ -107,6 +131,9 @@ class SyncServiceClass {
     this.storeId = storeId;
     this.deviceId = deviceId;
 
+    // ✅ OFFLINE-FIRST: Inicializar Vector Clock Manager
+    this.vectorClockManager = new VectorClockManager(deviceId);
+
     // Reintentar eventos fallidos (por validaciones previas) marcándolos como pendientes
     try {
       const resetCount = await db.resetFailedEventsToPending();
@@ -143,6 +170,12 @@ class SyncServiceClass {
    * Si no está inicializado, guarda directamente en la BD (modo offline seguro)
    */
   async enqueueEvent(event: BaseEvent): Promise<void> {
+    // ✅ OFFLINE-FIRST: Agregar vector clock al evento
+    if (this.vectorClockManager) {
+      const vectorClock = this.vectorClockManager.tick();
+      (event as any).vector_clock = vectorClock;
+    }
+
     // Siempre guardar en base de datos local primero (incluso si no está inicializado)
     await this.saveEventToDB(event);
     console.log('[SyncService] Evento guardado/encolado', {
@@ -151,6 +184,7 @@ class SyncServiceClass {
       store_id: event.store_id,
       device_id: event.device_id,
       seq: event.seq,
+      vector_clock: (event as any).vector_clock,
     });
 
     // Si está inicializado, agregar a la cola de sincronización
@@ -390,7 +424,15 @@ class SyncServiceClass {
         events: sanitizedEvents,
       };
 
-      const response = await api.post<PushSyncResponseDto>('/sync/push', dto);
+      // ✅ OFFLINE-FIRST: Ejecutar request con Circuit Breaker
+      const response = await this.circuitBreaker.execute(async () => {
+        return await api.post<PushSyncResponseDto>('/sync/push', dto);
+      });
+
+      // ✅ OFFLINE-FIRST: Mergear vector clock del servidor
+      if (response.data.server_vector_clock && this.vectorClockManager) {
+        this.vectorClockManager.merge(response.data.server_vector_clock);
+      }
 
       // Marcar eventos aceptados como sincronizados
       if (response.data.accepted.length > 0) {
@@ -406,6 +448,13 @@ class SyncServiceClass {
           error.name = rejected.code;
           await this.markEventAsFailed(rejected.event_id, error);
           this.syncQueue?.markAsFailed([rejected.event_id], error);
+        }
+      }
+
+      // ✅ OFFLINE-FIRST: Manejar eventos en conflicto
+      if (response.data.conflicted && response.data.conflicted.length > 0) {
+        for (const conflict of response.data.conflicted) {
+          await this.handleConflict(conflict);
         }
       }
 
@@ -430,6 +479,44 @@ class SyncServiceClass {
         err.name = 'ValidationError';
       }
       return { success: false, error: err };
+    }
+  }
+
+  /**
+   * Maneja un conflicto detectado por el servidor
+   */
+  private async handleConflict(conflict: {
+    event_id: string;
+    seq: number;
+    conflict_id: string;
+    reason: string;
+    requires_manual_review: boolean;
+    conflicting_with?: string[];
+  }): Promise<void> {
+    console.warn('[SyncService] Conflicto detectado', conflict);
+
+    // Marcar evento como en conflicto en la cola
+    this.syncQueue?.markAsConflict([conflict.event_id]);
+
+    // Guardar conflicto en IndexedDB para mostrar en UI
+    try {
+      await db.conflicts.add({
+        id: conflict.conflict_id,
+        event_id: conflict.event_id,
+        reason: conflict.reason,
+        conflicting_with: conflict.conflicting_with || [],
+        created_at: Date.now(),
+        status: 'pending',
+        requires_manual_review: conflict.requires_manual_review,
+      });
+    } catch (error) {
+      console.error('[SyncService] Error guardando conflicto en DB', error);
+    }
+
+    // TODO: Mostrar notificación al usuario si requires_manual_review === true
+    if (conflict.requires_manual_review) {
+      console.warn('[SyncService] ⚠️ Conflicto requiere resolución manual:', conflict.conflict_id);
+      // Ejemplo: toast.warning('Conflicto detectado', { action: { label: 'Resolver', onClick: () => navigate('/conflicts') } })
     }
   }
 

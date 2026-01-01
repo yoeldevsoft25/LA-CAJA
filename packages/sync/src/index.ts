@@ -1,6 +1,6 @@
 /**
  * Sync engine - Queue, states, conflict rules
- * Motor de sincronización robusto y escalable
+ * Motor de sincronización robusto y escalable con Offline-First World-Class
  */
 
 // Exportar tipos y enums
@@ -13,3 +13,11 @@ export type { SyncMetrics, MetricsListener } from './sync-metrics';
 export { SyncMetricsCollector } from './sync-metrics';
 export type { SyncStatus, QueuedEvent, SyncQueueConfig } from './sync-queue';
 export { SyncQueue } from './sync-queue';
+
+// ===== OFFLINE-FIRST WORLD-CLASS =====
+export type { VectorClock } from './vector-clock';
+export { VectorClockManager } from './vector-clock';
+export { CircuitBreaker, CircuitState } from './circuit-breaker';
+export type { CircuitBreakerConfig } from './circuit-breaker';
+export { CacheManager, CacheLevel } from './cache-manager';
+export type { CacheEntry } from './cache-manager';

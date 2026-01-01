@@ -50,11 +50,24 @@ export interface LocalSale {
   cached_at: number;
 }
 
+export interface LocalConflict {
+  id: string; // conflict_id del servidor
+  event_id: string;
+  reason: string;
+  conflicting_with: string[];
+  created_at: number;
+  status: 'pending' | 'resolved';
+  requires_manual_review: boolean;
+  resolution?: 'keep_mine' | 'take_theirs';
+  resolved_at?: number;
+}
+
 export class LaCajaDB extends Dexie {
   localEvents!: Table<LocalEvent, number>;
   products!: Table<LocalProduct, string>;
   customers!: Table<LocalCustomer, string>;
   sales!: Table<LocalSale, string>;
+  conflicts!: Table<LocalConflict, string>;
   kv!: Table<{ key: string; value: any }, string>;
 
   constructor() {
@@ -81,6 +94,16 @@ export class LaCajaDB extends Dexie {
       kv: 'key',
     }).upgrade(async (_tx) => {
       // Migración automática - Dexie maneja esto sin pérdida de datos
+    });
+
+    // Versión 4: Agregar tabla de conflictos para offline-first
+    this.version(4).stores({
+      localEvents: '++id, event_id, store_id, device_id, seq, type, sync_status, created_at, [sync_status+created_at], [store_id+device_id+sync_status]',
+      products: 'id, store_id, name, category, barcode, sku, is_active, [store_id+is_active], [store_id+category]',
+      customers: 'id, store_id, name, document_id, [store_id+document_id]',
+      sales: 'id, store_id, sold_at, customer_id, [store_id+sold_at]',
+      conflicts: 'id, event_id, status, created_at, [status+created_at]',
+      kv: 'key',
     });
   }
   

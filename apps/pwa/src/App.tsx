@@ -38,6 +38,7 @@ import LicenseBlockedPage from './pages/LicenseBlockedPage'
 import AdminPage from './pages/AdminPage'
 import LandingPageEnhanced from './pages/LandingPageEnhanced'
 import AccountingPage from './pages/AccountingPage'
+import ConflictsPage from './pages/ConflictsPage'
 import { useOnline } from './hooks/use-online'
 import { useAuth } from './stores/auth.store'
 import { offlineIndicator } from './services/offline-indicator.service'
@@ -224,6 +225,7 @@ function App() {
           <Route path="debts" element={<DebtsPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="accounting" element={<AccountingPage />} />
+          <Route path="conflicts" element={<ConflictsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
