@@ -5,6 +5,8 @@ import {
   IsNumber,
   IsObject,
   Matches,
+  IsOptional,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -42,6 +44,24 @@ class EventDto {
 
   @IsObject()
   payload: Record<string, any>;
+
+  // ===== OFFLINE-FIRST WORLD-CLASS FIELDS =====
+
+  @IsObject()
+  @IsOptional()
+  vector_clock?: Record<string, number>;
+
+  @IsArray()
+  @IsOptional()
+  causal_dependencies?: string[];
+
+  @IsObject()
+  @IsOptional()
+  delta_payload?: Record<string, any>;
+
+  @IsString()
+  @IsOptional()
+  full_payload_hash?: string;
 }
 
 export class PushSyncDto {
@@ -72,9 +92,19 @@ export class RejectedEventDto {
   message: string;
 }
 
+export class ConflictedEventDto {
+  event_id: string;
+  seq: number;
+  conflict_id: string;
+  reason: string;
+  requires_manual_review: boolean;
+  conflicting_with?: string[];
+}
+
 export class PushSyncResponseDto {
   accepted: AcceptedEventDto[];
   rejected: RejectedEventDto[];
+  conflicted: ConflictedEventDto[];
   server_time: number;
   last_processed_seq: number;
 }

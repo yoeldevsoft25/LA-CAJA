@@ -34,4 +34,21 @@ export class Event {
 
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   received_at: Date;
+
+  // ===== OFFLINE-FIRST WORLD-CLASS FIELDS =====
+
+  @Column({ type: 'jsonb', default: '{}' })
+  vector_clock: Record<string, number>;
+
+  @Column({ type: 'text', array: true, default: '{}' })
+  causal_dependencies: string[];
+
+  @Column({ type: 'text', default: 'resolved' })
+  conflict_status: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  delta_payload: Record<string, any> | null;
+
+  @Column({ type: 'text', nullable: true })
+  full_payload_hash: string | null;
 }

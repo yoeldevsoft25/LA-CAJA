@@ -28,8 +28,8 @@ import * as crypto from 'crypto';
  */
 
 @Injectable()
-export class SyncService {
-  private readonly logger = new Logger(SyncService.name);
+export class SyncServiceV2 {
+  private readonly logger = new Logger(SyncServiceV2.name);
 
   // Tipos de eventos conocidos
   private readonly knownEventTypes = [

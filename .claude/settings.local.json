@@ -36,7 +36,12 @@
       "Bash(git commit:*)",
       "Bash(~/Library/Android/sdk/build-tools/35.0.0/apksigner sign:*)",
       "Bash(keytool:*)",
-      "Bash(~/Library/Android/sdk/build-tools/35.0.0/apksigner verify --verbose LA-CAJA-release-signed.apk)"
+      "Bash(~/Library/Android/sdk/build-tools/35.0.0/apksigner verify --verbose LA-CAJA-release-signed.apk)",
+      "Bash(~/Library/Android/sdk/build-tools/35.0.0/apksigner verify:*)",
+      "Bash(npm run test:*)",
+      "Bash(cat:*)",
+      "Bash(PGPASSWORD='@bC154356' psql:*)",
+      "Bash(chmod:*)"
     ]
   },
   "enabledMcpjsonServers": [
