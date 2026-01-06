@@ -45,7 +45,9 @@
       "Bash(npx cap sync android)",
       "Bash(npm run cap:sync:*)",
       "Bash(npx tsc:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(awk:*)",
+      "Bash(python3:*)"
     ]
   },
   "enabledMcpjsonServers": [
