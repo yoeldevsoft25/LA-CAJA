@@ -227,8 +227,8 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
 
     console.log('[CSV Import] Iniciando importación de', parsedProducts.length, 'productos')
 
-    // Función para importar UN producto con reintentos automáticos
-    const importProductWithRetry = async (product: ParsedProduct, maxRetries = 5): Promise<boolean> => {
+    // Función para importar UN producto con reintentos automáticos y backoff agresivo
+    const importProductWithRetry = async (product: ParsedProduct, maxRetries = 10): Promise<boolean> => {
       let lastError: any = null
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -248,19 +248,22 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
             user.store_id
           )
 
-          // Éxito - Esperar un poco antes de continuar
-          await new Promise(resolve => setTimeout(resolve, 300))
+          // ✅ ÉXITO - Esperar 1 segundo completo antes del siguiente
+          await new Promise(resolve => setTimeout(resolve, 1000))
           return true
         } catch (err: any) {
           lastError = err
           const status = err?.response?.status
 
-          // Si es 429 (rate limit) o 500 (server error), reintentar con backoff exponencial
+          // Si es 429 (rate limit) o 500 (server error), reintentar con backoff AGRESIVO
           if (status === 429 || status === 500 || err?.code === 'ECONNABORTED') {
-            const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000) // Max 10 segundos
+            // Backoff exponencial: 2s → 4s → 8s → 16s → 30s (máximo)
+            const baseWait = 2000 * Math.pow(2, attempt - 1)
+            const waitTime = Math.min(baseWait, 30000) // Máximo 30 segundos
+
             console.warn(
-              `[CSV Import] Error ${status || err?.code} en fila ${product.row} (intento ${attempt}/${maxRetries}), ` +
-              `esperando ${waitTime}ms antes de reintentar...`
+              `[CSV Import] ⚠️ Rate limit en fila ${product.row} (intento ${attempt}/${maxRetries}), ` +
+              `esperando ${(waitTime / 1000).toFixed(1)}s...`
             )
             await new Promise(resolve => setTimeout(resolve, waitTime))
             continue // Reintentar
@@ -277,9 +280,8 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
       }
 
       // Si llegamos aquí, agotamos todos los reintentos
-      console.error(`[CSV Import] ❌ Fila ${product.row} (${product.name}) FALLÓ después de ${maxRetries} intentos:`, {
-        status: lastError?.response?.status,
-        message: lastError?.message
+      console.error(`[CSV Import] ❌ Fila ${product.row} (${product.name}) FALLÓ después de ${maxRetries} intentos`, {
+        status: lastError?.response?.status
       })
       return false
     }
