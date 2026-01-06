@@ -44,7 +44,8 @@
       "Bash(chmod:*)",
       "Bash(npx cap sync android)",
       "Bash(npm run cap:sync:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git push:*)"
     ]
   },
   "enabledMcpjsonServers": [
