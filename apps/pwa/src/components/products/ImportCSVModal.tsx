@@ -179,15 +179,33 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
       setParsedProducts(products)
       setErrors(validationErrors)
 
+      // Mostrar resumen detallado
+      console.log('[CSV Import] Resultado del parsing:', {
+        total_filas: lines.length - 1,
+        productos_validos: products.length,
+        filas_omitidas: skippedRows,
+        errores: validationErrors.length
+      })
+
       if (validationErrors.length === 0) {
         setStep('preview')
         toast.success(`${products.length} productos listos para importar`)
       } else if (products.length > 0) {
         // Hay productos válidos Y errores - permitir continuar con los válidos
         setStep('preview')
+
+        // Agrupar errores por tipo para mostrar al usuario
+        const errorsByType = validationErrors.reduce((acc, error) => {
+          const key = error.message
+          acc[key] = (acc[key] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
+
+        console.log('[CSV Import] Errores por tipo:', errorsByType)
+
         toast.success(
           `${products.length} productos válidos listos para importar. ${skippedRows} filas omitidas por errores.`,
-          { duration: 5000 }
+          { duration: 7000 }
         )
       } else {
         // TODOS los productos tienen errores
@@ -207,67 +225,94 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
     setStep('importing')
     setImportProgress(0)
 
+    console.log('[CSV Import] Iniciando importación de', parsedProducts.length, 'productos')
+
     try {
       let successCount = 0
       let errorCount = 0
-      const BATCH_SIZE = 50 // Importar 50 productos a la vez
+      const BATCH_SIZE = 25 // Reducido a 25 para evitar sobrecarga del servidor
 
       // Dividir en lotes para mejor rendimiento
       for (let batchStart = 0; batchStart < parsedProducts.length; batchStart += BATCH_SIZE) {
         const batch = parsedProducts.slice(batchStart, batchStart + BATCH_SIZE)
+        const batchNumber = Math.floor(batchStart / BATCH_SIZE) + 1
+        const totalBatches = Math.ceil(parsedProducts.length / BATCH_SIZE)
+
+        console.log(`[CSV Import] Procesando lote ${batchNumber}/${totalBatches} (${batch.length} productos)`)
 
         // Importar todos los productos del lote en paralelo
         const results = await Promise.allSettled(
-          batch.map(product =>
-            productsService.create(
-              {
-                name: product.name,
-                category: product.category || null,
-                sku: product.sku || null,
-                barcode: product.barcode || null,
-                price_bs: product.price_bs,
-                price_usd: product.price_usd,
-                cost_bs: product.cost_bs || 0,
-                cost_usd: product.cost_usd || 0,
-                low_stock_threshold: product.low_stock_threshold || 10,
-              },
-              user.store_id
-            )
-          )
+          batch.map(async (product) => {
+            try {
+              const result = await productsService.create(
+                {
+                  name: product.name,
+                  category: product.category || null,
+                  sku: product.sku || null,
+                  barcode: product.barcode || null,
+                  price_bs: product.price_bs,
+                  price_usd: product.price_usd,
+                  cost_bs: product.cost_bs || 0,
+                  cost_usd: product.cost_usd || 0,
+                  low_stock_threshold: product.low_stock_threshold || 10,
+                },
+                user.store_id
+              )
+              return { success: true, product, result }
+            } catch (err) {
+              return { success: false, product, error: err }
+            }
+          })
         )
 
         // Contar éxitos y errores
         results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
+          if (result.status === 'fulfilled' && result.value.success) {
             successCount++
           } else {
             errorCount++
             const product = batch[index]
-            console.error(`Error importing product row ${product.row}:`, result.reason)
+            const error = result.status === 'rejected' ? result.reason : (result.value as any).error
+            console.error(`[CSV Import] Error fila ${product.row} (${product.name}):`, error)
           }
         })
 
         // Actualizar progreso
         const progress = Math.round(((batchStart + batch.length) / parsedProducts.length) * 100)
         setImportProgress(progress)
+
+        console.log(`[CSV Import] Lote ${batchNumber} completado: ${successCount} éxitos, ${errorCount} errores`)
+
+        // Pequeña pausa entre lotes para no saturar el servidor
+        if (batchStart + BATCH_SIZE < parsedProducts.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
       }
+
+      console.log('[CSV Import] Importación completada:', {
+        total: parsedProducts.length,
+        exitos: successCount,
+        errores: errorCount
+      })
 
       setStep('complete')
 
       if (errorCount === 0) {
-        toast.success(`✅ ${successCount} productos importados exitosamente`)
+        toast.success(`✅ ${successCount} productos importados exitosamente`, {
+          duration: 5000
+        })
       } else {
         toast.success(`${successCount} productos importados, ${errorCount} con errores`, {
-          duration: 5000
+          duration: 6000
         })
       }
 
       setTimeout(() => {
         onSuccess()
         handleClose()
-      }, 2000)
+      }, 3000)
     } catch (error) {
-      console.error('Error importing products:', error)
+      console.error('[CSV Import] Error crítico durante importación:', error)
       toast.error('Error al importar productos')
       setStep('preview')
     }
