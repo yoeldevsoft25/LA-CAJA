@@ -215,14 +215,14 @@ export default function InventoryPage() {
           </div>
         ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Producto</TableHead>
+                    <TableHead className="w-[50%] sm:w-[45%]">Producto</TableHead>
                     <TableHead className="text-center">Stock Actual</TableHead>
                     <TableHead className="text-center hidden sm:table-cell">Umbral Mínimo</TableHead>
                     <TableHead className="text-center hidden md:table-cell">Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="text-right w-32 sm:w-40">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -238,11 +238,14 @@ export default function InventoryPage() {
                           isLowStock && 'bg-orange-50 hover:bg-orange-100'
                         )}
                   >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
+                        <TableCell className="align-top w-[50%] sm:w-[45%]">
+                          <div className="flex items-center gap-2 min-w-0">
                             <Package className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-foreground text-sm sm:text-base break-words">
+                            <div className="flex-1 min-w-0 max-w-full">
+                              <p
+                                className="font-semibold text-foreground text-sm sm:text-base break-words"
+                                title={item.product_name}
+                              >
                             {item.product_name}
                           </p>
                               {isLowStock && (
@@ -296,7 +299,7 @@ export default function InventoryPage() {
                             </Badge>
                       )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="w-32 sm:w-40">
                           <div className="flex items-center justify-end gap-1 sm:gap-2">
                             <Button
                               variant="ghost"

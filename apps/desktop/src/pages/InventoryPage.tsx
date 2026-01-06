@@ -177,10 +177,10 @@ export default function InventoryPage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200 overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-[50%] sm:w-[45%]">
                     Producto
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -192,7 +192,7 @@ export default function InventoryPage() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
                     Estado
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider w-32 sm:w-40">
                     Acciones
                   </th>
                 </tr>
@@ -205,11 +205,14 @@ export default function InventoryPage() {
                       item.is_low_stock ? 'bg-orange-50' : ''
                     }`}
                   >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center">
+                    <td className="px-4 py-3 align-top w-[50%] sm:w-[45%]">
+                      <div className="flex items-center min-w-0">
                         <Package className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm sm:text-base break-words">
+                        <div className="min-w-0 max-w-full">
+                          <p
+                            className="font-semibold text-gray-900 text-sm sm:text-base break-words"
+                            title={item.product_name}
+                          >
                             {item.product_name}
                           </p>
                           {item.is_low_stock && (
@@ -244,7 +247,7 @@ export default function InventoryPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 w-32 sm:w-40">
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => handleViewMovements(item)}
