@@ -230,7 +230,7 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
     try {
       let successCount = 0
       let errorCount = 0
-      const BATCH_SIZE = 25 // Reducido a 25 para evitar sobrecarga del servidor
+      const BATCH_SIZE = 5 // Reducido drásticamente a 5 para evitar rate limiting
 
       // Dividir en lotes para mejor rendimiento
       for (let batchStart = 0; batchStart < parsedProducts.length; batchStart += BATCH_SIZE) {
@@ -240,42 +240,42 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
 
         console.log(`[CSV Import] Procesando lote ${batchNumber}/${totalBatches} (${batch.length} productos)`)
 
-        // Importar todos los productos del lote en paralelo
-        const results = await Promise.allSettled(
-          batch.map(async (product) => {
-            try {
-              const result = await productsService.create(
-                {
-                  name: product.name,
-                  category: product.category || null,
-                  sku: product.sku || null,
-                  barcode: product.barcode || null,
-                  price_bs: product.price_bs,
-                  price_usd: product.price_usd,
-                  cost_bs: product.cost_bs || 0,
-                  cost_usd: product.cost_usd || 0,
-                  low_stock_threshold: product.low_stock_threshold || 10,
-                },
-                user.store_id
-              )
-              return { success: true, product, result }
-            } catch (err) {
-              return { success: false, product, error: err }
-            }
-          })
-        )
-
-        // Contar éxitos y errores
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled' && result.value.success) {
+        // Procesar productos UNO POR UNO para evitar rate limiting
+        for (const product of batch) {
+          try {
+            await productsService.create(
+              {
+                name: product.name,
+                category: product.category || null,
+                sku: product.sku || null,
+                barcode: product.barcode || null,
+                price_bs: product.price_bs,
+                price_usd: product.price_usd,
+                cost_bs: product.cost_bs || 0,
+                cost_usd: product.cost_usd || 0,
+                low_stock_threshold: product.low_stock_threshold || 10,
+              },
+              user.store_id
+            )
             successCount++
-          } else {
+            // Pausa de 200ms entre cada producto para evitar rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200))
+          } catch (err: any) {
             errorCount++
-            const product = batch[index]
-            const error = result.status === 'rejected' ? result.reason : (result.value as any).error
-            console.error(`[CSV Import] Error fila ${product.row} (${product.name}):`, error)
+
+            // Si es rate limiting (429), esperar más tiempo antes de continuar
+            if (err?.response?.status === 429) {
+              console.warn(`[CSV Import] Rate limit detectado en fila ${product.row}, esperando 2 segundos...`)
+              await new Promise(resolve => setTimeout(resolve, 2000))
+            }
+
+            console.error(`[CSV Import] Error fila ${product.row} (${product.name}):`, {
+              status: err?.response?.status,
+              message: err?.message,
+              data: err?.response?.data
+            })
           }
-        })
+        }
 
         // Actualizar progreso
         const progress = Math.round(((batchStart + batch.length) / parsedProducts.length) * 100)
@@ -283,9 +283,9 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
 
         console.log(`[CSV Import] Lote ${batchNumber} completado: ${successCount} éxitos, ${errorCount} errores`)
 
-        // Pequeña pausa entre lotes para no saturar el servidor
+        // Pausa entre lotes para no saturar el servidor
         if (batchStart + BATCH_SIZE < parsedProducts.length) {
-          await new Promise(resolve => setTimeout(resolve, 100))
+          await new Promise(resolve => setTimeout(resolve, 500))
         }
       }
 
