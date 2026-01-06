@@ -210,32 +210,46 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
     try {
       let successCount = 0
       let errorCount = 0
+      const BATCH_SIZE = 50 // Importar 50 productos a la vez
 
-      for (let i = 0; i < parsedProducts.length; i++) {
-        const product = parsedProducts[i]
+      // Dividir en lotes para mejor rendimiento
+      for (let batchStart = 0; batchStart < parsedProducts.length; batchStart += BATCH_SIZE) {
+        const batch = parsedProducts.slice(batchStart, batchStart + BATCH_SIZE)
 
-        try {
-          await productsService.create(
-            {
-              name: product.name,
-              category: product.category || null,
-              sku: product.sku || null,
-              barcode: product.barcode || null,
-              price_bs: product.price_bs,
-              price_usd: product.price_usd,
-              cost_bs: product.cost_bs || 0,
-              cost_usd: product.cost_usd || 0,
-              low_stock_threshold: product.low_stock_threshold || 10,
-            },
-            user.store_id
+        // Importar todos los productos del lote en paralelo
+        const results = await Promise.allSettled(
+          batch.map(product =>
+            productsService.create(
+              {
+                name: product.name,
+                category: product.category || null,
+                sku: product.sku || null,
+                barcode: product.barcode || null,
+                price_bs: product.price_bs,
+                price_usd: product.price_usd,
+                cost_bs: product.cost_bs || 0,
+                cost_usd: product.cost_usd || 0,
+                low_stock_threshold: product.low_stock_threshold || 10,
+              },
+              user.store_id
+            )
           )
-          successCount++
-        } catch (error) {
-          console.error(`Error importing product row ${product.row}:`, error)
-          errorCount++
-        }
+        )
 
-        setImportProgress(Math.round(((i + 1) / parsedProducts.length) * 100))
+        // Contar éxitos y errores
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            successCount++
+          } else {
+            errorCount++
+            const product = batch[index]
+            console.error(`Error importing product row ${product.row}:`, result.reason)
+          }
+        })
+
+        // Actualizar progreso
+        const progress = Math.round(((batchStart + batch.length) / parsedProducts.length) * 100)
+        setImportProgress(progress)
       }
 
       setStep('complete')
@@ -243,7 +257,9 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
       if (errorCount === 0) {
         toast.success(`✅ ${successCount} productos importados exitosamente`)
       } else {
-        toast.success(`${successCount} productos importados, ${errorCount} con errores`)
+        toast.success(`${successCount} productos importados, ${errorCount} con errores`, {
+          duration: 5000
+        })
       }
 
       setTimeout(() => {
@@ -398,7 +414,7 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
                     </tr>
                   </thead>
                   <tbody>
-                    {parsedProducts.map((product, idx) => (
+                    {parsedProducts.slice(0, 100).map((product, idx) => (
                       <tr key={idx} className="border-t hover:bg-muted/50">
                         <td className="px-4 py-2">{product.name}</td>
                         <td className="px-4 py-2">{product.category || '-'}</td>
@@ -406,6 +422,13 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
                         <td className="px-4 py-2 text-right">{product.price_usd.toFixed(2)}</td>
                       </tr>
                     ))}
+                    {parsedProducts.length > 100 && (
+                      <tr className="border-t bg-muted/30">
+                        <td colSpan={4} className="px-4 py-3 text-center text-muted-foreground">
+                          ... y {parsedProducts.length - 100} productos más (mostrando primeros 100)
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
