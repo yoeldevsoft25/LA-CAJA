@@ -5,6 +5,11 @@ import { notificationsService } from '@/services/notifications.service'
 import type { NotificationBadge } from '@/types/notifications.types'
 import { useAuth } from '@/stores/auth.store'
 
+const isBadgeUpdateEvent = (
+  event: unknown
+): event is { badge: NotificationBadge } =>
+  typeof event === 'object' && event !== null && 'badge' in event
+
 /**
  * Hook para obtener el badge de notificaciones no leídas
  */
@@ -29,7 +34,8 @@ export function useNotificationBadge(category?: string) {
   useEffect(() => {
     if (!storeId || !userId) return
 
-    const handleBadgeUpdate = (event: { badge: NotificationBadge }) => {
+    const handleBadgeUpdate = (event: unknown) => {
+      if (!isBadgeUpdateEvent(event)) return
       if (!category || event.badge.category === category) {
         setBadge(event.badge)
       }
@@ -48,4 +54,3 @@ export function useNotificationBadge(category?: string) {
     unreadCount: badge?.unread_count || 0,
   }
 }
-

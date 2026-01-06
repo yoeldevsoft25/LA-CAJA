@@ -5,6 +5,16 @@ import { notificationsService } from '@/services/notifications.service'
 import type { Notification } from '@/types/notifications.types'
 import { useAuth } from '@/stores/auth.store'
 
+const isNotificationEvent = (
+  event: unknown
+): event is { notification: Notification } =>
+  typeof event === 'object' && event !== null && 'notification' in event
+
+const isNotificationsEvent = (
+  event: unknown
+): event is { notifications: Notification[] } =>
+  typeof event === 'object' && event !== null && 'notifications' in event
+
 /**
  * Hook para manejar notificaciones del servidor en tiempo real
  */
@@ -37,10 +47,12 @@ export function useServerNotifications() {
 
     const handleConnect = () => setIsConnected(true)
     const handleDisconnect = () => setIsConnected(false)
-    const handleNewNotification = (event: { notification: Notification }) => {
+    const handleNewNotification = (event: unknown) => {
+      if (!isNotificationEvent(event)) return
       setNotifications((prev) => [event.notification, ...prev])
     }
-    const handleNotifications = (event: { notifications: Notification[] }) => {
+    const handleNotifications = (event: unknown) => {
+      if (!isNotificationsEvent(event)) return
       setNotifications(event.notifications)
     }
 
