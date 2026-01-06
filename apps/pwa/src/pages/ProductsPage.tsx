@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload } from 'lucide-react'
 import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
 import { productsCacheService } from '@/services/products-cache.service'
 import { useAuth } from '@/stores/auth.store'
@@ -12,6 +12,7 @@ import BulkPriceChangeModal from '@/components/products/BulkPriceChangeModal'
 import ProductVariantsModal from '@/components/variants/ProductVariantsModal'
 import ProductLotsModal from '@/components/lots/ProductLotsModal'
 import ProductSerialsModal from '@/components/serials/ProductSerialsModal'
+import ImportCSVModal from '@/components/products/ImportCSVModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,6 +27,7 @@ export default function ProductsPage() {
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false)
   const [priceProduct, setPriceProduct] = useState<Product | null>(null)
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false)
+  const [isImportCSVOpen, setIsImportCSVOpen] = useState(false)
   const [variantsProduct, setVariantsProduct] = useState<Product | null>(null)
   const [lotsProduct, setLotsProduct] = useState<Product | null>(null)
   const [serialsProduct, setSerialsProduct] = useState<Product | null>(null)
@@ -168,6 +170,14 @@ export default function ProductsPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => setIsImportCSVOpen(true)}
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary/10"
+            >
+              <Upload className="w-5 h-5 mr-2" />
+              Importar CSV
+            </Button>
             <Button
               onClick={() => setIsBulkPriceModalOpen(true)}
               variant="default"
@@ -438,6 +448,15 @@ export default function ProductsPage() {
         isOpen={!!serialsProduct}
         onClose={() => setSerialsProduct(null)}
         product={serialsProduct}
+      />
+
+      {/* Modal de importación CSV */}
+      <ImportCSVModal
+        open={isImportCSVOpen}
+        onClose={() => setIsImportCSVOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['products'] })
+        }}
       />
     </div>
   )
