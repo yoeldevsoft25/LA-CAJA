@@ -23,6 +23,8 @@ import { inventoryService, StockStatus } from '@/services/inventory.service'
 export default function ProductsPage() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(50) // 50 productos por página
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false)
@@ -34,6 +36,11 @@ export default function ProductsPage() {
   const [lotsProduct, setLotsProduct] = useState<Product | null>(null)
   const [serialsProduct, setSerialsProduct] = useState<Product | null>(null)
   const queryClient = useQueryClient()
+
+  // Reset page cuando cambia búsqueda
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
 
   // Cargar datos desde cache al iniciar (para mostrar inmediatamente)
   const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined);
@@ -54,7 +61,7 @@ export default function ProductsPage() {
     if (user?.store_id) {
       productsCacheService.getProductsFromCache(user.store_id, {
         search: searchQuery || undefined,
-        limit: 100,
+        limit: pageSize, // Solo cargar una página del cache
       }).then(cached => {
         if (cached.length > 0) {
           setInitialData({
@@ -66,15 +73,17 @@ export default function ProductsPage() {
         // Silenciar errores
       });
     }
-  }, [user?.store_id, searchQuery]);
+  }, [user?.store_id, searchQuery, pageSize]);
 
-  // Búsqueda de productos (con cache offline persistente)
+  // Búsqueda de productos (con cache offline persistente y paginación)
+  const offset = (currentPage - 1) * pageSize
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', 'list', searchQuery, user?.store_id],
+    queryKey: ['products', 'list', searchQuery, currentPage, pageSize, user?.store_id],
     queryFn: () =>
       productsService.search({
         q: searchQuery || undefined,
-        limit: 100,
+        limit: pageSize,
+        offset: offset,
       }, user?.store_id),
     enabled: !!user?.store_id && isOnline, // Solo ejecutar query si está online
     // Configuración para persistencia offline
@@ -413,6 +422,38 @@ export default function ProductsPage() {
         )}
         </CardContent>
       </Card>
+
+      {/* Paginación */}
+      {products.length > 0 && total > pageSize && (
+        <div className="mt-4 flex items-center justify-between px-4">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {offset + 1} - {Math.min(offset + pageSize, total)} de {total} productos
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-2 px-3">
+              <span className="text-sm">
+                Página {currentPage} de {Math.ceil(total / pageSize)}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage >= Math.ceil(total / pageSize)}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de formulario */}
       <ProductFormModal
