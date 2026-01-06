@@ -100,7 +100,7 @@ export default function InvoiceSeriesModal({
 
     if (!series) {
       // Crear nueva serie
-      ;(requestData as CreateInvoiceSeriesRequest).series_code = data.series_code
+      (requestData as CreateInvoiceSeriesRequest).series_code = data.series_code
     }
 
     onConfirm(requestData)
@@ -298,4 +298,3 @@ export default function InvoiceSeriesModal({
     </Dialog>
   )
 }
-

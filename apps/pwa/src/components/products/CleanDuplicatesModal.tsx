@@ -103,7 +103,7 @@ export default function CleanDuplicatesModal({ open, onClose, onSuccess }: Clean
 
     try {
       let totalDeactivated = 0
-      let totalToDeactivate = duplicateGroups.reduce((sum, g) => sum + g.duplicateCount, 0)
+      const totalToDeactivate = duplicateGroups.reduce((sum, g) => sum + g.duplicateCount, 0)
 
       for (let i = 0; i < duplicateGroups.length; i++) {
         const group = duplicateGroups[i]

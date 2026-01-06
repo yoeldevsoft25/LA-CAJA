@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   plugins: [
     react(),
     // Habilitar PWA también en desarrollo para soporte offline
@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => ({
           },
           {
             // CRÍTICO: Interceptar módulos de Vite en desarrollo
-            urlPattern: ({ url, request }) => {
+            urlPattern: ({ url }) => {
               // Capturar módulos de Vite (@vite/client, @react-refresh, etc.)
               const pathname = url.pathname;
               return pathname.startsWith('/@') || 

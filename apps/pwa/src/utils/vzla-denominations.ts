@@ -76,7 +76,7 @@ export function calculateChange(amount: number): Record<string, number> {
  */
 export function formatChangeBreakdown(breakdown: Record<string, number>): string {
   const parts = Object.entries(breakdown)
-    .filter(([_, count]) => count > 0)
+    .filter(([, count]) => count > 0)
     .map(([label, count]) => `${count}x ${label}`)
   
   return parts.length > 0 ? parts.join(', ') : 'Sin vueltas'
@@ -150,4 +150,3 @@ export function calculateRoundedChange(changeUsd: number, exchangeRate: number):
     breakdownFormatted,
   }
 }
-

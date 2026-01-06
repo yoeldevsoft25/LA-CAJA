@@ -449,7 +449,9 @@ class SyncServiceClass {
         }
         // Remover store_id y device_id del payload individual
         // El backend los recibe en el DTO principal
-        const { store_id: _s, device_id: _d, ...rest } = evt as any;
+        const { store_id, device_id, ...rest } = evt as any;
+        void store_id;
+        void device_id;
         return {
           ...rest,
           payload: {
@@ -735,6 +737,10 @@ class SyncServiceClass {
    */
   private localEventToBaseEvent(localEvent: LocalEvent): BaseEvent {
     const { id, sync_status, sync_attempts, synced_at, ...baseEvent } = localEvent;
+    void id;
+    void sync_status;
+    void sync_attempts;
+    void synced_at;
     return baseEvent;
   }
 }

@@ -144,7 +144,7 @@ export default function StockReceivedModal({
     } else if (isOpen && !product) {
       setProductItems([])
     }
-  }, [isOpen, product])
+  }, [isOpen, product, productItems.length])
 
   // Limpiar al cerrar
   useEffect(() => {

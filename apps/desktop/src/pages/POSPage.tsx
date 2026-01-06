@@ -198,7 +198,7 @@ export default function POSPage() {
 
         {/* Carrito - Sticky en desktop, normal en mobile */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:sticky lg:top-20 flex flex-col max-h-[calc(100vh-140px)] overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:sticky lg:top-20 flex flex-col max-h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)] lg:max-h-none overflow-hidden">
             <div className="p-3 sm:p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
               <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center">
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -225,9 +225,12 @@ export default function POSPage() {
                   <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                     {items.map((item) => (
                       <div key={item.id} className="bg-gray-50 rounded-lg p-2.5 sm:p-3">
-                        <div className="flex items-start justify-between mb-2 gap-2">
+                        <div className="flex items-start justify-between mb-2 gap-2 min-w-0">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-xs sm:text-sm text-gray-900 truncate">
+                            <p
+                              className="font-medium text-xs sm:text-sm text-gray-900 truncate"
+                              title={item.product_name}
+                            >
                               {item.product_name}
                             </p>
                             <p className="text-xs text-gray-500">

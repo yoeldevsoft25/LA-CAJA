@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/stores/auth.store'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -280,7 +280,7 @@ export default function MainLayout() {
 
   // Función mejorada para determinar si una ruta está activa
   // Solo activa la ruta más específica que coincida
-  const isActive = (path: string) => {
+  const isActive = useCallback((path: string) => {
     const currentPath = location.pathname
     
     // Coincidencia exacta
@@ -300,7 +300,7 @@ export default function MainLayout() {
     }
     
     return false
-  }
+  }, [location.pathname])
 
   // Encontrar la sección que contiene la ruta activa
   const activeSectionId = useMemo(() => {
@@ -308,7 +308,7 @@ export default function MainLayout() {
       section.items.some((item) => isActive(item.path))
     )
     return activeSection?.id
-  }, [location.pathname])
+  }, [isActive])
 
   // Estado controlado para las secciones abiertas
   const [openSections, setOpenSections] = useState<string[]>([])

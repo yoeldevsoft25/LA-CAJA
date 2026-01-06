@@ -92,7 +92,7 @@ export class LaCajaDB extends Dexie {
       customers: 'id, store_id, name, document_id, [store_id+document_id]',
       sales: 'id, store_id, sold_at, customer_id, [store_id+sold_at]',
       kv: 'key',
-    }).upgrade(async (_tx) => {
+    }).upgrade(async () => {
       // Migración automática - Dexie maneja esto sin pérdida de datos
     });
 
@@ -280,4 +280,3 @@ export class LaCajaDB extends Dexie {
 }
 
 export const db = new LaCajaDB();
-

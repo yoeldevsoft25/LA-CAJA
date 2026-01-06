@@ -148,49 +148,6 @@ function getDeviceId(): string {
   return deviceId
 }
 
-// Función auxiliar para calcular totales de la venta (no usada actualmente)
-// @ts-ignore - Función no usada pero puede ser útil en el futuro
-function calculateTotals(
-  items: CartItemDto[],
-  products: Array<{ id: string; price_bs: number; price_usd: number }>
-): {
-  subtotal_bs: number
-  subtotal_usd: number
-  discount_bs: number
-  discount_usd: number
-  total_bs: number
-  total_usd: number
-} {
-  let subtotalBs = 0
-  let subtotalUsd = 0
-  let discountBs = 0
-  let discountUsd = 0
-
-  for (const item of items) {
-    const product = products.find((p) => p.id === item.product_id)
-    if (!product) continue
-
-    const itemSubtotalBs = product.price_bs * item.qty
-    const itemSubtotalUsd = product.price_usd * item.qty
-    const itemDiscountBs = item.discount_bs || 0
-    const itemDiscountUsd = item.discount_usd || 0
-
-    subtotalBs += itemSubtotalBs
-    subtotalUsd += itemSubtotalUsd
-    discountBs += itemDiscountBs
-    discountUsd += itemDiscountUsd
-  }
-
-  return {
-    subtotal_bs: subtotalBs,
-    subtotal_usd: subtotalUsd,
-    discount_bs: discountBs,
-    discount_usd: discountUsd,
-    total_bs: subtotalBs - discountBs,
-    total_usd: subtotalUsd - discountUsd,
-  }
-}
-
 export const salesService = {
   async create(data: CreateSaleRequest): Promise<Sale> {
     // Verificar estado de conexión PRIMERO

@@ -21,6 +21,12 @@ export function useSync() {
   const [metrics, setMetrics] = useState<SyncMetrics | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Actualizar estado y métricas
+  const updateStatus = useCallback(() => {
+    setStatus(syncService.getStatus());
+    setMetrics(syncService.getMetrics());
+  }, []);
+
   // Inicializar servicio cuando el usuario está autenticado
   useEffect(() => {
     if (!user || !user.store_id) {
@@ -54,13 +60,7 @@ export function useSync() {
       syncService.stop();
       setIsInitialized(false);
     };
-  }, [user]);
-
-  // Actualizar estado y métricas
-  const updateStatus = useCallback(() => {
-    setStatus(syncService.getStatus());
-    setMetrics(syncService.getMetrics());
-  }, []);
+  }, [user, updateStatus]);
 
   // Sincronizar ahora manualmente
   const syncNow = useCallback(async () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Search, Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react'
 import { productsService, ProductSearchResponse } from '@/services/products.service'
@@ -71,7 +71,7 @@ export default function POSPage() {
   }, [defaultWarehouse, selectedWarehouseId])
 
   // Handler para productos rápidos
-  const handleQuickProductClick = async (quickProduct: QuickProduct) => {
+  const handleQuickProductClick = useCallback(async (quickProduct: QuickProduct) => {
     if (!quickProduct.product) {
       toast.error('Producto no encontrado')
       return
@@ -127,11 +127,13 @@ export default function POSPage() {
         toast.success(`${quickProduct.product.name} agregado al carrito`)
       }
     }
-  }
+  }, [addItem, items, updateItem])
+
+  const fastCheckoutEnabled = Boolean(fastCheckoutConfig?.enabled)
 
   // Soporte para teclas de acceso rápido
   useEffect(() => {
-    if (!fastCheckoutConfig?.enabled) return
+    if (!fastCheckoutEnabled) return
 
     const handleKeyPress = async (e: KeyboardEvent) => {
       // Ignorar si está escribiendo en un input
@@ -157,7 +159,7 @@ export default function POSPage() {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [fastCheckoutConfig, items])
+  }, [fastCheckoutEnabled, handleQuickProductClick])
 
   const { isOnline } = useOnline(); // Usar hook más confiable
   const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined);
@@ -556,7 +558,7 @@ export default function POSPage() {
 
         {/* Carrito - Sticky en desktop, normal en mobile */}
         <div className="lg:col-span-1">
-          <Card className="lg:sticky lg:top-20 border border-border flex flex-col max-h-[calc(100vh-140px)] overflow-hidden">
+          <Card className="lg:sticky lg:top-20 border border-border flex flex-col max-h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)] lg:max-h-none overflow-hidden">
             <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between flex-shrink-0">
               <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -600,9 +602,12 @@ export default function POSPage() {
                     <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                   {items.map((item) => (
                     <div key={item.id} className="bg-muted/50 rounded-lg p-2.5 sm:p-3 border border-border hover:border-primary/50 transition-all shadow-sm">
-                      <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="flex items-start justify-between mb-2 gap-2 min-w-0">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-xs sm:text-sm text-foreground truncate">
+                          <p
+                            className="font-medium text-xs sm:text-sm text-foreground truncate"
+                            title={item.product_name}
+                          >
                             {item.product_name}
                           </p>
                           <p className="text-xs text-muted-foreground">

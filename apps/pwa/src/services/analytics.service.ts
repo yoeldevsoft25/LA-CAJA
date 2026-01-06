@@ -75,9 +75,6 @@ class AnalyticsService {
     const mixpanelStub = (window as any).mixpanel || []
     ;(function (c: Document, a: any) {
       if (!a.__SV) {
-        let b: HTMLScriptElement
-        let e: HTMLScriptElement | null
-        let i: string[]
         window.mixpanel = a
         a._i = []
         a.init = function (
@@ -91,8 +88,8 @@ class AnalyticsService {
               target = target[parts[0]]
               methodName = parts[1]
             }
-            target[methodName] = function () {
-              target.push([methodName].concat(Array.prototype.slice.call(arguments, 0)))
+            target[methodName] = function (...args: unknown[]) {
+              target.push([methodName, ...args])
             }
           }
           let lib = a
@@ -107,28 +104,28 @@ class AnalyticsService {
           lib.people.toString = function () {
             return lib.toString(1) + '.people (stub)'
           }
-          i =
+          const methods =
             'disable time_event track track_pageview track_links track_forms track_with_groups add_group set_group remove_group register register_once alias unregister identify name_tag set_config reset opt_in_tracking opt_out_tracking has_opted_in_tracking has_opted_out_tracking clear_opt_in_out_tracking start_batch_senders people.set people.set_once people.unset people.increment people.append people.union people.track_charge people.clear_charges people.delete_user people.remove'.split(
               ' '
             )
-          for (let h = 0; h < i.length; h++) g(lib, i[h])
+          for (let h = 0; h < methods.length; h++) g(lib, methods[h])
           const a1 = a
           a1._i.push([token, config, name])
         }
         a.__SV = 1.2
-        b = c.createElement('script')
-        b.type = 'text/javascript'
-        b.async = true
+        const scriptTag = c.createElement('script')
+        scriptTag.type = 'text/javascript'
+        scriptTag.async = true
         const customUrl = (window as any).MIXPANEL_CUSTOM_LIB_URL
-        b.src =
+        scriptTag.src =
           typeof customUrl !== 'undefined'
             ? customUrl
             : 'file:' === c.location.protocol &&
                 '//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js'.match(/^\/\//)
               ? 'https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js'
               : '//cdn.mxpnl.com/libs/mixpanel-2-latest.min.js'
-        e = c.getElementsByTagName('script')[0]
-        e?.parentNode?.insertBefore(b, e)
+        const firstScript = c.getElementsByTagName('script')[0]
+        firstScript?.parentNode?.insertBefore(scriptTag, firstScript)
       }
     })(document, mixpanelStub)
 

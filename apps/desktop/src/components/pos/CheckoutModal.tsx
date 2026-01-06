@@ -295,7 +295,7 @@ export default function CheckoutModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between z-10">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">Procesar Venta</h2>
@@ -315,11 +315,13 @@ export default function CheckoutModal({
             <h3 className="font-semibold text-gray-900 mb-3">Resumen de la venta</h3>
             <div className="space-y-3 text-sm">
               {/* Lista de productos */}
-              <div className="space-y-2 max-h-32 overflow-y-auto">
+              <div className="space-y-2 h-24 sm:h-28 overflow-y-auto">
                 {items.map((item) => (
                   <div key={item.id} className="flex justify-between items-start pb-2 border-b border-gray-200 last:border-0">
                     <div className="flex-1 min-w-0 mr-2">
-                      <p className="font-medium text-gray-900 truncate">{item.product_name}</p>
+                      <p className="font-medium text-gray-900 truncate" title={item.product_name}>
+                        {item.product_name}
+                      </p>
                       <p className="text-xs text-gray-500">
                         ${Number(item.unit_price_usd).toFixed(2)} c/u
                       </p>

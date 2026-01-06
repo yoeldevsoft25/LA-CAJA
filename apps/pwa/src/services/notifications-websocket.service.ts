@@ -3,14 +3,18 @@ import { io, Socket } from 'socket.io-client'
 /**
  * Servicio WebSocket para notificaciones en tiempo real
  */
+type EventCallback = (...args: unknown[]) => void
+
 class NotificationsWebSocketService {
   private socket: Socket | null = null
-  private listeners: Map<string, Set<Function>> = new Map()
+  private listeners: Map<string, Set<EventCallback>> = new Map()
 
   /**
    * Conecta al WebSocket de notificaciones
    */
-  connect(_storeId: string, _userId: string): void {
+  connect(storeId: string, userId: string): void {
+    void storeId
+    void userId
     if (this.socket?.connected) {
       return
     }
@@ -80,20 +84,20 @@ class NotificationsWebSocketService {
   /**
    * Registra un listener para eventos
    */
-  on(event: string, callback: Function): void {
+  on(event: string, callback: EventCallback): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set())
     }
     this.listeners.get(event)?.add(callback)
-    this.socket?.on(event, callback as any)
+    this.socket?.on(event, callback)
   }
 
   /**
    * Elimina un listener de eventos
    */
-  off(event: string, callback: Function): void {
+  off(event: string, callback: EventCallback): void {
     this.listeners.get(event)?.delete(callback)
-    this.socket?.off(event, callback as any)
+    this.socket?.off(event, callback)
   }
 
   /**

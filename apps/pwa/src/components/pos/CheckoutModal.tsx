@@ -245,17 +245,14 @@ export default function CheckoutModal({
   useEffect(() => {
     if (selectedMethod === 'CASH_USD') {
       setReceivedBs(0)
-      if (receivedUsd === 0) {
-        // Prellenar con el total exacto
-        setReceivedUsd(total.usd)
-      }
+      // Prellenar con el total exacto
+      setReceivedUsd((prev) => (prev === 0 ? total.usd : prev))
     } else if (selectedMethod === 'CASH_BS') {
       setReceivedUsd(0)
       setGiveChangeInBs(false)
-      if (receivedBs === 0) {
-        // Prellenar con el total en Bs según la tasa
-        setReceivedBs(Math.round(total.usd * exchangeRate * 100) / 100)
-      }
+      // Prellenar con el total en Bs según la tasa
+      const defaultBs = Math.round(total.usd * exchangeRate * 100) / 100
+      setReceivedBs((prev) => (prev === 0 ? defaultBs : prev))
     } else {
       setReceivedUsd(0)
       setGiveChangeInBs(false)
@@ -558,7 +555,7 @@ export default function CheckoutModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-1 sm:p-4">
-      <Card className="max-w-md w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border">
+      <Card className="max-w-md w-full h-[85vh] sm:h-[90vh] flex flex-col border border-border overflow-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-background border-b border-border px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between z-10 rounded-t-lg">
           <h2 className="text-lg sm:text-xl font-bold text-foreground">Procesar Venta</h2>
@@ -581,7 +578,7 @@ export default function CheckoutModal({
               <h3 className="font-semibold text-foreground mb-3">Resumen de la venta</h3>
             <div className="space-y-3 text-sm">
               {/* Lista de productos */}
-                <div className="h-28 sm:h-32">
+                <div className="h-24 sm:h-28">
                   <ScrollArea className="h-full">
                     <div>
                       {items.map((item, index) => (
@@ -593,7 +590,9 @@ export default function CheckoutModal({
                           )}
                         >
                     <div className="flex-1 min-w-0 mr-2">
-                            <p className="font-medium text-foreground truncate">{item.product_name}</p>
+                            <p className="font-medium text-foreground truncate" title={item.product_name}>
+                              {item.product_name}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                         ${Number(item.unit_price_usd).toFixed(2)} c/u
                       </p>

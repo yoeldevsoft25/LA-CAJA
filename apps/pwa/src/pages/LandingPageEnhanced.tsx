@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -43,9 +43,119 @@ import {
   Twitter,
   Linkedin,
   HelpCircle,
+  type LucideIcon,
 } from 'lucide-react'
-import { useRef } from 'react'
 import { cn } from '@/lib/utils'
+
+const STAT_COLOR_CLASSES = {
+  emerald: 'from-emerald-500 to-emerald-600',
+  blue: 'from-blue-500 to-blue-600',
+  purple: 'from-purple-500 to-purple-600',
+  pink: 'from-pink-500 to-pink-600',
+  yellow: 'from-yellow-500 to-yellow-600',
+  cyan: 'from-cyan-500 to-cyan-600',
+  orange: 'from-orange-500 to-orange-600',
+  indigo: 'from-indigo-500 to-indigo-600',
+  green: 'from-green-500 to-green-600',
+} as const
+
+type StatItem = {
+  label: string
+  value: number
+  prefix?: string
+  suffix?: string
+  icon: LucideIcon
+  color: keyof typeof STAT_COLOR_CLASSES
+}
+
+type StatCardProps = {
+  stat: StatItem
+  index: number
+  isInView: boolean
+}
+
+function useCounter(end: number, isInView: boolean, duration: number = 2000) {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (!isInView) return
+
+    let startTime: number | null = null
+    let frameId = 0
+    const decimals = Number.isInteger(end) ? 0 : String(end).split('.')[1]?.length ?? 0
+    const factor = Math.pow(10, decimals)
+
+    const animate = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime
+      const progress = Math.min((currentTime - startTime) / duration, 1)
+      const nextValue = Math.floor(progress * end * factor) / factor
+      setCount(nextValue)
+      if (progress < 1) {
+        frameId = requestAnimationFrame(animate)
+      }
+    }
+
+    frameId = requestAnimationFrame(animate)
+
+    return () => {
+      if (frameId) {
+        cancelAnimationFrame(frameId)
+      }
+    }
+  }, [end, duration, isInView])
+
+  return count
+}
+
+function StatCard({ stat, index, isInView }: StatCardProps) {
+  const Icon = stat.icon
+  const count = useCounter(stat.value, isInView)
+  const gradient = STAT_COLOR_CLASSES[stat.color]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+    >
+      <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 group relative overflow-hidden">
+        {/* Gradient background on hover */}
+        <div
+          className={cn(
+            'absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity duration-300',
+            gradient
+          )}
+        />
+
+        <CardContent className="p-8 text-center relative z-10">
+          <div
+            className={cn(
+              'w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300',
+              gradient
+            )}
+          >
+            <Icon className="w-8 h-8 text-white" />
+          </div>
+
+          <div
+            className="text-5xl font-black mb-2 bg-gradient-to-br bg-clip-text text-transparent"
+            style={{
+              backgroundImage: 'linear-gradient(to bottom right, var(--tw-gradient-stops))',
+            }}
+          >
+            <span className="text-white">
+              {stat.prefix}
+              {count}
+              {stat.suffix}
+            </span>
+          </div>
+
+          <p className="text-slate-400 font-medium">{stat.label}</p>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
 
 export default function LandingPageEnhanced() {
   const navigate = useNavigate()
@@ -1254,29 +1364,7 @@ function StatsSection() {
   const sectionRef = useRef(null)
   const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
 
-  // Counter animation hook
-  const useCounter = (end: number, duration: number = 2000) => {
-    const [count, setCount] = useState(0)
-
-    useEffect(() => {
-      if (!isInView) return
-
-      let startTime: number | null = null
-      const animate = (currentTime: number) => {
-        if (!startTime) startTime = currentTime
-        const progress = Math.min((currentTime - startTime) / duration, 1)
-        setCount(Math.floor(progress * end))
-        if (progress < 1) {
-          requestAnimationFrame(animate)
-        }
-      }
-      requestAnimationFrame(animate)
-    }, [isInView, end, duration])
-
-    return count
-  }
-
-  const stats = [
+  const stats: StatItem[] = [
     { label: 'Uptime', value: 99.9, suffix: '%', icon: Zap, color: 'emerald' },
     { label: 'Tiempo Respuesta', value: 15, prefix: '<', suffix: 'ms', icon: Rocket, color: 'blue' },
     { label: 'Offline', value: 100, suffix: '%', icon: WifiOff, color: 'purple' },
@@ -1287,18 +1375,6 @@ function StatsSection() {
     { label: 'Plataformas', value: 3, icon: Smartphone, color: 'indigo' },
     { label: 'Setup', value: 5, suffix: 'min', icon: Target, color: 'green' },
   ]
-
-  const colorClasses = {
-    emerald: 'from-emerald-500 to-emerald-600',
-    blue: 'from-blue-500 to-blue-600',
-    purple: 'from-purple-500 to-purple-600',
-    pink: 'from-pink-500 to-pink-600',
-    yellow: 'from-yellow-500 to-yellow-600',
-    cyan: 'from-cyan-500 to-cyan-600',
-    orange: 'from-orange-500 to-orange-600',
-    indigo: 'from-indigo-500 to-indigo-600',
-    green: 'from-green-500 to-green-600',
-  }
 
   return (
     <section ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/50">
@@ -1323,49 +1399,9 @@ function StatsSection() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon
-            const count = useCounter(stat.value)
-            const gradient = colorClasses[stat.color as keyof typeof colorClasses]
-
-            return (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 group relative overflow-hidden">
-                  {/* Gradient background on hover */}
-                  <div className={cn(
-                    "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity duration-300",
-                    gradient
-                  )} />
-
-                  <CardContent className="p-8 text-center relative z-10">
-                    <div className={cn(
-                      "w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300",
-                      gradient
-                    )}>
-                      <Icon className="w-8 h-8 text-white" />
-                    </div>
-
-                    <div className="text-5xl font-black mb-2 bg-gradient-to-br bg-clip-text text-transparent" style={{
-                      backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))`,
-                    }}>
-                      <span className="text-white">
-                        {stat.prefix}
-                        {count}
-                        {stat.suffix}
-                      </span>
-                    </div>
-
-                    <p className="text-slate-400 font-medium">{stat.label}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )
-          })}
+          {stats.map((stat, index) => (
+            <StatCard key={stat.label} stat={stat} index={index} isInView={isInView} />
+          ))}
         </div>
       </div>
     </section>

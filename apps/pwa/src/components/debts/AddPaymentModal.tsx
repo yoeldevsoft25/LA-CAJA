@@ -74,7 +74,8 @@ export default function AddPaymentModal({
   })
 
   const exchangeRate = bcvRateData?.rate || 0
-  const debtWithTotals = useMemo(() => debt ? calculateDebtTotals(debt) : null, [debt])
+  const debtId = debt?.id
+  const debtWithTotals = useMemo(() => (debt ? calculateDebtTotals(debt) : null), [debt])
 
   // Observar cambios en amount_usd para calcular amount_bs
   const amountUsd = watch('amount_usd')
@@ -92,7 +93,7 @@ export default function AddPaymentModal({
 
   // Reset form cuando se abre el modal - solo depende de isOpen y debt.id
   useEffect(() => {
-    if (isOpen && debt) {
+    if (isOpen && debtId) {
       reset({
         amount_usd: 0,
         amount_bs: 0,
@@ -100,7 +101,7 @@ export default function AddPaymentModal({
         note: '',
       })
     }
-  }, [isOpen, debt?.id, reset])
+  }, [isOpen, debtId, reset])
 
   const addPaymentMutation = useMutation({
     mutationFn: (data: PaymentFormData) => debtsService.addPayment(debt!.id, {

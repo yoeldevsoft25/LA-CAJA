@@ -111,8 +111,10 @@ export default function CashMovementModal({
                 <RadioGroup
                   value={movementType}
                   onValueChange={(value) => {
-                    // @ts-ignore
-                    reset({ ...watch(), movement_type: value })
+                    reset({
+                      ...watch(),
+                      movement_type: value as CashMovementFormData['movement_type'],
+                    })
                   }}
                   className="grid grid-cols-2 gap-3"
                 >
@@ -266,4 +268,3 @@ export default function CashMovementModal({
     </Dialog>
   )
 }
-
