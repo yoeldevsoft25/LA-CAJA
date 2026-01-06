@@ -227,65 +227,88 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
 
     console.log('[CSV Import] Iniciando importación de', parsedProducts.length, 'productos')
 
+    // Función para importar UN producto con reintentos automáticos
+    const importProductWithRetry = async (product: ParsedProduct, maxRetries = 5): Promise<boolean> => {
+      let lastError: any = null
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          await productsService.create(
+            {
+              name: product.name,
+              category: product.category || null,
+              sku: product.sku || null,
+              barcode: product.barcode || null,
+              price_bs: product.price_bs,
+              price_usd: product.price_usd,
+              cost_bs: product.cost_bs || 0,
+              cost_usd: product.cost_usd || 0,
+              low_stock_threshold: product.low_stock_threshold || 10,
+            },
+            user.store_id
+          )
+
+          // Éxito - Esperar un poco antes de continuar
+          await new Promise(resolve => setTimeout(resolve, 300))
+          return true
+        } catch (err: any) {
+          lastError = err
+          const status = err?.response?.status
+
+          // Si es 429 (rate limit) o 500 (server error), reintentar con backoff exponencial
+          if (status === 429 || status === 500 || err?.code === 'ECONNABORTED') {
+            const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000) // Max 10 segundos
+            console.warn(
+              `[CSV Import] Error ${status || err?.code} en fila ${product.row} (intento ${attempt}/${maxRetries}), ` +
+              `esperando ${waitTime}ms antes de reintentar...`
+            )
+            await new Promise(resolve => setTimeout(resolve, waitTime))
+            continue // Reintentar
+          }
+
+          // Otros errores (400, 404, etc.) no se reintentan
+          console.error(`[CSV Import] Error NO retriable en fila ${product.row}:`, {
+            status,
+            message: err?.message,
+            data: err?.response?.data
+          })
+          return false
+        }
+      }
+
+      // Si llegamos aquí, agotamos todos los reintentos
+      console.error(`[CSV Import] ❌ Fila ${product.row} (${product.name}) FALLÓ después de ${maxRetries} intentos:`, {
+        status: lastError?.response?.status,
+        message: lastError?.message
+      })
+      return false
+    }
+
     try {
       let successCount = 0
       let errorCount = 0
-      const BATCH_SIZE = 5 // Reducido drásticamente a 5 para evitar rate limiting
 
-      // Dividir en lotes para mejor rendimiento
-      for (let batchStart = 0; batchStart < parsedProducts.length; batchStart += BATCH_SIZE) {
-        const batch = parsedProducts.slice(batchStart, batchStart + BATCH_SIZE)
-        const batchNumber = Math.floor(batchStart / BATCH_SIZE) + 1
-        const totalBatches = Math.ceil(parsedProducts.length / BATCH_SIZE)
+      // Procesar productos de UNO EN UNO con reintentos automáticos
+      for (let i = 0; i < parsedProducts.length; i++) {
+        const product = parsedProducts[i]
 
-        console.log(`[CSV Import] Procesando lote ${batchNumber}/${totalBatches} (${batch.length} productos)`)
+        console.log(`[CSV Import] Procesando ${i + 1}/${parsedProducts.length}: ${product.name}`)
 
-        // Procesar productos UNO POR UNO para evitar rate limiting
-        for (const product of batch) {
-          try {
-            await productsService.create(
-              {
-                name: product.name,
-                category: product.category || null,
-                sku: product.sku || null,
-                barcode: product.barcode || null,
-                price_bs: product.price_bs,
-                price_usd: product.price_usd,
-                cost_bs: product.cost_bs || 0,
-                cost_usd: product.cost_usd || 0,
-                low_stock_threshold: product.low_stock_threshold || 10,
-              },
-              user.store_id
-            )
-            successCount++
-            // Pausa de 200ms entre cada producto para evitar rate limiting
-            await new Promise(resolve => setTimeout(resolve, 200))
-          } catch (err: any) {
-            errorCount++
+        const success = await importProductWithRetry(product)
 
-            // Si es rate limiting (429), esperar más tiempo antes de continuar
-            if (err?.response?.status === 429) {
-              console.warn(`[CSV Import] Rate limit detectado en fila ${product.row}, esperando 2 segundos...`)
-              await new Promise(resolve => setTimeout(resolve, 2000))
-            }
-
-            console.error(`[CSV Import] Error fila ${product.row} (${product.name}):`, {
-              status: err?.response?.status,
-              message: err?.message,
-              data: err?.response?.data
-            })
-          }
+        if (success) {
+          successCount++
+        } else {
+          errorCount++
         }
 
         // Actualizar progreso
-        const progress = Math.round(((batchStart + batch.length) / parsedProducts.length) * 100)
+        const progress = Math.round(((i + 1) / parsedProducts.length) * 100)
         setImportProgress(progress)
 
-        console.log(`[CSV Import] Lote ${batchNumber} completado: ${successCount} éxitos, ${errorCount} errores`)
-
-        // Pausa entre lotes para no saturar el servidor
-        if (batchStart + BATCH_SIZE < parsedProducts.length) {
-          await new Promise(resolve => setTimeout(resolve, 500))
+        // Log cada 50 productos
+        if ((i + 1) % 50 === 0) {
+          console.log(`[CSV Import] ✅ Progreso: ${i + 1}/${parsedProducts.length} (${successCount} éxitos, ${errorCount} errores)`)
         }
       }
 
