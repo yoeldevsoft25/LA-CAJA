@@ -227,6 +227,35 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
 
     console.log('[CSV Import] Iniciando importación de', parsedProducts.length, 'productos')
 
+    // 🔍 PASO 1: Obtener TODOS los productos existentes para detectar duplicados
+    console.log('[CSV Import] 🔍 Cargando productos existentes para detectar duplicados...')
+    let existingProducts: any[] = []
+    try {
+      const response = await productsService.search({ limit: 100000 }, user.store_id)
+      existingProducts = response.products
+      console.log('[CSV Import] ✅ Productos existentes cargados:', existingProducts.length)
+    } catch (error) {
+      console.warn('[CSV Import] ⚠️ No se pudieron cargar productos existentes, continuando sin verificación:', error)
+    }
+
+    // Función auxiliar para verificar si un producto ya existe
+    const productExists = (product: ParsedProduct): boolean => {
+      return existingProducts.some(existing => {
+        // Coincidencia exacta por nombre (case-insensitive)
+        const nameMatch = existing.name.toLowerCase().trim() === product.name.toLowerCase().trim()
+
+        // Coincidencia por SKU (si ambos tienen SKU)
+        const skuMatch = product.sku && existing.sku &&
+          existing.sku.toLowerCase().trim() === product.sku.toLowerCase().trim()
+
+        // Coincidencia por código de barras (si ambos tienen)
+        const barcodeMatch = product.barcode && existing.barcode &&
+          existing.barcode.toLowerCase().trim() === product.barcode.toLowerCase().trim()
+
+        return nameMatch || skuMatch || barcodeMatch
+      })
+    }
+
     // Función para importar UN producto con reintentos automáticos y backoff agresivo
     const importProductWithRetry = async (product: ParsedProduct, maxRetries = 10): Promise<boolean> => {
       let lastError: any = null
@@ -289,10 +318,22 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
     try {
       let successCount = 0
       let errorCount = 0
+      let skippedCount = 0
 
       // Procesar productos de UNO EN UNO con reintentos automáticos
       for (let i = 0; i < parsedProducts.length; i++) {
         const product = parsedProducts[i]
+
+        // 🔍 VERIFICAR SI YA EXISTE ANTES DE INTENTAR CREAR
+        if (productExists(product)) {
+          console.log(`[CSV Import] ⏭️ OMITIENDO fila ${product.row} (${product.name}) - Ya existe`)
+          skippedCount++
+
+          // Actualizar progreso (cuenta como procesado)
+          const progress = Math.round(((i + 1) / parsedProducts.length) * 100)
+          setImportProgress(progress)
+          continue
+        }
 
         console.log(`[CSV Import] Procesando ${i + 1}/${parsedProducts.length}: ${product.name}`)
 
@@ -310,21 +351,30 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
 
         // Log cada 50 productos
         if ((i + 1) % 50 === 0) {
-          console.log(`[CSV Import] ✅ Progreso: ${i + 1}/${parsedProducts.length} (${successCount} éxitos, ${errorCount} errores)`)
+          console.log(`[CSV Import] ✅ Progreso: ${i + 1}/${parsedProducts.length} (${successCount} éxitos, ${errorCount} errores, ${skippedCount} omitidos)`)
         }
       }
 
       console.log('[CSV Import] Importación completada:', {
         total: parsedProducts.length,
         exitos: successCount,
-        errores: errorCount
+        errores: errorCount,
+        omitidos: skippedCount
       })
 
       setStep('complete')
 
-      if (errorCount === 0) {
+      if (errorCount === 0 && skippedCount === 0) {
         toast.success(`✅ ${successCount} productos importados exitosamente`, {
           duration: 5000
+        })
+      } else if (errorCount === 0 && skippedCount > 0) {
+        toast.success(`✅ ${successCount} productos nuevos importados. ${skippedCount} ya existían y fueron omitidos`, {
+          duration: 6000
+        })
+      } else if (skippedCount > 0) {
+        toast.success(`${successCount} productos importados, ${errorCount} con errores, ${skippedCount} omitidos (ya existían)`, {
+          duration: 7000
         })
       } else {
         toast.success(`${successCount} productos importados, ${errorCount} con errores`, {
