@@ -6,6 +6,10 @@
   # Directorio de publicación (relativo al base)
   publish = "dist"
 
+# Configuración de Node.js - Prisma 7.2.0 requiere Node 20.19+
+[build.environment]
+  NODE_VERSION = "20.19.0"
+
 # Redirecciones SPA - CRÍTICO para evitar 404
 # Todas las rutas deben redirigir a index.html para que React Router funcione
 [[redirects]]
