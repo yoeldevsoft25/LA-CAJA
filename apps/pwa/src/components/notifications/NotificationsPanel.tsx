@@ -59,9 +59,9 @@ export function NotificationsPanel() {
   }
 
   return (
-    <div className="flex flex-col w-80 h-[600px]">
+    <div className="flex flex-col w-80 max-h-[calc(100vh-100px)]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+      <div className="flex items-center justify-between p-4 border-b flex-shrink-0 bg-background">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5" />
           <h3 className="font-semibold">Notificaciones</h3>
@@ -85,7 +85,7 @@ export function NotificationsPanel() {
       </div>
 
       {/* Lista de notificaciones */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="overflow-y-auto overflow-x-hidden" style={{ maxHeight: 'calc(100vh - 180px)' }}>
         {notifications.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
