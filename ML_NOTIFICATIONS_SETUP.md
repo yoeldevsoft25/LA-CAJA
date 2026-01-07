@@ -121,7 +121,26 @@ PGPASSWORD='@bC154356' psql \
 # 3. Ejecuta el script
 ```
 
-### 2. Instalar Redis (para BullMQ)
+### 2. Configurar Redis (para BullMQ)
+
+#### Opción A: Redis en Render (Recomendado para Producción) 🚀
+
+1. **Crear Redis Instance en Render**:
+   - Ve a [Render Dashboard](https://dashboard.render.com)
+   - Click en **"New +"** → **"Redis"**
+   - Selecciona un plan (tienen Free tier)
+   - Render te dará una URL como: `redis://red-xxxxx:6379`
+
+2. **Configurar en Render**:
+   - Ve a tu servicio API en Render
+   - **Environment** → **Add Environment Variable**
+   - Agrega:
+     ```
+     REDIS_URL=redis://red-xxxxx:6379
+     ```
+   - ✅ El sistema detectará automáticamente `REDIS_URL` y la usará
+
+#### Opción B: Redis Local (Desarrollo)
 
 ```bash
 # macOS
@@ -134,6 +153,13 @@ docker run -d -p 6379:6379 redis:alpine
 # Verificar
 redis-cli ping
 # Debe responder: PONG
+```
+
+**Configurar en `.env`**:
+```env
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
 ```
 
 ### 3. Configurar Variables de Entorno
