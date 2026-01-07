@@ -23,6 +23,7 @@ import { PromotionsModule } from '../promotions/promotions.module';
 import { WarehousesModule } from '../warehouses/warehouses.module';
 import { FiscalInvoicesModule } from '../fiscal-invoices/fiscal-invoices.module';
 import { AccountingModule } from '../accounting/accounting.module';
+import { ConfigModule as SystemConfigModule } from '../config/config.module';
 import { forwardRef } from '@nestjs/common';
 
 @Module({
@@ -50,6 +51,7 @@ import { forwardRef } from '@nestjs/common';
     WarehousesModule,
     FiscalInvoicesModule,
     forwardRef(() => AccountingModule),
+    SystemConfigModule,
   ],
   controllers: [SalesController],
   providers: [SalesService],

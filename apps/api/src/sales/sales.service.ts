@@ -41,6 +41,7 @@ import { PromotionsService } from '../promotions/promotions.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { AccountingService } from '../accounting/accounting.service';
+import { ConfigValidationService } from '../config/config-validation.service';
 
 @Injectable()
 export class SalesService {
@@ -77,6 +78,7 @@ export class SalesService {
     private warehousesService: WarehousesService,
     private fiscalInvoicesService: FiscalInvoicesService,
     private accountingService: AccountingService,
+    private configValidationService: ConfigValidationService,
   ) {}
 
   async create(
@@ -84,6 +86,19 @@ export class SalesService {
     dto: CreateSaleDto,
     userId?: string,
   ): Promise<Sale> {
+    // ⚙️ VALIDAR CONFIGURACIÓN DEL SISTEMA ANTES DE GENERAR VENTA
+    const canGenerate = await this.configValidationService.canGenerateSale(
+      storeId,
+    );
+
+    if (!canGenerate) {
+      const errorMessage =
+        await this.configValidationService.getConfigurationErrorMessage(
+          storeId,
+        );
+      throw new BadRequestException(errorMessage);
+    }
+
     // Validar que hay items
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('El carrito no puede estar vacío');

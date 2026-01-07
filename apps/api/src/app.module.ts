@@ -41,6 +41,7 @@ import { RealTimeAnalyticsModule } from './realtime-analytics/realtime-analytics
 import { NotificationsModule } from './notifications/notifications.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { SecurityModule } from './security/security.module';
+import { ConfigModule as SystemConfigModule } from './config/config.module';
 import { AdminController } from './admin/admin.controller';
 import { AdminApiGuard } from './admin/admin-api.guard';
 import { LicenseWatcherService } from './admin/license-watcher.service';
@@ -180,6 +181,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     NotificationsModule,
     AccountingModule,
     SecurityModule, // ✅ Módulo de seguridad y auditoría
+    SystemConfigModule, // ✅ Módulo de validación de configuración
   ],
   controllers: [AppController, AdminController],
   providers: [
