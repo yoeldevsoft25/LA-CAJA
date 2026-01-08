@@ -213,25 +213,17 @@ export class WarehousesService {
     variantId: string | null,
     qtyDelta: number,
   ): Promise<WarehouseStock> {
-    // Buscar el registro existente
-    let stock: WarehouseStock | null;
+    // Buscar el registro existente usando raw query para evitar problemas con TypeORM
+    const stocks = await this.dataSource.query(
+      `SELECT * FROM warehouse_stock
+       WHERE warehouse_id = $1
+       AND product_id = $2
+       AND ($3::uuid IS NULL AND variant_id IS NULL OR variant_id = $3)
+       LIMIT 1`,
+      [warehouseId, productId, variantId]
+    );
 
-    if (variantId === null) {
-      stock = await this.warehouseStockRepository
-        .createQueryBuilder('ws')
-        .where('ws.warehouse_id = :warehouseId', { warehouseId })
-        .andWhere('ws.product_id = :productId', { productId })
-        .andWhere('ws.variant_id IS NULL')
-        .getOne();
-    } else {
-      stock = await this.warehouseStockRepository.findOne({
-        where: {
-          warehouse_id: warehouseId,
-          product_id: productId,
-          variant_id: variantId,
-        },
-      });
-    }
+    let stock: WarehouseStock | null = stocks.length > 0 ? stocks[0] : null;
 
     if (stock) {
       stock.stock = Math.max(0, stock.stock + qtyDelta);
@@ -258,25 +250,17 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente
-    let stock: WarehouseStock | null;
+    // Buscar el registro existente usando raw query
+    const stocks = await this.dataSource.query(
+      `SELECT * FROM warehouse_stock
+       WHERE warehouse_id = $1
+       AND product_id = $2
+       AND ($3::uuid IS NULL AND variant_id IS NULL OR variant_id = $3)
+       LIMIT 1`,
+      [warehouseId, productId, variantId]
+    );
 
-    if (variantId === null) {
-      stock = await this.warehouseStockRepository
-        .createQueryBuilder('ws')
-        .where('ws.warehouse_id = :warehouseId', { warehouseId })
-        .andWhere('ws.product_id = :productId', { productId })
-        .andWhere('ws.variant_id IS NULL')
-        .getOne();
-    } else {
-      stock = await this.warehouseStockRepository.findOne({
-        where: {
-          warehouse_id: warehouseId,
-          product_id: productId,
-          variant_id: variantId,
-        },
-      });
-    }
+    const stock: WarehouseStock | null = stocks.length > 0 ? stocks[0] : null;
 
     if (!stock || stock.stock < quantity) {
       throw new BadRequestException('Stock insuficiente para reservar');
@@ -296,25 +280,17 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente
-    let stock: WarehouseStock | null;
+    // Buscar el registro existente usando raw query
+    const stocks = await this.dataSource.query(
+      `SELECT * FROM warehouse_stock
+       WHERE warehouse_id = $1
+       AND product_id = $2
+       AND ($3::uuid IS NULL AND variant_id IS NULL OR variant_id = $3)
+       LIMIT 1`,
+      [warehouseId, productId, variantId]
+    );
 
-    if (variantId === null) {
-      stock = await this.warehouseStockRepository
-        .createQueryBuilder('ws')
-        .where('ws.warehouse_id = :warehouseId', { warehouseId })
-        .andWhere('ws.product_id = :productId', { productId })
-        .andWhere('ws.variant_id IS NULL')
-        .getOne();
-    } else {
-      stock = await this.warehouseStockRepository.findOne({
-        where: {
-          warehouse_id: warehouseId,
-          product_id: productId,
-          variant_id: variantId,
-        },
-      });
-    }
+    const stock: WarehouseStock | null = stocks.length > 0 ? stocks[0] : null;
 
     if (!stock || stock.reserved < quantity) {
       throw new BadRequestException('Stock reservado insuficiente');
