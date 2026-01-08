@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { inventoryService, StockReceivedRequest, StockStatus } from '@/services/inventory.service'
@@ -7,7 +7,7 @@ import { productsCacheService } from '@/services/products-cache.service'
 import { exchangeService } from '@/services/exchange.service'
 import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
-import { Plus, Trash2, Search } from 'lucide-react'
+import { Plus, Trash2, Search, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -23,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
 interface StockReceivedModalProps {
   isOpen: boolean
@@ -54,6 +54,7 @@ export default function StockReceivedModal({
   const [invoice, setInvoice] = useState('')
   const [note, setNote] = useState('')
   const [warehouseId, setWarehouseId] = useState<string | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Obtener productos para selección (con cache offline persistente)
   const { data: productsData } = useQuery({
@@ -67,7 +68,7 @@ export default function StockReceivedModal({
 
   // Cargar desde cache cuando se abre el modal
   const [initialProducts, setInitialProducts] = useState<{ products: any[]; total: number } | undefined>(undefined);
-  
+
   useEffect(() => {
     if (user?.store_id && isOpen) {
       productsCacheService.getProductsFromCache(user.store_id, { limit: 1000 })
@@ -159,6 +160,15 @@ export default function StockReceivedModal({
     }
   }, [isOpen])
 
+  // Focus en el input de búsqueda cuando se abre
+  useEffect(() => {
+    if (showProductSearch && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 100)
+    }
+  }, [showProductSearch])
+
   const addProduct = (product: Product) => {
     const newItem: ProductItem = {
       id: `item-${Date.now()}-${Math.random()}`,
@@ -207,7 +217,7 @@ export default function StockReceivedModal({
       toast.success(
         `Stock recibido exitosamente para ${results.length} producto${results.length > 1 ? 's' : ''}`
       )
-      onClose() // Cerrar modal después de éxito
+      onClose()
       onSuccess?.()
     },
     onError: (error: any) => {
@@ -263,18 +273,10 @@ export default function StockReceivedModal({
   )
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
-        onInteractOutside={(e) => {
-          // Prevenir que el dialog se cierre cuando se interactúa con el popover
-          if (showProductSearch) {
-            e.preventDefault()
-          }
-        }}
-      >
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-4 sm:px-6 py-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-xl">
             Recibir Stock {totalProducts > 0 && `(${totalProducts} productos)`}
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -282,271 +284,278 @@ export default function StockReceivedModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-          <div className="space-y-4 sm:space-y-6">
-              {/* Botón para agregar producto */}
-              <Popover open={showProductSearch} onOpenChange={setShowProductSearch} modal={false}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full border-dashed"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Agregar Producto
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-full sm:w-[500px] p-0"
-                  align="start"
-                  onOpenAutoFocus={(e) => e.preventDefault()}
-                >
-                  <div className="sticky top-0 bg-background border-b border-border p-2 z-10">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                      <Input
-                        type="text"
-                        placeholder="Buscar producto..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                        autoFocus
-                      />
-                    </div>
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+          <div className="space-y-6">
+            {/* Buscador de productos con diseño colapsable */}
+            {!showProductSearch ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-dashed"
+                onClick={() => setShowProductSearch(true)}
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Agregar Producto
+              </Button>
+            ) : (
+              <Card className="border-2 border-primary">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Buscar Producto</CardTitle>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setShowProductSearch(false)
+                        setSearchQuery('')
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <ScrollArea className="h-[200px]">
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Buscar por nombre, SKU o código de barras..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <ScrollArea className="h-[200px] rounded-md border">
                     {filteredProducts.length === 0 ? (
                       <div className="p-4 text-center text-sm text-muted-foreground">
-                        {searchQuery ? 'No se encontraron productos' : 'Busca un producto para agregar'}
+                        {searchQuery ? 'No se encontraron productos' : 'Escribe para buscar productos'}
                       </div>
                     ) : (
-                      <div className="divide-y divide-border">
+                      <div className="divide-y">
                         {filteredProducts.map((p: any) => (
                           <button
                             key={p.id}
                             type="button"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              addProduct(p)
-                            }}
-                            className="w-full px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+                            onClick={() => addProduct(p)}
+                            className="w-full px-3 py-2.5 text-left hover:bg-muted transition-colors"
                           >
-                            <p className="font-medium text-foreground text-sm">{p.name}</p>
-                            {p.sku && <p className="text-xs text-muted-foreground">SKU: {p.sku}</p>}
+                            <p className="font-medium text-sm">{p.name}</p>
+                            {p.sku && <p className="text-xs text-muted-foreground mt-0.5">SKU: {p.sku}</p>}
                           </button>
                         ))}
                       </div>
                     )}
                   </ScrollArea>
-                </PopoverContent>
-              </Popover>
+                </CardContent>
+              </Card>
+            )}
 
-              {/* Lista de productos agregados */}
-              {productItems.length > 0 && (
-                <div className="space-y-3">
-                  {productItems.map((item) => (
-                    <Card key={item.id} className="bg-muted/50 border-border">
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-foreground text-sm sm:text-base">
-                              {item.product_name}
-                            </h4>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeProduct(item.id)}
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+            {/* Lista de productos agregados */}
+            {productItems.length > 0 && (
+              <div className="space-y-3">
+                {productItems.map((item) => (
+                  <Card key={item.id} className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 className="font-semibold text-sm sm:text-base">
+                          {item.product_name}
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeProduct(item.id)}
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* Cantidad */}
+                        <div>
+                          <Label className="text-xs mb-1.5 block">
+                            Cantidad <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={item.qty}
+                            onChange={(e) =>
+                              updateProductItem(item.id, 'qty', parseInt(e.target.value) || 1)
+                            }
+                          />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {/* Cantidad */}
-                          <div>
-                            <Label className="text-xs mb-1">
-                              Cantidad <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                              type="number"
-                              step="1"
-                              min="1"
-                              value={item.qty}
-                              onChange={(e) =>
-                                updateProductItem(item.id, 'qty', parseInt(e.target.value) || 1)
-                              }
-                            />
-                          </div>
-
-                          {/* Costo USD */}
-                          <div>
-                            <Label className="text-xs mb-1">
-                              Costo Unit. USD <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.unit_cost_usd || ''}
-                              onChange={(e) =>
-                                updateProductItem(item.id, 'unit_cost_usd', parseFloat(e.target.value) || 0)
-                              }
-                              placeholder="0.00"
-                            />
-                          </div>
-
-                          {/* Costo BS (calculado) */}
-                          <div>
-                            <Label className="text-xs mb-1">
-                              Costo Unit. Bs
-                              <span className="text-xs font-normal text-muted-foreground ml-1">
-                                (Calculado)
-                              </span>
-                            </Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.unit_cost_bs.toFixed(2)}
-                              className="bg-muted cursor-not-allowed"
-                              readOnly
-                            />
-                          </div>
+                        {/* Costo USD */}
+                        <div>
+                          <Label className="text-xs mb-1.5 block">
+                            Costo Unit. USD <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.unit_cost_usd || ''}
+                            onChange={(e) =>
+                              updateProductItem(item.id, 'unit_cost_usd', parseFloat(e.target.value) || 0)
+                            }
+                            placeholder="0.00"
+                          />
                         </div>
 
-                        {/* Subtotal */}
-                        <div className="mt-2 text-right text-sm">
-                          <span className="text-muted-foreground">Subtotal: </span>
-                          <span className="font-semibold text-foreground">
-                            ${(item.unit_cost_usd * item.qty).toFixed(2)} USD /{' '}
-                            {(item.unit_cost_bs * item.qty).toFixed(2)} Bs
-                          </span>
+                        {/* Costo BS (calculado) */}
+                        <div>
+                          <Label className="text-xs mb-1.5 block">
+                            Costo Unit. Bs
+                            <span className="text-xs font-normal text-muted-foreground ml-1">
+                              (Calculado)
+                            </span>
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={item.unit_cost_bs.toFixed(2)}
+                            className="bg-muted cursor-not-allowed"
+                            readOnly
+                          />
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                      </div>
 
-              {/* Información compartida (Bodega, Proveedor, Factura, Nota) */}
-              {productItems.length > 0 && (
-                <div className="border-t border-border pt-4 space-y-4">
-                  {/* Selector de bodega */}
-                  {warehouses.length > 0 && (
-                    <div>
-                      <Label htmlFor="warehouse">Bodega (Opcional)</Label>
-                      <Select
-                        value={warehouseId || 'default'}
-                        onValueChange={(value) =>
-                          setWarehouseId(value === 'default' ? null : value)
-                        }
-                      >
-                        <SelectTrigger className="mt-2">
-                          <SelectValue placeholder="Usar bodega por defecto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="default">Usar bodega por defecto</SelectItem>
-                          {warehouses
-                            .filter((w) => w.is_active)
-                            .map((w) => (
-                              <SelectItem key={w.id} value={w.id}>
-                                {w.name} {w.is_default && '(Por defecto)'}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Si no se selecciona, se usará la bodega por defecto
-                      </p>
-                    </div>
-                  )}
+                      {/* Subtotal */}
+                      <div className="mt-2 text-right text-sm">
+                        <span className="text-muted-foreground">Subtotal: </span>
+                        <span className="font-semibold">
+                          ${(item.unit_cost_usd * item.qty).toFixed(2)} USD /{' '}
+                          {(item.unit_cost_bs * item.qty).toFixed(2)} Bs
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="supplier">Proveedor</Label>
-                      <Input
-                        id="supplier"
-                        type="text"
-                        value={supplier}
-                        onChange={(e) => setSupplier(e.target.value)}
-                        className="mt-2"
-                        placeholder="Nombre del proveedor"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="invoice">N° Factura</Label>
-                      <Input
-                        id="invoice"
-                        type="text"
-                        value={invoice}
-                        onChange={(e) => setInvoice(e.target.value)}
-                        className="mt-2"
-                        placeholder="Número de factura"
-                      />
-                    </div>
-                  </div>
-
+            {/* Información compartida */}
+            {productItems.length > 0 && (
+              <div className="border-t pt-4 space-y-4">
+                {/* Selector de bodega */}
+                {warehouses.length > 0 && (
                   <div>
-                    <Label htmlFor="note">Nota</Label>
-                    <Textarea
-                      id="note"
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows={2}
-                      className="mt-2 resize-none"
-                      placeholder="Notas adicionales (opcional)"
+                    <Label htmlFor="warehouse">Bodega (Opcional)</Label>
+                    <Select
+                      value={warehouseId || 'default'}
+                      onValueChange={(value) =>
+                        setWarehouseId(value === 'default' ? null : value)
+                      }
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="Usar bodega por defecto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Usar bodega por defecto</SelectItem>
+                        {warehouses
+                          .filter((w) => w.is_active)
+                          .map((w) => (
+                            <SelectItem key={w.id} value={w.id}>
+                              {w.name} {w.is_default && '(Por defecto)'}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Si no se selecciona, se usará la bodega por defecto
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="supplier">Proveedor</Label>
+                    <Input
+                      id="supplier"
+                      type="text"
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      className="mt-2"
+                      placeholder="Nombre del proveedor"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="invoice">N° Factura</Label>
+                    <Input
+                      id="invoice"
+                      type="text"
+                      value={invoice}
+                      onChange={(e) => setInvoice(e.target.value)}
+                      className="mt-2"
+                      placeholder="Número de factura"
                     />
                   </div>
                 </div>
-              )}
 
-              {/* Resumen total */}
-              {productItems.length > 0 && (
-                <Card className="bg-info/5 border-info/50">
-                  <CardHeader>
-                    <CardTitle className="text-sm sm:text-base">Resumen</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Productos:</span>
-                        <span className="ml-2 font-semibold text-foreground">{totalProducts}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Total unidades:</span>
-                        <span className="ml-2 font-semibold text-foreground">{totalItems}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Total USD:</span>
-                        <span className="ml-2 font-semibold text-foreground">
-                          ${totalCostUsd.toFixed(2)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Total Bs:</span>
-                        <span className="ml-2 font-semibold text-foreground">
-                          {totalCostBs.toFixed(2)}
-                        </span>
-                      </div>
+                <div>
+                  <Label htmlFor="note">Nota</Label>
+                  <Textarea
+                    id="note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                    className="mt-2 resize-none"
+                    placeholder="Notas adicionales (opcional)"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Resumen total */}
+            {productItems.length > 0 && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Resumen</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Productos:</span>
+                      <span className="ml-2 font-semibold">{totalProducts}</span>
                     </div>
-                    {bcvRateData?.available && bcvRateData.rate && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Tasa BCV utilizada: {bcvRateData.rate.toFixed(2)} Bs/USD
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                    <div>
+                      <span className="text-muted-foreground">Unidades:</span>
+                      <span className="ml-2 font-semibold">{totalItems}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total USD:</span>
+                      <span className="ml-2 font-semibold">
+                        ${totalCostUsd.toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Total Bs:</span>
+                      <span className="ml-2 font-semibold">
+                        {totalCostBs.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  {bcvRateData?.available && bcvRateData.rate && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Tasa BCV: {bcvRateData.rate.toFixed(2)} Bs/USD
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="flex-shrink-0 border-t px-4 sm:px-6 py-4">
+          <div className="flex gap-3">
             <Button
               type="button"
               variant="outline"
@@ -560,7 +569,7 @@ export default function StockReceivedModal({
               type="button"
               onClick={handleSubmit}
               disabled={isLoading || productItems.length === 0}
-              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="flex-1"
             >
               {isLoading
                 ? 'Registrando...'
