@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, IsNull } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Warehouse } from '../database/entities/warehouse.entity';
 import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -206,6 +206,25 @@ export class WarehousesService {
   }
 
   /**
+   * Busca un registro de stock usando query raw para evitar bug de TypeORM con alias
+   */
+  private async findStockRecord(
+    warehouseId: string,
+    productId: string,
+    variantId: string | null,
+  ): Promise<WarehouseStock | null> {
+    const result = await this.dataSource.query(
+      `SELECT * FROM warehouse_stock
+       WHERE warehouse_id = $1
+       AND product_id = $2
+       AND ($3::uuid IS NULL AND variant_id IS NULL OR variant_id = $3::uuid)
+       LIMIT 1`,
+      [warehouseId, productId, variantId],
+    );
+    return result[0] || null;
+  }
+
+  /**
    * Actualiza el stock de una bodega (usado internamente)
    */
   async updateStock(
@@ -214,14 +233,8 @@ export class WarehousesService {
     variantId: string | null,
     qtyDelta: number,
   ): Promise<WarehouseStock> {
-    // Buscar el registro existente - usar findOne con where directo y IsNull() para valores nulos
-    const stock = await this.warehouseStockRepository.findOne({
-      where: {
-        warehouse_id: warehouseId,
-        product_id: productId,
-        variant_id: variantId === null ? IsNull() : variantId,
-      },
-    });
+    // Buscar el registro existente usando query raw
+    const stock = await this.findStockRecord(warehouseId, productId, variantId);
 
     if (stock) {
       stock.stock = Math.max(0, stock.stock + qtyDelta);
@@ -248,14 +261,8 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente - usar findOne con where directo y IsNull() para valores nulos
-    const stock = await this.warehouseStockRepository.findOne({
-      where: {
-        warehouse_id: warehouseId,
-        product_id: productId,
-        variant_id: variantId === null ? IsNull() : variantId,
-      },
-    });
+    // Buscar el registro existente usando query raw
+    const stock = await this.findStockRecord(warehouseId, productId, variantId);
 
     if (!stock || stock.stock < quantity) {
       throw new BadRequestException('Stock insuficiente para reservar');
@@ -275,14 +282,8 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente - usar findOne con where directo y IsNull() para valores nulos
-    const stock = await this.warehouseStockRepository.findOne({
-      where: {
-        warehouse_id: warehouseId,
-        product_id: productId,
-        variant_id: variantId === null ? IsNull() : variantId,
-      },
-    });
+    // Buscar el registro existente usando query raw
+    const stock = await this.findStockRecord(warehouseId, productId, variantId);
 
     if (!stock || stock.reserved < quantity) {
       throw new BadRequestException('Stock reservado insuficiente');
