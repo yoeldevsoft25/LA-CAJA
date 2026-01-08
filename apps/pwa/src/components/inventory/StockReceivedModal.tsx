@@ -291,10 +291,6 @@ export default function StockReceivedModal({
                     type="button"
                     variant="outline"
                     className="w-full border-dashed"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                    }}
                   >
                     <Plus className="w-5 h-5 mr-2" />
                     Agregar Producto
