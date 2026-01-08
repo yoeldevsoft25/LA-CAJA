@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, IsNull } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Warehouse } from '../database/entities/warehouse.entity';
 import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -200,6 +200,26 @@ export class WarehousesService {
   }
 
   /**
+   * Busca un registro de stock usando raw query para evitar bug de TypeORM
+   */
+  private async findStockRecord(
+    warehouseId: string,
+    productId: string,
+    variantId: string | null,
+  ): Promise<WarehouseStock | null> {
+    const result = await this.dataSource.query(
+      `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
+       FROM warehouse_stock
+       WHERE warehouse_id = $1
+         AND product_id = $2
+         AND (($3::uuid IS NULL AND variant_id IS NULL) OR variant_id = $3::uuid)
+       LIMIT 1`,
+      [warehouseId, productId, variantId],
+    );
+    return result[0] || null;
+  }
+
+  /**
    * Actualiza el stock de una bodega (usado internamente)
    */
   async updateStock(
@@ -208,28 +228,33 @@ export class WarehousesService {
     variantId: string | null,
     qtyDelta: number,
   ): Promise<WarehouseStock> {
-    // Buscar el registro existente
-    const stock = await this.warehouseStockRepository.findOne({
-      where: {
-        warehouse_id: warehouseId,
-        product_id: productId,
-        variant_id: variantId === null ? IsNull() : variantId,
-      },
-    });
+    const stock = await this.findStockRecord(warehouseId, productId, variantId);
 
     if (stock) {
-      stock.stock = Math.max(0, stock.stock + qtyDelta);
-      return this.warehouseStockRepository.save(stock);
+      const newStockValue = Math.max(0, stock.stock + qtyDelta);
+      await this.dataSource.query(
+        `UPDATE warehouse_stock SET stock = $1, updated_at = NOW() WHERE id = $2`,
+        [newStockValue, stock.id],
+      );
+      stock.stock = newStockValue;
+      return stock;
     } else {
-      const newStock = this.warehouseStockRepository.create({
-        id: randomUUID(),
+      const newId = randomUUID();
+      const newStockValue = Math.max(0, qtyDelta);
+      await this.dataSource.query(
+        `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 0, NOW())`,
+        [newId, warehouseId, productId, variantId, newStockValue],
+      );
+      return {
+        id: newId,
         warehouse_id: warehouseId,
         product_id: productId,
         variant_id: variantId,
-        stock: Math.max(0, qtyDelta),
+        stock: newStockValue,
         reserved: 0,
-      });
-      return this.warehouseStockRepository.save(newStock);
+        updated_at: new Date(),
+      } as WarehouseStock;
     }
   }
 
@@ -242,21 +267,16 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    const stock = await this.warehouseStockRepository.findOne({
-      where: {
-        warehouse_id: warehouseId,
-        product_id: productId,
-        variant_id: variantId === null ? IsNull() : variantId,
-      },
-    });
+    const stock = await this.findStockRecord(warehouseId, productId, variantId);
 
     if (!stock || stock.stock < quantity) {
       throw new BadRequestException('Stock insuficiente para reservar');
     }
 
-    stock.reserved += quantity;
-    stock.stock -= quantity;
-    await this.warehouseStockRepository.save(stock);
+    await this.dataSource.query(
+      `UPDATE warehouse_stock SET stock = stock - $1, reserved = reserved + $1, updated_at = NOW() WHERE id = $2`,
+      [quantity, stock.id],
+    );
   }
 
   /**
@@ -268,20 +288,15 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    const stock = await this.warehouseStockRepository.findOne({
-      where: {
-        warehouse_id: warehouseId,
-        product_id: productId,
-        variant_id: variantId === null ? IsNull() : variantId,
-      },
-    });
+    const stock = await this.findStockRecord(warehouseId, productId, variantId);
 
     if (!stock || stock.reserved < quantity) {
       throw new BadRequestException('Stock reservado insuficiente');
     }
 
-    stock.reserved -= quantity;
-    stock.stock += quantity;
-    await this.warehouseStockRepository.save(stock);
+    await this.dataSource.query(
+      `UPDATE warehouse_stock SET stock = stock + $1, reserved = reserved - $1, updated_at = NOW() WHERE id = $2`,
+      [quantity, stock.id],
+    );
   }
 }
