@@ -264,7 +264,15 @@ export default function StockReceivedModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent
+        className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
+        onInteractOutside={(e) => {
+          // Prevenir que el dialog se cierre cuando se interactúa con el popover
+          if (showProductSearch) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">
             Recibir Stock {totalProducts > 0 && `(${totalProducts} productos)`}
@@ -277,12 +285,16 @@ export default function StockReceivedModal({
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
           <div className="space-y-4 sm:space-y-6">
               {/* Botón para agregar producto */}
-              <Popover open={showProductSearch} onOpenChange={setShowProductSearch}>
+              <Popover open={showProductSearch} onOpenChange={setShowProductSearch} modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
                     variant="outline"
                     className="w-full border-dashed"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
                   >
                     <Plus className="w-5 h-5 mr-2" />
                     Agregar Producto
@@ -291,6 +303,7 @@ export default function StockReceivedModal({
                 <PopoverContent
                   className="w-full sm:w-[500px] p-0"
                   align="start"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                   <div className="sticky top-0 bg-background border-b border-border p-2 z-10">
                     <div className="relative">
