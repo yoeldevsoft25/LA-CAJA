@@ -215,14 +215,14 @@ export class WarehousesService {
   ): Promise<WarehouseStock> {
     // Usar query builder para evitar problemas con IsNull()
     const queryBuilder = this.warehouseStockRepository
-      .createQueryBuilder('stock')
-      .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId });
+      .createQueryBuilder('ws')
+      .where('ws.warehouse_id = :warehouseId', { warehouseId })
+      .andWhere('ws.product_id = :productId', { productId });
 
     if (variantId === null) {
-      queryBuilder.andWhere('stock.variant_id IS NULL');
+      queryBuilder.andWhere('ws.variant_id IS NULL');
     } else {
-      queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
+      queryBuilder.andWhere('ws.variant_id = :variantId', { variantId });
     }
 
     const stock = await queryBuilder.getOne();
@@ -254,14 +254,14 @@ export class WarehousesService {
   ): Promise<void> {
     // Usar query builder para evitar problemas con IsNull()
     const queryBuilder = this.warehouseStockRepository
-      .createQueryBuilder('stock')
-      .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId });
+      .createQueryBuilder('ws')
+      .where('ws.warehouse_id = :warehouseId', { warehouseId })
+      .andWhere('ws.product_id = :productId', { productId });
 
     if (variantId === null) {
-      queryBuilder.andWhere('stock.variant_id IS NULL');
+      queryBuilder.andWhere('ws.variant_id IS NULL');
     } else {
-      queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
+      queryBuilder.andWhere('ws.variant_id = :variantId', { variantId });
     }
 
     const stock = await queryBuilder.getOne();
@@ -286,14 +286,14 @@ export class WarehousesService {
   ): Promise<void> {
     // Usar query builder para evitar problemas con IsNull()
     const queryBuilder = this.warehouseStockRepository
-      .createQueryBuilder('stock')
-      .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId });
+      .createQueryBuilder('ws')
+      .where('ws.warehouse_id = :warehouseId', { warehouseId })
+      .andWhere('ws.product_id = :productId', { productId });
 
     if (variantId === null) {
-      queryBuilder.andWhere('stock.variant_id IS NULL');
+      queryBuilder.andWhere('ws.variant_id IS NULL');
     } else {
-      queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
+      queryBuilder.andWhere('ws.variant_id = :variantId', { variantId });
     }
 
     const stock = await queryBuilder.getOne();
