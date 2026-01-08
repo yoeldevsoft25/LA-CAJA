@@ -272,11 +272,17 @@ export default function StockReceivedModal({
   )
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent
         className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
+        onEscapeKeyDown={(e) => {
+          e.preventDefault()
+          onClose()
+        }}
+        onPointerDownOutside={(e) => {
+          e.preventDefault()
+        }}
         onInteractOutside={(e) => {
-          // Prevenir que el Dialog se cierre al interactuar con elementos internos
           e.preventDefault()
         }}
       >
