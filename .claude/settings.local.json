@@ -51,7 +51,8 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(lsof:*)",
-      "Bash(node check-code.js:*)"
+      "Bash(node check-code.js:*)",
+      "Bash(exist\" error. \n\nSolution: Replace all repository.save\\(\\) calls with raw SQL queries\n\\(INSERT/UPDATE\\) to completely bypass TypeORM''s entity loading mechanism.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   },
   "enabledMcpjsonServers": [

@@ -226,6 +226,7 @@ export class WarehousesService {
 
   /**
    * Actualiza el stock de una bodega (usado internamente)
+   * Usa queries raw para evitar bug de TypeORM con alias de clase
    */
   async updateStock(
     warehouseId: string,
@@ -237,23 +238,38 @@ export class WarehousesService {
     const stock = await this.findStockRecord(warehouseId, productId, variantId);
 
     if (stock) {
-      stock.stock = Math.max(0, stock.stock + qtyDelta);
-      return this.warehouseStockRepository.save(stock);
+      // Actualizar usando query raw para evitar que TypeORM cargue relaciones
+      const newStockValue = Math.max(0, stock.stock + qtyDelta);
+      await this.dataSource.query(
+        `UPDATE warehouse_stock SET stock = $1, updated_at = NOW() WHERE id = $2`,
+        [newStockValue, stock.id],
+      );
+      stock.stock = newStockValue;
+      return stock;
     } else {
-      const newStock = this.warehouseStockRepository.create({
-        id: randomUUID(),
+      // Insertar usando query raw
+      const newId = randomUUID();
+      const newStockValue = Math.max(0, qtyDelta);
+      await this.dataSource.query(
+        `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 0, NOW())`,
+        [newId, warehouseId, productId, variantId, newStockValue],
+      );
+      return {
+        id: newId,
         warehouse_id: warehouseId,
         product_id: productId,
         variant_id: variantId,
-        stock: Math.max(0, qtyDelta),
+        stock: newStockValue,
         reserved: 0,
-      });
-      return this.warehouseStockRepository.save(newStock);
+        updated_at: new Date(),
+      } as WarehouseStock;
     }
   }
 
   /**
    * Reserva stock en una bodega (para transferencias pendientes)
+   * Usa queries raw para evitar bug de TypeORM con alias de clase
    */
   async reserveStock(
     warehouseId: string,
@@ -268,13 +284,18 @@ export class WarehousesService {
       throw new BadRequestException('Stock insuficiente para reservar');
     }
 
-    stock.reserved += quantity;
-    stock.stock -= quantity;
-    await this.warehouseStockRepository.save(stock);
+    // Actualizar usando query raw
+    await this.dataSource.query(
+      `UPDATE warehouse_stock
+       SET stock = stock - $1, reserved = reserved + $1, updated_at = NOW()
+       WHERE id = $2`,
+      [quantity, stock.id],
+    );
   }
 
   /**
    * Libera stock reservado
+   * Usa queries raw para evitar bug de TypeORM con alias de clase
    */
   async releaseReservedStock(
     warehouseId: string,
@@ -289,8 +310,12 @@ export class WarehousesService {
       throw new BadRequestException('Stock reservado insuficiente');
     }
 
-    stock.reserved -= quantity;
-    stock.stock += quantity;
-    await this.warehouseStockRepository.save(stock);
+    // Actualizar usando query raw
+    await this.dataSource.query(
+      `UPDATE warehouse_stock
+       SET stock = stock + $1, reserved = reserved - $1, updated_at = NOW()
+       WHERE id = $2`,
+      [quantity, stock.id],
+    );
   }
 }
