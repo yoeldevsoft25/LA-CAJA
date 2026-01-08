@@ -200,33 +200,43 @@ export default function ProductFormModal({
   })
 
   const onSubmit = (data: ProductFormData) => {
-    const submitData: Partial<Product> = {
-      name: data.name,
-      category: data.category || null,
-      sku: data.sku || null,
-      barcode: data.barcode || null,
-      price_usd: data.price_usd,
-      cost_usd: data.cost_usd,
-      low_stock_threshold: data.low_stock_threshold || 0,
-      is_weight_product: data.is_weight_product || false,
-      weight_unit: data.is_weight_product ? (data.weight_unit || null) : null,
-      price_per_weight_bs: data.is_weight_product
-        ? (data.price_per_weight_bs || null)
-        : null,
-      price_per_weight_usd: data.is_weight_product
-        ? (data.price_per_weight_usd || null)
-        : null,
-      min_weight: data.is_weight_product ? (data.min_weight || null) : null,
-      max_weight: data.is_weight_product ? (data.max_weight || null) : null,
-      scale_plu: data.is_weight_product ? (data.scale_plu || null) : null,
-      scale_department: data.is_weight_product ? (data.scale_department || null) : null,
-    }
-
     if (isEditing) {
-      // Al actualizar, solo enviar price_usd y cost_usd, el backend calculará los Bs
-      updateMutation.mutate(submitData)
+      // Al actualizar, solo enviar campos permitidos en UpdateProductDto
+      const updateData: Partial<Product> = {
+        name: data.name,
+        category: data.category || null,
+        sku: data.sku || null,
+        barcode: data.barcode || null,
+        price_usd: data.price_usd,
+        cost_usd: data.cost_usd,
+        low_stock_threshold: data.low_stock_threshold || 0,
+        is_active: true,
+      }
+      updateMutation.mutate(updateData)
     } else {
-      createMutation.mutate(submitData)
+      // Al crear, enviar todos los campos incluyendo propiedades de peso
+      const createData: Partial<Product> = {
+        name: data.name,
+        category: data.category || null,
+        sku: data.sku || null,
+        barcode: data.barcode || null,
+        price_usd: data.price_usd,
+        cost_usd: data.cost_usd,
+        low_stock_threshold: data.low_stock_threshold || 0,
+        is_weight_product: data.is_weight_product || false,
+        weight_unit: data.is_weight_product ? (data.weight_unit || null) : null,
+        price_per_weight_bs: data.is_weight_product
+          ? (data.price_per_weight_bs || null)
+          : null,
+        price_per_weight_usd: data.is_weight_product
+          ? (data.price_per_weight_usd || null)
+          : null,
+        min_weight: data.is_weight_product ? (data.min_weight || null) : null,
+        max_weight: data.is_weight_product ? (data.max_weight || null) : null,
+        scale_plu: data.is_weight_product ? (data.scale_plu || null) : null,
+        scale_department: data.is_weight_product ? (data.scale_department || null) : null,
+      }
+      createMutation.mutate(createData)
     }
   }
 
