@@ -213,21 +213,21 @@ export class WarehousesService {
     variantId: string | null,
     qtyDelta: number,
   ): Promise<WarehouseStock> {
-    // Buscar el registro existente usando getMany() porque getOne() tiene bug con aliases
-    const queryBuilder = this.warehouseStockRepository
-      .createQueryBuilder('stock')
-      .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId })
-      .limit(1);
+    // Buscar el registro existente - usar findOne con where directo en lugar de query builder
+    const whereCondition: any = {
+      warehouse_id: warehouseId,
+      product_id: productId,
+    };
 
     if (variantId === null) {
-      queryBuilder.andWhere('stock.variant_id IS NULL');
+      whereCondition.variant_id = null;
     } else {
-      queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
+      whereCondition.variant_id = variantId;
     }
 
-    const results = await queryBuilder.getMany();
-    const stock = results.length > 0 ? results[0] : null;
+    const stock = await this.warehouseStockRepository.findOne({
+      where: whereCondition,
+    });
 
     if (stock) {
       stock.stock = Math.max(0, stock.stock + qtyDelta);
@@ -254,21 +254,21 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente usando getMany() porque getOne() tiene bug con aliases
-    const queryBuilder = this.warehouseStockRepository
-      .createQueryBuilder('stock')
-      .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId })
-      .limit(1);
+    // Buscar el registro existente - usar findOne con where directo en lugar de query builder
+    const whereCondition: any = {
+      warehouse_id: warehouseId,
+      product_id: productId,
+    };
 
     if (variantId === null) {
-      queryBuilder.andWhere('stock.variant_id IS NULL');
+      whereCondition.variant_id = null;
     } else {
-      queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
+      whereCondition.variant_id = variantId;
     }
 
-    const results = await queryBuilder.getMany();
-    const stock = results.length > 0 ? results[0] : null;
+    const stock = await this.warehouseStockRepository.findOne({
+      where: whereCondition,
+    });
 
     if (!stock || stock.stock < quantity) {
       throw new BadRequestException('Stock insuficiente para reservar');
@@ -288,21 +288,21 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente usando getMany() porque getOne() tiene bug con aliases
-    const queryBuilder = this.warehouseStockRepository
-      .createQueryBuilder('stock')
-      .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId })
-      .limit(1);
+    // Buscar el registro existente - usar findOne con where directo en lugar de query builder
+    const whereCondition: any = {
+      warehouse_id: warehouseId,
+      product_id: productId,
+    };
 
     if (variantId === null) {
-      queryBuilder.andWhere('stock.variant_id IS NULL');
+      whereCondition.variant_id = null;
     } else {
-      queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
+      whereCondition.variant_id = variantId;
     }
 
-    const results = await queryBuilder.getMany();
-    const stock = results.length > 0 ? results[0] : null;
+    const stock = await this.warehouseStockRepository.findOne({
+      where: whereCondition,
+    });
 
     if (!stock || stock.reserved < quantity) {
       throw new BadRequestException('Stock reservado insuficiente');
