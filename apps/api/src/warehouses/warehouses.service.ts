@@ -213,11 +213,12 @@ export class WarehousesService {
     variantId: string | null,
     qtyDelta: number,
   ): Promise<WarehouseStock> {
-    // Buscar el registro existente
+    // Buscar el registro existente usando getMany() porque getOne() tiene bug con aliases
     const queryBuilder = this.warehouseStockRepository
       .createQueryBuilder('stock')
       .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId });
+      .andWhere('stock.product_id = :productId', { productId })
+      .limit(1);
 
     if (variantId === null) {
       queryBuilder.andWhere('stock.variant_id IS NULL');
@@ -225,7 +226,8 @@ export class WarehousesService {
       queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
     }
 
-    const stock = await queryBuilder.getOne();
+    const results = await queryBuilder.getMany();
+    const stock = results.length > 0 ? results[0] : null;
 
     if (stock) {
       stock.stock = Math.max(0, stock.stock + qtyDelta);
@@ -252,11 +254,12 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente
+    // Buscar el registro existente usando getMany() porque getOne() tiene bug con aliases
     const queryBuilder = this.warehouseStockRepository
       .createQueryBuilder('stock')
       .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId });
+      .andWhere('stock.product_id = :productId', { productId })
+      .limit(1);
 
     if (variantId === null) {
       queryBuilder.andWhere('stock.variant_id IS NULL');
@@ -264,7 +267,8 @@ export class WarehousesService {
       queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
     }
 
-    const stock = await queryBuilder.getOne();
+    const results = await queryBuilder.getMany();
+    const stock = results.length > 0 ? results[0] : null;
 
     if (!stock || stock.stock < quantity) {
       throw new BadRequestException('Stock insuficiente para reservar');
@@ -284,11 +288,12 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente
+    // Buscar el registro existente usando getMany() porque getOne() tiene bug con aliases
     const queryBuilder = this.warehouseStockRepository
       .createQueryBuilder('stock')
       .where('stock.warehouse_id = :warehouseId', { warehouseId })
-      .andWhere('stock.product_id = :productId', { productId });
+      .andWhere('stock.product_id = :productId', { productId })
+      .limit(1);
 
     if (variantId === null) {
       queryBuilder.andWhere('stock.variant_id IS NULL');
@@ -296,7 +301,8 @@ export class WarehousesService {
       queryBuilder.andWhere('stock.variant_id = :variantId', { variantId });
     }
 
-    const stock = await queryBuilder.getOne();
+    const results = await queryBuilder.getMany();
+    const stock = results.length > 0 ? results[0] : null;
 
     if (!stock || stock.reserved < quantity) {
       throw new BadRequestException('Stock reservado insuficiente');
