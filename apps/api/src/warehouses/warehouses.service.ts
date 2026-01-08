@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, IsNull } from 'typeorm';
 import { Warehouse } from '../database/entities/warehouse.entity';
 import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -213,20 +213,13 @@ export class WarehousesService {
     variantId: string | null,
     qtyDelta: number,
   ): Promise<WarehouseStock> {
-    // Buscar el registro existente - usar findOne con where directo en lugar de query builder
-    const whereCondition: any = {
-      warehouse_id: warehouseId,
-      product_id: productId,
-    };
-
-    if (variantId === null) {
-      whereCondition.variant_id = null;
-    } else {
-      whereCondition.variant_id = variantId;
-    }
-
+    // Buscar el registro existente - usar findOne con where directo y IsNull() para valores nulos
     const stock = await this.warehouseStockRepository.findOne({
-      where: whereCondition,
+      where: {
+        warehouse_id: warehouseId,
+        product_id: productId,
+        variant_id: variantId === null ? IsNull() : variantId,
+      },
     });
 
     if (stock) {
@@ -254,20 +247,13 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente - usar findOne con where directo en lugar de query builder
-    const whereCondition: any = {
-      warehouse_id: warehouseId,
-      product_id: productId,
-    };
-
-    if (variantId === null) {
-      whereCondition.variant_id = null;
-    } else {
-      whereCondition.variant_id = variantId;
-    }
-
+    // Buscar el registro existente - usar findOne con where directo y IsNull() para valores nulos
     const stock = await this.warehouseStockRepository.findOne({
-      where: whereCondition,
+      where: {
+        warehouse_id: warehouseId,
+        product_id: productId,
+        variant_id: variantId === null ? IsNull() : variantId,
+      },
     });
 
     if (!stock || stock.stock < quantity) {
@@ -288,20 +274,13 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
   ): Promise<void> {
-    // Buscar el registro existente - usar findOne con where directo en lugar de query builder
-    const whereCondition: any = {
-      warehouse_id: warehouseId,
-      product_id: productId,
-    };
-
-    if (variantId === null) {
-      whereCondition.variant_id = null;
-    } else {
-      whereCondition.variant_id = variantId;
-    }
-
+    // Buscar el registro existente - usar findOne con where directo y IsNull() para valores nulos
     const stock = await this.warehouseStockRepository.findOne({
-      where: whereCondition,
+      where: {
+        warehouse_id: warehouseId,
+        product_id: productId,
+        variant_id: variantId === null ? IsNull() : variantId,
+      },
     });
 
     if (!stock || stock.reserved < quantity) {
