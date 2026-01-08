@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 
 /**
  * Servicio para gestión de bodegas/almacenes
+ * Actualizado: 2026-01-08 - Fix IsNull() para variant_id
  */
 @Injectable()
 export class WarehousesService {
