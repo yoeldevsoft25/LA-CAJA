@@ -112,12 +112,13 @@ function StatCard({ stat, index, isInView }: StatCardProps) {
   const Icon = stat.icon
   const count = useCounter(stat.value, isInView)
   const gradient = STAT_COLOR_CLASSES[stat.color]
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
-      animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
+      animate={isInView ? { opacity: 1, scale: 1 } : { opacity: isMobile ? 1 : 0, scale: isMobile ? 1 : 0.9 }}
+      transition={{ duration: isMobile ? 0.3 : 0.5, delay: isMobile ? 0 : index * 0.1 }}
     >
       <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 group relative overflow-hidden">
         {/* Gradient background on hover */}
@@ -749,8 +750,8 @@ function FeaturesSection() {
   // En mobile, usar amount más bajo y margin más grande para activar antes
   const isInView = useInView(featuresRef, { 
     once: true, 
-    amount: isMobile ? 0.1 : 0.2,
-    margin: isMobile ? '-100px' : '0px'
+    amount: isMobile ? 0.05 : 0.2,
+    margin: isMobile ? '-150px' : '0px'
   })
 
   const features = [
@@ -933,8 +934,8 @@ function FeaturesSection() {
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: isMobile ? 1 : 0, y: isMobile ? 0 : 20 }}
+                transition={{ duration: isMobile ? 0.3 : 0.5, delay: isMobile ? 0 : index * 0.05 }}
               >
                 <Card className="bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 group h-full">
                   <CardHeader>
@@ -987,11 +988,11 @@ function FeaturesSection() {
 function SeniatShowcaseSection() {
   const sectionRef = useRef(null)
   const isMobile = useMobileDetection()
-  // En mobile, activar más temprano
+  // En mobile, activar más temprano con amount más bajo
   const isInView = useInView(sectionRef, { 
     once: true, 
-    amount: isMobile ? 0.1 : 0.3,
-    margin: isMobile ? '-100px' : '0px'
+    amount: isMobile ? 0.05 : 0.3,
+    margin: isMobile ? '-150px' : '0px'
   })
 
   return (
@@ -1264,7 +1265,13 @@ function FeatureCheckItem({
 // ========================================
 function ComparisonSection() {
   const sectionRef = useRef(null)
-  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const isMobile = useMobileDetection()
+  // En mobile, activar más temprano con amount más bajo
+  const isInView = useInView(sectionRef, { 
+    once: true, 
+    amount: isMobile ? 0.05 : 0.3,
+    margin: isMobile ? '-150px' : '0px'
+  })
 
   const features: Array<{
     name: string
@@ -1404,7 +1411,13 @@ function ComparisonSection() {
 // ========================================
 function StatsSection() {
   const sectionRef = useRef(null)
-  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const isMobile = useMobileDetection()
+  // En mobile, activar más temprano con amount más bajo
+  const isInView = useInView(sectionRef, { 
+    once: true, 
+    amount: isMobile ? 0.05 : 0.3,
+    margin: isMobile ? '-150px' : '0px'
+  })
 
   const stats: StatItem[] = [
     { label: 'Uptime', value: 99.9, suffix: '%', icon: Zap, color: 'emerald' },
@@ -1455,7 +1468,13 @@ function StatsSection() {
 // ========================================
 function PricingSection() {
   const sectionRef = useRef(null)
-  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const isMobile = useMobileDetection()
+  // En mobile, activar más temprano con amount más bajo
+  const isInView = useInView(sectionRef, { 
+    once: true, 
+    amount: isMobile ? 0.05 : 0.3,
+    margin: isMobile ? '-150px' : '0px'
+  })
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const navigate = useNavigate()
 
@@ -1748,7 +1767,13 @@ function PricingSection() {
 // ========================================
 function TestimonialsSection() {
   const sectionRef = useRef(null)
-  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const isMobile = useMobileDetection()
+  // En mobile, activar más temprano con amount más bajo
+  const isInView = useInView(sectionRef, { 
+    once: true, 
+    amount: isMobile ? 0.05 : 0.3,
+    margin: isMobile ? '-150px' : '0px'
+  })
 
   const testimonials = [
     {
@@ -2022,7 +2047,13 @@ function FAQSection() {
 // ========================================
 function FinalCTASection() {
   const sectionRef = useRef(null)
-  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
+  const isMobile = useMobileDetection()
+  // En mobile, activar más temprano con amount más bajo
+  const isInView = useInView(sectionRef, { 
+    once: true, 
+    amount: isMobile ? 0.05 : 0.3,
+    margin: isMobile ? '-150px' : '0px'
+  })
   const navigate = useNavigate()
 
   return (

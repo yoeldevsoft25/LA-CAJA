@@ -1,8 +1,8 @@
 import { useEffect, useCallback } from 'react'
-import { UseFormReturn, DefaultValues } from 'react-hook-form'
+import { UseFormReturn, DefaultValues, FieldValues } from 'react-hook-form'
 import { useQueryClient } from '@tanstack/react-query'
 
-export interface UseModalFormOptions<T> {
+export interface UseModalFormOptions<T extends FieldValues> {
   isOpen: boolean
   defaultValues: DefaultValues<T>
   entity?: Partial<T> | null
@@ -11,7 +11,7 @@ export interface UseModalFormOptions<T> {
   queryKeysToInvalidate?: string[][]
 }
 
-export interface UseModalFormReturn<T> {
+export interface UseModalFormReturn<T extends FieldValues> {
   form: UseFormReturn<T>
   handleSuccess: () => void
   queryClient: ReturnType<typeof useQueryClient>
@@ -43,7 +43,7 @@ export interface UseModalFormReturn<T> {
  * })
  * ```
  */
-export function useModalForm<T extends Record<string, any>>(
+export function useModalForm<T extends FieldValues>(
   form: UseFormReturn<T>,
   options: UseModalFormOptions<T>
 ): UseModalFormReturn<T> {
