@@ -219,10 +219,13 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     ordersService
       .closeOrder(currentOrder.id, saleData)
       .then(() => {
+        // Invalidar todas las queries relacionadas
         queryClient.invalidateQueries({ queryKey: ['order', currentOrder.id] })
         queryClient.invalidateQueries({ queryKey: ['orders', 'open'] })
         queryClient.invalidateQueries({ queryKey: ['tables'] })
         queryClient.invalidateQueries({ queryKey: ['sales'] })
+        queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+        queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
         toast.success('Orden cerrada y venta generada correctamente')
         onOrderUpdated?.()
         onClose()

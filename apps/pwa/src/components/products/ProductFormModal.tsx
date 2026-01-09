@@ -122,8 +122,36 @@ export default function ProductFormModal({
     }
   }, [priceUsd, costUsd, pricePerWeightUsd, bcvRateData, setValue])
 
+  // Limpiar formulario cuando se cierra el modal
+  useEffect(() => {
+    if (!isOpen) {
+      reset({
+        name: '',
+        category: '',
+        sku: '',
+        barcode: '',
+        price_bs: 0,
+        price_usd: 0,
+        cost_bs: 0,
+        cost_usd: 0,
+        low_stock_threshold: 0,
+        is_weight_product: false,
+        weight_unit: null,
+        price_per_weight_bs: null,
+        price_per_weight_usd: null,
+        min_weight: null,
+        max_weight: null,
+        scale_plu: null,
+        scale_department: null,
+      })
+      return
+    }
+  }, [isOpen, reset])
+
   // Cargar datos del producto si está en modo edición
   useEffect(() => {
+    if (!isOpen) return
+    
     if (product) {
       reset({
         name: product.name,
@@ -169,7 +197,7 @@ export default function ProductFormModal({
         scale_department: null,
       })
     }
-  }, [product, reset])
+  }, [isOpen, product, reset])
 
   // Obtener storeId del usuario autenticado
   const { user } = useAuth()

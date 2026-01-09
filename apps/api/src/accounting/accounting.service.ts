@@ -534,6 +534,22 @@ export class AccountingService {
   }
 
   /**
+   * Obtener un asiento contable por ID
+   */
+  async getJournalEntry(storeId: string, entryId: string): Promise<JournalEntry> {
+    const entry = await this.journalEntryRepository.findOne({
+      where: { id: entryId, store_id: storeId },
+      relations: ['lines'],
+    });
+
+    if (!entry) {
+      throw new NotFoundException('Asiento contable no encontrado');
+    }
+
+    return entry;
+  }
+
+  /**
    * Postear asiento (cambiar de draft a posted)
    */
   async postEntry(storeId: string, entryId: string, userId: string): Promise<JournalEntry> {

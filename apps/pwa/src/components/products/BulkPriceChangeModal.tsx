@@ -14,12 +14,14 @@ interface BulkPriceChangeModalProps {
   isOpen: boolean
   onClose: () => void
   products: Product[]
+  onSuccess?: () => void
 }
 
 export default function BulkPriceChangeModal({
   isOpen,
   onClose,
   products,
+  onSuccess,
 }: BulkPriceChangeModalProps) {
   const queryClient = useQueryClient()
   const [mode, setMode] = useState<'percentage' | 'bcv'>('percentage') // Modo: porcentaje o tasa BCV
@@ -58,6 +60,9 @@ export default function BulkPriceChangeModal({
     onSuccess: (data) => {
       toast.success(`Precios actualizados exitosamente: ${data.updated} productos`)
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
+      onSuccess?.()
       onClose()
       // Reset form
       setCategory('')

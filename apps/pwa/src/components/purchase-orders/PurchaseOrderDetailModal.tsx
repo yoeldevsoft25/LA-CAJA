@@ -365,7 +365,11 @@ export default function PurchaseOrderDetailModal({
           onClose={() => setIsReceptionOpen(false)}
           order={order}
           onSuccess={() => {
+            // Invalidar queries para refrescar datos
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders', order.id] })
             setIsReceptionOpen(false)
+            // Cerrar modal padre para que se refresque con los nuevos datos
             onClose()
             onSuccess?.()
           }}
@@ -379,7 +383,11 @@ export default function PurchaseOrderDetailModal({
           onClose={() => setIsEditOpen(false)}
           order={order}
           onSuccess={() => {
+            // Invalidar queries para refrescar datos
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders', order.id] })
             setIsEditOpen(false)
+            // Cerrar modal padre para que se refresque con los nuevos datos
             onClose()
             onSuccess?.()
           }}

@@ -469,6 +469,8 @@ export default function ProductsPage() {
         product={editingProduct}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['products'] })
+          queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+          queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
           handleCloseForm()
         }}
       />
@@ -476,8 +478,17 @@ export default function ProductsPage() {
       {/* Modal de cambio de precio */}
       <ChangePriceModal
         isOpen={isPriceModalOpen}
-        onClose={() => setIsPriceModalOpen(false)}
+        onClose={() => {
+          setIsPriceModalOpen(false)
+          setPriceProduct(null)
+        }}
         product={priceProduct}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['products'] })
+          queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+          setIsPriceModalOpen(false)
+          setPriceProduct(null)
+        }}
       />
 
       {/* Modal de cambio masivo de precios */}
@@ -485,6 +496,10 @@ export default function ProductsPage() {
         isOpen={isBulkPriceModalOpen}
         onClose={() => setIsBulkPriceModalOpen(false)}
         products={products}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['products'] })
+          queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+        }}
       />
 
       {/* Modal de gestión de variantes */}
@@ -510,7 +525,7 @@ export default function ProductsPage() {
 
       {/* Modal de importación CSV */}
       <ImportCSVModal
-        open={isImportCSVOpen}
+        isOpen={isImportCSVOpen}
         onClose={() => setIsImportCSVOpen(false)}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['products'] })
@@ -519,7 +534,7 @@ export default function ProductsPage() {
 
       {/* Modal de limpieza de duplicados */}
       <CleanDuplicatesModal
-        open={isCleanDuplicatesOpen}
+        isOpen={isCleanDuplicatesOpen}
         onClose={() => setIsCleanDuplicatesOpen(false)}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['products'] })

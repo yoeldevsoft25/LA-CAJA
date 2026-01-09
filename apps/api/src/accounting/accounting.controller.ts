@@ -115,6 +115,12 @@ export class AccountingController {
     return this.accountingService.createJournalEntry(storeId, dto, userId);
   }
 
+  @Get('entries/:id')
+  async getJournalEntry(@Request() req: any, @Param('id') entryId: string) {
+    const storeId = req.user.store_id;
+    return this.accountingService.getJournalEntry(storeId, entryId);
+  }
+
   @Post('entries/:id/post')
   @HttpCode(HttpStatus.OK)
   async postEntry(@Request() req: any, @Param('id') entryId: string) {

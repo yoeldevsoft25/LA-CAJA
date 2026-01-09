@@ -18,6 +18,7 @@ interface ChangePriceModalProps {
   isOpen: boolean
   onClose: () => void
   product: Product | null
+  onSuccess?: () => void
 }
 
 const priceSchema = z.object({
@@ -38,6 +39,7 @@ export default function ChangePriceModal({
   isOpen,
   onClose,
   product,
+  onSuccess,
 }: ChangePriceModalProps) {
   const queryClient = useQueryClient()
   const {
@@ -101,6 +103,8 @@ export default function ChangePriceModal({
     onSuccess: () => {
       toast.success('Precio actualizado exitosamente')
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      onSuccess?.()
       onClose()
     },
     onError: (error: any) => {

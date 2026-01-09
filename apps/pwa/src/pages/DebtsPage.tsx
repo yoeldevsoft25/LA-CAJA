@@ -164,11 +164,13 @@ export default function DebtsPage() {
     queryClient.invalidateQueries({ queryKey: ['debts'] })
     queryClient.invalidateQueries({ queryKey: ['debtSummary'] })
     setIsPaymentOpen(false)
-    setSelectedDebt(null)
+    // No limpiar selectedDebt para mantener el modal de detalle abierto si estaba abierto
+    // El modal de detalle se refrescará automáticamente con los nuevos datos
   }
 
   const handleDetailAddPayment = () => {
-    setIsDetailOpen(false)
+    // No cerrar el modal de detalle, solo abrir el modal de pago
+    // El modal de detalle se refrescará después del pago
     setIsPaymentOpen(true)
   }
 
@@ -519,7 +521,7 @@ export default function DebtsPage() {
         isOpen={isPaymentOpen}
         onClose={() => {
           setIsPaymentOpen(false)
-          setSelectedDebt(null)
+          // No limpiar selectedDebt aquí para mantener el modal de detalle abierto
         }}
         debt={selectedDebt}
         onSuccess={handlePaymentSuccess}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileText, Package, DollarSign, Calendar, User, CreditCard, UserCircle, Receipt, ReceiptText, ExternalLink } from 'lucide-react'
 import { Sale } from '@/services/sales.service'
 import { fiscalInvoicesService, FiscalInvoice } from '@/services/fiscal-invoices.service'
@@ -41,11 +41,12 @@ export default function SaleDetailModal({
   sale,
 }: SaleDetailModalProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [fiscalInvoice, setFiscalInvoice] = useState<FiscalInvoice | null>(null)
 
   // Obtener factura fiscal si existe
-  const { data: fiscalInvoiceData } = useQuery({
+  const { data: fiscalInvoiceData, refetch: refetchFiscalInvoice } = useQuery({
     queryKey: ['fiscal-invoices', 'by-sale', sale?.id],
     queryFn: () => fiscalInvoicesService.findBySale(sale!.id),
     enabled: !!sale?.id && isOpen,
@@ -65,7 +66,10 @@ export default function SaleDetailModal({
   const totalItems = sale.items.reduce((sum, item) => sum + item.qty, 0)
 
   const handleCreateSuccess = () => {
-    // Refrescar la factura fiscal
+    // Invalidar queries y refrescar la factura fiscal
+    queryClient.invalidateQueries({ queryKey: ['fiscal-invoices', 'by-sale', sale.id] })
+    queryClient.invalidateQueries({ queryKey: ['fiscal-invoices'] })
+    refetchFiscalInvoice()
     setShowCreateModal(false)
   }
 

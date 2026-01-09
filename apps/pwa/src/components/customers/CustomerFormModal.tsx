@@ -50,7 +50,23 @@ export default function CustomerFormModal({
     },
   })
 
+  // Limpiar formulario cuando se cierra el modal
   useEffect(() => {
+    if (!isOpen) {
+      reset({
+        name: '',
+        document_id: '',
+        phone: '',
+        note: '',
+      })
+      return
+    }
+  }, [isOpen, reset])
+
+  // Cargar datos del cliente si está en modo edición
+  useEffect(() => {
+    if (!isOpen) return
+
     if (customer) {
       reset({
         name: customer.name,
@@ -66,7 +82,7 @@ export default function CustomerFormModal({
         note: '',
       })
     }
-  }, [customer, reset])
+  }, [isOpen, customer, reset])
 
   const createMutation = useMutation({
     mutationFn: customersService.create,

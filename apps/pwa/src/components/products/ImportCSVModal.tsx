@@ -28,12 +28,12 @@ interface ValidationError {
 }
 
 interface ImportCSVModalProps {
-  open: boolean
+  isOpen: boolean
   onClose: () => void
   onSuccess: () => void
 }
 
-export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVModalProps) {
+export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSVModalProps) {
   const { user } = useAuth()
   const [file, setFile] = useState<File | null>(null)
   const [parsedProducts, setParsedProducts] = useState<ParsedProduct[]>([])
@@ -433,7 +433,7 @@ export default function ImportCSVModal({ open, onClose, onSuccess }: ImportCSVMo
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Importar Productos desde CSV</DialogTitle>

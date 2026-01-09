@@ -129,7 +129,27 @@ export default function EntryFormModal({
   const watchedLines = watch('lines')
   const entryDate = watch('entry_date')
 
+  // Limpiar formulario y estado cuando se cierra el modal
   useEffect(() => {
+    if (!isOpen) {
+      reset({
+        entry_date: new Date(),
+        entry_type: 'manual',
+        description: '',
+        lines: [
+          { account_code: '', description: null, debit_amount_bs: 0, credit_amount_bs: 0, debit_amount_usd: 0, credit_amount_usd: 0 },
+          { account_code: '', description: null, debit_amount_bs: 0, credit_amount_bs: 0, debit_amount_usd: 0, credit_amount_usd: 0 },
+        ],
+      })
+      setBalanceError(null)
+      return
+    }
+  }, [isOpen, reset])
+
+  // Cargar datos del asiento si está en modo edición
+  useEffect(() => {
+    if (!isOpen) return
+
     if (entry) {
       reset({
         entry_date: new Date(entry.entry_date),
@@ -144,18 +164,20 @@ export default function EntryFormModal({
           credit_amount_usd: Number(line.credit_amount_usd) || 0,
         })),
       })
+      setBalanceError(null)
     } else {
       reset({
         entry_date: new Date(),
         entry_type: 'manual',
         description: '',
-      lines: [
-        { account_code: '', description: null, debit_amount_bs: 0, credit_amount_bs: 0, debit_amount_usd: 0, credit_amount_usd: 0 },
-        { account_code: '', description: null, debit_amount_bs: 0, credit_amount_bs: 0, debit_amount_usd: 0, credit_amount_usd: 0 },
-      ],
+        lines: [
+          { account_code: '', description: null, debit_amount_bs: 0, credit_amount_bs: 0, debit_amount_usd: 0, credit_amount_usd: 0 },
+          { account_code: '', description: null, debit_amount_bs: 0, credit_amount_bs: 0, debit_amount_usd: 0, credit_amount_usd: 0 },
+        ],
       })
+      setBalanceError(null)
     }
-  }, [entry, reset])
+  }, [isOpen, entry, reset])
 
   // Calcular balance en tiempo real
   useEffect(() => {

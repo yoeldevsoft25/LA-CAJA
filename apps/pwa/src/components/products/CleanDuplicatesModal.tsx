@@ -15,12 +15,12 @@ interface DuplicateGroup {
 }
 
 interface CleanDuplicatesModalProps {
-  open: boolean
+  isOpen: boolean
   onClose: () => void
   onSuccess: () => void
 }
 
-export default function CleanDuplicatesModal({ open, onClose, onSuccess }: CleanDuplicatesModalProps) {
+export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: CleanDuplicatesModalProps) {
   const { user } = useAuth()
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([])
   const [isScanning, setIsScanning] = useState(false)
@@ -168,7 +168,7 @@ export default function CleanDuplicatesModal({ open, onClose, onSuccess }: Clean
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
