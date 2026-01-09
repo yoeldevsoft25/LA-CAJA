@@ -69,20 +69,26 @@ export default function StockReceivedModal({
   // Si se pasa un producto específico, agregarlo automáticamente
   useEffect(() => {
     if (isOpen && product && productItems.length === 0) {
+      // Buscar el producto completo para obtener los costos predeterminados
+      const fullProduct = products.find((p: any) => p.id === product.product_id)
+      // Convertir a número si viene como string (PostgreSQL devuelve NUMERIC como string)
+      const defaultCostUsd = fullProduct?.cost_usd ? Number(fullProduct.cost_usd) : 0
+      const defaultCostBs = fullProduct?.cost_bs ? Number(fullProduct.cost_bs) : 0
+
       setProductItems([
         {
           id: `item-${Date.now()}`,
           product_id: product.product_id,
           product_name: product.product_name,
           qty: 1,
-          unit_cost_usd: 0,
-          unit_cost_bs: 0,
+          unit_cost_usd: defaultCostUsd,
+          unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 100) / 100,
         },
       ])
     } else if (isOpen && !product) {
       setProductItems([])
     }
-  }, [isOpen, product])
+  }, [isOpen, product, products, exchangeRate])
 
   // Limpiar al cerrar
   useEffect(() => {
@@ -97,13 +103,18 @@ export default function StockReceivedModal({
   }, [isOpen])
 
   const addProduct = (product: Product) => {
+    // Cargar costos predeterminados del producto si existen, sino usar 0
+    // Convertir a número si viene como string (PostgreSQL devuelve NUMERIC como string)
+    const defaultCostUsd = Number(product.cost_usd) || 0
+    const defaultCostBs = Number(product.cost_bs) || 0
+
     const newItem: ProductItem = {
       id: `item-${Date.now()}-${Math.random()}`,
       product_id: product.id,
       product_name: product.name,
       qty: 1,
-      unit_cost_usd: 0,
-      unit_cost_bs: 0,
+      unit_cost_usd: defaultCostUsd,
+      unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 100) / 100,
     }
     setProductItems([...productItems, newItem])
     setSearchQuery('')

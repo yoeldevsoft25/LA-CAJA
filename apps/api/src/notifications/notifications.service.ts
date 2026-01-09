@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, QueryFailedError } from 'typeorm';
 import { Notification } from '../database/entities/notification.entity';
 import { NotificationPreference } from '../database/entities/notification-preference.entity';
 import { NotificationSubscription } from '../database/entities/notification-subscription.entity';
@@ -450,39 +450,91 @@ export class NotificationsService {
     userId: string,
     dto: SubscribePushDto,
   ): Promise<NotificationSubscription> {
-    // Buscar suscripción existente
-    let subscription = await this.subscriptionRepository.findOne({
-      where: {
-        store_id: storeId,
-        user_id: userId,
-        device_id: dto.device_id,
-      },
-    });
+    try {
+      this.logger.debug(
+        `Suscribiendo push para store: ${storeId}, user: ${userId}, device: ${dto.device_id}`,
+      );
 
-    if (subscription) {
-      // Actualizar suscripción existente
-      subscription.endpoint = dto.endpoint;
-      subscription.p256dh_key = dto.p256dh_key;
-      subscription.auth_key = dto.auth_key;
-      subscription.user_agent = dto.user_agent || null;
-      subscription.is_active = true;
-      subscription.last_used_at = new Date();
-    } else {
-      // Crear nueva suscripción
-      subscription = this.subscriptionRepository.create({
-        id: randomUUID(),
-        store_id: storeId,
-        user_id: userId,
-        device_id: dto.device_id,
-        endpoint: dto.endpoint,
-        p256dh_key: dto.p256dh_key,
-        auth_key: dto.auth_key,
-        user_agent: dto.user_agent,
-        is_active: true,
+      // Buscar suscripción existente
+      let subscription = await this.subscriptionRepository.findOne({
+        where: {
+          store_id: storeId,
+          user_id: userId,
+          device_id: dto.device_id,
+        },
       });
-    }
 
-    return this.subscriptionRepository.save(subscription);
+      if (subscription) {
+        // Actualizar suscripción existente
+        this.logger.debug(`Actualizando suscripción existente: ${subscription.id}`);
+        subscription.endpoint = dto.endpoint;
+        subscription.p256dh_key = dto.p256dh_key;
+        subscription.auth_key = dto.auth_key;
+        subscription.user_agent = dto.user_agent || null;
+        subscription.is_active = true;
+        subscription.last_used_at = new Date();
+      } else {
+        // Crear nueva suscripción
+        this.logger.debug('Creando nueva suscripción push');
+        subscription = this.subscriptionRepository.create({
+          id: randomUUID(),
+          store_id: storeId,
+          user_id: userId,
+          device_id: dto.device_id,
+          endpoint: dto.endpoint,
+          p256dh_key: dto.p256dh_key,
+          auth_key: dto.auth_key,
+          user_agent: dto.user_agent || null,
+          is_active: true,
+        });
+      }
+
+      const saved = await this.subscriptionRepository.save(subscription);
+      this.logger.log(
+        `Suscripción push exitosa: ${saved.id} para device: ${dto.device_id}`,
+      );
+      return saved;
+    } catch (error) {
+      this.logger.error(
+        `Error suscribiendo push para store: ${storeId}, user: ${userId}, device: ${dto.device_id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+
+      // Si es un error de constraint único (puede ocurrir por race conditions)
+      const isUniqueConstraintError =
+        error instanceof QueryFailedError &&
+        ((error as any).code === '23505' || // PostgreSQL unique violation code
+          error.message.includes('unique constraint') ||
+          error.message.includes('duplicate key') ||
+          error.message.includes('UNIQUE constraint'));
+
+      if (isUniqueConstraintError) {
+        // Intentar nuevamente obtener la suscripción existente y actualizarla
+        this.logger.warn(
+          'Constraint único detectado, intentando recuperar suscripción existente',
+        );
+        const existing = await this.subscriptionRepository.findOne({
+          where: {
+            store_id: storeId,
+            user_id: userId,
+            device_id: dto.device_id,
+          },
+        });
+
+        if (existing) {
+          existing.endpoint = dto.endpoint;
+          existing.p256dh_key = dto.p256dh_key;
+          existing.auth_key = dto.auth_key;
+          existing.user_agent = dto.user_agent || null;
+          existing.is_active = true;
+          existing.last_used_at = new Date();
+          return this.subscriptionRepository.save(existing);
+        }
+      }
+
+      // Re-lanzar el error si no se pudo manejar
+      throw error;
+    }
   }
 
   /**
