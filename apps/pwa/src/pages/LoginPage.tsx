@@ -309,7 +309,7 @@ export default function LoginPage() {
                   className="space-y-3 overflow-hidden"
                 >
                   <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgb(13, 129, 206)' }} />
                     Empleado
                   </Label>
                   {loadingCashiers ? (
@@ -318,7 +318,7 @@ export default function LoginPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
-                      <Loader2 className="w-5 h-5 animate-spin mr-3 text-blue-500" />
+                      <Loader2 className="w-5 h-5 animate-spin mr-3" style={{ color: 'rgb(13, 129, 206)' }} />
                       <span className="text-sm font-medium">Cargando empleados...</span>
                     </motion.div>
                   ) : cashiers && cashiers.length > 0 ? (
