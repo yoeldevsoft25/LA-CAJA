@@ -331,9 +331,26 @@ export default function LoginPage() {
                           className={cn(
                             "flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-300 relative overflow-hidden",
                             selectedCashierId === cashier.user_id
-                              ? "border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100/50 shadow-lg shadow-blue-500/20"
-                              : "border-gray-200 hover:border-blue-300 hover:bg-gray-50/80 hover:shadow-md"
+                              ? "shadow-lg"
+                              : "border-gray-200 hover:bg-gray-50/80 hover:shadow-md"
                           )}
+                          style={selectedCashierId === cashier.user_id ? {
+                            borderColor: 'rgb(13, 129, 206)',
+                            background: 'linear-gradient(to right, rgba(13, 129, 206, 0.1), rgba(13, 129, 206, 0.05))',
+                            boxShadow: '0 10px 15px -3px rgba(13, 129, 206, 0.2), 0 4px 6px -2px rgba(13, 129, 206, 0.1)',
+                          } : {
+                            borderColor: '',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedCashierId !== cashier.user_id) {
+                              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(13, 129, 206, 0.5)'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedCashierId !== cashier.user_id) {
+                              (e.currentTarget as HTMLElement).style.borderColor = ''
+                            }
+                          }}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.05 }}
@@ -341,12 +358,18 @@ export default function LoginPage() {
                           whileTap={{ scale: 0.98 }}
                         >
                           {/* Indicador de selección mejorado */}
-                          <div className={cn(
-                            "w-3 h-3 rounded-full transition-all duration-300 flex items-center justify-center",
-                            selectedCashierId === cashier.user_id 
-                              ? "bg-blue-500 scale-125 shadow-lg shadow-blue-500/50" 
-                              : "bg-gray-300"
-                          )}>
+                          <div 
+                            className={cn(
+                              "w-3 h-3 rounded-full transition-all duration-300 flex items-center justify-center",
+                              selectedCashierId === cashier.user_id 
+                                ? "scale-125 shadow-lg" 
+                                : "bg-gray-300"
+                            )}
+                            style={selectedCashierId === cashier.user_id ? {
+                              backgroundColor: 'rgb(13, 129, 206)',
+                              boxShadow: '0 10px 15px -3px rgba(13, 129, 206, 0.5), 0 4px 6px -2px rgba(13, 129, 206, 0.3)',
+                            } : undefined}
+                          >
                             {selectedCashierId === cashier.user_id && (
                               <motion.div
                                 className="w-1.5 h-1.5 rounded-full bg-white"
