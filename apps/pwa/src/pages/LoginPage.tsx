@@ -166,7 +166,7 @@ export default function LoginPage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md relative z-10"
       >
-        {/* Header */}
+        {/* Header - Mejorado con tipografía moderna */}
         <div className="text-center mb-12">
           <motion.div
             initial={{ scale: 0.9, rotateY: -180 }}
@@ -176,39 +176,53 @@ export default function LoginPage() {
               type: 'spring',
               stiffness: 200,
             }}
-            className="inline-flex items-center justify-center mb-6"
+            className="inline-flex items-center justify-center mb-8"
             style={{ transformStyle: 'preserve-3d' }}
           >
             <img 
               src="/favicon.svg" 
               alt="LA CAJA Logo" 
-              className="w-16 h-16 rounded-2xl border-2 border-slate-300/50 shadow-xl"
+              className="w-20 h-20 rounded-2xl border-2 border-slate-300/50 shadow-xl"
             />
           </motion.div>
           <motion.h1
-            className="text-4xl font-bold tracking-tight text-gray-900 mb-2"
+            className="text-5xl font-extrabold tracking-tight mb-4 leading-tight"
+            style={{
+              color: 'rgb(13, 129, 206)', // Color exacto del logo
+              textShadow: '0 2px 8px rgba(13, 129, 206, 0.2)',
+            }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
           >
             Bienvenido
           </motion.h1>
           <motion.p
-            className="text-base text-gray-600"
+            className="text-lg text-gray-600 font-medium leading-relaxed"
+            style={{
+              letterSpacing: '0.01em',
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
           >
             Inicia sesión en tu punto de venta
           </motion.p>
         </div>
 
-        {/* Main Card */}
-        <Card className="border-blue-200/50 shadow-2xl backdrop-blur-xl bg-white/80">
+        {/* Main Card - Mejorado con diseño moderno */}
+        <Card className="border-2 shadow-2xl backdrop-blur-xl bg-white/95 rounded-2xl overflow-hidden" style={{ borderColor: 'rgba(13, 129, 206, 0.2)' }}>
+          <div className="absolute top-0 left-0 right-0 h-1" style={{ background: `linear-gradient(to right, rgb(13, 129, 206), rgba(13, 129, 206, 0.8), rgb(13, 129, 206))` }} />
           <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
-            {/* Selección de Tienda */}
-            <div className="space-y-2">
-              <Label htmlFor="store_id" className="text-sm font-medium">
+            {/* Selección de Tienda - Mejorado */}
+            <motion.div 
+              className="space-y-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Label htmlFor="store_id" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgb(13, 129, 206)' }} />
                 Tienda
               </Label>
               <Controller
@@ -224,7 +238,14 @@ export default function LoginPage() {
                     }}
                     disabled={loadingStores}
                   >
-                    <SelectTrigger className={cn("h-11", errors.store_id && "border-destructive")}>
+                    <SelectTrigger 
+                      className={cn(
+                        "h-12 text-base border-2 transition-all duration-200",
+                        errors.store_id 
+                          ? "border-destructive focus:border-destructive" 
+                          : "border-gray-200 hover:border-blue-300 focus:border-blue-500"
+                      )}
+                    >
                       <SelectValue placeholder="Selecciona tu tienda" />
                     </SelectTrigger>
                     <SelectContent>
@@ -243,116 +264,189 @@ export default function LoginPage() {
                 )}
               />
               {errors.store_id && (
-                <p className="text-xs text-destructive">{errors.store_id.message}</p>
+                <motion.p 
+                  className="text-xs text-destructive font-medium"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {errors.store_id.message}
+                </motion.p>
               )}
-            </div>
+            </motion.div>
 
-            {/* Selección de Empleado */}
+            {/* Selección de Empleado - Mejorado */}
             <AnimatePresence mode="wait">
               {selectedStoreId && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-2 overflow-hidden"
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="space-y-3 overflow-hidden"
                 >
-                  <Label className="text-sm font-medium">Empleado</Label>
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    Empleado
+                  </Label>
                   {loadingCashiers ? (
-                    <div className="flex items-center justify-center py-8 text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      <span className="text-sm">Cargando empleados...</span>
-                    </div>
+                    <motion.div 
+                      className="flex items-center justify-center py-10 text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <Loader2 className="w-5 h-5 animate-spin mr-3 text-blue-500" />
+                      <span className="text-sm font-medium">Cargando empleados...</span>
+                    </motion.div>
                   ) : cashiers && cashiers.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-2">
-                      {cashiers.map((cashier) => (
+                    <div className="grid grid-cols-1 gap-3">
+                      {cashiers.map((cashier, index) => (
                         <motion.button
                           key={cashier.user_id}
                           type="button"
                           onClick={() => setSelectedCashierId(cashier.user_id)}
                           className={cn(
-                            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all duration-200",
+                            "flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-300 relative overflow-hidden",
                             selectedCashierId === cashier.user_id
-                              ? "border-primary bg-primary/5 shadow-md"
-                              : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                              ? "border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100/50 shadow-lg shadow-blue-500/20"
+                              : "border-gray-200 hover:border-blue-300 hover:bg-gray-50/80 hover:shadow-md"
                           )}
-                          whileHover={{ scale: 1.02 }}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ scale: 1.02, x: 4 }}
                           whileTap={{ scale: 0.98 }}
                         >
+                          {/* Indicador de selección mejorado */}
                           <div className={cn(
-                            "w-2 h-2 rounded-full transition-all",
-                            selectedCashierId === cashier.user_id ? "bg-primary scale-125" : "bg-muted"
-                          )} />
+                            "w-3 h-3 rounded-full transition-all duration-300 flex items-center justify-center",
+                            selectedCashierId === cashier.user_id 
+                              ? "bg-blue-500 scale-125 shadow-lg shadow-blue-500/50" 
+                              : "bg-gray-300"
+                          )}>
+                            {selectedCashierId === cashier.user_id && (
+                              <motion.div
+                                className="w-1.5 h-1.5 rounded-full bg-white"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: 'spring', stiffness: 500 }}
+                              />
+                            )}
+                          </div>
                           <div className="flex-1 text-left">
-                            <p className="text-sm font-medium text-foreground">
+                            <p className={cn(
+                              "text-sm font-semibold transition-colors",
+                              selectedCashierId === cashier.user_id ? "text-blue-700" : "text-gray-900"
+                            )}>
                               {cashier.full_name || 'Sin nombre'}
                             </p>
-                            <p className="text-xs text-muted-foreground capitalize">
+                            <p className={cn(
+                              "text-xs capitalize transition-colors",
+                              selectedCashierId === cashier.user_id ? "text-blue-600" : "text-gray-500"
+                            )}>
                               {cashier.role === 'owner' ? 'Propietario' : 'Cajero'}
                             </p>
                           </div>
                           {selectedCashierId === cashier.user_id && (
-                            <ChevronRight className="w-4 h-4 text-primary" />
+                            <motion.div
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ type: 'spring', stiffness: 400 }}
+                            >
+                              <ChevronRight className="w-5 h-5 text-blue-500" />
+                            </motion.div>
                           )}
                         </motion.button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <motion.p 
+                      className="text-sm text-muted-foreground text-center py-6 font-medium"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
                       No hay empleados disponibles
-                    </p>
+                    </motion.p>
                   )}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* PIN Input */}
+            {/* PIN Input - Mejorado */}
             <AnimatePresence mode="wait">
               {selectedCashierId && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-2 overflow-hidden"
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="space-y-3 overflow-hidden"
                 >
-                  <Label htmlFor="pin" className="text-sm font-medium">
-                    PIN {selectedCashierName && `de ${selectedCashierName}`}
+                  <Label htmlFor="pin" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    PIN {selectedCashierName && <span className="font-normal text-gray-500">de {selectedCashierName}</span>}
                   </Label>
                   <Input
                     type="password"
                     id="pin"
                     placeholder="••••"
                     maxLength={6}
-                    className={cn("h-11 text-center text-lg tracking-widest", errors.pin && "border-destructive")}
+                    className={cn(
+                      "h-12 text-center text-xl tracking-[0.5em] font-semibold border-2 transition-all duration-200",
+                      errors.pin 
+                        ? "border-destructive focus:border-destructive" 
+                        : "border-gray-200 hover:border-blue-300 focus:border-blue-500"
+                    )}
                     {...register('pin')}
                     autoFocus
                   />
                   {errors.pin && (
-                    <p className="text-xs text-destructive">{errors.pin.message}</p>
+                    <motion.p 
+                      className="text-xs text-destructive font-medium"
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      {errors.pin.message}
+                    </motion.p>
                   )}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full h-11 text-base font-medium shadow-lg hover:shadow-xl transition-all"
-              disabled={mutation.isPending || !selectedCashierId}
+            {/* Submit Button - Mejorado */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
             >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Iniciando sesión...
-                </>
-              ) : (
-                <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Iniciar sesión
-                </>
-              )}
-            </Button>
+              <Button
+                type="submit"
+                className={cn(
+                  "w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden",
+                  "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+                disabled={mutation.isPending || !selectedCashierId}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="mr-2 h-5 w-5" />
+                    Iniciar sesión
+                  </>
+                )}
+                {/* Efecto de brillo en hover */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '200%' }}
+                  transition={{ duration: 0.6 }}
+                />
+              </Button>
+            </motion.div>
           </form>
         </Card>
       </motion.div>
