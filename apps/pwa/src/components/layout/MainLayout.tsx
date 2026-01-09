@@ -13,7 +13,6 @@ import {
   FileText,
   BarChart3,
   Menu,
-  Store,
   ChevronLeft,
   Settings,
   Bell,
