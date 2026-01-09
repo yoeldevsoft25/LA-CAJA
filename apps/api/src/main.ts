@@ -65,6 +65,10 @@ async function bootstrap() {
   );
 
   // CORS restringido a orígenes permitidos
+  const nodeEnv = configService.get<string>('NODE_ENV');
+  const isDevelopment = nodeEnv !== 'production';
+  const allowAllOriginsLocal = configService.get<string>('ALLOW_ALL_ORIGINS_LOCAL') === 'true';
+  
   const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
   const origins = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => origin.trim())
@@ -76,8 +80,13 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
+      // Permitir todas las conexiones si está en desarrollo local y se permite (útil para VPN)
+      if (isDevelopment && allowAllOriginsLocal) {
+        return callback(null, true);
+      }
+
       // Permitir requests sin origin (mobile apps, Postman, etc.) solo en desarrollo
-      if (!origin && configService.get<string>('NODE_ENV') !== 'production') {
+      if (!origin && isDevelopment) {
         return callback(null, true);
       }
 
@@ -101,7 +110,12 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3000;
   await app.listen(port, '0.0.0.0');
   logger.log(`🚀 API listening on http://localhost:${port}`);
-  logger.log(`📋 CORS permitido para: ${origins.join(', ')}`);
+  
+  if (isDevelopment && allowAllOriginsLocal) {
+    logger.warn(`⚠️  CORS: PERMITIENDO TODOS LOS ORÍGENES (modo desarrollo + VPN)`);
+  } else {
+    logger.log(`📋 CORS permitido para: ${origins.join(', ')}`);
+  }
 }
 
 bootstrap();
