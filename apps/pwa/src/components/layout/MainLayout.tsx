@@ -469,9 +469,11 @@ export default function MainLayout() {
       {isMobile && (
         <div className="flex items-center px-6 h-16 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground">
-              <Store className="w-5 h-5" strokeWidth={2.5} />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt="LA CAJA Logo"
+              className="w-10 h-10 rounded-lg"
+            />
             <div>
               <h2 className="text-lg font-semibold tracking-tight">LA CAJA</h2>
               <p className="text-xs text-muted-foreground">Sistema POS</p>
@@ -580,9 +582,11 @@ export default function MainLayout() {
         <div className="flex h-16 items-center gap-4 px-6">
           {/* Logo (Desktop) */}
           <div className="hidden lg:flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground">
-              <Store className="w-5 h-5" strokeWidth={2.5} />
-            </div>
+            <img
+              src="/favicon.svg"
+              alt="LA CAJA Logo"
+              className="w-10 h-10 rounded-lg"
+            />
             <div>
               <h2 className="text-lg font-semibold tracking-tight">LA CAJA</h2>
               <p className="text-xs text-muted-foreground">Sistema POS</p>

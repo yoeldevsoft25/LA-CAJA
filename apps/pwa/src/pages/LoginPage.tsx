@@ -329,84 +329,40 @@ export default function LoginPage() {
                           type="button"
                           onClick={() => setSelectedCashierId(cashier.user_id)}
                           className={cn(
-                            "flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-300 relative overflow-hidden",
+                            "flex items-center gap-4 p-4 rounded-xl border-2 transition-colors duration-200",
                             selectedCashierId === cashier.user_id
-                              ? "shadow-lg"
-                              : "border-gray-200 hover:bg-gray-50/80 hover:shadow-md"
+                              ? "border-[rgb(13,129,206)] bg-[rgba(13,129,206,0.05)] shadow-md"
+                              : "border-gray-200 hover:border-[rgba(13,129,206,0.5)] hover:bg-gray-50/50"
                           )}
-                          style={selectedCashierId === cashier.user_id ? {
-                            borderColor: 'rgb(13, 129, 206)',
-                            background: 'linear-gradient(to right, rgba(13, 129, 206, 0.1), rgba(13, 129, 206, 0.05))',
-                            boxShadow: '0 10px 15px -3px rgba(13, 129, 206, 0.2), 0 4px 6px -2px rgba(13, 129, 206, 0.1)',
-                          } : {
-                            borderColor: '',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (selectedCashierId !== cashier.user_id) {
-                              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(13, 129, 206, 0.5)'
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (selectedCashierId !== cashier.user_id) {
-                              (e.currentTarget as HTMLElement).style.borderColor = ''
-                            }
-                          }}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05 }}
-                          whileHover={{ scale: 1.02, x: 4 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          {/* Indicador de selección mejorado */}
-                          <div 
+                          {/* Indicador de selección */}
+                          <div
                             className={cn(
-                              "w-3 h-3 rounded-full transition-all duration-300 flex items-center justify-center",
-                              selectedCashierId === cashier.user_id 
-                                ? "scale-125 shadow-lg" 
+                              "w-3 h-3 rounded-full transition-colors duration-200",
+                              selectedCashierId === cashier.user_id
+                                ? "bg-[rgb(13,129,206)]"
                                 : "bg-gray-300"
                             )}
-                            style={selectedCashierId === cashier.user_id ? {
-                              backgroundColor: 'rgb(13, 129, 206)',
-                              boxShadow: '0 10px 15px -3px rgba(13, 129, 206, 0.5), 0 4px 6px -2px rgba(13, 129, 206, 0.3)',
-                            } : undefined}
-                          >
-                            {selectedCashierId === cashier.user_id && (
-                              <motion.div
-                                className="w-1.5 h-1.5 rounded-full bg-white"
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ type: 'spring', stiffness: 500 }}
-                              />
-                            )}
-                          </div>
+                          />
                           <div className="flex-1 text-left">
-                            <p 
+                            <p
                               className={cn(
-                                "text-sm font-semibold transition-colors",
-                                selectedCashierId === cashier.user_id ? "" : "text-gray-900"
+                                "text-sm font-semibold",
+                                selectedCashierId === cashier.user_id ? "text-[rgb(13,129,206)]" : "text-gray-900"
                               )}
-                              style={selectedCashierId === cashier.user_id ? { color: 'rgb(13, 129, 206)' } : undefined}
                             >
                               {cashier.full_name || 'Sin nombre'}
                             </p>
-                            <p 
-                              className={cn(
-                                "text-xs capitalize transition-colors",
-                                selectedCashierId === cashier.user_id ? "" : "text-gray-500"
-                              )}
-                              style={selectedCashierId === cashier.user_id ? { color: 'rgba(13, 129, 206, 0.8)' } : undefined}
-                            >
+                            <p className="text-xs text-gray-500 capitalize">
                               {cashier.role === 'owner' ? 'Propietario' : 'Cajero'}
                             </p>
                           </div>
                           {selectedCashierId === cashier.user_id && (
-                            <motion.div
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ type: 'spring', stiffness: 400 }}
-                            >
-                              <ChevronRight className="w-5 h-5" style={{ color: 'rgb(13, 129, 206)' }} />
-                            </motion.div>
+                            <ChevronRight className="w-4 h-4 text-[rgb(13,129,206)]" />
                           )}
                         </motion.button>
                       ))}
@@ -444,7 +400,7 @@ export default function LoginPage() {
                     placeholder="••••"
                     maxLength={6}
                     className={cn(
-                      "h-12 text-center text-xl tracking-[0.5em] font-semibold border-2 transition-all duration-200",
+                      "h-12 text-center text-xl tracking-[0.5em] font-semibold border-2 transition-colors duration-200 outline-none focus:ring-0 focus:ring-offset-0",
                       errors.pin
                         ? "border-destructive focus:border-destructive"
                         : "border-gray-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]"
