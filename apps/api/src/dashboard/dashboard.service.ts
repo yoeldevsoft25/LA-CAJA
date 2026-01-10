@@ -229,12 +229,35 @@ export class DashboardService {
       lowStockCount = 0;
     }
 
-    // Calcular valor de inventario (aproximado)
+    // Calcular valor de inventario (considera productos con y sin lotes)
     let totalStockValueBs = 0;
     let totalStockValueUsd = 0;
     try {
+      const lotTotals = await this.productLotRepository
+        .createQueryBuilder('lot')
+        .leftJoin('lot.product', 'product')
+        .where('product.store_id = :storeId', { storeId })
+        .andWhere('product.is_active = true')
+        .select(
+          'COALESCE(SUM(lot.remaining_quantity * lot.unit_cost_bs), 0)',
+          'total_bs',
+        )
+        .addSelect(
+          'COALESCE(SUM(lot.remaining_quantity * lot.unit_cost_usd), 0)',
+          'total_usd',
+        )
+        .getRawOne();
+
+      totalStockValueBs += Number(lotTotals?.total_bs || 0);
+      totalStockValueUsd += Number(lotTotals?.total_usd || 0);
+
       const productsWithStock = await this.productRepository
         .createQueryBuilder('product')
+        .leftJoin(
+          'product_lots',
+          'lot',
+          'lot.product_id = product.id',
+        )
         .leftJoin(
           'inventory_movements',
           'movement',
@@ -243,6 +266,7 @@ export class DashboardService {
         )
         .where('product.store_id = :storeId', { storeId })
         .andWhere('product.is_active = true')
+        .andWhere('lot.id IS NULL')
         .select('product.id', 'id')
         .addSelect('product.cost_bs', 'cost_bs')
         .addSelect('product.cost_usd', 'cost_usd')

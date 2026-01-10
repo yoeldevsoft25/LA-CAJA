@@ -238,7 +238,7 @@ export default function DashboardPage() {
               subtitle={`${formatCurrency(kpis.sales.today_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.today_amount_usd, 'USD')}`}
               color="blue"
               icon={<DollarSign className="w-5 h-5" />}
-              link="/sales"
+              link="/app/sales"
             />
             <KPICard
               title="Ventas del Período"
@@ -246,7 +246,7 @@ export default function DashboardPage() {
               subtitle={`${formatCurrency(kpis.sales.period_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.period_amount_usd, 'USD')}`}
               color="green"
               icon={<ShoppingCart className="w-5 h-5" />}
-              link="/sales"
+              link="/app/sales"
             />
             <KPICard
               title="Crecimiento"
@@ -317,7 +317,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <Link
-                  to="/inventory"
+                  to="/app/inventory"
                   className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
                 >
                   Ver inventario <ArrowUpRight className="w-3 h-3" />
@@ -359,7 +359,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <Link
-                  to="/debts"
+                  to="/app/debts"
                   className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
                 >
                   Ver detalles <ArrowUpRight className="w-3 h-3" />
@@ -446,7 +446,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <Link
-                  to="/fiscal-invoices"
+                  to="/app/fiscal-invoices"
                   className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
                 >
                   Ver facturas <ArrowUpRight className="w-3 h-3" />
@@ -479,7 +479,7 @@ export default function DashboardPage() {
                       </span>
                     </p>
                     <Link
-                      to={`/products/${kpis.performance.top_selling_product.id}`}
+                      to="/app/products"
                       className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
                     >
                       Ver producto <ArrowUpRight className="w-3 h-3" />
@@ -616,4 +616,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-
