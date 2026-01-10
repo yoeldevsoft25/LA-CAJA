@@ -108,4 +108,64 @@ export class InventoryController {
     );
     return { product_id: productId, current_stock: stock };
   }
+
+  /**
+   * Vaciar el stock de un producto específico (poner a 0)
+   * Solo owners pueden ejecutar esta acción
+   */
+  @Post('stock/reset/:productId')
+  @HttpCode(HttpStatus.OK)
+  async resetProductStock(
+    @Param('productId') productId: string,
+    @Body() body: { note?: string },
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const result = await this.inventoryService.resetProductStock(
+      storeId,
+      productId,
+      req.user.sub,
+      req.user.role,
+      body.note,
+    );
+    return {
+      ok: true,
+      message: result
+        ? 'Stock vaciado exitosamente'
+        : 'El producto ya tiene stock en 0',
+      movement: result,
+    };
+  }
+
+  /**
+   * Vaciar TODO el inventario de la tienda
+   * Solo owners pueden ejecutar esta acción - PELIGROSO
+   */
+  @Post('stock/reset-all')
+  @HttpCode(HttpStatus.OK)
+  async resetAllStock(
+    @Body() body: { note?: string; confirm?: boolean },
+    @Request() req: any,
+  ) {
+    if (!body.confirm) {
+      return {
+        ok: false,
+        message:
+          'Debes confirmar esta acción enviando confirm: true. Esta acción es IRREVERSIBLE.',
+      };
+    }
+
+    const storeId = req.user.store_id;
+    const result = await this.inventoryService.resetAllStock(
+      storeId,
+      req.user.sub,
+      req.user.role,
+      body.note,
+    );
+    return {
+      ok: true,
+      message: `Se vació el stock de ${result.reset_count} productos`,
+      reset_count: result.reset_count,
+    };
+  }
 }

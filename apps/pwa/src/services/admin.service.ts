@@ -128,6 +128,18 @@ const adminServiceObj = {
     const res = await adminApi.post('/admin/stores', payload, { headers: { 'x-admin-key': key } })
     return res.data
   },
+
+  /**
+   * Eliminar una tienda completa y todos sus datos asociados
+   * ADVERTENCIA: Esta operación es irreversible
+   */
+  async deleteStore(storeId: string) {
+    const key = ensureKey()
+    const res = await adminApi.delete(`/admin/stores/${storeId}`, {
+      headers: { 'x-admin-key': key },
+    })
+    return res.data
+  },
 }
 
 export const adminService = adminServiceObj

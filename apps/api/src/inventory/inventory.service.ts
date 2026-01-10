@@ -382,4 +382,145 @@ export class InventoryService {
 
     return this.movementRepository.save(movement);
   }
+
+  /**
+   * Vaciar el stock de un producto específico (poner a 0)
+   * Solo owners pueden ejecutar esta acción
+   */
+  async resetProductStock(
+    storeId: string,
+    productId: string,
+    userId: string,
+    role: string,
+    note?: string,
+  ): Promise<InventoryMovement | null> {
+    if (role !== 'owner') {
+      throw new ForbiddenException('Solo un owner puede vaciar el stock');
+    }
+
+    // Verificar que el producto existe
+    const product = await this.productRepository.findOne({
+      where: { id: productId, store_id: storeId },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    // Obtener stock actual
+    const currentStock = await this.getCurrentStock(storeId, productId);
+
+    // Si ya está en 0, no hacer nada
+    if (currentStock === 0) {
+      return null;
+    }
+
+    // Determinar bodega por defecto
+    let warehouseId: string | null = null;
+    const defaultWarehouse = await this.warehousesService.getDefault(storeId);
+    if (defaultWarehouse) {
+      warehouseId = defaultWarehouse.id;
+    }
+
+    // Crear movimiento de ajuste para llevar a 0
+    const movement = this.movementRepository.create({
+      id: randomUUID(),
+      store_id: storeId,
+      product_id: productId,
+      movement_type: 'adjust',
+      qty_delta: -currentStock, // Restar todo el stock actual
+      unit_cost_bs: 0,
+      unit_cost_usd: 0,
+      warehouse_id: warehouseId,
+      note: note || 'Stock vaciado manualmente por owner',
+      ref: { reason: 'reset', previous_stock: currentStock },
+      happened_at: new Date(),
+      approved: true,
+      requested_by: userId,
+      approved_by: userId,
+      approved_at: new Date(),
+    });
+
+    const savedMovement = await this.movementRepository.save(movement);
+
+    // Actualizar stock de la bodega si se especificó
+    if (warehouseId) {
+      await this.warehousesService.updateStock(
+        warehouseId,
+        productId,
+        null,
+        -currentStock,
+      );
+    }
+
+    return savedMovement;
+  }
+
+  /**
+   * Vaciar TODO el inventario de la tienda (poner a 0)
+   * Solo owners pueden ejecutar esta acción - PELIGROSO
+   */
+  async resetAllStock(
+    storeId: string,
+    userId: string,
+    role: string,
+    note?: string,
+  ): Promise<{ reset_count: number; movements: InventoryMovement[] }> {
+    if (role !== 'owner') {
+      throw new ForbiddenException('Solo un owner puede vaciar todo el inventario');
+    }
+
+    // Obtener todos los productos con stock > 0
+    const { items } = await this.getStockStatus(storeId, {});
+    const productsWithStock = items.filter((item) => item.current_stock > 0);
+
+    if (productsWithStock.length === 0) {
+      return { reset_count: 0, movements: [] };
+    }
+
+    // Determinar bodega por defecto
+    let warehouseId: string | null = null;
+    const defaultWarehouse = await this.warehousesService.getDefault(storeId);
+    if (defaultWarehouse) {
+      warehouseId = defaultWarehouse.id;
+    }
+
+    const movements: InventoryMovement[] = [];
+
+    // Crear movimiento de ajuste para cada producto
+    for (const product of productsWithStock) {
+      const movement = this.movementRepository.create({
+        id: randomUUID(),
+        store_id: storeId,
+        product_id: product.product_id,
+        movement_type: 'adjust',
+        qty_delta: -product.current_stock,
+        unit_cost_bs: 0,
+        unit_cost_usd: 0,
+        warehouse_id: warehouseId,
+        note: note || 'Stock vaciado en reset masivo por owner',
+        ref: { reason: 'reset_all', previous_stock: product.current_stock },
+        happened_at: new Date(),
+        approved: true,
+        requested_by: userId,
+        approved_by: userId,
+        approved_at: new Date(),
+      });
+
+      const savedMovement = await this.movementRepository.save(movement);
+      movements.push(savedMovement);
+
+      // Actualizar stock de la bodega
+      if (warehouseId) {
+        await this.warehousesService.updateStock(
+          warehouseId,
+          product.product_id,
+          null,
+          -product.current_stock,
+        );
+      }
+    }
+
+    return { reset_count: movements.length, movements };
+  }
 }

@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { toast } from 'react-hot-toast'
 import { addDays, format, formatDistanceToNowStrict, isAfter, parseISO } from 'date-fns'
-import { MoreHorizontal, ShieldCheck, ShieldOff, Sparkles, CreditCard, Calendar } from 'lucide-react'
+import { MoreHorizontal, ShieldCheck, ShieldOff, Sparkles, CreditCard, Calendar, Trash2, AlertTriangle } from 'lucide-react'
 
 function formatDate(value: string | null) {
   if (!value) return '—'
@@ -74,6 +74,8 @@ export default function AdminPage() {
     days: '',
     notes: '',
   })
+  const [deleteConfirmStore, setDeleteConfirmStore] = useState<AdminStore | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const { data: stores, isLoading, refetch, error } = useQuery<AdminStore[], Error>({
     queryKey: ['admin-stores', statusFilter, planFilter, expiringIn, adminKey],
     queryFn: () =>
@@ -212,6 +214,20 @@ export default function AdminPage() {
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message || err?.message || 'Error'
+      toast.error(msg)
+    },
+  })
+
+  const deleteStoreMutation = useMutation({
+    mutationFn: (storeId: string) => adminService.deleteStore(storeId),
+    onSuccess: (data) => {
+      toast.success(data.message || 'Tienda eliminada')
+      setDeleteConfirmStore(null)
+      setDeleteConfirmText('')
+      qc.invalidateQueries({ queryKey: ['admin-stores'] })
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Error al eliminar'
       toast.error(msg)
     },
   })
@@ -549,6 +565,14 @@ export default function AdminPage() {
                                   >
                                     Añadir nota
                                   </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-800" />
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteConfirmStore(store)}
+                                    className="text-rose-400 focus:text-rose-300 focus:bg-rose-950/50"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Eliminar tienda
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -768,6 +792,95 @@ export default function AdminPage() {
             >
               {mutation.isPending ? 'Actualizando...' : 'Actualizar Plan'}
             </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Modal de confirmación para eliminar tienda */}
+      <Sheet open={!!deleteConfirmStore} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteConfirmStore(null)
+          setDeleteConfirmText('')
+        }
+      }}>
+        <SheetContent className="bg-slate-900 text-slate-100 border-slate-800 w-[420px]">
+          <SheetHeader>
+            <SheetTitle className="text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-rose-400" />
+              Eliminar Tienda
+            </SheetTitle>
+            <SheetDescription className="text-slate-400">
+              Esta acción es <span className="text-rose-400 font-semibold">IRREVERSIBLE</span>.
+              Se eliminarán todos los datos asociados a la tienda.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-4">
+            <div className="p-4 bg-rose-950/30 border border-rose-900/50 rounded-lg space-y-2">
+              <p className="text-sm text-slate-200">
+                <strong>Tienda:</strong> {deleteConfirmStore?.name}
+              </p>
+              <p className="text-xs text-slate-400">
+                <strong>ID:</strong> {deleteConfirmStore?.id}
+              </p>
+              <p className="text-xs text-slate-400">
+                <strong>Usuarios:</strong> {deleteConfirmStore?.member_count || 0}
+              </p>
+              <p className="text-xs text-slate-400">
+                <strong>Plan:</strong> {deleteConfirmStore?.license_plan || 'Sin plan'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-slate-200">
+                Para confirmar, escribe el nombre de la tienda:
+              </Label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={deleteConfirmStore?.name || ''}
+                className="bg-slate-950 border-slate-800 text-slate-100"
+              />
+              <p className="text-xs text-slate-500">
+                Escribe exactamente: <code className="text-rose-300">{deleteConfirmStore?.name}</code>
+              </p>
+            </div>
+
+            <Separator className="bg-slate-800" />
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 border-slate-700 text-slate-200 hover:bg-slate-800"
+                onClick={() => {
+                  setDeleteConfirmStore(null)
+                  setDeleteConfirmText('')
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white"
+                disabled={
+                  deleteConfirmText !== deleteConfirmStore?.name ||
+                  deleteStoreMutation.isPending
+                }
+                onClick={() => {
+                  if (deleteConfirmStore) {
+                    deleteStoreMutation.mutate(deleteConfirmStore.id)
+                  }
+                }}
+              >
+                {deleteStoreMutation.isPending ? (
+                  'Eliminando...'
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar Permanentemente
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </SheetContent>
       </Sheet>

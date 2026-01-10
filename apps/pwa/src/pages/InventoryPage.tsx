@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/stores/auth.store'
-import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History } from 'lucide-react'
+import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History, Trash2, AlertOctagon } from 'lucide-react'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import StockReceivedModal from '@/components/inventory/StockReceivedModal'
 import StockAdjustModal from '@/components/inventory/StockAdjustModal'
@@ -23,6 +23,9 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import toast from 'react-hot-toast'
 
 export default function InventoryPage() {
   const { user } = useAuth()
@@ -35,6 +38,12 @@ export default function InventoryPage() {
   const [isStockAdjustModalOpen, setIsStockAdjustModalOpen] = useState(false)
   const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<StockStatus | null>(null)
+  // Estados para vaciar stock (solo owners)
+  const [isResetProductModalOpen, setIsResetProductModalOpen] = useState(false)
+  const [isResetAllModalOpen, setIsResetAllModalOpen] = useState(false)
+  const [resetNote, setResetNote] = useState('')
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const isOwner = user?.role === 'owner'
 
   useEffect(() => {
     setCurrentPage(1)
@@ -83,6 +92,36 @@ export default function InventoryPage() {
   const total = stockStatusData?.total || 0
   const lowStockCount = showLowStockOnly ? total : lowStockCountData?.total || 0
 
+  // Mutaciones para vaciar stock (solo owners)
+  const resetProductMutation = useMutation({
+    mutationFn: ({ productId, note }: { productId: string; note?: string }) =>
+      inventoryService.resetProductStock(productId, note),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      setIsResetProductModalOpen(false)
+      setSelectedProduct(null)
+      setResetNote('')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al vaciar el stock')
+    },
+  })
+
+  const resetAllMutation = useMutation({
+    mutationFn: (note?: string) => inventoryService.resetAllStock(note),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      setIsResetAllModalOpen(false)
+      setResetNote('')
+      setResetConfirmText('')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al vaciar el inventario')
+    },
+  })
+
   const handleReceiveStock = (product: StockStatus) => {
     setSelectedProduct(product)
     setIsStockReceivedModalOpen(true)
@@ -102,7 +141,17 @@ export default function InventoryPage() {
     setIsStockReceivedModalOpen(false)
     setIsStockAdjustModalOpen(false)
     setIsMovementsModalOpen(false)
+    setIsResetProductModalOpen(false)
+    setIsResetAllModalOpen(false)
     setSelectedProduct(null)
+    setResetNote('')
+    setResetConfirmText('')
+  }
+
+  const handleResetProductStock = (product: StockStatus) => {
+    setSelectedProduct(product)
+    setResetNote('')
+    setIsResetProductModalOpen(true)
   }
 
   // Calcular porcentaje de stock para Progress
@@ -148,6 +197,21 @@ export default function InventoryPage() {
               <History className="w-4 h-4 mr-2" />
               Ver Todos los Movimientos
             </Button>
+            {/* Solo owners pueden vaciar todo el inventario */}
+            {isOwner && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setResetNote('')
+                  setResetConfirmText('')
+                  setIsResetAllModalOpen(true)
+                }}
+                className="w-full sm:w-auto text-destructive border-destructive/50 hover:bg-destructive/10"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Vaciar Todo
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -328,6 +392,18 @@ export default function InventoryPage() {
                         >
                           <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
                             </Button>
+                            {/* Solo owners pueden vaciar stock de un producto */}
+                            {isOwner && item.current_stock > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleResetProductStock(item)}
+                                className="h-8 w-8 sm:h-9 sm:w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                title="Vaciar stock"
+                              >
+                                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                              </Button>
+                            )}
                       </div>
                         </TableCell>
                       </TableRow>
@@ -398,6 +474,124 @@ export default function InventoryPage() {
         onClose={handleCloseModals}
         product={selectedProduct}
       />
+
+      {/* Modal de confirmación para vaciar stock de un producto */}
+      <Dialog open={isResetProductModalOpen} onOpenChange={(open) => !open && handleCloseModals()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertOctagon className="w-5 h-5" />
+              Vaciar Stock del Producto
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción pondrá el stock de este producto en <strong>0</strong>.
+              Se registrará como un ajuste de inventario.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-semibold">{selectedProduct.product_name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Stock actual: <span className="font-bold text-foreground">{selectedProduct.current_stock}</span> unidades
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reset-note">Nota (opcional)</Label>
+                <Textarea
+                  id="reset-note"
+                  value={resetNote}
+                  onChange={(e) => setResetNote(e.target.value)}
+                  placeholder="Razón del vaciado de stock..."
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCloseModals}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedProduct) {
+                  resetProductMutation.mutate({
+                    productId: selectedProduct.product_id,
+                    note: resetNote || undefined,
+                  })
+                }
+              }}
+              disabled={resetProductMutation.isPending}
+            >
+              {resetProductMutation.isPending ? 'Vaciando...' : 'Vaciar Stock'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmación para vaciar TODO el inventario */}
+      <Dialog open={isResetAllModalOpen} onOpenChange={(open) => !open && handleCloseModals()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertOctagon className="w-5 h-5" />
+              Vaciar TODO el Inventario
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción es <strong className="text-destructive">IRREVERSIBLE</strong>.
+              Se pondrá en <strong>0</strong> el stock de TODOS los productos de la tienda.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <p className="text-sm text-destructive font-medium">
+                Se vaciarán {stockItems.filter(item => item.current_stock > 0).length} productos con stock
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reset-all-note">Nota (opcional)</Label>
+              <Textarea
+                id="reset-all-note"
+                value={resetNote}
+                onChange={(e) => setResetNote(e.target.value)}
+                placeholder="Razón del vaciado masivo..."
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reset-confirm">
+                Para confirmar, escribe <code className="text-destructive font-bold">VACIAR TODO</code>
+              </Label>
+              <Input
+                id="reset-confirm"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder="VACIAR TODO"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCloseModals}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => resetAllMutation.mutate(resetNote || undefined)}
+              disabled={resetConfirmText !== 'VACIAR TODO' || resetAllMutation.isPending}
+            >
+              {resetAllMutation.isPending ? 'Vaciando...' : 'Vaciar Todo el Inventario'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

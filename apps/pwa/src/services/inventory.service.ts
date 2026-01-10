@@ -132,4 +132,28 @@ export const inventoryService = {
     const response = await api.get<MovementsResponse>('/inventory/movements', { params })
     return response.data
   },
+
+  /**
+   * Vaciar el stock de un producto específico (poner a 0)
+   * Solo owners pueden ejecutar esta acción
+   */
+  async resetProductStock(productId: string, note?: string): Promise<{ ok: boolean; message: string }> {
+    const response = await api.post<{ ok: boolean; message: string }>(
+      `/inventory/stock/reset/${productId}`,
+      { note }
+    )
+    return response.data
+  },
+
+  /**
+   * Vaciar TODO el inventario de la tienda
+   * Solo owners pueden ejecutar esta acción - PELIGROSO
+   */
+  async resetAllStock(note?: string): Promise<{ ok: boolean; message: string; reset_count: number }> {
+    const response = await api.post<{ ok: boolean; message: string; reset_count: number }>(
+      '/inventory/stock/reset-all',
+      { note, confirm: true }
+    )
+    return response.data
+  },
 }

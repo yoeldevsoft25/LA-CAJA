@@ -275,4 +275,28 @@ export class AdminController {
     await this.memberRepo.delete({ store_id: storeId, user_id: userId });
     return { ok: true };
   }
+
+  /**
+   * Eliminar una tienda completa y todos sus datos asociados
+   * ADVERTENCIA: Esta operación es irreversible
+   */
+  @Delete('stores/:id')
+  async deleteStore(@Param('id') storeId: string) {
+    const store = await this.storeRepo.findOne({ where: { id: storeId } });
+    if (!store) {
+      throw new NotFoundException('Store no encontrada');
+    }
+
+    // Primero eliminar todos los miembros de la tienda
+    await this.memberRepo.delete({ store_id: storeId });
+
+    // Eliminar la tienda (las demás tablas tienen ON DELETE CASCADE)
+    await this.storeRepo.delete({ id: storeId });
+
+    return {
+      ok: true,
+      message: `Tienda "${store.name}" eliminada exitosamente`,
+      deleted_store_id: storeId,
+    };
+  }
 }
