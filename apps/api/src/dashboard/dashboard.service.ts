@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In } from 'typeorm';
+import { Repository, Between, In, IsNull } from 'typeorm';
 import { Sale } from '../database/entities/sale.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
 import { Product } from '../database/entities/product.entity';
@@ -150,6 +150,7 @@ export class DashboardService {
       where: {
         store_id: storeId,
         sold_at: Between(today, todayEnd),
+        voided_at: IsNull(),
       },
     });
 
@@ -165,6 +166,7 @@ export class DashboardService {
       where: {
         store_id: storeId,
         sold_at: Between(periodStart, periodEnd),
+        voided_at: IsNull(),
       },
     });
 
@@ -180,6 +182,7 @@ export class DashboardService {
       where: {
         store_id: storeId,
         sold_at: Between(previousPeriodStart, previousPeriodEnd),
+        voided_at: IsNull(),
       },
     });
 
@@ -383,6 +386,7 @@ export class DashboardService {
         .leftJoin('item.sale', 'sale')
         .leftJoin('item.product', 'product')
         .where('sale.store_id = :storeId', { storeId })
+        .andWhere('sale.voided_at IS NULL')
         .andWhere('sale.sold_at >= :start', { start: periodStart })
         .andWhere('sale.sold_at <= :end', { end: periodEnd })
         .select('product.id', 'product_id')
@@ -406,6 +410,7 @@ export class DashboardService {
         .leftJoin('item.sale', 'sale')
         .leftJoin('item.product', 'product')
         .where('sale.store_id = :storeId', { storeId })
+        .andWhere('sale.voided_at IS NULL')
         .andWhere('sale.sold_at >= :start', { start: periodStart })
         .andWhere('sale.sold_at <= :end', { end: periodEnd })
         .andWhere('product.category IS NOT NULL')
@@ -506,6 +511,7 @@ export class DashboardService {
       where: {
         store_id: storeId,
         sold_at: Between(startDate, endDate),
+        voided_at: IsNull(),
       },
     });
 
@@ -539,6 +545,7 @@ export class DashboardService {
       .leftJoin('item.sale', 'sale')
       .leftJoin('item.product', 'product')
       .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
       .andWhere('sale.sold_at >= :start', { start: startDate })
       .andWhere('sale.sold_at <= :end', { end: endDate })
       .select('product.id', 'product_id')
