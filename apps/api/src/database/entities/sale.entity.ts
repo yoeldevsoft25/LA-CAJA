@@ -80,6 +80,19 @@ export class Sale {
   @JoinColumn({ name: 'sold_by_user_id' })
   sold_by_user: Profile | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  voided_at: Date | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  voided_by_user_id: string | null;
+
+  @ManyToOne(() => Profile, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'voided_by_user_id' })
+  voided_by_user: Profile | null;
+
+  @Column({ type: 'text', nullable: true })
+  void_reason: string | null;
+
   @Column({ type: 'text', nullable: true })
   note: string | null;
 

@@ -12,9 +12,11 @@ import {
   UnauthorizedException,
   UsePipes,
   ValidationPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { VoidSaleDto } from './dto/void-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('sales')
@@ -102,5 +104,20 @@ export class SalesController {
   async findOne(@Param('id') id: string, @Request() req: any) {
     const storeId = req.user.store_id;
     return this.salesService.findOne(storeId, id);
+  }
+
+  @Post(':id/void')
+  @HttpCode(HttpStatus.OK)
+  async voidSale(
+    @Param('id') id: string,
+    @Body() dto: VoidSaleDto,
+    @Request() req: any,
+  ) {
+    if (req.user.role !== 'owner') {
+      throw new ForbiddenException('Solo el owner puede anular ventas');
+    }
+    const storeId = req.user.store_id;
+    const userId = req.user.sub;
+    return this.salesService.voidSale(storeId, id, userId, dto.reason);
   }
 }

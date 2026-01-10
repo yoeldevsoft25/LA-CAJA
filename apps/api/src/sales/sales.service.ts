@@ -918,6 +918,149 @@ export class SalesService {
     return { sales: salesWithDebtInfo, total };
   }
 
+  async voidSale(
+    storeId: string,
+    saleId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<Sale> {
+    return this.dataSource.transaction(async (manager) => {
+      const sale = await manager.findOne(Sale, {
+        where: { id: saleId, store_id: storeId },
+        relations: ['items'],
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Venta no encontrada');
+      }
+
+      if (sale.voided_at) {
+        throw new BadRequestException('La venta ya fue anulada');
+      }
+
+      const fiscalInvoice = await this.fiscalInvoicesService.findBySale(
+        storeId,
+        saleId,
+      );
+      if (fiscalInvoice && fiscalInvoice.status === 'issued') {
+        throw new BadRequestException(
+          'La venta tiene una factura fiscal emitida. Debe anularse con una nota de crédito.',
+        );
+      }
+
+      const debt = await manager.findOne(Debt, {
+        where: { sale_id: saleId, store_id: storeId },
+      });
+      if (debt) {
+        const paymentsCount = await manager.count(DebtPayment, {
+          where: { debt_id: debt.id },
+        });
+        if (paymentsCount > 0) {
+          throw new BadRequestException(
+            'La venta tiene pagos asociados. Debes reversar los pagos antes de anular.',
+          );
+        }
+        await manager.delete(DebtPayment, { debt_id: debt.id });
+        await manager.delete(Debt, { id: debt.id });
+      }
+
+      const saleItems =
+        sale.items?.length > 0
+          ? sale.items
+          : await manager.find(SaleItem, { where: { sale_id: saleId } });
+
+      const saleMovements = await manager
+        .createQueryBuilder(InventoryMovement, 'movement')
+        .where('movement.store_id = :storeId', { storeId })
+        .andWhere("movement.ref ->> 'sale_id' = :saleId", { saleId })
+        .getMany();
+
+      const warehouseByItemKey = new Map<string, string | null>();
+      for (const movement of saleMovements) {
+        const key = `${movement.product_id}:${movement.variant_id || 'null'}`;
+        if (!warehouseByItemKey.has(key)) {
+          warehouseByItemKey.set(key, movement.warehouse_id || null);
+        }
+      }
+
+      const now = new Date();
+      const reasonNote = reason
+        ? `Devolución venta ${saleId}: ${reason}`
+        : `Devolución venta ${saleId}`;
+
+      for (const item of saleItems) {
+        if (item.lot_id) {
+          const lot = await manager.findOne(ProductLot, {
+            where: { id: item.lot_id },
+          });
+          if (lot) {
+            lot.remaining_quantity += item.qty;
+            lot.updated_at = now;
+            await manager.save(ProductLot, lot);
+
+            const lotMovement = manager.create(LotMovement, {
+              id: randomUUID(),
+              lot_id: lot.id,
+              movement_type: 'adjusted',
+              qty_delta: item.qty,
+              happened_at: now,
+              sale_id: saleId,
+              note: reasonNote,
+            });
+            await manager.save(LotMovement, lotMovement);
+          }
+          continue;
+        }
+
+        const key = `${item.product_id}:${item.variant_id || 'null'}`;
+        const warehouseId = warehouseByItemKey.get(key) || null;
+
+        const movement = manager.create(InventoryMovement, {
+          id: randomUUID(),
+          store_id: storeId,
+          product_id: item.product_id,
+          variant_id: item.variant_id || null,
+          movement_type: 'adjust',
+          qty_delta: item.qty,
+          unit_cost_bs: 0,
+          unit_cost_usd: 0,
+          warehouse_id: warehouseId,
+          note: reasonNote,
+          ref: { sale_id: saleId, reversal: true, warehouse_id: warehouseId },
+          happened_at: now,
+          approved: true,
+        });
+        await manager.save(InventoryMovement, movement);
+
+        if (warehouseId) {
+          await this.warehousesService.updateStock(
+            warehouseId,
+            item.product_id,
+            item.variant_id || null,
+            item.qty,
+          );
+        }
+      }
+
+      await manager.getRepository(ProductSerial).update(
+        { sale_id: saleId },
+        {
+          status: 'returned',
+          sale_id: null,
+          sale_item_id: null,
+          sold_at: null,
+          updated_at: now,
+        },
+      );
+
+      sale.voided_at = now;
+      sale.voided_by_user_id = userId;
+      sale.void_reason = reason || null;
+
+      return manager.save(Sale, sale);
+    });
+  }
+
   private async getCurrentStock(
     storeId: string,
     productId: string,
