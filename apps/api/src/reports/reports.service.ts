@@ -114,7 +114,8 @@ export class ReportsService {
   }> {
     const query = this.saleRepository
       .createQueryBuilder('sale')
-      .where('sale.store_id = :storeId', { storeId });
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL');
 
     if (startDate) {
       const start = this.normalizeStartDate(new Date(startDate));
@@ -290,7 +291,8 @@ export class ReportsService {
     const query = this.saleItemRepository
       .createQueryBuilder('item')
       .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
-      .where('sale.store_id = :storeId', { storeId });
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL');
 
     if (startDate) {
       const start = this.normalizeStartDate(new Date(startDate));
@@ -519,7 +521,8 @@ export class ReportsService {
   ): Promise<string> {
     const query = this.saleRepository
       .createQueryBuilder('sale')
-      .where('sale.store_id = :storeId', { storeId });
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL');
 
     if (startDate) {
       const start = this.normalizeStartDate(new Date(startDate));
@@ -671,6 +674,10 @@ export class ReportsService {
           cashierId: shift.cashier_id,
         })
         .andWhere('sale.sold_at >= :openedAt', { openedAt: shift.opened_at })
+        .andWhere('sale.voided_at IS NULL')
+        .andWhere('sale.sold_at <= :closedAt', {
+          closedAt: shift.closed_at ?? new Date(),
+        })
         .getMany();
 
       let shiftSalesBs = 0;
@@ -1160,7 +1167,8 @@ export class ReportsService {
     const query = this.saleItemRepository
       .createQueryBuilder('item')
       .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
-      .where('sale.store_id = :storeId', { storeId });
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL');
 
     if (startDate) {
       const start = this.normalizeStartDate(new Date(startDate));

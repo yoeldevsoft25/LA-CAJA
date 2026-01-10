@@ -16,6 +16,10 @@ import { GetStockStatusDto } from './dto/get-stock-status.dto';
 
 @Injectable()
 export class InventoryService {
+  private roundToTwoDecimals(value: number): number {
+    return Math.round(value * 100) / 100;
+  }
+
   constructor(
     @InjectRepository(InventoryMovement)
     private movementRepository: Repository<InventoryMovement>,
@@ -53,6 +57,11 @@ export class InventoryService {
       }
     }
 
+    // Actualizar costos del producto con el costo recibido
+    product.cost_bs = this.roundToTwoDecimals(dto.unit_cost_bs);
+    product.cost_usd = this.roundToTwoDecimals(dto.unit_cost_usd);
+    await this.productRepository.save(product);
+
     // Crear movimiento de inventario
     const movement = this.movementRepository.create({
       id: randomUUID(),
@@ -60,8 +69,8 @@ export class InventoryService {
       product_id: dto.product_id,
       movement_type: 'received',
       qty_delta: dto.qty,
-      unit_cost_bs: dto.unit_cost_bs,
-      unit_cost_usd: dto.unit_cost_usd,
+      unit_cost_bs: this.roundToTwoDecimals(dto.unit_cost_bs),
+      unit_cost_usd: this.roundToTwoDecimals(dto.unit_cost_usd),
       warehouse_id: warehouseId,
       note: dto.note || null,
       ref: dto.ref || null,
