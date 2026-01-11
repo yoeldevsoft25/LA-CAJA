@@ -458,7 +458,8 @@ export default function LoginPage() {
                     placeholder="••••"
                     maxLength={6}
                     className={cn(
-                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200 focus:ring-0 focus:ring-offset-0',
+                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none',
                       errors.pin
                         ? 'border-destructive focus:border-destructive'
                         : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'

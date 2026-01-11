@@ -61,7 +61,7 @@ export default function SimpleLoader({
         setTimeout(() => {
           setIsComplete(true)
           onComplete?.()
-        }, 2000)
+        }, 3500)
       }
     }, 16)
 
@@ -140,34 +140,34 @@ export default function SimpleLoader({
                   transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
                 >
                   {/* Logo con anillo de progreso */}
-                  <div className="relative mb-10">
+                  <div className="relative mb-10 w-20 h-20 flex items-center justify-center">
                     {/* Anillo de progreso exterior */}
                     <svg
-                      className="absolute -inset-4"
-                      width="140"
-                      height="140"
-                      viewBox="0 0 140 140"
+                      className="absolute -inset-3"
+                      width="104"
+                      height="104"
+                      viewBox="0 0 104 104"
                     >
                       {/* Track */}
                       <circle
-                        cx="70"
-                        cy="70"
-                        r="64"
+                        cx="52"
+                        cy="52"
+                        r="48"
                         fill="none"
                         stroke={colors.brand.primaryLight}
                         strokeWidth="2"
                       />
                       {/* Progress */}
                       <motion.circle
-                        cx="70"
-                        cy="70"
-                        r="64"
+                        cx="52"
+                        cy="52"
+                        r="48"
                         fill="none"
                         stroke={colors.brand.primary}
                         strokeWidth="3"
                         strokeLinecap="round"
-                        strokeDasharray={2 * Math.PI * 64}
-                        strokeDashoffset={2 * Math.PI * 64 * (1 - progress / 100)}
+                        strokeDasharray={2 * Math.PI * 48}
+                        strokeDashoffset={2 * Math.PI * 48 * (1 - progress / 100)}
                         style={{
                           transform: 'rotate(-90deg)',
                           transformOrigin: 'center',
@@ -189,8 +189,8 @@ export default function SimpleLoader({
                           marginLeft: -3,
                         }}
                         animate={{
-                          x: Math.cos((dot.angle * Math.PI) / 180 + (progress / 100) * Math.PI * 2) * 58,
-                          y: Math.sin((dot.angle * Math.PI) / 180 + (progress / 100) * Math.PI * 2) * 58,
+                          x: Math.cos((dot.angle * Math.PI) / 180 + (progress / 100) * Math.PI * 2) * 44,
+                          y: Math.sin((dot.angle * Math.PI) / 180 + (progress / 100) * Math.PI * 2) * 44,
                           opacity: progress > dot.id * 12.5 ? [0.3, 1, 0.3] : 0.1,
                           scale: progress > dot.id * 12.5 ? [0.8, 1.2, 0.8] : 0.5,
                         }}
@@ -218,12 +218,9 @@ export default function SimpleLoader({
                       }}
                     />
 
-                    {/* Logo container */}
+                    {/* Logo container - sin fondo para integrar con el círculo */}
                     <motion.div
-                      className="relative bg-white p-5 rounded-2xl shadow-xl border border-slate-100"
-                      style={{
-                        boxShadow: colors.shadows.xl,
-                      }}
+                      className="relative flex items-center justify-center"
                       animate={{
                         y: [0, -6, 0],
                       }}
@@ -236,7 +233,7 @@ export default function SimpleLoader({
                       <img
                         src="/favicon.svg"
                         alt="LA CAJA"
-                        className="w-16 h-16"
+                        className="w-20 h-20 drop-shadow-lg"
                       />
                     </motion.div>
                   </div>
