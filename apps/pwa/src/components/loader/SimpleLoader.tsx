@@ -220,7 +220,7 @@ export default function SimpleLoader({
 
                     {/* Logo container - sin fondo para integrar con el círculo */}
                     <motion.div
-                      className="relative flex items-center justify-center"
+                      className="relative flex items-center justify-center w-20 h-20 rounded-full overflow-hidden bg-white"
                       animate={{
                         y: [0, -6, 0],
                       }}
@@ -233,7 +233,7 @@ export default function SimpleLoader({
                       <img
                         src="/favicon.svg"
                         alt="LA CAJA"
-                        className="w-20 h-20 drop-shadow-lg"
+                        className="w-full h-full object-cover drop-shadow-lg"
                       />
                     </motion.div>
                   </div>
