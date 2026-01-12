@@ -233,7 +233,7 @@ export default function FiscalInvoicesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/fiscal-invoices/${invoice.id}`)}
+                            onClick={() => navigate(`/app/fiscal-invoices/${invoice.id}`)}
                             className="h-8 w-8"
                             title="Ver detalle"
                           >
@@ -288,4 +288,3 @@ export default function FiscalInvoicesPage() {
     </div>
   )
 }
-

@@ -12,6 +12,27 @@ import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 import { randomUUID } from 'crypto';
 
+export interface WarehouseStockSummary {
+  id: string;
+  warehouse_id: string;
+  product_id: string;
+  variant_id: string | null;
+  stock: number;
+  reserved: number;
+  updated_at: Date;
+  product: {
+    id: string;
+    name: string;
+    sku: string | null;
+    barcode: string | null;
+  } | null;
+  variant: {
+    id: string;
+    variant_type: string;
+    variant_value: string;
+  } | null;
+}
+
 /**
  * Servicio para gestión de bodegas/almacenes
  */
@@ -188,15 +209,52 @@ export class WarehousesService {
     storeId: string,
     warehouseId: string,
     productId?: string,
-  ): Promise<WarehouseStock[]> {
+  ): Promise<WarehouseStockSummary[]> {
     await this.findOne(storeId, warehouseId); // Validar que existe
 
-    const where: any = { warehouse_id: warehouseId };
+    const query = this.warehouseStockRepository
+      .createQueryBuilder('stock')
+      .leftJoinAndSelect('stock.product', 'product')
+      .leftJoinAndSelect('stock.variant', 'variant')
+      .where('stock.warehouse_id = :warehouseId', { warehouseId });
+
     if (productId) {
-      where.product_id = productId;
+      query.andWhere('stock.product_id = :productId', { productId });
     }
 
-    return this.warehouseStockRepository.find({ where });
+    const stocks = await query.getMany();
+
+    return Promise.all(
+      stocks.map(async (stock) => {
+        const product = stock.product ? await stock.product : null;
+        const variant = stock.variant ? await stock.variant : null;
+
+        return {
+          id: stock.id,
+          warehouse_id: stock.warehouse_id,
+          product_id: stock.product_id,
+          variant_id: stock.variant_id,
+          stock: Number(stock.stock) || 0,
+          reserved: Number(stock.reserved) || 0,
+          updated_at: stock.updated_at,
+          product: product
+            ? {
+                id: product.id,
+                name: product.name,
+                sku: product.sku ?? null,
+                barcode: product.barcode ?? null,
+              }
+            : null,
+          variant: variant
+            ? {
+                id: variant.id,
+                variant_type: variant.variant_type,
+                variant_value: variant.variant_value,
+              }
+            : null,
+        };
+      }),
+    );
   }
 
   /**

@@ -196,9 +196,10 @@ export default function StockAdjustModal({
                 <Input
                   id="qty_delta"
                   type="number"
-                  step="1"
+                  step="0.001"
+                  inputMode="decimal"
                   {...register('qty_delta', { valueAsNumber: true })}
-                  placeholder="Ej: -5 (reducir) o +3 (aumentar)"
+                  placeholder="Ej: -0.5 (reducir) o +3 (aumentar)"
                 />
                 {errors.qty_delta && (
                   <p className="mt-1 text-sm text-destructive">{errors.qty_delta.message}</p>
@@ -302,4 +303,3 @@ export default function StockAdjustModal({
     </Dialog>
   )
 }
-

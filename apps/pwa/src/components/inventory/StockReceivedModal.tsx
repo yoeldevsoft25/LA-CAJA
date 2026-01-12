@@ -35,6 +35,8 @@ interface ProductItem {
   id: string
   product_id: string
   product_name: string
+  is_weight_product?: boolean
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null
   qty: number
   unit_cost_usd: number
   unit_cost_bs: number
@@ -143,12 +145,16 @@ export default function StockReceivedModal({
       // Convertir a número si viene como string (PostgreSQL devuelve NUMERIC como string)
       const defaultCostUsd = fullProduct?.cost_usd ? Number(fullProduct.cost_usd) : 0
       const defaultCostBs = fullProduct?.cost_bs ? Number(fullProduct.cost_bs) : 0
+      const isWeightProduct = !!fullProduct?.is_weight_product
+      const weightUnit = fullProduct?.weight_unit ?? null
 
       return [
         {
           id: `item-${Date.now()}`,
           product_id: product.product_id,
           product_name: product.product_name,
+          is_weight_product: isWeightProduct,
+          weight_unit: weightUnit,
           qty: 1,
           unit_cost_usd: defaultCostUsd,
           unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 100) / 100,
@@ -189,6 +195,8 @@ export default function StockReceivedModal({
       id: `item-${Date.now()}-${Math.random()}`,
       product_id: product.id,
       product_name: product.name,
+      is_weight_product: !!product.is_weight_product,
+      weight_unit: product.weight_unit ?? null,
       qty: 1,
       unit_cost_usd: defaultCostUsd,
       unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 100) / 100,
@@ -382,15 +390,29 @@ export default function StockReceivedModal({
                         {/* Cantidad */}
                         <div>
                           <Label className="text-xs mb-1.5 block">
-                            Cantidad <span className="text-destructive">*</span>
+                            {item.is_weight_product && item.weight_unit
+                              ? `Cantidad (${item.weight_unit})`
+                              : 'Cantidad'}{' '}
+                            <span className="text-destructive">*</span>
                           </Label>
                           <Input
                             type="number"
-                            step="1"
-                            min="1"
+                            step={item.is_weight_product ? '0.001' : '1'}
+                            min={item.is_weight_product ? '0.001' : '1'}
+                            inputMode="decimal"
                             value={item.qty}
                             onChange={(e) =>
-                              updateProductItem(item.id, 'qty', parseInt(e.target.value) || 1)
+                              (() => {
+                                const parsed = parseFloat(e.target.value)
+                                if (Number.isNaN(parsed)) {
+                                  updateProductItem(item.id, 'qty', 0)
+                                  return
+                                }
+                                const normalized = item.is_weight_product
+                                  ? Math.round(parsed * 1000) / 1000
+                                  : Math.trunc(parsed)
+                                updateProductItem(item.id, 'qty', normalized)
+                              })()
                             }
                           />
                         </div>

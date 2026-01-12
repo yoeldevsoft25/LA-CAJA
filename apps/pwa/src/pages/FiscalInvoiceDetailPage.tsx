@@ -109,7 +109,7 @@ export default function FiscalInvoiceDetailPage() {
             La factura fiscal solicitada no existe o fue eliminada.
           </AlertDescription>
         </Alert>
-        <Button onClick={() => navigate('/fiscal-invoices')} className="mt-4">
+        <Button onClick={() => navigate('/app/fiscal-invoices')} className="mt-4">
           Volver a Facturas
         </Button>
       </div>
@@ -121,7 +121,7 @@ export default function FiscalInvoiceDetailPage() {
       {/* Header - Oculto en impresión */}
       <div className="mb-6 flex items-center justify-between no-print">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/fiscal-invoices')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/app/fiscal-invoices')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -369,4 +369,3 @@ export default function FiscalInvoiceDetailPage() {
     </div>
   )
 }
-
