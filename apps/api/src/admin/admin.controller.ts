@@ -287,16 +287,117 @@ export class AdminController {
       throw new NotFoundException('Store no encontrada');
     }
 
-    // Primero eliminar todos los miembros de la tienda
-    await this.memberRepo.delete({ store_id: storeId });
+    // Usar una transacción para eliminar todo de forma segura
+    const queryRunner = this.storeRepo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    // Eliminar la tienda (las demás tablas tienen ON DELETE CASCADE)
-    await this.storeRepo.delete({ id: storeId });
+    try {
+      // Eliminar en orden inverso de dependencias
+      // Tablas que dependen de store_id (orden basado en foreign keys)
+      const tablesToClear = [
+        // Offline sync events
+        'sync_events',
+        // Fiscal
+        'fiscal_invoices',
+        'fiscal_configs',
+        // ML y analytics
+        'demand_predictions',
+        'anomaly_detections',
+        'realtime_events',
+        'push_subscriptions',
+        // Compras y proveedores
+        'purchase_order_items',
+        'purchase_orders',
+        'suppliers',
+        // Transferencias y almacenes
+        'transfer_items',
+        'transfers',
+        'warehouse_stock',
+        'warehouses',
+        // Contabilidad
+        'accounting_entries',
+        'accounting_accounts',
+        // Promociones y listas de precios
+        'promotion_rules',
+        'promotions',
+        'price_list_products',
+        'price_lists',
+        // Mesas y órdenes
+        'order_items',
+        'orders',
+        'tables',
+        // Periféricos
+        'peripherals',
+        // Series de factura
+        'invoice_series',
+        // Productos y variantes
+        'product_serials',
+        'product_lots',
+        'product_variant_prices',
+        'product_variants',
+        // Fast checkout
+        'fast_checkout_configs',
+        // Descuentos
+        'discount_authorizations',
+        'discounts',
+        // Pagos
+        'payment_methods',
+        // Turnos
+        'cash_cuts',
+        'shifts',
+        // Caja
+        'cash_movements',
+        'cash_sessions',
+        // Deudas y clientes
+        'debt_payments',
+        'debts',
+        'customers',
+        // Ventas
+        'sale_payments',
+        'sale_items',
+        'sales',
+        // Inventario
+        'inventory_movements',
+        'inventory',
+        // Productos
+        'products',
+        // Eventos
+        'events',
+        // Refresh tokens
+        'refresh_tokens',
+        // Miembros (ya tiene CASCADE pero lo hacemos explícito)
+        'store_members',
+      ];
 
-    return {
-      ok: true,
-      message: `Tienda "${store.name}" eliminada exitosamente`,
-      deleted_store_id: storeId,
-    };
+      for (const table of tablesToClear) {
+        try {
+          await queryRunner.query(
+            `DELETE FROM "${table}" WHERE store_id = $1`,
+            [storeId],
+          );
+        } catch {
+          // Ignorar si la tabla no existe o no tiene store_id
+        }
+      }
+
+      // Finalmente eliminar la tienda
+      await queryRunner.query(`DELETE FROM stores WHERE id = $1`, [storeId]);
+
+      await queryRunner.commitTransaction();
+
+      return {
+        ok: true,
+        message: `Tienda "${store.name}" y todos sus datos eliminados exitosamente`,
+        deleted_store_id: storeId,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(
+        `Error al eliminar tienda: ${error.message || 'Error desconocido'}`,
+      );
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
