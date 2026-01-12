@@ -7,7 +7,7 @@ import { SaleItem } from '../database/entities/sale-item.entity';
 import { Product } from '../database/entities/product.entity';
 import { Debt } from '../database/entities/debt.entity';
 import { DebtPayment } from '../database/entities/debt-payment.entity';
-import { InventoryMovement } from '../database/entities/inventory-movement.entity';
+import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { PurchaseOrder } from '../database/entities/purchase-order.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { Shift } from '../database/entities/shift.entity';
@@ -22,7 +22,7 @@ import { ReportsModule } from '../reports/reports.module';
       Product,
       Debt,
       DebtPayment,
-      InventoryMovement,
+      WarehouseStock,
       PurchaseOrder,
       FiscalInvoice,
       Shift,

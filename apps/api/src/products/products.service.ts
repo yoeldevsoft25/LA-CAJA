@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, In } from 'typeorm';
+import { Repository, ILike, In, EntityManager } from 'typeorm';
 import { Product } from '../database/entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -61,6 +61,64 @@ export class ProductsService {
   ): number {
     return (
       value * (this.weightUnitToKg[toUnit] / this.weightUnitToKg[fromUnit])
+    );
+  }
+
+  private async applyWeightUnitConversion(
+    manager: EntityManager,
+    storeId: string,
+    productId: string,
+    fromUnit: 'kg' | 'g' | 'lb' | 'oz',
+    toUnit: 'kg' | 'g' | 'lb' | 'oz',
+  ): Promise<void> {
+    const quantityFactor = this.convertWeightValue(1, fromUnit, toUnit);
+    const priceFactor = this.convertWeightPrice(1, fromUnit, toUnit);
+
+    if (!Number.isFinite(quantityFactor) || !Number.isFinite(priceFactor)) {
+      throw new BadRequestException(
+        `Conversión de unidad inválida (${fromUnit} -> ${toUnit})`,
+      );
+    }
+
+    if (quantityFactor === 1 && priceFactor === 1) {
+      return;
+    }
+
+    await manager.query(
+      `UPDATE warehouse_stock
+       SET stock = ROUND(stock * $1, 3),
+           reserved = ROUND(reserved * $1, 3),
+           updated_at = NOW()
+       WHERE product_id = $2`,
+      [quantityFactor, productId],
+    );
+
+    await manager.query(
+      `UPDATE inventory_movements
+       SET qty_delta = ROUND(qty_delta * $1, 3),
+           unit_cost_bs = ROUND(unit_cost_bs * $2, 4),
+           unit_cost_usd = ROUND(unit_cost_usd * $2, 4)
+       WHERE product_id = $3 AND store_id = $4`,
+      [quantityFactor, priceFactor, productId, storeId],
+    );
+
+    await manager.query(
+      `UPDATE product_lots
+       SET initial_quantity = ROUND(initial_quantity * $1, 3),
+           remaining_quantity = ROUND(remaining_quantity * $1, 3),
+           unit_cost_bs = ROUND(unit_cost_bs * $2, 4),
+           unit_cost_usd = ROUND(unit_cost_usd * $2, 4),
+           updated_at = NOW()
+       WHERE product_id = $3`,
+      [quantityFactor, priceFactor, productId],
+    );
+
+    await manager.query(
+      `UPDATE lot_movements lm
+       SET qty_delta = ROUND(lm.qty_delta * $1, 3)
+       FROM product_lots pl
+       WHERE pl.id = lm.lot_id AND pl.product_id = $2`,
+      [quantityFactor, productId],
     );
   }
 
@@ -177,8 +235,6 @@ export class ProductsService {
     productId: string,
     dto: UpdateProductDto,
   ): Promise<Product> {
-    const product = await this.findOne(storeId, productId);
-
     // Obtener tasa BCV una sola vez si es necesaria
     let exchangeRate: number | null = null;
     if (
@@ -191,142 +247,179 @@ export class ProductsService {
       this.logger.log(`Usando tasa BCV para actualización: ${exchangeRate}`);
     }
 
-    // Actualizar campos básicos
-    if (dto.name !== undefined) product.name = dto.name;
-    if (dto.category !== undefined) product.category = dto.category ?? null;
-    if (dto.sku !== undefined) product.sku = dto.sku ?? null;
-    if (dto.barcode !== undefined) product.barcode = dto.barcode ?? null;
-    if (dto.low_stock_threshold !== undefined)
-      product.low_stock_threshold = dto.low_stock_threshold;
-    if (dto.is_active !== undefined) product.is_active = dto.is_active;
-    if (dto.is_weight_product !== undefined)
-      product.is_weight_product = dto.is_weight_product;
+    return this.productRepository.manager.transaction(async (manager) => {
+      const productRepo = manager.getRepository(Product);
+      const product = await productRepo.findOne({
+        where: { id: productId, store_id: storeId },
+      });
 
-    // Si se actualiza el precio USD, recalcular el precio Bs usando la tasa BCV
-    // SIEMPRE recalcular, ignorando cualquier price_bs que venga en el DTO
-    if (dto.price_usd !== undefined && exchangeRate !== null) {
-      product.price_usd = this.roundToTwoDecimals(dto.price_usd);
-      product.price_bs = this.roundToTwoDecimals(dto.price_usd * exchangeRate);
-      this.logger.log(
-        `Actualizando precio: price_usd=${product.price_usd} -> price_bs=${product.price_bs.toFixed(2)} (tasa=${exchangeRate})`,
-      );
-    }
+      if (!product) {
+        throw new NotFoundException('Producto no encontrado');
+      }
 
-    // Si se actualiza el costo USD, recalcular el costo Bs usando la tasa BCV
-    // SIEMPRE recalcular, ignorando cualquier cost_bs que venga en el DTO
-    if (dto.cost_usd !== undefined && exchangeRate !== null) {
-      product.cost_usd = this.roundToTwoDecimals(dto.cost_usd);
-      product.cost_bs = this.roundToTwoDecimals(dto.cost_usd * exchangeRate);
-      this.logger.log(
-        `Actualizando costo: cost_usd=${product.cost_usd} -> cost_bs=${product.cost_bs.toFixed(2)} (tasa=${exchangeRate})`,
-      );
-    }
+      let unitChanged = false;
+      let previousUnit: 'kg' | 'g' | 'lb' | 'oz' | null = null;
+      let currentUnit: 'kg' | 'g' | 'lb' | 'oz' | null = null;
 
-    const isWeightProduct = product.is_weight_product;
-    if (!isWeightProduct) {
-      product.weight_unit = null;
-      product.price_per_weight_bs = null;
-      product.price_per_weight_usd = null;
-      product.min_weight = null;
-      product.max_weight = null;
-      product.scale_plu = null;
-      product.scale_department = null;
-    } else {
-      const previousUnit = (product.weight_unit || 'kg') as
-        | 'kg'
-        | 'g'
-        | 'lb'
-        | 'oz';
-      if (dto.weight_unit !== undefined) product.weight_unit = dto.weight_unit;
-      const currentUnit = (product.weight_unit || 'kg') as
-        | 'kg'
-        | 'g'
-        | 'lb'
-        | 'oz';
-      const unitChanged = previousUnit !== currentUnit;
+      // Actualizar campos básicos
+      if (dto.name !== undefined) product.name = dto.name;
+      if (dto.category !== undefined) product.category = dto.category ?? null;
+      if (dto.sku !== undefined) product.sku = dto.sku ?? null;
+      if (dto.barcode !== undefined) product.barcode = dto.barcode ?? null;
+      if (dto.low_stock_threshold !== undefined)
+        product.low_stock_threshold = dto.low_stock_threshold;
+      if (dto.is_active !== undefined) product.is_active = dto.is_active;
+      if (dto.is_weight_product !== undefined)
+        product.is_weight_product = dto.is_weight_product;
 
-      if (unitChanged) {
-        if (dto.price_per_weight_usd == null && dto.price_per_weight_bs == null) {
-          if (product.price_per_weight_usd != null) {
-            product.price_per_weight_usd = this.roundToDecimals(
-              this.convertWeightPrice(
-                product.price_per_weight_usd,
-                previousUnit,
-                currentUnit,
-              ),
-              4,
-            );
-          }
+      // Si se actualiza el precio USD, recalcular el precio Bs usando la tasa BCV
+      // SIEMPRE recalcular, ignorando cualquier price_bs que venga en el DTO
+      if (dto.price_usd !== undefined && exchangeRate !== null) {
+        product.price_usd = this.roundToTwoDecimals(dto.price_usd);
+        product.price_bs = this.roundToTwoDecimals(
+          dto.price_usd * exchangeRate,
+        );
+        this.logger.log(
+          `Actualizando precio: price_usd=${product.price_usd} -> price_bs=${product.price_bs.toFixed(2)} (tasa=${exchangeRate})`,
+        );
+      }
 
+      // Si se actualiza el costo USD, recalcular el costo Bs usando la tasa BCV
+      // SIEMPRE recalcular, ignorando cualquier cost_bs que venga en el DTO
+      if (dto.cost_usd !== undefined && exchangeRate !== null) {
+        product.cost_usd = this.roundToTwoDecimals(dto.cost_usd);
+        product.cost_bs = this.roundToTwoDecimals(
+          dto.cost_usd * exchangeRate,
+        );
+        this.logger.log(
+          `Actualizando costo: cost_usd=${product.cost_usd} -> cost_bs=${product.cost_bs.toFixed(2)} (tasa=${exchangeRate})`,
+        );
+      }
+
+      const isWeightProduct = product.is_weight_product;
+      if (!isWeightProduct) {
+        product.weight_unit = null;
+        product.price_per_weight_bs = null;
+        product.price_per_weight_usd = null;
+        product.min_weight = null;
+        product.max_weight = null;
+        product.scale_plu = null;
+        product.scale_department = null;
+      } else {
+        previousUnit = (product.weight_unit || 'kg') as
+          | 'kg'
+          | 'g'
+          | 'lb'
+          | 'oz';
+        if (dto.weight_unit !== undefined) product.weight_unit = dto.weight_unit;
+        currentUnit = (product.weight_unit || 'kg') as
+          | 'kg'
+          | 'g'
+          | 'lb'
+          | 'oz';
+        unitChanged = previousUnit !== currentUnit;
+
+        if (unitChanged) {
           if (
-            product.price_per_weight_bs != null &&
-            (product.price_per_weight_usd == null || exchangeRate === null)
+            dto.price_per_weight_usd == null &&
+            dto.price_per_weight_bs == null
           ) {
-            product.price_per_weight_bs = this.roundToDecimals(
-              this.convertWeightPrice(
-                product.price_per_weight_bs,
+            if (product.price_per_weight_usd != null) {
+              product.price_per_weight_usd = this.roundToDecimals(
+                this.convertWeightPrice(
+                  product.price_per_weight_usd,
+                  previousUnit,
+                  currentUnit,
+                ),
+                4,
+              );
+            }
+
+            if (
+              product.price_per_weight_bs != null &&
+              (product.price_per_weight_usd == null || exchangeRate === null)
+            ) {
+              product.price_per_weight_bs = this.roundToDecimals(
+                this.convertWeightPrice(
+                  product.price_per_weight_bs,
+                  previousUnit,
+                  currentUnit,
+                ),
+                4,
+              );
+            }
+
+            if (product.price_per_weight_usd != null && exchangeRate !== null) {
+              product.price_per_weight_bs = this.roundToDecimals(
+                product.price_per_weight_usd * exchangeRate,
+                4,
+              );
+            }
+          }
+
+          if (dto.min_weight === undefined && product.min_weight != null) {
+            product.min_weight = this.roundToDecimals(
+              this.convertWeightValue(
+                product.min_weight,
                 previousUnit,
                 currentUnit,
               ),
-              4,
+              3,
             );
           }
 
-          if (product.price_per_weight_usd != null && exchangeRate !== null) {
-            product.price_per_weight_bs = this.roundToDecimals(
-              product.price_per_weight_usd * exchangeRate,
-              4,
+          if (dto.max_weight === undefined && product.max_weight != null) {
+            product.max_weight = this.roundToDecimals(
+              this.convertWeightValue(
+                product.max_weight,
+                previousUnit,
+                currentUnit,
+              ),
+              3,
             );
           }
         }
 
-        if (dto.min_weight === undefined && product.min_weight != null) {
-          product.min_weight = this.roundToDecimals(
-            this.convertWeightValue(
-              product.min_weight,
-              previousUnit,
-              currentUnit,
-            ),
-            3,
+        if (dto.min_weight !== undefined) product.min_weight = dto.min_weight;
+        if (dto.max_weight !== undefined) product.max_weight = dto.max_weight;
+        if (dto.scale_plu !== undefined) product.scale_plu = dto.scale_plu;
+        if (dto.scale_department !== undefined)
+          product.scale_department = dto.scale_department;
+
+        if (dto.price_per_weight_usd != null && exchangeRate !== null) {
+          product.price_per_weight_usd = this.roundToDecimals(
+            dto.price_per_weight_usd,
+            4,
           );
-        }
-
-        if (dto.max_weight === undefined && product.max_weight != null) {
-          product.max_weight = this.roundToDecimals(
-            this.convertWeightValue(
-              product.max_weight,
-              previousUnit,
-              currentUnit,
-            ),
-            3,
+          product.price_per_weight_bs = this.roundToDecimals(
+            dto.price_per_weight_usd * exchangeRate,
+            4,
+          );
+        } else if (dto.price_per_weight_bs != null) {
+          product.price_per_weight_bs = this.roundToDecimals(
+            dto.price_per_weight_bs,
+            4,
           );
         }
       }
 
-      if (dto.min_weight !== undefined) product.min_weight = dto.min_weight;
-      if (dto.max_weight !== undefined) product.max_weight = dto.max_weight;
-      if (dto.scale_plu !== undefined) product.scale_plu = dto.scale_plu;
-      if (dto.scale_department !== undefined)
-        product.scale_department = dto.scale_department;
+      const savedProduct = await productRepo.save(product);
 
-      if (dto.price_per_weight_usd != null && exchangeRate !== null) {
-        product.price_per_weight_usd = this.roundToDecimals(
-          dto.price_per_weight_usd,
-          4,
+      if (unitChanged && product.is_weight_product && previousUnit && currentUnit) {
+        this.logger.log(
+          `Convirtiendo inventario de ${previousUnit} a ${currentUnit} para producto ${product.id}`,
         );
-        product.price_per_weight_bs = this.roundToDecimals(
-          dto.price_per_weight_usd * exchangeRate,
-          4,
-        );
-      } else if (dto.price_per_weight_bs != null) {
-        product.price_per_weight_bs = this.roundToDecimals(
-          dto.price_per_weight_bs,
-          4,
+        await this.applyWeightUnitConversion(
+          manager,
+          storeId,
+          product.id,
+          previousUnit,
+          currentUnit,
         );
       }
-    }
 
-    return this.productRepository.save(product);
+      return savedProduct;
+    });
   }
 
   async changePrice(

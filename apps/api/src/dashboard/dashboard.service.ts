@@ -6,7 +6,7 @@ import { SaleItem } from '../database/entities/sale-item.entity';
 import { Product } from '../database/entities/product.entity';
 import { Debt } from '../database/entities/debt.entity';
 import { DebtPayment } from '../database/entities/debt-payment.entity';
-import { InventoryMovement } from '../database/entities/inventory-movement.entity';
+import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { PurchaseOrder } from '../database/entities/purchase-order.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { Shift } from '../database/entities/shift.entity';
@@ -32,8 +32,8 @@ export class DashboardService {
     private debtRepository: Repository<Debt>,
     @InjectRepository(DebtPayment)
     private debtPaymentRepository: Repository<DebtPayment>,
-    @InjectRepository(InventoryMovement)
-    private inventoryMovementRepository: Repository<InventoryMovement>,
+    @InjectRepository(WarehouseStock)
+    private warehouseStockRepository: Repository<WarehouseStock>,
     @InjectRepository(PurchaseOrder)
     private purchaseOrderRepository: Repository<PurchaseOrder>,
     @InjectRepository(FiscalInvoice)
@@ -202,28 +202,53 @@ export class DashboardService {
       where: { store_id: storeId, is_active: true },
     });
 
-    // Obtener productos con stock bajo usando una subconsulta
+    const warehouseStockSubquery = this.warehouseStockRepository
+      .createQueryBuilder('stock')
+      .select('stock.product_id', 'product_id')
+      .addSelect('SUM(stock.stock)', 'current_stock')
+      .innerJoin(
+        'warehouses',
+        'warehouse',
+        'warehouse.id = stock.warehouse_id AND warehouse.store_id = :storeId',
+        { storeId },
+      )
+      .groupBy('stock.product_id');
+
+    const lotStockSubquery = this.productLotRepository
+      .createQueryBuilder('lot')
+      .select('lot.product_id', 'product_id')
+      .addSelect('SUM(lot.remaining_quantity)', 'lot_stock')
+      .groupBy('lot.product_id');
+
+    const currentStockExpression =
+      'CASE WHEN lot_stock.lot_stock IS NOT NULL THEN lot_stock.lot_stock ELSE COALESCE(stock.current_stock, 0) END';
+
+    // Obtener productos con stock bajo usando stock de bodega o lotes
     let lowStockCount = 0;
     try {
       const lowStockProducts = await this.productRepository
         .createQueryBuilder('product')
         .leftJoin(
-          'inventory_movements',
-          'movement',
-          'movement.product_id = product.id AND movement.store_id = :storeId AND movement.approved = true',
-          { storeId },
+          `(${warehouseStockSubquery.getQuery()})`,
+          'stock',
+          'stock.product_id = product.id',
         )
+        .leftJoin(
+          `(${lotStockSubquery.getQuery()})`,
+          'lot_stock',
+          'lot_stock.product_id = product.id',
+        )
+        .setParameters({
+          ...warehouseStockSubquery.getParameters(),
+          ...lotStockSubquery.getParameters(),
+        })
         .where('product.store_id = :storeId', { storeId })
         .andWhere('product.is_active = true')
         .andWhere('product.low_stock_threshold > 0')
         .select('product.id', 'id')
         .addSelect('product.low_stock_threshold', 'low_stock_threshold')
-        .addSelect('COALESCE(SUM(movement.qty_delta), 0)', 'current_stock')
-        .groupBy('product.id')
-        .addGroupBy('product.low_stock_threshold')
-        .having(
-          'COALESCE(SUM(movement.qty_delta), 0) <= product.low_stock_threshold',
-        )
+        .addSelect(currentStockExpression, 'current_stock')
+        .andWhere(`${currentStockExpression} <= product.low_stock_threshold`)
         .getRawMany();
 
       lowStockCount = lowStockProducts.length;
@@ -262,21 +287,18 @@ export class DashboardService {
           'lot.product_id = product.id',
         )
         .leftJoin(
-          'inventory_movements',
-          'movement',
-          'movement.product_id = product.id AND movement.store_id = :storeId AND movement.approved = true',
-          { storeId },
+          `(${warehouseStockSubquery.getQuery()})`,
+          'stock',
+          'stock.product_id = product.id',
         )
+        .setParameters(warehouseStockSubquery.getParameters())
         .where('product.store_id = :storeId', { storeId })
         .andWhere('product.is_active = true')
         .andWhere('lot.id IS NULL')
         .select('product.id', 'id')
         .addSelect('product.cost_bs', 'cost_bs')
         .addSelect('product.cost_usd', 'cost_usd')
-        .addSelect('COALESCE(SUM(movement.qty_delta), 0)', 'stock')
-        .groupBy('product.id')
-        .addGroupBy('product.cost_bs')
-        .addGroupBy('product.cost_usd')
+        .addSelect('COALESCE(stock.current_stock, 0)', 'stock')
         .getRawMany();
 
       for (const product of productsWithStock) {
