@@ -358,6 +358,31 @@ export default function CheckoutModal({
     : ''
   
   // Para USD con cambio en Bs
+  const getWeightPriceDecimals = (unit?: string | null) => {
+    return unit === 'g' || unit === 'oz' ? 4 : 2
+  }
+
+  const formatWeightValue = (value: number, unit?: string | null) => {
+    const safeUnit = unit || 'kg'
+    const decimals = safeUnit === 'g' || safeUnit === 'oz' ? 0 : 3
+    const safeValue = Number.isFinite(value) ? value : 0
+    const fixed = safeValue.toFixed(decimals)
+    const trimmed = fixed.replace(/\.?0+$/, '')
+    return `${trimmed} ${safeUnit}`
+  }
+
+  const totalUnits = items.reduce(
+    (sum, item) => sum + (item.is_weight_product ? 0 : item.qty),
+    0
+  )
+  const weightLineItems = items.filter((item) => item.is_weight_product).length
+  const totalItemsLabel =
+    weightLineItems > 0
+      ? totalUnits > 0
+        ? `${totalUnits} unidades + ${weightLineItems} por peso`
+        : `${weightLineItems} por peso`
+      : `${totalUnits} unidades`
+
   const changeBsFromUsd = roundedChangeResultUsd.changeBs
   const changeBreakdownFormattedFromUsd = roundedChangeResultUsd.breakdownFormatted
   
@@ -486,7 +511,10 @@ export default function CheckoutModal({
     // Validación de modo caja rápida
     if (fastCheckoutConfig?.enabled) {
       // Validar límite de items
-      const totalItems = items.reduce((sum, item) => sum + item.qty, 0)
+      const totalItems = items.reduce(
+        (sum, item) => sum + (item.is_weight_product ? 1 : item.qty),
+        0
+      )
       if (totalItems > fastCheckoutConfig.max_items) {
         setError(
           `El modo caja rápida permite máximo ${fastCheckoutConfig.max_items} items. Total actual: ${totalItems} items`
@@ -697,11 +725,26 @@ export default function CheckoutModal({
                               {item.product_name}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                        ${Number(item.unit_price_usd).toFixed(2)} c/u
-                      </p>
+                              {item.is_weight_product ? (
+                                <>
+                                  ${Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
+                                    getWeightPriceDecimals(item.weight_unit)
+                                  )} / {item.weight_unit || 'kg'}
+                                </>
+                              ) : (
+                                <>${Number(item.unit_price_usd).toFixed(2)} c/u</>
+                              )}
+                            </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                            <p className="font-semibold text-foreground">x{item.qty}</p>
+                            <p className="font-semibold text-foreground">
+                              {item.is_weight_product
+                                ? formatWeightValue(
+                                    Number(item.weight_value ?? item.qty),
+                                    item.weight_unit
+                                  )
+                                : `x${item.qty}`}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                         ${(item.qty * Number(item.unit_price_usd)).toFixed(2)}
                       </p>
@@ -716,7 +759,7 @@ export default function CheckoutModal({
                 <div className="flex justify-between pt-2 border-t border-border">
                   <span className="text-muted-foreground font-medium">Total Items:</span>
                   <span className="font-semibold text-foreground">
-                  {items.reduce((sum, item) => sum + item.qty, 0)} unidades
+                    {totalItemsLabel}
                 </span>
               </div>
                 <div className="border-t border-border pt-2 mt-2">

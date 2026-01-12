@@ -225,7 +225,7 @@ export default function AnomaliesList({
                             {severity.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>{anomaly.score.toFixed(2)}</TableCell>
+                        <TableCell>{Number(anomaly.score).toFixed(2)}</TableCell>
                         <TableCell className="max-w-xs truncate">
                           {anomaly.description}
                         </TableCell>

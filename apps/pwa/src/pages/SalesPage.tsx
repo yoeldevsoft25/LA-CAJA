@@ -334,7 +334,19 @@ export default function SalesPage() {
                   <TableBody>
                   {sales.map((sale: Sale) => {
                     const itemCount = sale.items.length
-                    const totalItems = sale.items.reduce((sum: number, item: any) => sum + item.qty, 0)
+                    const totalUnits = sale.items.reduce(
+                      (sum: number, item: any) => sum + (item.is_weight_product ? 0 : item.qty),
+                      0
+                    )
+                    const weightLineItems = sale.items.filter(
+                      (item: any) => item.is_weight_product
+                    ).length
+                    const totalItemsLabel =
+                      weightLineItems > 0
+                        ? totalUnits > 0
+                          ? `${totalUnits} unidades + ${weightLineItems} por peso`
+                          : `${weightLineItems} por peso`
+                        : `${totalUnits} unidades`
                     
                     // Determinar estado de deuda para FIAO
                     const isFIAO = sale.payment.method === 'FIAO'
@@ -383,7 +395,7 @@ export default function SalesPage() {
                               {itemCount} producto{itemCount !== 1 ? 's' : ''}
                             </p>
                               <p className="text-xs text-muted-foreground">
-                              {totalItems} unidad{totalItems !== 1 ? 'es' : ''} total
+                              {totalItemsLabel}
                             </p>
                           </div>
                           </TableCell>
