@@ -295,9 +295,9 @@ export default function CheckoutModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md lg:max-w-4xl xl:max-w-5xl h-[90vh] lg:h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex items-center justify-between z-10">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">Procesar Venta</h2>
           <button
             onClick={onClose}
@@ -308,14 +308,17 @@ export default function CheckoutModal({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+        {/* Content - Two columns on desktop */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 lg:p-6">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 sm:space-y-6 lg:space-y-0">
+            {/* LEFT COLUMN - Resumen + Método de pago + Efectivo */}
+            <div className="space-y-4 sm:space-y-6">
           {/* Resumen */}
           <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
             <h3 className="font-semibold text-gray-900 mb-3">Resumen de la venta</h3>
             <div className="space-y-3 text-sm">
               {/* Lista de productos */}
-              <div className="space-y-2 h-24 sm:h-28 overflow-y-auto">
+              <div className="space-y-2 h-24 sm:h-28 lg:h-40 lg:max-h-48 overflow-y-auto">
                 {items.map((item) => (
                   <div key={item.id} className="flex justify-between items-start pb-2 border-b border-gray-200 last:border-0">
                     <div className="flex-1 min-w-0 mr-2">
@@ -367,11 +370,11 @@ export default function CheckoutModal({
           </div>
 
           {/* Método de pago */}
-          <div>
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Método de pago
             </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {methods.map((method) => {
                 const Icon = method.icon
                 const isSelected = selectedMethod === method.id
@@ -581,9 +584,12 @@ export default function CheckoutModal({
               )}
             </div>
           )}
+            </div>
 
+            {/* RIGHT COLUMN - Tasa + Cliente */}
+            <div className="space-y-4 sm:space-y-6">
           {/* Tasa de cambio */}
-          <div>
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Tasa de Cambio (Bs/USD)
             </label>
@@ -624,7 +630,7 @@ export default function CheckoutModal({
           </div>
 
           {/* Información del Cliente (Opcional para todas las ventas) */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-semibold text-gray-700">
                 Información del Cliente (Opcional)
@@ -797,11 +803,12 @@ export default function CheckoutModal({
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
-
+            </div>
+          </div>
         </div>
 
-        <div className="flex-shrink-0 border-t border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="flex-shrink-0 border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:max-w-md lg:ml-auto">
             <button
               onClick={onClose}
               disabled={isLoading}
