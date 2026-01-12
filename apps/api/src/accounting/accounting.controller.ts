@@ -95,8 +95,13 @@ export class AccountingController {
   async initializeChartOfAccounts(@Request() req: any) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
-    await this.chartOfAccountsService.initializeDefaultChartOfAccounts(storeId, userId);
-    return { message: 'Plan de cuentas inicializado exitosamente' };
+    const { accounts_created, mappings_created } =
+      await this.chartOfAccountsService.initializeDefaultChartOfAccounts(storeId, userId);
+    return {
+      message: 'Plan de cuentas inicializado exitosamente',
+      accounts_created,
+      mappings_created,
+    };
   }
 
   /**
@@ -147,10 +152,16 @@ export class AccountingController {
   @Get('mappings')
   async getAccountMappings(@Request() req: any) {
     const storeId = req.user.store_id;
-    return this.mappingRepository.find({
+    const mappings = await this.mappingRepository.find({
       where: { store_id: storeId, is_active: true },
       order: { transaction_type: 'ASC' },
+      relations: ['account'],
     });
+
+    return mappings.map(({ account, ...mapping }) => ({
+      ...mapping,
+      account_name: account?.account_name || null,
+    }));
   }
 
   @Post('mappings')
@@ -165,8 +176,8 @@ export class AccountingController {
       id: randomUUID(),
       store_id: storeId,
       transaction_type: dto.transaction_type,
-      account_id: dto.account_id,
-      account_code: dto.account_code,
+      account_id: account.id,
+      account_code: account.account_code,
       is_default: dto.is_default ?? false,
       conditions: dto.conditions || null,
       is_active: dto.is_active ?? true,
@@ -192,6 +203,12 @@ export class AccountingController {
     }
 
     Object.assign(mapping, dto);
+
+    if (dto.account_id) {
+      const account = await this.chartOfAccountsService.getAccount(storeId, dto.account_id);
+      mapping.account_id = account.id;
+      mapping.account_code = account.account_code;
+    }
     return this.mappingRepository.save(mapping);
   }
 
@@ -282,4 +299,3 @@ export class AccountingController {
     );
   }
 }
-

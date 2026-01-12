@@ -15,11 +15,19 @@ import type { AccountMapping, MappingTransactionType } from '@/types/accounting.
 import { Edit, Trash2, Plus } from 'lucide-react'
 
 const transactionTypeLabels: Record<MappingTransactionType, string> = {
-  sale: 'Venta',
-  purchase: 'Compra',
-  fiscal_invoice: 'Factura Fiscal',
-  payment: 'Pago',
-  receipt: 'Recibo',
+  sale_revenue: 'Venta - Ingresos',
+  sale_cost: 'Venta - Costos',
+  sale_tax: 'Venta - Impuestos',
+  purchase_expense: 'Compra - Gastos',
+  purchase_tax: 'Compra - Impuestos',
+  inventory_asset: 'Inventario - Activo',
+  cash_asset: 'Caja/Banco - Activo',
+  accounts_receivable: 'Cuentas por Cobrar',
+  accounts_payable: 'Cuentas por Pagar',
+  expense: 'Gasto',
+  income: 'Ingreso',
+  transfer: 'Transferencia',
+  adjustment: 'Ajuste',
 }
 
 interface AccountMappingsListProps {
@@ -81,12 +89,14 @@ export default function AccountMappingsList({
               mappingsList.map((mapping) => (
                 <TableRow key={mapping.id}>
                   <TableCell className="font-medium">
-                    {transactionTypeLabels[mapping.transaction_type]}
+                    {transactionTypeLabels[mapping.transaction_type] || mapping.transaction_type}
                   </TableCell>
                   <TableCell>
                     <div>
                       <p className="font-mono font-semibold">{mapping.account_code}</p>
-                      <p className="text-sm text-muted-foreground">{mapping.account_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {mapping.account_name || mapping.account_code}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell>

@@ -15,8 +15,22 @@ import { MappingTransactionType } from '@/types/accounting.types'
 import toast from 'react-hot-toast'
 
 const mappingSchema = z.object({
-  transaction_type: z.enum(['sale', 'purchase', 'fiscal_invoice', 'payment', 'receipt']),
-  account_code: z.string().min(1, 'Cuenta requerida'),
+  transaction_type: z.enum([
+    'sale_revenue',
+    'sale_cost',
+    'sale_tax',
+    'purchase_expense',
+    'purchase_tax',
+    'inventory_asset',
+    'cash_asset',
+    'accounts_receivable',
+    'accounts_payable',
+    'expense',
+    'income',
+    'transfer',
+    'adjustment',
+  ]),
+  account_id: z.string().min(1, 'Cuenta requerida'),
   is_default: z.boolean(),
   conditions: z.string().optional(),
 })
@@ -31,11 +45,19 @@ interface MappingFormModalProps {
 }
 
 const transactionTypeLabels: Record<MappingTransactionType, string> = {
-  sale: 'Venta',
-  purchase: 'Compra',
-  fiscal_invoice: 'Factura Fiscal',
-  payment: 'Pago',
-  receipt: 'Recibo',
+  sale_revenue: 'Venta - Ingresos',
+  sale_cost: 'Venta - Costos',
+  sale_tax: 'Venta - Impuestos',
+  purchase_expense: 'Compra - Gastos',
+  purchase_tax: 'Compra - Impuestos',
+  inventory_asset: 'Inventario - Activo',
+  cash_asset: 'Caja/Banco - Activo',
+  accounts_receivable: 'Cuentas por Cobrar',
+  accounts_payable: 'Cuentas por Pagar',
+  expense: 'Gasto',
+  income: 'Ingreso',
+  transfer: 'Transferencia',
+  adjustment: 'Ajuste',
 }
 
 export default function MappingFormModal({
@@ -63,8 +85,8 @@ export default function MappingFormModal({
   } = useForm<MappingFormData>({
     resolver: zodResolver(mappingSchema),
     defaultValues: {
-      transaction_type: MappingTransactionType.SALE,
-      account_code: '',
+      transaction_type: MappingTransactionType.SALE_REVENUE,
+      account_id: '',
       is_default: false,
       conditions: '',
     },
@@ -74,14 +96,14 @@ export default function MappingFormModal({
     if (mapping) {
       reset({
         transaction_type: mapping.transaction_type as any,
-        account_code: mapping.account_code,
+        account_id: mapping.account_id,
         is_default: mapping.is_default,
         conditions: mapping.conditions ? JSON.stringify(mapping.conditions, null, 2) : '',
       })
     } else {
       reset({
-        transaction_type: 'sale',
-        account_code: '',
+        transaction_type: 'sale_revenue',
+        account_id: '',
         is_default: false,
         conditions: '',
       })
@@ -129,18 +151,30 @@ export default function MappingFormModal({
     }
 
     if (isEditing) {
+      const selectedAccount = accounts?.find((acc) => acc.id === data.account_id)
+      if (!selectedAccount) {
+        toast.error('Cuenta no encontrada')
+        return
+      }
       updateMutation.mutate({
         id: mapping!.id,
         data: {
-          account_code: data.account_code,
+          account_id: selectedAccount.id,
+          account_code: selectedAccount.account_code,
           is_default: data.is_default,
           conditions,
         },
       })
     } else {
+      const selectedAccount = accounts?.find((acc) => acc.id === data.account_id)
+      if (!selectedAccount) {
+        toast.error('Cuenta no encontrada')
+        return
+      }
       createMutation.mutate({
         transaction_type: data.transaction_type as MappingTransactionType,
-        account_code: data.account_code,
+        account_id: selectedAccount.id,
+        account_code: selectedAccount.account_code,
         is_default: data.is_default,
         conditions,
       })
@@ -192,25 +226,25 @@ export default function MappingFormModal({
 
               {/* Cuenta */}
               <div className="space-y-2">
-                <Label htmlFor="account_code">Cuenta *</Label>
+                <Label htmlFor="account_id">Cuenta *</Label>
                 <Select
-                  value={watch('account_code') || undefined}
-                  onValueChange={(value) => setValue('account_code', value)}
+                  value={watch('account_id') || undefined}
+                  onValueChange={(value) => setValue('account_id', value)}
                   disabled={isLoading}
                 >
-                  <SelectTrigger id="account_code">
+                  <SelectTrigger id="account_id">
                     <SelectValue placeholder="Seleccionar cuenta" />
                   </SelectTrigger>
                   <SelectContent>
                     {accounts?.map((account) => (
-                      <SelectItem key={account.id} value={account.code}>
-                        {account.code} - {account.name}
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.account_code} - {account.account_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.account_code && (
-                  <p className="text-sm text-destructive">{errors.account_code.message}</p>
+                {errors.account_id && (
+                  <p className="text-sm text-destructive">{errors.account_id.message}</p>
                 )}
               </div>
 

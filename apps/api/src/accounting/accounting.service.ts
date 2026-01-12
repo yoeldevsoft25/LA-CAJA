@@ -278,7 +278,7 @@ export class AccountingService {
           lines.push({
             account_id: receivableMapping.account_id,
             account_code: receivableMapping.account_code,
-            account_name: receivableMapping.account_code, // Usar código como nombre temporal
+            account_name: receivableMapping.account?.account_name || receivableMapping.account_code,
             debit_amount_bs: totalBs,
             credit_amount_bs: 0,
             debit_amount_usd: totalUsd,
@@ -292,7 +292,7 @@ export class AccountingService {
           lines.push({
             account_id: cashMapping.account_id,
             account_code: cashMapping.account_code,
-            account_name: cashMapping.account_code,
+            account_name: cashMapping.account?.account_name || cashMapping.account_code,
             debit_amount_bs: totalBs,
             credit_amount_bs: 0,
             debit_amount_usd: totalUsd,
@@ -306,7 +306,7 @@ export class AccountingService {
       lines.push({
         account_id: revenueMapping.account_id,
         account_code: revenueMapping.account_code,
-        account_name: revenueMapping.account_code,
+        account_name: revenueMapping.account?.account_name || revenueMapping.account_code,
         debit_amount_bs: 0,
         credit_amount_bs: totalBs,
         debit_amount_usd: 0,
@@ -319,7 +319,7 @@ export class AccountingService {
         lines.push({
           account_id: costMapping.account_id,
           account_code: costMapping.account_code,
-          account_name: costMapping.account_code,
+          account_name: costMapping.account?.account_name || costMapping.account_code,
           debit_amount_bs: costBs,
           credit_amount_bs: 0,
           debit_amount_usd: costUsd,
@@ -333,7 +333,7 @@ export class AccountingService {
           lines.push({
             account_id: inventoryMapping.account_id,
             account_code: inventoryMapping.account_code,
-            account_name: inventoryMapping.account_code,
+            account_name: inventoryMapping.account?.account_name || inventoryMapping.account_code,
             debit_amount_bs: 0,
             credit_amount_bs: costBs,
             debit_amount_usd: 0,
@@ -417,6 +417,7 @@ export class AccountingService {
           is_active: true,
           conditions: conditions,
         },
+        relations: ['account'],
       });
 
       if (specificMapping) {
@@ -432,6 +433,7 @@ export class AccountingService {
         is_default: true,
         is_active: true,
       },
+      relations: ['account'],
     });
   }
 
@@ -661,7 +663,7 @@ export class AccountingService {
       lines.push({
         account_id: payableMapping.account_id,
         account_code: payableMapping.account_code,
-        account_name: payableMapping.account_code,
+        account_name: payableMapping.account?.account_name || payableMapping.account_code,
         debit_amount_bs: 0,
         credit_amount_bs: totalBs,
         debit_amount_usd: 0,
@@ -675,7 +677,7 @@ export class AccountingService {
       lines.push({
         account_id: debitAccount.account_id,
         account_code: debitAccount.account_code,
-        account_name: debitAccount.account_code,
+        account_name: debitAccount.account?.account_name || debitAccount.account_code,
         debit_amount_bs: totalBs,
         credit_amount_bs: 0,
         debit_amount_usd: totalUsd,
@@ -796,7 +798,7 @@ export class AccountingService {
         lines.push({
           account_id: cashMapping.account_id,
           account_code: cashMapping.account_code,
-          account_name: cashMapping.account_code,
+          account_name: cashMapping.account?.account_name || cashMapping.account_code,
           debit_amount_bs: totalBs,
           credit_amount_bs: 0,
           debit_amount_usd: totalUsd,
@@ -807,7 +809,7 @@ export class AccountingService {
         lines.push({
           account_id: receivableMapping.account_id,
           account_code: receivableMapping.account_code,
-          account_name: receivableMapping.account_code,
+          account_name: receivableMapping.account?.account_name || receivableMapping.account_code,
           debit_amount_bs: totalBs,
           credit_amount_bs: 0,
           debit_amount_usd: totalUsd,
@@ -820,7 +822,7 @@ export class AccountingService {
       lines.push({
         account_id: revenueMapping.account_id,
         account_code: revenueMapping.account_code,
-        account_name: revenueMapping.account_code,
+        account_name: revenueMapping.account?.account_name || revenueMapping.account_code,
         debit_amount_bs: 0,
         credit_amount_bs: subtotalBs,
         debit_amount_usd: 0,
@@ -831,13 +833,13 @@ export class AccountingService {
       // Impuesto (si aplica)
       if (taxBs > 0 || taxUsd > 0) {
         if (taxMapping) {
-          lines.push({
-            account_id: taxMapping.account_id,
-            account_code: taxMapping.account_code,
-            account_name: taxMapping.account_code,
-            debit_amount_bs: 0,
-            credit_amount_bs: taxBs,
-            debit_amount_usd: 0,
+        lines.push({
+          account_id: taxMapping.account_id,
+          account_code: taxMapping.account_code,
+          account_name: taxMapping.account?.account_name || taxMapping.account_code,
+          debit_amount_bs: 0,
+          credit_amount_bs: taxBs,
+          debit_amount_usd: 0,
             credit_amount_usd: taxUsd,
             description: `Factura fiscal ${fiscalInvoice.invoice_number} - IVA`,
           });
@@ -1204,5 +1206,3 @@ export class AccountingService {
     };
   }
 }
-
-

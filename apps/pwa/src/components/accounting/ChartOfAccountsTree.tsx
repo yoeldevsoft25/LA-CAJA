@@ -61,7 +61,7 @@ export default function ChartOfAccountsTree({ onSelectAccount }: ChartOfAccounts
 
   const handleDelete = (account: ChartOfAccountTree, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (window.confirm(`¿Estás seguro de eliminar la cuenta ${account.code} - ${account.name}?`)) {
+    if (window.confirm(`¿Estás seguro de eliminar la cuenta ${account.account_code} - ${account.account_name}?`)) {
       deleteMutation.mutate(account.id)
     }
   }
@@ -98,12 +98,12 @@ export default function ChartOfAccountsTree({ onSelectAccount }: ChartOfAccounts
           )}
 
           <div className="flex-1 min-w-0 flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold">{account.code}</span>
-            <span className="flex-1 truncate">{account.name}</span>
+            <span className="font-mono text-sm font-semibold">{account.account_code}</span>
+            <span className="flex-1 truncate">{account.account_name}</span>
             <Badge className={cn('text-xs', accountTypeColors[account.account_type])}>
               {accountTypeLabels[account.account_type]}
             </Badge>
-            {account.status === 'inactive' && (
+            {!account.is_active && (
               <Badge variant="secondary" className="text-xs">
                 Inactiva
               </Badge>

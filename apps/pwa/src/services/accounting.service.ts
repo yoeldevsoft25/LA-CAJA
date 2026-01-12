@@ -72,8 +72,8 @@ export const chartOfAccountsService = {
   /**
    * Inicializa el plan básico de cuentas
    */
-  async initialize(): Promise<{ message: string; accounts_created: number }> {
-    const response = await api.post<{ message: string; accounts_created: number }>(
+  async initialize(): Promise<{ message: string; accounts_created?: number; mappings_created?: number }> {
+    const response = await api.post<{ message: string; accounts_created?: number; mappings_created?: number }>(
       '/accounting/accounts/initialize'
     )
     return response.data

@@ -50,7 +50,7 @@ export default function AccountBalanceView() {
                 <SelectContent>
                   {accounts?.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.code} - {account.name}
+                      {account.account_code} - {account.account_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -76,10 +76,10 @@ export default function AccountFormModal({
   useEffect(() => {
     if (account) {
       reset({
-        code: account.code,
-        name: account.name,
+        code: account.account_code,
+        name: account.account_name,
         account_type: account.account_type,
-        parent_id: account.parent_id,
+        parent_id: account.parent_account_id,
         description: account.description || null,
       })
     } else {
@@ -127,16 +127,16 @@ export default function AccountFormModal({
       updateMutation.mutate({
         id: account!.id,
         data: {
-          name: data.name,
+          account_name: data.name,
           description: data.description || null,
         },
       })
     } else {
       createMutation.mutate({
-        code: data.code,
-        name: data.name,
+        account_code: data.code,
+        account_name: data.name,
         account_type: data.account_type as AccountType,
-        parent_id: data.parent_id || null,
+        parent_account_id: data.parent_id || null,
         description: data.description || null,
       })
     }
@@ -242,7 +242,7 @@ export default function AccountFormModal({
                       <SelectItem value="__none__">Ninguna</SelectItem>
                       {availableParents.map((parent) => (
                         <SelectItem key={parent.id} value={parent.id}>
-                          {parent.code} - {parent.name}
+                          {parent.account_code} - {parent.account_name}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -38,7 +38,16 @@ export default function AccountingPage() {
     mutationFn: () => chartOfAccountsService.initialize(),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['accounting', 'accounts'] })
-      toast.success(`Plan de cuentas inicializado: ${data.accounts_created} cuentas creadas`)
+      queryClient.invalidateQueries({ queryKey: ['accounting', 'accounts', 'tree'] })
+      queryClient.invalidateQueries({ queryKey: ['accounting', 'mappings'] })
+      if (typeof data.accounts_created === 'number') {
+        const mappingsText = typeof data.mappings_created === 'number'
+          ? `, ${data.mappings_created} mapeos creados`
+          : ''
+        toast.success(`Plan de cuentas inicializado: ${data.accounts_created} cuentas creadas${mappingsText}`)
+      } else {
+        toast.success(data.message || 'Plan de cuentas inicializado')
+      }
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Error al inicializar el plan de cuentas'

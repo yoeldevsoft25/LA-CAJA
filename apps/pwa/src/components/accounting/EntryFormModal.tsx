@@ -226,14 +226,14 @@ export default function EntryFormModal({
       entry_type: data.entry_type as EntryType,
       description: data.description,
       lines: data.lines.map((line) => {
-        const account = accounts?.find(acc => acc.code === line.account_code)
+        const account = accounts?.find(acc => acc.account_code === line.account_code)
         if (!account) {
           throw new Error(`Cuenta ${line.account_code} no encontrada`)
         }
         return {
           account_id: account.id,
           account_code: line.account_code,
-          account_name: account.name,
+          account_name: account.account_name,
           description: line.description || null,
           debit_amount_bs: line.debit_amount_bs || 0,
           credit_amount_bs: line.credit_amount_bs || 0,
@@ -368,11 +368,11 @@ export default function EntryFormModal({
                             <Select
                               value={watch(`lines.${index}.account_code`) || undefined}
                               onValueChange={(value) => {
-                                const selectedAccount = accounts?.find(acc => acc.code === value)
+                                const selectedAccount = accounts?.find(acc => acc.account_code === value)
                                 if (selectedAccount) {
-                                  setValue(`lines.${index}.account_code`, selectedAccount.code)
+                                  setValue(`lines.${index}.account_code`, selectedAccount.account_code)
                                   setValue(`lines.${index}.account_id`, selectedAccount.id, { shouldValidate: false })
-                                  setValue(`lines.${index}.account_name`, selectedAccount.name, { shouldValidate: false })
+                                  setValue(`lines.${index}.account_name`, selectedAccount.account_name, { shouldValidate: false })
                                 }
                               }}
                             >
@@ -381,8 +381,8 @@ export default function EntryFormModal({
                               </SelectTrigger>
                               <SelectContent>
                                 {accounts?.map((account) => (
-                                  <SelectItem key={account.id} value={account.code}>
-                                    {account.code} - {account.name}
+                                  <SelectItem key={account.id} value={account.account_code}>
+                                    {account.account_code} - {account.account_name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

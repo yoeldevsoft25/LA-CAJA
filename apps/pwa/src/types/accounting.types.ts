@@ -10,25 +10,18 @@ export enum AccountType {
   EXPENSE = 'expense',
 }
 
-export enum AccountStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-}
-
 export interface ChartOfAccount {
   id: string
   store_id: string
-  code: string
-  name: string
+  account_code: string
+  account_name: string
   account_type: AccountType
-  parent_id: string | null
+  parent_account_id: string | null
   level: number
-  is_detail: boolean
-  status: AccountStatus
+  is_active: boolean
+  allows_entries: boolean
   description: string | null
-  allows_entries?: boolean // Si permite asientos directos
-  is_active?: boolean // Estado activo/inactivo
-  metadata?: Record<string, any> // Metadatos adicionales
+  metadata?: Record<string, any> | null // Metadatos adicionales
   created_at: string
   updated_at: string
   // Campos calculados
@@ -100,21 +93,31 @@ export interface AccountingEntry {
 }
 
 export enum MappingTransactionType {
-  SALE = 'sale',
-  PURCHASE = 'purchase',
-  FISCAL_INVOICE = 'fiscal_invoice',
-  PAYMENT = 'payment',
-  RECEIPT = 'receipt',
+  SALE_REVENUE = 'sale_revenue',
+  SALE_COST = 'sale_cost',
+  SALE_TAX = 'sale_tax',
+  PURCHASE_EXPENSE = 'purchase_expense',
+  PURCHASE_TAX = 'purchase_tax',
+  INVENTORY_ASSET = 'inventory_asset',
+  CASH_ASSET = 'cash_asset',
+  ACCOUNTS_RECEIVABLE = 'accounts_receivable',
+  ACCOUNTS_PAYABLE = 'accounts_payable',
+  EXPENSE = 'expense',
+  INCOME = 'income',
+  TRANSFER = 'transfer',
+  ADJUSTMENT = 'adjustment',
 }
 
 export interface AccountMapping {
   id: string
   store_id: string
   transaction_type: MappingTransactionType
+  account_id: string
   account_code: string
-  account_name: string
+  account_name?: string | null
   is_default: boolean
   conditions: Record<string, any> | null
+  is_active?: boolean
   created_at: string
   updated_at: string
 }
@@ -162,10 +165,10 @@ export interface AccountBalance {
 }
 
 export interface CreateAccountDto {
-  code: string
-  name: string
+  account_code: string
+  account_name: string
   account_type: AccountType
-  parent_id?: string | null
+  parent_account_id?: string | null
   level?: number // 1-5
   is_active?: boolean
   allows_entries?: boolean
@@ -174,9 +177,10 @@ export interface CreateAccountDto {
 }
 
 export interface UpdateAccountDto {
-  name?: string
+  account_name?: string
   description?: string | null
-  status?: AccountStatus
+  is_active?: boolean
+  allows_entries?: boolean
 }
 
 export interface CreateEntryDto {
@@ -207,12 +211,14 @@ export interface CreateEntryDto {
 
 export interface CreateMappingDto {
   transaction_type: MappingTransactionType
+  account_id: string
   account_code: string
   is_default?: boolean
   conditions?: Record<string, any> | null
 }
 
 export interface UpdateMappingDto {
+  account_id?: string
   account_code?: string
   is_default?: boolean
   conditions?: Record<string, any> | null
@@ -268,4 +274,3 @@ export interface IncomeStatementReport {
     net_income_usd: number
   }
 }
-
