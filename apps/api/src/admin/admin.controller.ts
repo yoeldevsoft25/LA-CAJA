@@ -281,6 +281,7 @@ export class AdminController {
    * ADVERTENCIA: Esta operación es irreversible
    *
    * Compatible con Supabase (sin necesidad de privilegios de superusuario)
+   * Consulta information_schema para obtener solo tablas que existen con store_id
    */
   @Delete('stores/:id')
   async deleteStore(@Param('id') storeId: string) {
@@ -293,90 +294,99 @@ export class AdminController {
     await queryRunner.connect();
 
     try {
-      // Orden correcto de eliminación basado en dependencias de FK
-      // Las tablas hijas (que referencian otras) van primero
-      const tablesToDelete = [
-        // Nivel 4: tablas que referencian otras tablas de datos
-        'sale_payments',
-        'sale_items',
-        'order_items',
-        'transfer_items',
-        'purchase_order_items',
-        'debt_payments',
-        'promotion_rules',
-        'price_list_products',
-        'product_variant_prices',
-        'discount_authorizations',
-        'accounting_entries',
-        'warehouse_stock',
-        // Nivel 3: tablas principales de transacciones
-        'sales',
-        'orders',
-        'transfers',
-        'purchase_orders',
-        'fiscal_invoices',
-        'cash_movements',
-        'cash_cuts',
-        'debts',
-        'demand_predictions',
-        'anomaly_detections',
-        'realtime_events',
-        'sync_events',
-        // Nivel 2: tablas de configuración y catálogos
-        'cash_sessions',
-        'shifts',
-        'promotions',
-        'price_lists',
-        'discounts',
-        'payment_methods',
-        'product_serials',
-        'product_lots',
-        'product_variants',
-        'inventory_movements',
-        'inventory',
-        'products',
-        'tables',
-        'peripherals',
-        'invoice_series',
-        'fast_checkout_configs',
-        'customers',
-        'suppliers',
-        'warehouses',
-        'accounting_accounts',
-        'fiscal_configs',
-        'push_subscriptions',
-        // Nivel 1: tablas base
-        'events',
-        'refresh_tokens',
-        'store_members',
-      ];
+      // PASO 1: Consultar information_schema para obtener SOLO las tablas que:
+      // 1. Existen en la base de datos
+      // 2. Tienen una columna llamada 'store_id'
+      // 3. No son la tabla 'stores' (esa la eliminamos al final)
+      const tablesWithStoreId: { table_name: string }[] = await queryRunner.query(`
+        SELECT DISTINCT c.table_name
+        FROM information_schema.columns c
+        INNER JOIN information_schema.tables t
+          ON c.table_name = t.table_name
+          AND c.table_schema = t.table_schema
+        WHERE c.column_name = 'store_id'
+          AND c.table_schema = 'public'
+          AND t.table_type = 'BASE TABLE'
+          AND c.table_name != 'stores'
+        ORDER BY c.table_name
+      `);
 
-      // Iniciar transacción
+      const existingTables = tablesWithStoreId.map((t) => t.table_name);
+
+      // PASO 2: Obtener el orden correcto basado en foreign keys
+      // Consultar las dependencias de FK para ordenar las tablas
+      const fkDependencies: { child_table: string; parent_table: string }[] =
+        await queryRunner.query(`
+        SELECT
+          tc.table_name as child_table,
+          ccu.table_name as parent_table
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.constraint_column_usage ccu
+          ON tc.constraint_name = ccu.constraint_name
+          AND tc.table_schema = ccu.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = 'public'
+          AND tc.table_name != ccu.table_name
+      `);
+
+      // Construir grafo de dependencias
+      const dependencyCount: Record<string, number> = {};
+      const dependents: Record<string, string[]> = {};
+
+      for (const table of existingTables) {
+        dependencyCount[table] = 0;
+        dependents[table] = [];
+      }
+
+      for (const fk of fkDependencies) {
+        if (existingTables.includes(fk.child_table) && existingTables.includes(fk.parent_table)) {
+          dependencyCount[fk.child_table]++;
+          dependents[fk.parent_table].push(fk.child_table);
+        }
+      }
+
+      // Ordenación topológica (tablas sin dependencias primero, pero las invertimos al final)
+      const sortedTables: string[] = [];
+      const queue = existingTables.filter((t) => dependencyCount[t] === 0);
+
+      while (queue.length > 0) {
+        const table = queue.shift()!;
+        sortedTables.push(table);
+
+        for (const dependent of dependents[table] || []) {
+          dependencyCount[dependent]--;
+          if (dependencyCount[dependent] === 0) {
+            queue.push(dependent);
+          }
+        }
+      }
+
+      // Agregar tablas que no entraron en la ordenación (ciclos o sin FKs)
+      for (const table of existingTables) {
+        if (!sortedTables.includes(table)) {
+          sortedTables.push(table);
+        }
+      }
+
+      // Invertir: queremos eliminar primero las tablas hijas (las que dependen de otras)
+      const deletionOrder = sortedTables.reverse();
+
+      // PASO 3: Ejecutar eliminaciones en una transacción
       await queryRunner.startTransaction();
 
       let tablesCleared = 0;
+      const deletedFromTables: string[] = [];
 
-      // Eliminar datos de cada tabla en orden
-      for (const tableName of tablesToDelete) {
-        try {
-          const result = await queryRunner.query(
-            `DELETE FROM "${tableName}" WHERE store_id = $1`,
-            [storeId],
-          );
-          if (result && result[1] > 0) {
-            tablesCleared++;
-          }
-        } catch (err: any) {
-          // Si la tabla no existe, continuar
-          if (err.code === '42P01') {
-            continue;
-          }
-          // Si la columna no existe, continuar
-          if (err.code === '42703') {
-            continue;
-          }
-          // Otros errores, propagar
-          throw err;
+      for (const tableName of deletionOrder) {
+        const result = await queryRunner.query(
+          `DELETE FROM "${tableName}" WHERE store_id = $1`,
+          [storeId],
+        );
+        // result es [rows, count] en pg
+        const rowCount = Array.isArray(result) ? result[1] : (result?.rowCount ?? 0);
+        if (rowCount > 0) {
+          tablesCleared++;
+          deletedFromTables.push(`${tableName}(${rowCount})`);
         }
       }
 
@@ -390,6 +400,8 @@ export class AdminController {
         message: `Tienda "${store.name}" y todos sus datos eliminados exitosamente`,
         deleted_store_id: storeId,
         tables_cleared: tablesCleared,
+        tables_checked: existingTables.length,
+        details: deletedFromTables,
       };
     } catch (error) {
       if (queryRunner.isTransactionActive) {
