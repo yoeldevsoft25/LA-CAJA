@@ -27,7 +27,7 @@ export class LotMovement {
   @Column({ type: 'varchar', length: 20 })
   movement_type: LotMovementType;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'numeric', precision: 18, scale: 3 })
   qty_delta: number;
 
   @Column({ type: 'timestamptz' })

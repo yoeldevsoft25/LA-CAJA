@@ -25,6 +25,14 @@ export interface LocalProduct {
   cost_usd: number;
   low_stock_threshold: number;
   is_active: boolean;
+  is_weight_product?: boolean;
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null;
+  price_per_weight_bs?: number | null;
+  price_per_weight_usd?: number | null;
+  min_weight?: number | null;
+  max_weight?: number | null;
+  scale_plu?: string | null;
+  scale_department?: number | null;
   updated_at: number; // timestamp
   cached_at: number; // cuando se guardó en cache
 }

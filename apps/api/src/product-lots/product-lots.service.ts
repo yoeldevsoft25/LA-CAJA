@@ -194,11 +194,12 @@ export class ProductLotsService {
       const savedMovement = await manager.save(LotMovement, movement);
 
       // Actualizar cantidad restante del lote
-      lot.remaining_quantity += dto.qty_delta;
+      lot.remaining_quantity =
+        Number(lot.remaining_quantity) + Number(dto.qty_delta);
 
       if (lot.remaining_quantity < 0) {
         throw new BadRequestException(
-          `La cantidad restante del lote no puede ser negativa. Actual: ${lot.remaining_quantity + dto.qty_delta}`,
+          `La cantidad restante del lote no puede ser negativa. Actual: ${Number(lot.remaining_quantity) + Number(dto.qty_delta)}`,
         );
       }
 

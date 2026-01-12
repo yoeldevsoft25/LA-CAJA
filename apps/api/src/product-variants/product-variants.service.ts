@@ -221,7 +221,7 @@ export class ProductVariantsService {
       .andWhere('movement.approved = true')
       .getRawOne();
 
-    return parseInt(result.stock, 10) || 0;
+    return parseFloat(result.stock) || 0;
   }
 
   /**

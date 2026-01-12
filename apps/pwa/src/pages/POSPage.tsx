@@ -74,6 +74,39 @@ export default function POSPage() {
     }
   }, [defaultWarehouse, selectedWarehouseId])
 
+  const resolveWeightProduct = useCallback(async (source: any): Promise<WeightProduct | null> => {
+    const normalize = (item: any): WeightProduct | null => {
+      const pricePerWeightBs = Number(item.price_per_weight_bs) || 0
+      const pricePerWeightUsd = Number(item.price_per_weight_usd) || 0
+      const hasPrice = pricePerWeightBs > 0 || pricePerWeightUsd > 0
+      if (!hasPrice) return null
+
+      return {
+        id: item.id,
+        name: item.name,
+        weight_unit: item.weight_unit || 'kg',
+        price_per_weight_bs: pricePerWeightBs,
+        price_per_weight_usd: pricePerWeightUsd,
+        min_weight: item.min_weight != null ? Number(item.min_weight) : null,
+        max_weight: item.max_weight != null ? Number(item.max_weight) : null,
+      }
+    }
+
+    let weightProduct = normalize(source)
+    if (weightProduct && source.weight_unit) {
+      return weightProduct
+    }
+
+    try {
+      const fresh = await productsService.getById(source.id, user?.store_id)
+      weightProduct = normalize(fresh)
+    } catch (error) {
+      // Silenciar errores y usar lo que ya tenemos
+    }
+
+    return weightProduct
+  }, [user?.store_id])
+
   // Handler para productos rápidos
   const handleQuickProductClick = useCallback(async (quickProduct: QuickProduct) => {
     if (!quickProduct.product) {
@@ -81,27 +114,13 @@ export default function POSPage() {
       return
     }
 
-    if (quickProduct.product.is_weight_product && quickProduct.product.weight_unit) {
-      const hasPricePerWeight = Boolean(
-        quickProduct.product.price_per_weight_usd || quickProduct.product.price_per_weight_bs
-      )
-      if (!hasPricePerWeight) {
+    if (quickProduct.product.is_weight_product) {
+      const weightProduct = await resolveWeightProduct(quickProduct.product)
+      if (!weightProduct) {
         toast.error('Este producto por peso no tiene precio configurado')
         return
       }
-      setSelectedWeightProduct({
-        id: quickProduct.product.id,
-        name: quickProduct.product.name,
-        weight_unit: quickProduct.product.weight_unit,
-        price_per_weight_bs: Number(quickProduct.product.price_per_weight_bs) || 0,
-        price_per_weight_usd: Number(quickProduct.product.price_per_weight_usd) || 0,
-        min_weight: quickProduct.product.min_weight != null
-          ? Number(quickProduct.product.min_weight)
-          : null,
-        max_weight: quickProduct.product.max_weight != null
-          ? Number(quickProduct.product.max_weight)
-          : null,
-      })
+      setSelectedWeightProduct(weightProduct)
       setShowWeightModal(true)
       return
     }
@@ -156,7 +175,7 @@ export default function POSPage() {
         toast.success(`${quickProduct.product.name} agregado al carrito`)
       }
     }
-  }, [addItem, items, updateItem])
+  }, [addItem, items, resolveWeightProduct, updateItem])
 
   const fastCheckoutEnabled = Boolean(fastCheckoutConfig?.enabled)
 
@@ -232,7 +251,6 @@ export default function POSPage() {
 
   const products = productsData?.products || []
 
-
   const handleAddToCart = async (product: any, variant: ProductVariant | null = null) => {
     // Determinar precios (usar precio de variante si existe, sino precio del producto)
     const priceBs = variant?.price_bs
@@ -271,23 +289,13 @@ export default function POSPage() {
 
   const handleProductClick = async (product: any) => {
     // Verificar si es un producto por peso
-    if (product.is_weight_product && product.weight_unit) {
-      const hasPricePerWeight = Boolean(
-        product.price_per_weight_usd || product.price_per_weight_bs
-      )
-      if (!hasPricePerWeight) {
+    if (product.is_weight_product) {
+      const weightProduct = await resolveWeightProduct(product)
+      if (!weightProduct) {
         toast.error('Este producto por peso no tiene precio configurado')
         return
       }
-      setSelectedWeightProduct({
-        id: product.id,
-        name: product.name,
-        weight_unit: product.weight_unit,
-        price_per_weight_bs: Number(product.price_per_weight_bs) || 0,
-        price_per_weight_usd: Number(product.price_per_weight_usd) || 0,
-        min_weight: product.min_weight,
-        max_weight: product.max_weight,
-      })
+      setSelectedWeightProduct(weightProduct)
       setShowWeightModal(true)
       return
     }
@@ -312,20 +320,23 @@ export default function POSPage() {
   }
 
   // Handler para confirmar peso de producto
-  const handleWeightConfirm = (weightValue: number, calculatedPriceBs: number, calculatedPriceUsd: number) => {
+  const handleWeightConfirm = (weightValue: number) => {
     if (!selectedWeightProduct) return
 
     const unitLabel = selectedWeightProduct.weight_unit === 'g' ? 'g' :
                       selectedWeightProduct.weight_unit === 'kg' ? 'kg' :
                       selectedWeightProduct.weight_unit === 'lb' ? 'lb' : 'oz'
 
-    // Agregar al carrito con qty=1 pero el precio ya calculado por peso
+    const unitPriceBs = Number(selectedWeightProduct.price_per_weight_bs) || 0
+    const unitPriceUsd = Number(selectedWeightProduct.price_per_weight_usd) || 0
+
+    // Agregar al carrito con qty = peso y unit_price = precio por unidad de peso
     addItem({
       product_id: selectedWeightProduct.id,
       product_name: `${selectedWeightProduct.name} (${weightValue} ${unitLabel})`,
-      qty: 1, // Siempre 1 porque el precio ya incluye el peso
-      unit_price_bs: calculatedPriceBs,
-      unit_price_usd: calculatedPriceUsd,
+      qty: weightValue,
+      unit_price_bs: unitPriceBs,
+      unit_price_usd: unitPriceUsd,
       // Guardar info de peso para el backend
       is_weight_product: true,
       weight_unit: selectedWeightProduct.weight_unit,
@@ -724,8 +735,12 @@ export default function POSPage() {
                             {item.product_name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {item.is_weight_product && item.weight_value && item.price_per_weight_usd ? (
-                              <>{item.weight_value} {item.weight_unit} × ${Number(item.price_per_weight_usd).toFixed(2)}/{item.weight_unit}</>
+                            {item.is_weight_product && item.weight_value ? (
+                              <>
+                                {item.weight_value} {item.weight_unit || 'kg'} × $
+                                {Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(2)}/
+                                {item.weight_unit || 'kg'}
+                              </>
                             ) : (
                               <>${item.unit_price_usd.toFixed(2)} c/u</>
                             )}

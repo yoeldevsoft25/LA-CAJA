@@ -12,7 +12,7 @@ export class StockReceivedDto {
   product_id: string;
 
   @IsNumber()
-  @Min(1)
+  @Min(0.001)
   qty: number;
 
   @IsNumber()

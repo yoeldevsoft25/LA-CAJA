@@ -232,22 +232,28 @@ export class ProjectionsService {
 
     // Crear items de venta
     if (payload.items && Array.isArray(payload.items)) {
-      const items = payload.items.map((item: any) =>
-        this.saleItemRepository.create({
+      const items = payload.items.map((item: any) => {
+        const isWeightProduct = Boolean(item.is_weight_product);
+        const weightValue =
+          item.weight_value !== undefined && item.weight_value !== null
+            ? Number(item.weight_value)
+            : null;
+        const normalizedQty = isWeightProduct && weightValue !== null
+          ? weightValue
+          : Number(item.qty) || 0;
+
+        return this.saleItemRepository.create({
           id: item.item_id || randomUUID(),
           sale_id: savedSale.id,
           product_id: item.product_id,
-          qty: Number(item.qty) || 0,
+          qty: normalizedQty,
           unit_price_bs: Number(item.unit_price_bs) || 0,
           unit_price_usd: Number(item.unit_price_usd) || 0,
           discount_bs: Number(item.discount_bs) || 0,
           discount_usd: Number(item.discount_usd) || 0,
-          is_weight_product: Boolean(item.is_weight_product),
+          is_weight_product: isWeightProduct,
           weight_unit: item.weight_unit || null,
-          weight_value:
-            item.weight_value !== undefined && item.weight_value !== null
-              ? Number(item.weight_value)
-              : null,
+          weight_value: weightValue,
           price_per_weight_bs:
             item.price_per_weight_bs !== undefined &&
             item.price_per_weight_bs !== null
@@ -258,8 +264,8 @@ export class ProjectionsService {
             item.price_per_weight_usd !== null
               ? Number(item.price_per_weight_usd)
               : null,
-        }),
-      );
+        });
+      });
 
       await this.saleItemRepository.save(items);
     }
@@ -268,12 +274,15 @@ export class ProjectionsService {
     // Nota: Para FIAO, el stock se descuenta igual
     if (payload.items && Array.isArray(payload.items)) {
       for (const item of payload.items) {
+        const movementQty = item.is_weight_product && item.weight_value != null
+          ? Number(item.weight_value)
+          : Number(item.qty) || 0;
         const movement = this.movementRepository.create({
           id: randomUUID(),
           store_id: event.store_id,
           product_id: item.product_id,
           movement_type: 'sold',
-          qty_delta: -(Number(item.qty) || 0), // Negativo para descontar
+          qty_delta: -movementQty, // Negativo para descontar
           unit_cost_bs: 0,
           unit_cost_usd: 0,
           note: `Venta ${payload.sale_id}`,

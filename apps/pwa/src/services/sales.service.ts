@@ -122,25 +122,25 @@ function resolveOfflineItemPricing(
   const itemDiscountUsd = item.discount_usd || 0
 
   if (isWeightProduct) {
-    const weightValue = item.weight_value || 0
+    const weightValue = item.weight_value || item.qty || 0
     const pricePerWeightBs = item.price_per_weight_bs ?? product.price_per_weight_bs ?? 0
     const pricePerWeightUsd = item.price_per_weight_usd ?? product.price_per_weight_usd ?? 0
-    const unitPriceBs = weightValue * pricePerWeightBs
-    const unitPriceUsd = weightValue * pricePerWeightUsd
+    const subtotalBs = weightValue * pricePerWeightBs - itemDiscountBs
+    const subtotalUsd = weightValue * pricePerWeightUsd - itemDiscountUsd
 
     return {
-      qty: 1,
-      unit_price_bs: unitPriceBs,
-      unit_price_usd: unitPriceUsd,
+      qty: weightValue,
+      unit_price_bs: pricePerWeightBs,
+      unit_price_usd: pricePerWeightUsd,
       discount_bs: itemDiscountBs,
       discount_usd: itemDiscountUsd,
-      subtotal_bs: unitPriceBs - itemDiscountBs,
-      subtotal_usd: unitPriceUsd - itemDiscountUsd,
+      subtotal_bs: subtotalBs,
+      subtotal_usd: subtotalUsd,
       is_weight_product: true,
       weight_unit: item.weight_unit || product.weight_unit || null,
-      weight_value: item.weight_value || null,
-      price_per_weight_bs: item.price_per_weight_bs ?? product.price_per_weight_bs ?? null,
-      price_per_weight_usd: item.price_per_weight_usd ?? product.price_per_weight_usd ?? null,
+      weight_value: weightValue,
+      price_per_weight_bs: pricePerWeightBs || null,
+      price_per_weight_usd: pricePerWeightUsd || null,
     }
   }
 

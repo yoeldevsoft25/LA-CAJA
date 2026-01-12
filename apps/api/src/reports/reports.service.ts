@@ -349,7 +349,7 @@ export class ReportsService {
       }
 
       const productData = productMap.get(productId)!;
-      productData.quantity_sold += item.qty;
+      productData.quantity_sold += Number(item.qty);
       productData.revenue_bs +=
         Number(item.unit_price_bs || 0) * item.qty -
         Number(item.discount_bs || 0);
@@ -991,18 +991,18 @@ export class ReportsService {
 
       const productData = productMap.get(lot.product_id)!;
       productData.lots_count++;
-      productData.total_quantity += lot.remaining_quantity;
+      productData.total_quantity += Number(lot.remaining_quantity);
       productData.expiration_dates.push({
         lot_number: lot.lot_number,
         expiration_date: lot.expiration_date!,
-        quantity: lot.remaining_quantity,
+        quantity: Number(lot.remaining_quantity),
         days_until_expiration: daysUntilExpiration,
       });
 
-      total_quantity += lot.remaining_quantity;
-      total_value_bs += Number(lot.unit_cost_bs || 0) * lot.remaining_quantity;
+      total_quantity += Number(lot.remaining_quantity);
+      total_value_bs += Number(lot.unit_cost_bs || 0) * Number(lot.remaining_quantity);
       total_value_usd +=
-        Number(lot.unit_cost_usd || 0) * lot.remaining_quantity;
+        Number(lot.unit_cost_usd || 0) * Number(lot.remaining_quantity);
     }
 
     return {
@@ -1213,7 +1213,7 @@ export class ReportsService {
       }
 
       const productData = productMap.get(item.product_id)!;
-      productData.quantity_sold += item.qty;
+      productData.quantity_sold += Number(item.qty);
       productData.revenue_bs +=
         Number(item.unit_price_bs || 0) * item.qty -
         Number(item.discount_bs || 0);

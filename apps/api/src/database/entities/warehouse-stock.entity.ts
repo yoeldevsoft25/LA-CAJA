@@ -24,10 +24,10 @@ export class WarehouseStock {
   @Column({ type: 'uuid', name: 'variant_id', nullable: true })
   variant_id: string | null;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'numeric', precision: 18, scale: 3, default: 0 })
   stock: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'numeric', precision: 18, scale: 3, default: 0 })
   reserved: number;
 
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })

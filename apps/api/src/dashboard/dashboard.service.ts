@@ -475,7 +475,7 @@ export class DashboardService {
           ? {
               id: topProduct.product_id,
               name: topProduct.product_name,
-              quantity_sold: parseInt(topProduct.total_quantity) || 0,
+              quantity_sold: parseFloat(topProduct.total_quantity) || 0,
             }
           : null,
         best_selling_category: topCategory?.category || null,
@@ -568,7 +568,7 @@ export class DashboardService {
     const topProductsTrend = topProducts.map((p) => ({
       product_id: p.product_id,
       product_name: p.product_name,
-      quantity_sold: parseInt(p.total_quantity) || 0,
+      quantity_sold: parseFloat(p.total_quantity) || 0,
       revenue_bs: parseFloat(p.total_revenue_bs) || 0,
       revenue_usd: parseFloat(p.total_revenue_usd) || 0,
     }));

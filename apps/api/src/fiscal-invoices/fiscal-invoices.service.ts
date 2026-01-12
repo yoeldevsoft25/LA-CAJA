@@ -222,7 +222,7 @@ export class FiscalInvoicesService {
           variant_id: saleItem.variant_id || null,
           product_name: product?.name || 'Producto',
           product_code: product?.sku || product?.barcode || null,
-          quantity: saleItem.qty,
+          quantity: Number(saleItem.qty),
           unit_price_bs: saleItem.unit_price_bs,
           unit_price_usd: saleItem.unit_price_usd,
           discount_bs: saleItem.discount_bs || 0,

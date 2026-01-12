@@ -191,7 +191,7 @@ export class InventoryService {
       .andWhere('movement.approved = true')
       .getRawOne();
 
-    return parseInt(result.stock, 10) || 0;
+    return parseFloat(result.stock) || 0;
   }
 
   async getStockStatus(
@@ -305,9 +305,10 @@ export class InventoryService {
     const items = results.map((row) => ({
       product_id: row.product_id,
       product_name: row.product_name,
-      current_stock: parseInt(row.current_stock, 10) || 0,
+      current_stock: parseFloat(row.current_stock) || 0,
       low_stock_threshold: row.low_stock_threshold,
-      is_low_stock: parseInt(row.current_stock, 10) <= row.low_stock_threshold,
+      is_low_stock:
+        (parseFloat(row.current_stock) || 0) <= row.low_stock_threshold,
     }));
 
     if (!isPaginated) {

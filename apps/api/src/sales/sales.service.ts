@@ -283,25 +283,42 @@ export class SalesService {
           }
         }
 
-        // Verificar si el producto tiene seriales
-        const productSerials = await manager.find(ProductSerial, {
-          where: { product_id: product.id },
-        });
+        const isWeightProduct = Boolean(
+          cartItem.is_weight_product || product.is_weight_product,
+        );
+        const weightValue = isWeightProduct
+          ? Number(cartItem.weight_value ?? cartItem.qty)
+          : 0;
 
-        // Si el producto tiene seriales, validar que haya suficientes disponibles
-        if (productSerials.length > 0) {
-          const availableSerials = productSerials.filter(
-            (s) => s.status === 'available',
+        if (isWeightProduct && weightValue <= 0) {
+          throw new BadRequestException(
+            `Peso inválido para el producto ${product.name}`,
           );
+        }
 
-          if (availableSerials.length < cartItem.qty) {
-            throw new BadRequestException(
-              `No hay suficientes seriales disponibles para ${product.name}. Disponibles: ${availableSerials.length}, Solicitados: ${cartItem.qty}`,
+        const requestedQty = isWeightProduct ? weightValue : cartItem.qty;
+
+        if (!isWeightProduct) {
+          // Verificar si el producto tiene seriales
+          const productSerials = await manager.find(ProductSerial, {
+            where: { product_id: product.id },
+          });
+
+          // Si el producto tiene seriales, validar que haya suficientes disponibles
+          if (productSerials.length > 0) {
+            const availableSerials = productSerials.filter(
+              (s) => s.status === 'available',
             );
-          }
 
-          // Nota: Los seriales se asignan después de la venta mediante el endpoint de asignación
-          // Esto permite flexibilidad para escanear seriales después de crear la venta
+            if (availableSerials.length < requestedQty) {
+              throw new BadRequestException(
+                `No hay suficientes seriales disponibles para ${product.name}. Disponibles: ${availableSerials.length}, Solicitados: ${requestedQty}`,
+              );
+            }
+
+            // Nota: Los seriales se asignan después de la venta mediante el endpoint de asignación
+            // Esto permite flexibilidad para escanear seriales después de crear la venta
+          }
         }
 
         // Verificar si el producto tiene lotes
@@ -327,7 +344,7 @@ export class SalesService {
           // Obtener asignación FIFO
           const allocations = this.inventoryRulesService.getLotsForSale(
             product.id,
-            cartItem.qty,
+            requestedQty,
             availableLots,
           );
 
@@ -340,7 +357,7 @@ export class SalesService {
           for (const allocation of allocations) {
             const lot = availableLots.find((l) => l.id === allocation.lot_id);
             if (lot) {
-              lot.remaining_quantity -= allocation.quantity;
+              lot.remaining_quantity = Number(lot.remaining_quantity) - allocation.quantity;
               lot.updated_at = new Date();
               await manager.save(ProductLot, lot);
 
@@ -366,19 +383,15 @@ export class SalesService {
               )
             : await this.getCurrentStock(storeId, product.id);
 
-          if (currentStock < cartItem.qty) {
+          if (currentStock < requestedQty) {
             const variantInfo = variant
               ? ` (${variant.variant_type}: ${variant.variant_value})`
               : '';
             throw new BadRequestException(
-              `Stock insuficiente para ${product.name}${variantInfo}. Disponible: ${currentStock}, Solicitado: ${cartItem.qty}`,
+              `Stock insuficiente para ${product.name}${variantInfo}. Disponible: ${currentStock}, Solicitado: ${requestedQty}`,
             );
           }
         }
-
-        const isWeightProduct = Boolean(
-          cartItem.is_weight_product || product.is_weight_product,
-        );
 
         // Calcular precios
         // Primero intentar obtener precio de lista de precio (solo productos normales)
@@ -390,7 +403,7 @@ export class SalesService {
             storeId,
             product.id,
             variant?.id || null,
-            cartItem.qty,
+            requestedQty,
             dto.price_list_id,
           );
 
@@ -400,18 +413,11 @@ export class SalesService {
           }
         }
 
-        let effectiveQty = cartItem.qty;
+        let effectiveQty = requestedQty;
         let itemSubtotalBs = 0;
         let itemSubtotalUsd = 0;
 
         if (isWeightProduct) {
-          const weightValue = cartItem.weight_value || 0;
-          if (weightValue <= 0) {
-            throw new BadRequestException(
-              `Peso inválido para el producto ${product.name}`,
-            );
-          }
-
           const pricePerWeightBs =
             cartItem.price_per_weight_bs ?? product.price_per_weight_bs ?? 0;
           const pricePerWeightUsd =
@@ -423,15 +429,14 @@ export class SalesService {
             );
           }
 
-          // Para productos por peso guardamos qty=1 y unit_price como total calculado
-          priceBs = weightValue * pricePerWeightBs;
-          priceUsd = weightValue * pricePerWeightUsd;
-          effectiveQty = 1;
-          itemSubtotalBs = priceBs;
-          itemSubtotalUsd = priceUsd;
+          // Para productos por peso guardamos qty = peso y unit_price = precio por unidad
+          priceBs = pricePerWeightBs;
+          priceUsd = pricePerWeightUsd;
+          itemSubtotalBs = priceBs * effectiveQty;
+          itemSubtotalUsd = priceUsd * effectiveQty;
         } else {
-          itemSubtotalBs = priceBs * cartItem.qty;
-          itemSubtotalUsd = priceUsd * cartItem.qty;
+          itemSubtotalBs = priceBs * effectiveQty;
+          itemSubtotalUsd = priceUsd * effectiveQty;
         }
 
         const itemDiscountBs = cartItem.discount_bs || 0;
@@ -460,7 +465,7 @@ export class SalesService {
           weight_unit: isWeightProduct
             ? cartItem.weight_unit || product.weight_unit || null
             : null,
-          weight_value: isWeightProduct ? cartItem.weight_value || null : null,
+          weight_value: isWeightProduct ? weightValue : null,
           price_per_weight_bs: isWeightProduct
             ? cartItem.price_per_weight_bs ?? product.price_per_weight_bs ?? null
             : null,
@@ -1043,7 +1048,8 @@ export class SalesService {
             where: { id: item.lot_id },
           });
           if (lot) {
-            lot.remaining_quantity += item.qty;
+            lot.remaining_quantity =
+              Number(lot.remaining_quantity) + Number(item.qty);
             lot.updated_at = now;
             await manager.save(ProductLot, lot);
 
@@ -1121,6 +1127,6 @@ export class SalesService {
       .andWhere('movement.product_id = :productId', { productId })
       .getRawOne();
 
-    return parseInt(result.stock, 10) || 0;
+    return parseFloat(result.stock) || 0;
   }
 }

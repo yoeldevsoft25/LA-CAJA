@@ -22,7 +22,7 @@ export class CreateProductLotDto {
   lot_number: string;
 
   @IsNumber()
-  @Min(1, { message: 'La cantidad debe ser mayor a 0' })
+  @Min(0.001, { message: 'La cantidad debe ser mayor a 0' })
   initial_quantity: number;
 
   @IsNumber({ maxDecimalPlaces: 2 })

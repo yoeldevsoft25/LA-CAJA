@@ -219,7 +219,14 @@ export class WarehousesService {
          LIMIT 1`,
         [warehouseId, productId, variantId],
       );
-      return result[0] || null;
+      if (!result[0]) {
+        return null;
+      }
+      return {
+        ...result[0],
+        stock: Number(result[0].stock),
+        reserved: Number(result[0].reserved),
+      } as WarehouseStock;
     } catch (error: any) {
       // Si falla porque no existe la columna id, intentar sin ella
       if (error.message?.includes('column "id"') || error.message?.includes('does not exist')) {
@@ -240,6 +247,8 @@ export class WarehousesService {
         return {
           id: `${record.warehouse_id}-${record.product_id}-${record.variant_id || 'null'}`,
           ...record,
+          stock: Number(record.stock),
+          reserved: Number(record.reserved),
         } as WarehouseStock;
       }
       throw error;

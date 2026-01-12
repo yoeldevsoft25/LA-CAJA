@@ -35,10 +35,10 @@ export class ProductLot {
   @Column({ type: 'varchar', length: 100 })
   lot_number: string;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'numeric', precision: 18, scale: 3 })
   initial_quantity: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'numeric', precision: 18, scale: 3 })
   remaining_quantity: number;
 
   @Column({ type: 'numeric', precision: 18, scale: 2 })

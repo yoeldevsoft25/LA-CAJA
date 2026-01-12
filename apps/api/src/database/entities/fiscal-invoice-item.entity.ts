@@ -45,7 +45,7 @@ export class FiscalInvoiceItem {
   @Column({ type: 'varchar', length: 100, nullable: true })
   product_code: string | null;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'numeric', precision: 18, scale: 3 })
   quantity: number;
 
   @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })

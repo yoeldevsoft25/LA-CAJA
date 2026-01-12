@@ -24,6 +24,34 @@ export class ProductsCacheService {
       cost_usd: typeof product.cost_usd === 'string' ? parseFloat(product.cost_usd) : product.cost_usd,
       low_stock_threshold: product.low_stock_threshold,
       is_active: product.is_active,
+      is_weight_product: product.is_weight_product || false,
+      weight_unit: product.weight_unit || null,
+      price_per_weight_bs:
+        product.price_per_weight_bs === null || product.price_per_weight_bs === undefined
+          ? null
+          : typeof product.price_per_weight_bs === 'string'
+            ? parseFloat(product.price_per_weight_bs)
+            : product.price_per_weight_bs,
+      price_per_weight_usd:
+        product.price_per_weight_usd === null || product.price_per_weight_usd === undefined
+          ? null
+          : typeof product.price_per_weight_usd === 'string'
+            ? parseFloat(product.price_per_weight_usd)
+            : product.price_per_weight_usd,
+      min_weight:
+        product.min_weight === null || product.min_weight === undefined
+          ? null
+          : typeof product.min_weight === 'string'
+            ? parseFloat(product.min_weight)
+            : product.min_weight,
+      max_weight:
+        product.max_weight === null || product.max_weight === undefined
+          ? null
+          : typeof product.max_weight === 'string'
+            ? parseFloat(product.max_weight)
+            : product.max_weight,
+      scale_plu: product.scale_plu ?? null,
+      scale_department: product.scale_department ?? null,
       updated_at: new Date(product.updated_at).getTime(),
       cached_at: Date.now(),
     };
@@ -46,6 +74,14 @@ export class ProductsCacheService {
       cost_usd: local.cost_usd,
       low_stock_threshold: local.low_stock_threshold,
       is_active: local.is_active,
+      is_weight_product: local.is_weight_product || false,
+      weight_unit: local.weight_unit ?? null,
+      price_per_weight_bs: local.price_per_weight_bs ?? null,
+      price_per_weight_usd: local.price_per_weight_usd ?? null,
+      min_weight: local.min_weight ?? null,
+      max_weight: local.max_weight ?? null,
+      scale_plu: local.scale_plu ?? null,
+      scale_department: local.scale_department ?? null,
       updated_at: new Date(local.updated_at).toISOString(),
     };
   }
@@ -104,6 +140,4 @@ export class ProductsCacheService {
 }
 
 export const productsCacheService = new ProductsCacheService();
-
-
 

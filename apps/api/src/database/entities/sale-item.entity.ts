@@ -37,7 +37,7 @@ export class SaleItem {
   @Column({ type: 'uuid', nullable: true })
   lot_id: string | null;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'numeric', precision: 18, scale: 3 })
   qty: number;
 
   @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })

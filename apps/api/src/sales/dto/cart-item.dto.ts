@@ -1,4 +1,4 @@
-import { IsUUID, IsNumber, Min, IsOptional, IsBoolean, IsString, IsIn } from 'class-validator';
+import { IsUUID, IsNumber, Min, IsOptional, IsBoolean, IsString, IsIn, ValidateIf } from 'class-validator';
 
 export class CartItemDto {
   @IsUUID()
@@ -9,6 +9,9 @@ export class CartItemDto {
   variant_id?: string | null;
 
   @IsNumber()
+  @ValidateIf((o) => o.is_weight_product)
+  @Min(0.001)
+  @ValidateIf((o) => !o.is_weight_product)
   @Min(1)
   qty: number;
 

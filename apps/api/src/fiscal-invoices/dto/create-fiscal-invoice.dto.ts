@@ -20,7 +20,7 @@ export class CreateFiscalInvoiceItemDto {
   variant_id?: string;
 
   @IsNumber()
-  @Min(1)
+  @Min(0.001)
   quantity: number;
 
   @IsNumber()

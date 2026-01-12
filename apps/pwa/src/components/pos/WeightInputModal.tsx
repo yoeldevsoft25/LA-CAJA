@@ -26,7 +26,7 @@ interface WeightInputModalProps {
   isOpen: boolean
   onClose: () => void
   product: WeightProduct | null
-  onConfirm: (weightValue: number, calculatedPriceBs: number, calculatedPriceUsd: number) => void
+  onConfirm: (weightValue: number) => void
 }
 
 const UNIT_LABELS: Record<string, string> = {
@@ -112,7 +112,7 @@ export default function WeightInputModal({
       setError(validationError)
       return
     }
-    onConfirm(weightValue, totalBs, totalUsd)
+    onConfirm(weightValue)
     onClose()
   }
 
