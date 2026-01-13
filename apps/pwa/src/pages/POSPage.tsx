@@ -331,22 +331,23 @@ export default function POSPage() {
                       selectedWeightProduct.weight_unit === 'kg' ? 'kg' :
                       selectedWeightProduct.weight_unit === 'lb' ? 'lb' : 'oz'
 
-    const unitPriceBs = Number(selectedWeightProduct.price_per_weight_bs) || 0
-    const unitPriceUsd = Number(selectedWeightProduct.price_per_weight_usd) || 0
+    // Convertir a números (PostgreSQL devuelve NUMERIC como string)
+    const pricePerWeightBs = Number(selectedWeightProduct.price_per_weight_bs) || 0
+    const pricePerWeightUsd = Number(selectedWeightProduct.price_per_weight_usd) || 0
 
     // Agregar al carrito con qty = peso y unit_price = precio por unidad de peso
     addItem({
       product_id: selectedWeightProduct.id,
       product_name: `${selectedWeightProduct.name} (${weightValue} ${unitLabel})`,
       qty: weightValue,
-      unit_price_bs: unitPriceBs,
-      unit_price_usd: unitPriceUsd,
+      unit_price_bs: pricePerWeightBs,
+      unit_price_usd: pricePerWeightUsd,
       // Guardar info de peso para el backend
       is_weight_product: true,
       weight_unit: selectedWeightProduct.weight_unit,
       weight_value: weightValue,
-      price_per_weight_bs: selectedWeightProduct.price_per_weight_bs,
-      price_per_weight_usd: selectedWeightProduct.price_per_weight_usd,
+      price_per_weight_bs: pricePerWeightBs,
+      price_per_weight_usd: pricePerWeightUsd,
     })
 
     toast.success(`${selectedWeightProduct.name} (${weightValue} ${unitLabel}) agregado al carrito`)
