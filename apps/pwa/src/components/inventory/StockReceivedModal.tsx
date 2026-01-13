@@ -397,8 +397,20 @@ export default function StockReceivedModal({
                           </Label>
                           <Input
                             type="number"
-                            step={item.is_weight_product ? '0.001' : '1'}
-                            min={item.is_weight_product ? '0.001' : '1'}
+                            step={
+                              item.is_weight_product
+                                ? item.weight_unit === 'g' || item.weight_unit === 'oz'
+                                  ? '1'
+                                  : '0.001'
+                                : '1'
+                            }
+                            min={
+                              item.is_weight_product
+                                ? item.weight_unit === 'g' || item.weight_unit === 'oz'
+                                  ? '1'
+                                  : '0.001'
+                                : '1'
+                            }
                             inputMode="decimal"
                             value={item.qty}
                             onChange={(e) =>
@@ -408,8 +420,12 @@ export default function StockReceivedModal({
                                   updateProductItem(item.id, 'qty', 0)
                                   return
                                 }
+                                // Para gramos y onzas: valores enteros
+                                // Para kg y lb: hasta 3 decimales
                                 const normalized = item.is_weight_product
-                                  ? Math.round(parsed * 1000) / 1000
+                                  ? item.weight_unit === 'g' || item.weight_unit === 'oz'
+                                    ? Math.round(parsed)
+                                    : Math.round(parsed * 1000) / 1000
                                   : Math.trunc(parsed)
                                 updateProductItem(item.id, 'qty', normalized)
                               })()

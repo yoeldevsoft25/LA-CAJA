@@ -17,6 +17,8 @@ interface ProductItem {
   id: string
   product_id: string
   product_name: string
+  is_weight_product?: boolean
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null
   qty: number
   unit_cost_usd: number
   unit_cost_bs: number
@@ -74,12 +76,16 @@ export default function StockReceivedModal({
       // Convertir a número si viene como string (PostgreSQL devuelve NUMERIC como string)
       const defaultCostUsd = fullProduct?.cost_usd ? Number(fullProduct.cost_usd) : 0
       const defaultCostBs = fullProduct?.cost_bs ? Number(fullProduct.cost_bs) : 0
+      const isWeightProduct = !!fullProduct?.is_weight_product
+      const weightUnit = fullProduct?.weight_unit ?? null
 
       setProductItems([
         {
           id: `item-${Date.now()}`,
           product_id: product.product_id,
           product_name: product.product_name,
+          is_weight_product: isWeightProduct,
+          weight_unit: weightUnit,
           qty: 1,
           unit_cost_usd: defaultCostUsd,
           unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 100) / 100,
@@ -107,11 +113,15 @@ export default function StockReceivedModal({
     // Convertir a número si viene como string (PostgreSQL devuelve NUMERIC como string)
     const defaultCostUsd = Number(product.cost_usd) || 0
     const defaultCostBs = Number(product.cost_bs) || 0
+    const isWeightProduct = !!(product as any).is_weight_product
+    const weightUnit = (product as any).weight_unit ?? null
 
     const newItem: ProductItem = {
       id: `item-${Date.now()}-${Math.random()}`,
       product_id: product.id,
       product_name: product.name,
+      is_weight_product: isWeightProduct,
+      weight_unit: weightUnit,
       qty: 1,
       unit_cost_usd: defaultCostUsd,
       unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 100) / 100,
@@ -308,16 +318,43 @@ export default function StockReceivedModal({
                       {/* Cantidad */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Cantidad <span className="text-red-500">*</span>
+                          {item.is_weight_product && item.weight_unit
+                            ? `Cantidad (${item.weight_unit})`
+                            : 'Cantidad'}{' '}
+                          <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
-                          step="1"
-                          min="1"
-                          value={item.qty}
-                          onChange={(e) =>
-                            updateProductItem(item.id, 'qty', parseInt(e.target.value) || 1)
+                          step={
+                            item.is_weight_product
+                              ? item.weight_unit === 'g' || item.weight_unit === 'oz'
+                                ? '1'
+                                : '0.001'
+                              : '1'
                           }
+                          min={
+                            item.is_weight_product
+                              ? item.weight_unit === 'g' || item.weight_unit === 'oz'
+                                ? '1'
+                                : '0.001'
+                              : '1'
+                          }
+                          value={item.qty}
+                          onChange={(e) => {
+                            const parsed = parseFloat(e.target.value)
+                            if (Number.isNaN(parsed)) {
+                              updateProductItem(item.id, 'qty', 0)
+                              return
+                            }
+                            // Para gramos y onzas: valores enteros
+                            // Para kg y lb: hasta 3 decimales
+                            const normalized = item.is_weight_product
+                              ? item.weight_unit === 'g' || item.weight_unit === 'oz'
+                                ? Math.round(parsed)
+                                : Math.round(parsed * 1000) / 1000
+                              : Math.trunc(parsed)
+                            updateProductItem(item.id, 'qty', normalized)
+                          }}
                           className="w-full px-3 py-2 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>

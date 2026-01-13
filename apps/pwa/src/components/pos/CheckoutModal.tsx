@@ -740,7 +740,7 @@ export default function CheckoutModal({
                             <p className="font-semibold text-foreground">
                               {item.is_weight_product
                                 ? formatWeightValue(
-                                    Number(item.weight_value ?? item.qty),
+                                    Number(item.qty),
                                     item.weight_unit
                                   )
                                 : `x${item.qty}`}

@@ -743,9 +743,9 @@ export default function POSPage() {
                             {item.product_name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {item.is_weight_product && item.weight_value ? (
+                            {item.is_weight_product ? (
                               <>
-                                {item.weight_value} {item.weight_unit || 'kg'} × $
+                                {item.qty} {item.weight_unit || 'kg'} × $
                                 {Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
                                   getWeightPriceDecimals(item.weight_unit)
                                 )}/
