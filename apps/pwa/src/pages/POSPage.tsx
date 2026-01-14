@@ -688,7 +688,7 @@ export default function POSPage() {
 
         {/* Carrito - Sticky en desktop, normal en mobile */}
         <div className="lg:col-span-1">
-          <Card className="lg:sticky lg:top-20 border border-border flex flex-col max-h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)] lg:max-h-none overflow-hidden">
+          <Card className="lg:sticky lg:top-20 border border-border flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)] overflow-hidden min-h-0">
             <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between flex-shrink-0">
               <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
