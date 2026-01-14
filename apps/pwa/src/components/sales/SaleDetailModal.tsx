@@ -410,6 +410,8 @@ export default function SaleDetailModal({
                           const discountUsd = Number(item.discount_usd || 0)
                           const subtotalBs = unitPriceBs * item.qty - discountBs
                           const subtotalUsd = unitPriceUsd * item.qty - discountUsd
+                          const isWeightProduct = Boolean(item.is_weight_product)
+                          const weightValue = Number(item.weight_value ?? item.qty ?? 0)
 
                           return (
                             <TableRow key={item.id}>
@@ -427,7 +429,11 @@ export default function SaleDetailModal({
                                 </div>
                               </TableCell>
                               <TableCell className="text-center">
-                                <span className="font-semibold text-foreground">{item.qty}</span>
+                                <span className="font-semibold text-foreground">
+                                  {isWeightProduct
+                                    ? formatWeightValue(weightValue, item.weight_unit)
+                                    : item.qty}
+                                </span>
                               </TableCell>
                               <TableCell className="text-right">
                                 <span className="text-sm text-foreground">
