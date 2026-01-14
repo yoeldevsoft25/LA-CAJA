@@ -35,6 +35,15 @@ const currencyLabels: Record<string, string> = {
   MIXED: 'Mixto',
 }
 
+const formatWeightValue = (value: number, unit?: string | null) => {
+  const safeUnit = unit || 'kg'
+  const decimals = safeUnit === 'g' || safeUnit === 'oz' ? 0 : 3
+  const safeValue = Number.isFinite(value) ? value : 0
+  const fixed = safeValue.toFixed(decimals)
+  const trimmed = fixed.replace(/\.?0+$/, '')
+  return `${trimmed} ${safeUnit}`
+}
+
 export default function SaleDetailModal({
   isOpen,
   onClose,
@@ -591,4 +600,3 @@ export default function SaleDetailModal({
     </Dialog>
   )
 }
-
