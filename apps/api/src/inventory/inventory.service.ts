@@ -257,6 +257,8 @@ export class InventoryService {
       .addSelect('product.name', 'product_name')
       .addSelect('product.low_stock_threshold', 'low_stock_threshold')
       .addSelect('COALESCE(stock.current_stock, 0)', 'current_stock')
+      .addSelect('product.is_weight_product', 'is_weight_product')
+      .addSelect('product.weight_unit', 'weight_unit')
       .where('product.store_id = :storeId', { storeId })
       .andWhere('product.is_active = true');
 
@@ -328,6 +330,8 @@ export class InventoryService {
       low_stock_threshold: row.low_stock_threshold,
       is_low_stock:
         (parseFloat(row.current_stock) || 0) <= row.low_stock_threshold,
+      is_weight_product: row.is_weight_product || false,
+      weight_unit: row.weight_unit || null,
     }));
 
     if (!isPaginated) {

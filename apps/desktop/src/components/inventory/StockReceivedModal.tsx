@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { inventoryService, StockReceivedRequest, StockStatus } from '@/services/inventory.service'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
-import { X, Plus, Trash2, Search } from 'lucide-react'
+import { X, Plus, Trash2, Search, Scale } from 'lucide-react'
 
 interface StockReceivedModalProps {
   isOpen: boolean
@@ -76,8 +76,11 @@ export default function StockReceivedModal({
       // Convertir a número si viene como string (PostgreSQL devuelve NUMERIC como string)
       const defaultCostUsd = fullProduct?.cost_usd ? Number(fullProduct.cost_usd) : 0
       const defaultCostBs = fullProduct?.cost_bs ? Number(fullProduct.cost_bs) : 0
-      const isWeightProduct = !!fullProduct?.is_weight_product
-      const weightUnit = fullProduct?.weight_unit ?? null
+
+      // Usar is_weight_product y weight_unit del StockStatus (viene del backend)
+      // Si no está en StockStatus, intentar obtener del producto completo
+      const isWeightProduct = product.is_weight_product ?? fullProduct?.is_weight_product ?? false
+      const weightUnit = product.weight_unit ?? fullProduct?.weight_unit ?? null
 
       setProductItems([
         {
@@ -86,7 +89,7 @@ export default function StockReceivedModal({
           product_name: product.product_name,
           is_weight_product: isWeightProduct,
           weight_unit: weightUnit,
-          qty: 1,
+          qty: isWeightProduct ? 0 : 1, // Para productos por peso, iniciar en 0
           unit_cost_usd: defaultCostUsd,
           unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 100) / 100,
         },
@@ -299,10 +302,18 @@ export default function StockReceivedModal({
                     className="border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50"
                   >
                     <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        {item.is_weight_product && (
+                          <Scale className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        )}
                         <h4 className="font-semibold text-gray-900 text-sm sm:text-base">
                           {item.product_name}
                         </h4>
+                        {item.is_weight_product && item.weight_unit && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            Por {item.weight_unit === 'g' ? 'gramos' : item.weight_unit === 'kg' ? 'kilos' : item.weight_unit === 'lb' ? 'libras' : 'onzas'}
+                          </span>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -319,7 +330,7 @@ export default function StockReceivedModal({
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
                           {item.is_weight_product && item.weight_unit
-                            ? `Cantidad (${item.weight_unit})`
+                            ? `Cantidad en ${item.weight_unit === 'g' ? 'gramos' : item.weight_unit === 'kg' ? 'kilos' : item.weight_unit === 'lb' ? 'libras' : 'onzas'} (${item.weight_unit})`
                             : 'Cantidad'}{' '}
                           <span className="text-red-500">*</span>
                         </label>
@@ -339,7 +350,18 @@ export default function StockReceivedModal({
                                 : '0.001'
                               : '1'
                           }
-                          value={item.qty}
+                          placeholder={
+                            item.is_weight_product
+                              ? item.weight_unit === 'g'
+                                ? 'Ej: 500 (gramos)'
+                                : item.weight_unit === 'kg'
+                                ? 'Ej: 2.5 (kilos)'
+                                : item.weight_unit === 'lb'
+                                ? 'Ej: 1.5 (libras)'
+                                : 'Ej: 8 (onzas)'
+                              : 'Ej: 10'
+                          }
+                          value={item.qty || ''}
                           onChange={(e) => {
                             const parsed = parseFloat(e.target.value)
                             if (Number.isNaN(parsed)) {
@@ -362,7 +384,10 @@ export default function StockReceivedModal({
                       {/* Costo USD */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Costo Unit. USD <span className="text-red-500">*</span>
+                          {item.is_weight_product && item.weight_unit
+                            ? `Costo por ${item.weight_unit} (USD)`
+                            : 'Costo Unit. USD'}{' '}
+                          <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
@@ -380,7 +405,9 @@ export default function StockReceivedModal({
                       {/* Costo BS (calculado) */}
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Costo Unit. Bs
+                          {item.is_weight_product && item.weight_unit
+                            ? `Costo por ${item.weight_unit} (Bs)`
+                            : 'Costo Unit. Bs'}
                           <span className="text-xs font-normal text-gray-500 ml-1">
                             (Calculado)
                           </span>
@@ -455,13 +482,27 @@ export default function StockReceivedModal({
             {productItems.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
                 <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Resumen</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                <div className="space-y-2 text-sm">
+                  {productItems.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center">
+                      <span className="text-gray-700">{item.product_name}</span>
+                      <span className="font-semibold text-gray-900">
+                        {item.qty}{' '}
+                        {item.is_weight_product && item.weight_unit
+                          ? item.weight_unit
+                          : 'unidades'}
+                        {' - '}${(item.unit_cost_usd * item.qty).toFixed(2)} USD
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-blue-200 mt-3 pt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                   <div>
                     <span className="text-gray-600">Productos:</span>
                     <span className="ml-2 font-semibold text-gray-900">{totalProducts}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Total unidades:</span>
+                    <span className="text-gray-600">Total items:</span>
                     <span className="ml-2 font-semibold text-gray-900">{totalItems}</span>
                   </div>
                   <div>

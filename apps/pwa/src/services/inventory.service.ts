@@ -6,6 +6,9 @@ export interface StockStatus {
   current_stock: number
   low_stock_threshold: number
   is_low_stock: boolean
+  // Campos para productos por peso
+  is_weight_product?: boolean
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null
 }
 
 export interface StockStatusResponse {
