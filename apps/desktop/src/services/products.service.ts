@@ -13,6 +13,15 @@ export interface Product {
   cost_usd: number | string
   low_stock_threshold: number
   is_active: boolean
+  // Campos para productos por peso
+  is_weight_product?: boolean
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null
+  price_per_weight_bs?: number | string | null
+  price_per_weight_usd?: number | string | null
+  min_weight?: number | null
+  max_weight?: number | null
+  scale_plu?: string | null
+  scale_department?: number | null
   updated_at: string
 }
 

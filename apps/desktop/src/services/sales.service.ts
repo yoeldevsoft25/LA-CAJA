@@ -5,6 +5,12 @@ export interface CartItemDto {
   qty: number
   discount_bs?: number
   discount_usd?: number
+  // Campos para productos por peso
+  is_weight_product?: boolean
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null
+  weight_value?: number | null
+  price_per_weight_bs?: number | null
+  price_per_weight_usd?: number | null
 }
 
 export interface CreateSaleRequest {

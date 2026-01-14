@@ -11,6 +11,14 @@ export interface CartItem {
   unit_price_usd: number
   discount_bs?: number
   discount_usd?: number
+  variant_id?: string | null
+  variant_name?: string | null
+  // Campos para productos por peso
+  is_weight_product?: boolean
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null
+  weight_value?: number | null // Valor del peso (ej: 2.5 kg)
+  price_per_weight_bs?: number | null
+  price_per_weight_usd?: number | null
 }
 
 interface CartState {

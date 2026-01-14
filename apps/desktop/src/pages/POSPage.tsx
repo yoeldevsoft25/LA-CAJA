@@ -1,16 +1,28 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Search, Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react'
+import { Search, Plus, Minus, ShoppingCart, Trash2, Scale } from 'lucide-react'
 import { productsService } from '@/services/products.service'
 import { salesService } from '@/services/sales.service'
 import { cashService } from '@/services/cash.service'
 import { useCart } from '@/stores/cart.store'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
+import WeightInputModal from '@/components/pos/WeightInputModal'
+
+interface WeightProduct {
+  id: string
+  name: string
+  weight_unit: 'kg' | 'g' | 'lb' | 'oz'
+  price_per_weight_bs: number
+  price_per_weight_usd: number
+  min_weight?: number | null
+  max_weight?: number | null
+}
 
 export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showCheckout, setShowCheckout] = useState(false)
+  const [selectedWeightProduct, setSelectedWeightProduct] = useState<WeightProduct | null>(null)
   const { items, addItem, updateItem, removeItem, clear, getTotal } = useCart()
 
   // Obtener sesión actual de caja
@@ -34,8 +46,30 @@ export default function POSPage() {
 
   const products = productsData?.products || []
 
+  // Helper para obtener decimales de precio por peso
+  const getWeightPriceDecimals = (unit?: string | null) => {
+    return unit === 'g' || unit === 'oz' ? 4 : 2
+  }
+
   const handleAddToCart = (product: any) => {
-    const existingItem = items.find((item) => item.product_id === product.id)
+    // Si es producto por peso, abrir modal para ingresar peso
+    if (product.is_weight_product) {
+      setSelectedWeightProduct({
+        id: product.id,
+        name: product.name,
+        weight_unit: product.weight_unit || 'kg',
+        price_per_weight_bs: Number(product.price_per_weight_bs) || 0,
+        price_per_weight_usd: Number(product.price_per_weight_usd) || 0,
+        min_weight: product.min_weight,
+        max_weight: product.max_weight,
+      })
+      return
+    }
+
+    // Producto normal
+    const existingItem = items.find(
+      (item) => item.product_id === product.id && !item.is_weight_product
+    )
 
     if (existingItem) {
       updateItem(existingItem.id, { qty: existingItem.qty + 1 })
@@ -49,6 +83,35 @@ export default function POSPage() {
       })
     }
     toast.success(`${product.name} agregado al carrito`)
+  }
+
+  // Handler para confirmar peso de producto
+  const handleWeightConfirm = (weightValue: number) => {
+    if (!selectedWeightProduct) return
+
+    const unitLabel = selectedWeightProduct.weight_unit
+
+    // Convertir a números (PostgreSQL devuelve NUMERIC como string)
+    const pricePerWeightBs = Number(selectedWeightProduct.price_per_weight_bs) || 0
+    const pricePerWeightUsd = Number(selectedWeightProduct.price_per_weight_usd) || 0
+
+    // Agregar al carrito con qty = peso y unit_price = precio por unidad de peso
+    addItem({
+      product_id: selectedWeightProduct.id,
+      product_name: `${selectedWeightProduct.name} (${weightValue} ${unitLabel})`,
+      qty: weightValue,
+      unit_price_bs: pricePerWeightBs,
+      unit_price_usd: pricePerWeightUsd,
+      // Guardar info de peso para el backend
+      is_weight_product: true,
+      weight_unit: selectedWeightProduct.weight_unit,
+      weight_value: weightValue,
+      price_per_weight_bs: pricePerWeightBs,
+      price_per_weight_usd: pricePerWeightUsd,
+    })
+
+    toast.success(`${selectedWeightProduct.name} (${weightValue} ${unitLabel}) agregado al carrito`)
+    setSelectedWeightProduct(null)
   }
 
   const handleUpdateQty = (itemId: string, newQty: number) => {
@@ -94,6 +157,12 @@ export default function POSPage() {
       qty: item.qty,
       discount_bs: item.discount_bs || 0,
       discount_usd: item.discount_usd || 0,
+      // Incluir info de peso para productos por peso
+      is_weight_product: item.is_weight_product || false,
+      weight_unit: item.weight_unit || null,
+      weight_value: item.weight_value || null,
+      price_per_weight_bs: item.price_per_weight_bs || null,
+      price_per_weight_usd: item.price_per_weight_usd || null,
     }))
 
     createSaleMutation.mutate({
@@ -102,7 +171,7 @@ export default function POSPage() {
       currency: checkoutData.currency,
       payment_method: checkoutData.payment_method,
       cash_payment: checkoutData.cash_payment,
-      cash_session_id: currentCashSession?.id || undefined, // Asociar con sesión de caja actual
+      cash_session_id: currentCashSession?.id || undefined,
       customer_id: checkoutData.customer_id,
       customer_name: checkoutData.customer_name,
       customer_document_id: checkoutData.customer_document_id,
@@ -166,7 +235,10 @@ export default function POSPage() {
                   >
                     <div className="flex items-start justify-between gap-3 min-w-0">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm sm:text-base text-gray-900 break-words leading-snug">
+                        <h3 className="font-semibold text-sm sm:text-base text-gray-900 break-words leading-snug flex items-center gap-2">
+                          {product.is_weight_product && (
+                            <Scale className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                          )}
                           {product.name}
                         </h3>
                         {product.category && (
@@ -181,12 +253,33 @@ export default function POSPage() {
                         )}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-base sm:text-lg text-gray-900">
-                          ${Number(product.price_usd).toFixed(2)}
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-500">
-                          Bs. {Number(product.price_bs).toFixed(2)}
-                        </p>
+                        {product.is_weight_product ? (
+                          <>
+                            <p className="font-bold text-base sm:text-lg text-gray-900">
+                              ${Number(product.price_per_weight_usd).toFixed(
+                                getWeightPriceDecimals(product.weight_unit)
+                              )}
+                              <span className="text-xs font-normal text-gray-500">
+                                /{product.weight_unit || 'kg'}
+                              </span>
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-500">
+                              Bs. {Number(product.price_per_weight_bs).toFixed(
+                                getWeightPriceDecimals(product.weight_unit)
+                              )}
+                              /{product.weight_unit || 'kg'}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-bold text-base sm:text-lg text-gray-900">
+                              ${Number(product.price_usd).toFixed(2)}
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-500">
+                              Bs. {Number(product.price_bs).toFixed(2)}
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -228,13 +321,25 @@ export default function POSPage() {
                         <div className="flex items-start justify-between mb-2 gap-2 min-w-0">
                           <div className="flex-1 min-w-0">
                             <p
-                              className="font-medium text-xs sm:text-sm text-gray-900 break-words leading-snug"
+                              className="font-medium text-xs sm:text-sm text-gray-900 break-words leading-snug flex items-center gap-1"
                               title={item.product_name}
                             >
+                              {item.is_weight_product && (
+                                <Scale className="w-3 h-3 text-blue-600 flex-shrink-0" />
+                              )}
                               {item.product_name}
                             </p>
                             <p className="text-xs text-gray-500">
-                              ${item.unit_price_usd.toFixed(2)} c/u
+                              {item.is_weight_product ? (
+                                <>
+                                  {item.qty} {item.weight_unit || 'kg'} × $
+                                  {Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
+                                    getWeightPriceDecimals(item.weight_unit)
+                                  )}/{item.weight_unit || 'kg'}
+                                </>
+                              ) : (
+                                <>${item.unit_price_usd.toFixed(2)} c/u</>
+                              )}
                             </p>
                           </div>
                           <button
@@ -249,31 +354,39 @@ export default function POSPage() {
                           </button>
                         </div>
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleUpdateQty(item.id, item.qty - 1)
-                              }}
-                              className="p-1.5 rounded bg-white border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
-                              aria-label="Disminuir cantidad"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="w-8 text-center font-semibold text-sm sm:text-base">
-                              {item.qty}
+                          {/* Solo mostrar controles +/- para productos NO por peso */}
+                          {!item.is_weight_product && (
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleUpdateQty(item.id, item.qty - 1)
+                                }}
+                                className="p-1.5 rounded bg-white border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+                                aria-label="Disminuir cantidad"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="w-8 text-center font-semibold text-sm sm:text-base">
+                                {item.qty}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleUpdateQty(item.id, item.qty + 1)
+                                }}
+                                className="p-1.5 rounded bg-white border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+                                aria-label="Aumentar cantidad"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                          {item.is_weight_product && (
+                            <span className="text-sm text-gray-600">
+                              {item.qty} {item.weight_unit || 'kg'}
                             </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleUpdateQty(item.id, item.qty + 1)
-                              }}
-                              className="p-1.5 rounded bg-white border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
-                              aria-label="Aumentar cantidad"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
+                          )}
                           <p className="font-semibold text-sm sm:text-base text-gray-900">
                             ${(item.qty * item.unit_price_usd).toFixed(2)}
                           </p>
@@ -314,6 +427,14 @@ export default function POSPage() {
         total={total}
         onConfirm={handleCheckout}
         isLoading={createSaleMutation.isPending}
+      />
+
+      {/* Modal para ingresar peso */}
+      <WeightInputModal
+        isOpen={!!selectedWeightProduct}
+        onClose={() => setSelectedWeightProduct(null)}
+        product={selectedWeightProduct}
+        onConfirm={handleWeightConfirm}
       />
     </div>
   )
