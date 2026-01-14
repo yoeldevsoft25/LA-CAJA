@@ -387,9 +387,14 @@ export default function POSPage() {
                               {item.qty} {item.weight_unit || 'kg'}
                             </span>
                           )}
-                          <p className="font-semibold text-sm sm:text-base text-gray-900">
-                            ${(item.qty * item.unit_price_usd).toFixed(2)}
-                          </p>
+                          <div className="text-right tabular-nums">
+                            <p className="font-semibold text-sm sm:text-base text-gray-900">
+                              ${(item.qty * Number(item.unit_price_usd || 0)).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Bs. {(item.qty * Number(item.unit_price_bs || 0)).toFixed(2)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))}

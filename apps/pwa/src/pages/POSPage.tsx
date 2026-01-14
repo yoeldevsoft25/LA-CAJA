@@ -807,9 +807,14 @@ export default function POSPage() {
                             </Button>
                           </div>
                         )}
-                        <p className="font-semibold text-sm sm:text-base text-foreground tabular-nums">
-                          ${(item.qty * item.unit_price_usd).toFixed(2)}
-                        </p>
+                        <div className="text-right tabular-nums">
+                          <p className="font-semibold text-sm sm:text-base text-foreground">
+                            ${(item.qty * Number(item.unit_price_usd || 0)).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Bs. {(item.qty * Number(item.unit_price_bs || 0)).toFixed(2)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
