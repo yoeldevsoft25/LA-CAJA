@@ -50,6 +50,9 @@ export interface SaleItem {
   unit_price_usd: number | string
   discount_bs: number | string
   discount_usd: number | string
+  is_weight_product?: boolean
+  weight_value?: number | string | null
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null
   product?: {
     id: string
     name: string

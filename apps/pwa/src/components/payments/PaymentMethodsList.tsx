@@ -83,6 +83,7 @@ export default function PaymentMethodsList() {
       await Promise.all(
         updates.map((update) =>
           paymentsService.upsertPaymentMethodConfig(update.method, {
+            method: update.method,
             sort_order: update.sort_order,
           })
         )

@@ -9,6 +9,7 @@
 
 ## 📋 Índice
 
+0. [Fullstack Senior Developer (Completo)](#0-fullstack-senior-developer-completo) ⭐ **RECOMENDADO**
 1. [Backend Developer (NestJS/Event Sourcing)](#1-backend-developer-nestjsevent-sourcing)
 2. [Frontend Developer (React/PWA)](#2-frontend-developer-reactpwa)
 3. [ML Engineer (Python/TensorFlow)](#3-ml-engineer-pythontensorflow)
@@ -39,6 +40,26 @@ Contexto específico del rol y dominio del proyecto.
 
 ### 6. Progressive Refinement
 Iteración y refinamiento basado en feedback.
+
+---
+
+## 0. Fullstack Senior Developer (Completo) ⭐
+
+### Prompt Completo
+Para un prompt completo que cubre todo el stack del proyecto (Backend + Frontend + Arquitectura + Best Practices), ver:
+
+📄 **[PROMPT_AGENTE_FULLSTACK_SENIOR.md](./PROMPT_AGENTE_FULLSTACK_SENIOR.md)**
+
+Este prompt incluye:
+- ✅ Stack tecnológico completo (Backend, Frontend PWA, Frontend Desktop)
+- ✅ Metodología estructurada (Chain-of-Thought, Self-Criticism)
+- ✅ Estándares de código para todo el proyecto
+- ✅ Ejemplos de implementación completos
+- ✅ Convenciones específicas del proyecto
+- ✅ Checklist completo de validación
+- ✅ Restricciones y constraints
+
+**Recomendado para:** Tareas que requieren cambios en múltiples capas o implementaciones completas de funcionalidades.
 
 ---
 
@@ -1261,6 +1282,16 @@ Now, design the requested architecture following this structured approach.
 
 ---
 
+---
+
+## 📚 Referencias Adicionales
+
+- **Prompt Fullstack Completo:** [PROMPT_AGENTE_FULLSTACK_SENIOR.md](./PROMPT_AGENTE_FULLSTACK_SENIOR.md) - Prompt comprehensivo para desarrollo fullstack
+- **Plan de Auditoría:** [AUDIT_MASTER_PLAN.md](../../AUDIT_MASTER_PLAN.md) - Plan completo de auditoría del sistema
+- **Plan de Optimización UI:** [UI_OPTIMIZATION_PLAN.md](../../UI_OPTIMIZATION_PLAN.md) - Plan de mejoras UI/UX
+
+---
+
 **Última actualización:** Enero 2025  
-**Versión:** 1.0
+**Versión:** 1.1
 

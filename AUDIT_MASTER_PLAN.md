@@ -341,15 +341,23 @@ Frontend:
 └── apps/pwa/src/services/debts.service.ts
 ```
 
-### Checklist
+### Checklist Backend
 | ID | Verificación | Estado | Notas |
 |----|--------------|--------|-------|
-| D-BE-01 | Crear deuda desde venta | ⬜ | |
-| D-BE-02 | Asociar a cliente | ⬜ | |
-| D-BE-03 | Registrar abono | ⬜ | |
-| D-BE-04 | Calcular saldo pendiente | ⬜ | |
-| D-BE-05 | Marcar como pagada | ⬜ | |
-| D-BE-06 | Historial de abonos | ⬜ | |
+| D-BE-01 | Crear deuda desde venta | ✅ | createDebtFromSale + integración automática en SalesService (FIAO) |
+| D-BE-02 | Asociar a cliente | ✅ | customer_id en Debt entity + validación |
+| D-BE-03 | Registrar abono | ✅ | addPayment con transacción + validaciones |
+| D-BE-04 | Calcular saldo pendiente | ✅ | getDebtSummary calcula remaining_bs/usd |
+| D-BE-05 | Marcar como pagada | ✅ | Actualización automática de status (OPEN→PARTIAL→PAID) |
+| D-BE-06 | Historial de abonos | ✅ | payments relación en Debt + getDebtsByCustomer |
+| D-BE-07 | DTO con validaciones | ✅ | CreateDebtPaymentDto con class-validator |
+| D-BE-08 | Transacciones atómicas | ✅ | addPayment usa dataSource.transaction |
+| D-BE-09 | Índices optimizados | ✅ | idx_debts_store_customer, idx_debts_store_status, idx_debt_payments_debt |
+| D-BE-10 | Conversión moneda automática | ✅ | Usa ExchangeService.getBCVRate() para calcular amount_bs |
+
+### Checklist Frontend PWA
+| ID | Verificación | Estado | Notas |
+|----|--------------|--------|-------|
 | D-FE-01 | Listado deudas pendientes | ⬜ | |
 | D-FE-02 | Detalle de deuda | ⬜ | |
 | D-FE-03 | Registrar pago/abono | ⬜ | |
@@ -371,14 +379,25 @@ Frontend:
 └── apps/pwa/src/services/exchange.service.ts
 ```
 
-### Checklist
+### Checklist Backend
 | ID | Verificación | Estado | Notas |
 |----|--------------|--------|-------|
-| E-BE-01 | Obtener tasa BCV automática | ⬜ | |
-| E-BE-02 | Cache de tasa (TTL) | ⬜ | |
-| E-BE-03 | Tasa manual como fallback | ⬜ | |
-| E-BE-04 | Historial de tasas | ⬜ | |
-| E-BE-05 | Conversión USD ↔ Bs | ⬜ | |
+| E-BE-01 | Obtener tasa BCV automática | ✅ | fetchFromBCVAPI() desde DolarAPI + fallback |
+| E-BE-02 | Cache de tasa (TTL) | ✅ | Cache en memoria con CACHE_DURATION_MS (1 hora) |
+| E-BE-03 | Tasa manual como fallback | ✅ | setManualRate + getActiveManualRate + getLastManualRate |
+| E-BE-04 | Historial de tasas | ✅ | getRateHistory con paginación y filtro por tipo |
+| E-BE-05 | Conversión USD ↔ Bs | ✅ | Funciones usdToBs() y bsToUsd() con redondeo |
+| E-BE-06 | Sistema multi-tasa | ✅ | Soporte BCV, PARALLEL, CASH, ZELLE |
+| E-BE-07 | Configuración por tienda | ✅ | StoreRateConfig con mapeo método de pago → tipo tasa |
+| E-BE-08 | Tasa preferida | ✅ | is_preferred para priorizar tasas |
+| E-BE-09 | Vigencia de tasas | ✅ | effective_from y effective_until |
+| E-BE-10 | Guardar tasa API en BD | ✅ | saveApiRate guarda tasas obtenidas de API |
+| E-BE-11 | Índices optimizados | ✅ | 3 índices parciales en ExchangeRate |
+| E-BE-12 | DTOs con validaciones | ✅ | SetManualRateDto, UpdateRateConfigDto, SetMultipleRatesDto |
+
+### Checklist Frontend PWA
+| ID | Verificación | Estado | Notas |
+|----|--------------|--------|-------|
 | E-FE-01 | Mostrar tasa actual | ⬜ | |
 | E-FE-02 | Indicador de última actualización | ⬜ | |
 
@@ -674,6 +693,8 @@ Frontend:
 | ISS-023 | PAYMENTS/Backend | Comisiones por método no implementadas | ✅ Cerrado | 2026-01-14 |
 | ISS-024 | PAYMENTS/Backend | requires_authorization no se valida en ventas | ✅ Cerrado | 2026-01-14 |
 | ISS-025 | PAYMENTS/PWA | No hay UI para reordenar métodos | ✅ Cerrado | 2026-01-14 |
+| ISS-026 | DEBTS/PWA | Sin UI para gestión de deudas (listado, detalle, pagos) | 🔄 Pendiente | 2026-01-14 |
+| ISS-027 | EXCHANGE/PWA | Sin UI para mostrar tasa actual e historial | 🔄 Pendiente | 2026-01-14 |
 
 ## Bajos (Nice-to-have)
 | ID | Módulo | Descripción | Estado | Fecha |
@@ -714,6 +735,10 @@ Frontend:
 | 2026-01-14 | PAYMENTS | Backend: orden y comisiones en métodos de pago | Codex |
 | 2026-01-14 | PAYMENTS | Backend: validación requires_authorization en ventas | Codex |
 | 2026-01-14 | PAYMENTS | PWA: reordenar métodos + comisión | Codex |
+| 2026-01-14 | DEBTS | Auditoría módulo DEBTS (BE) | Codex |
+| 2026-01-14 | DEBTS | Backend: CRUD completo + integración automática con ventas FIAO | Codex |
+| 2026-01-14 | EXCHANGE | Auditoría módulo EXCHANGE (BE) | Codex |
+| 2026-01-14 | EXCHANGE | Backend: Sistema multi-tasa completo con cache y fallback | Codex |
 
 ---
 
