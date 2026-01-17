@@ -70,7 +70,7 @@ const setupPwaUpdates = () => {
     onRegisteredSW() {
       void hardRefreshIfBuildMismatch()
     },
-    onRegisterError(error) {
+    onRegisterError(error: unknown) {
       console.warn('[PWA] Error registrando Service Worker:', error)
     },
   })
