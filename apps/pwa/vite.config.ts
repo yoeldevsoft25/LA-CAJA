@@ -403,11 +403,10 @@ export default defineConfig(({ mode }) => ({
       // 'strict' puede causar problemas de inicialización con dependencias circulares
       preserveEntrySignatures: 'allow-extension',
       output: {
-        // SOLUCIÓN SIMPLIFICADA: Agrupar TODO React y dependencias en un solo chunk
-        // El análisis recursivo y separaciones complejas causan errores de inicialización
-        // "Cannot access 'kn' before initialization" debido a dependencias circulares
+        // SOLUCIÓN FUNCIONAL: Agrupar TODO React y dependencias en react-vendor
+        // Date-fns puede ir separado porque NO depende de React
+        // Esto garantiza el orden correcto de inicialización
         manualChunks: (id) => {
-          // Solo procesar node_modules (el código propio se mantiene junto)
           if (!id.includes('node_modules')) {
             return undefined;
           }
@@ -417,13 +416,8 @@ export default defineConfig(({ mode }) => ({
             return 'date-fns-vendor';
           }
 
-          // CRÍTICO: Agrupar TODO lo demás en react-vendor para evitar errores
-          // "Cannot read properties of undefined (reading 'useLayoutEffect')"
-          // Cualquier subdependencia que use React debe estar en el mismo chunk que React
-          // Separar chunks causa problemas de orden de inicialización
-          // Excepciones: date-fns (ya manejado arriba)
-          
-          // React core y todo su ecosistema va a react-vendor
+          // CRÍTICO: Todo lo demás (incluyendo React y todas sus dependencias) va a react-vendor
+          // Esto evita errores de inicialización y garantiza que React esté disponible
           return 'react-vendor';
         },
         // Optimizar nombres de chunks para mejor cacheo
