@@ -221,6 +221,9 @@ export default function CheckoutModal({
   const [selectedPromotionId, setSelectedPromotionId] = useState<string | null>(null)
   const [promotionCode, setPromotionCode] = useState<string>('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null)
+  
+  // Detectar si es móvil para usar bottom sheet
+  const [isMobile, setIsMobile] = useState(false)
 
   // Prellenar la tasa cuando se obtiene del backend
   useEffect(() => {
@@ -340,6 +343,16 @@ export default function CheckoutModal({
       setReceivedBs(0)
     }
   }, [selectedMethod, total.usd, exchangeRate])
+
+  // Detectar si es móvil para usar bottom sheet
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024) // lg breakpoint
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Cerrar resultados al hacer click fuera
   useEffect(() => {
@@ -794,18 +807,6 @@ export default function CheckoutModal({
         : fallbackOrder(b.id)
     return orderA - orderB
   })
-
-  // Detectar si es móvil para usar bottom sheet
-  const [isMobile, setIsMobile] = useState(false)
-  
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024) // lg breakpoint
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   // Contenido del modal/sheet (reutilizable)
   const modalContent = (

@@ -206,22 +206,38 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         // Separar chunks por vendor y código propio
-        // IMPORTANTE: React, React-DOM, @radix-ui, @tanstack y react-router deben estar
-        // en el MISMO chunk que el resto de dependencias React. Separarlos causa
-        // "Cannot read properties of undefined (reading 'createContext')" porque
-        // librerías como Radix/TanStack usan React.createContext y si su chunk
-        // se ejecuta antes de que React esté disponible, falla.
+        // IMPORTANTE: React y todas las librerías que lo usan directamente deben estar
+        // en el MISMO chunk para evitar "Cannot read properties of undefined (reading 'createContext')"
         manualChunks: (id) => {
-          // Solo separar librerías que NO dependen de React en tiempo de init
+          // React core y librerías que dependen críticamente de React.createContext
+          // Todas juntas para garantizar orden de carga correcto
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/@radix-ui') ||
+            id.includes('node_modules/@tanstack') ||
+            id.includes('node_modules/react-router') ||
+            id.includes('node_modules/react-hot-toast') ||
+            id.includes('node_modules/react-hook-form') ||
+            id.includes('node_modules/react-day-picker') ||
+            id.includes('node_modules/react-helmet-async') ||
+            id.includes('node_modules/framer-motion') ||
+            id.includes('node_modules/@hookform/resolvers')
+          ) {
+            return 'react-vendor';
+          }
+          
+          // Recharts (usa React pero puede ir en chunk separado si se carga lazy)
           if (id.includes('node_modules/recharts')) {
             return 'recharts-vendor';
           }
+          
+          // Date-fns (no depende de React)
           if (id.includes('node_modules/date-fns')) {
             return 'date-fns-vendor';
           }
-          // Todo lo demás (react, react-dom, @radix-ui, @tanstack, react-router,
-          // framer-motion, lucide-react, etc.) en un solo vendor para evitar
-          // problemas de orden de carga con createContext
+          
+          // Otras librerías (axios, dexie, zustand, socket.io, etc.)
           if (id.includes('node_modules')) {
             return 'vendor';
           }
