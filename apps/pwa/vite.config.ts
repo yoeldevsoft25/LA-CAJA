@@ -206,27 +206,22 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         // Separar chunks por vendor y código propio
+        // IMPORTANTE: React, React-DOM, @radix-ui, @tanstack y react-router deben estar
+        // en el MISMO chunk que el resto de dependencias React. Separarlos causa
+        // "Cannot read properties of undefined (reading 'createContext')" porque
+        // librerías como Radix/TanStack usan React.createContext y si su chunk
+        // se ejecuta antes de que React esté disponible, falla.
         manualChunks: (id) => {
-          // React y React DOM
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'react-vendor';
-          }
-          // Radix UI (componentes UI)
-          if (id.includes('node_modules/@radix-ui')) {
-            return 'radix-vendor';
-          }
-          // TanStack Query (gestión de estado del servidor)
-          if (id.includes('node_modules/@tanstack')) {
-            return 'tanstack-vendor';
-          }
-          // Otras librerías grandes
+          // Solo separar librerías que NO dependen de React en tiempo de init
           if (id.includes('node_modules/recharts')) {
             return 'recharts-vendor';
           }
           if (id.includes('node_modules/date-fns')) {
             return 'date-fns-vendor';
           }
-          // Vendor chunk para el resto de node_modules
+          // Todo lo demás (react, react-dom, @radix-ui, @tanstack, react-router,
+          // framer-motion, lucide-react, etc.) en un solo vendor para evitar
+          // problemas de orden de carga con createContext
           if (id.includes('node_modules')) {
             return 'vendor';
           }
