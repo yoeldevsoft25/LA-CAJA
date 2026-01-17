@@ -266,7 +266,8 @@ export default defineConfig(({ mode }) => ({
             id.includes('node_modules/framer-motion') ||
             id.includes('node_modules/@hookform/resolvers') ||
             id.includes('node_modules/lucide-react') || // Usa forwardRef - CRÍTICO
-            id.includes('node_modules/dexie-react-hooks') // Usa hooks de React
+            id.includes('node_modules/dexie-react-hooks') || // Usa hooks de React
+            id.includes('node_modules/goober') // Dependencia de react-hot-toast
           ) {
             return 'react-vendor';
           }
