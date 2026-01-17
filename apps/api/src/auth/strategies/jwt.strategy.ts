@@ -51,13 +51,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       fullMember: member,
     });
 
-    // ⚠️ IMPORTANTE: Usar el rol del token (payload.role), NO el de la DB
-    // Esto es porque el token ya fue firmado con el rol correcto en el momento del login/refresh
-    // Si hay discrepancia, significa que el token fue generado con un rol diferente al actual en DB
+    // ⚠️ IMPORTANTE: Usar el rol de la base de datos (member.role), NO el del token
+    // Esto asegura que si el rol del usuario cambió en la DB, se use el rol actual
+    // El token puede tener un rol desactualizado si el usuario cambió de rol después del login
+    if (payload.role !== member.role) {
+      console.warn('[JwtStrategy] ⚠️ Discrepancia de rol detectada:', {
+        userId: payload.sub,
+        storeId: payload.store_id,
+        roleInToken: payload.role,
+        roleInDB: member.role,
+        action: 'Usando rol de la base de datos',
+      });
+    }
+
     return {
       sub: payload.sub,
       store_id: payload.store_id,
-      role: payload.role, // Usar rol del token
+      role: member.role, // Usar rol de la base de datos (actualizado)
     };
   }
 }
