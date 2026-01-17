@@ -8,15 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   AlertTriangle,
-  Calendar,
   Package,
   ArrowRight,
   X,
   Clock,
 } from 'lucide-react'
 import { useState } from 'react'
-import { format, differenceInDays, isPast } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { differenceInDays, isPast } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 interface ExpiringLotsAlertProps {

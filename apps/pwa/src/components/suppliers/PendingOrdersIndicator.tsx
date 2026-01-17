@@ -3,18 +3,15 @@ import { Link } from 'react-router-dom'
 import { purchaseOrdersService, PurchaseOrder } from '@/services/purchase-orders.service'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  Package,
   Truck,
   Clock,
   ArrowRight,
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react'
-import { format, differenceInDays } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { differenceInDays } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 interface PendingOrdersIndicatorProps {
