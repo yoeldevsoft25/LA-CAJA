@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle, Printer, Receipt, Download } from 'lucide-react'
+import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle, Printer, Receipt, Download, Filter, X } from 'lucide-react'
 import { salesService, Sale } from '@/services/sales.service'
 import { authService } from '@/services/auth.service'
 import { useAuth } from '@/stores/auth.store'
