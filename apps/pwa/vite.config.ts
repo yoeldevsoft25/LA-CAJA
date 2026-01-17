@@ -5,6 +5,7 @@ import path from 'path';
 
 const buildId = process.env.PWA_BUILD_ID || new Date().toISOString();
 const buildIdJson = JSON.stringify(buildId);
+// Cache por build - se limpia automáticamente en cada build
 const reactChunkCache = new Map<string, boolean>();
 const nodeModulesRegex = /[\\/](node_modules)[\\/]/;
 const reactDepRegex = /[\\/](node_modules)[\\/](react|react-dom|scheduler|react-is|use-sync-external-store)[\\/]/;
@@ -14,24 +15,32 @@ const isReactChunkModule = (
   getModuleInfo: (id: string) => {
     importedIds?: readonly string[];
     dynamicallyImportedIds?: readonly string[];
-    importers?: readonly string[];
-    dynamicImporters?: readonly string[];
   } | null,
   stack: Set<string>,
+  depth: number = 0,
 ): boolean => {
+  // Límite de recursión para evitar loops infinitos (máximo 10 niveles)
+  if (depth > 10) {
+    return false;
+  }
+
+  // Solo procesar node_modules
   if (!nodeModulesRegex.test(id)) {
     return false;
   }
 
+  // Verificar cache
   if (reactChunkCache.has(id)) {
     return reactChunkCache.get(id) as boolean;
   }
 
+  // Verificar si es React core directamente
   if (reactDepRegex.test(id)) {
     reactChunkCache.set(id, true);
     return true;
   }
 
+  // Detectar ciclos
   if (stack.has(id)) {
     return false;
   }
@@ -42,23 +51,21 @@ const isReactChunkModule = (
     return false;
   }
 
+  // Agregar al stack para detectar ciclos
   stack.add(id);
+
+  // SOLO analizar dependencias HACIA ADELANTE (no importers)
+  // Analizar importers crea dependencias circulares dentro del mismo chunk
   const deps = [
     ...(info.importedIds || []),
     ...(info.dynamicallyImportedIds || []),
   ];
 
-  if (deps.some((dep) => isReactChunkModule(dep, getModuleInfo, stack))) {
-    stack.delete(id);
-    reactChunkCache.set(id, true);
-    return true;
-  }
+  // Verificar si alguna dependencia es React
+  const result = deps.some((dep) => 
+    isReactChunkModule(dep, getModuleInfo, stack, depth + 1)
+  );
 
-  const importers = [
-    ...(info.importers || []),
-    ...(info.dynamicImporters || []),
-  ];
-  const result = importers.some((dep) => isReactChunkModule(dep, getModuleInfo, stack));
   stack.delete(id);
   reactChunkCache.set(id, result);
   return result;
@@ -397,10 +404,10 @@ export default defineConfig(({ mode }) => ({
             return 'date-fns-vendor';
           }
 
-          // Recharts: puede ir separado si se carga lazy (aunque usa React internamente)
-          // Si causa problemas, moverlo a react-vendor
+          // Recharts: mover a react-vendor para evitar dependencias circulares
+          // Recharts depende de React internamente y puede causar problemas si está separado
           if (id.includes('node_modules/recharts')) {
-            return 'recharts-vendor';
+            return 'react-vendor';
           }
 
           // Resto de vendor (axios, dexie, zustand, socket.io, etc.)
