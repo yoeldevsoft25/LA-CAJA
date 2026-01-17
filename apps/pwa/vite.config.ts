@@ -162,7 +162,11 @@ export default defineConfig(({ mode }) => ({
         ],
         navigateFallbackDenylist: [
           /^\/_/,                    // Excluir rutas que empiezan con _
-          /\/[^/?]+\.[^/]+$/,        // Excluir archivos con extensión (pero permitir rutas SPA)
+          /\.(js|css|json|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico|webp)$/i, // Excluir todos los archivos estáticos con extensión
+          /^\/assets\//,             // Excluir toda la carpeta /assets/ (archivos JS/CSS/imágenes)
+          /^\/sw\.js$/,              // Excluir Service Worker
+          /^\/manifest\.webmanifest$/, // Excluir manifest
+          /^\/favicon\.(svg|ico)$/,  // Excluir favicons
           /^\/api\//,                // Excluir rutas de API
           /^\/socket\.io\//,         // Excluir WebSocket
         ],
@@ -209,8 +213,10 @@ export default defineConfig(({ mode }) => ({
         // IMPORTANTE: React y todas las librerías que lo usan directamente deben estar
         // en el MISMO chunk para evitar "Cannot read properties of undefined (reading 'createContext')"
         manualChunks: (id) => {
-          // React core y librerías que dependen críticamente de React.createContext
-          // Todas juntas para garantizar orden de carga correcto
+          // React core Y todas las librerías que dependen de React DEBEN estar
+          // en el MISMO chunk para evitar errores de orden de carga.
+          // Separar React de sus dependencias causa "Cannot read properties of undefined (reading 'forwardRef')"
+          // porque las librerías intentan usar React antes de que esté disponible.
           if (
             id.includes('node_modules/react') ||
             id.includes('node_modules/react-dom') ||
@@ -222,7 +228,9 @@ export default defineConfig(({ mode }) => ({
             id.includes('node_modules/react-day-picker') ||
             id.includes('node_modules/react-helmet-async') ||
             id.includes('node_modules/framer-motion') ||
-            id.includes('node_modules/@hookform/resolvers')
+            id.includes('node_modules/@hookform/resolvers') ||
+            id.includes('node_modules/lucide-react') || // Usa forwardRef
+            id.includes('node_modules/dexie-react-hooks') // Usa hooks de React
           ) {
             return 'react-vendor';
           }
@@ -237,7 +245,7 @@ export default defineConfig(({ mode }) => ({
             return 'date-fns-vendor';
           }
           
-          // Otras librerías (axios, dexie, zustand, socket.io, etc.)
+          // Otras librerías que NO dependen de React (axios, dexie, zustand, socket.io, etc.)
           if (id.includes('node_modules')) {
             return 'vendor';
           }

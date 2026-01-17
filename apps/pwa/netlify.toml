@@ -5,7 +5,9 @@
   publish = "dist"
 
 # Redirecciones SPA - CRÍTICO para evitar 404
-# Todas las rutas deben redirigir a index.html para que React Router funcione
+# IMPORTANTE: Esta regla solo aplica a rutas que NO son archivos estáticos
+# Netlify automáticamente sirve archivos que existen (como /assets/*.js) antes de aplicar redirects
+# Pero para rutas de la SPA (sin extensión), redirige a index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
