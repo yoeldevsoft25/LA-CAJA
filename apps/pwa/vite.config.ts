@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => ({
         // NO agregar index.html manualmente - Workbox lo detecta automáticamente
         // Si lo agregamos manualmente, causa conflicto con la entrada automática
         // Usar modo development para evitar minificación con Terser (estaba colgando el build)
-        mode: mode === 'production' ? 'production' : 'development',
+        mode: 'development',
         // Estrategia para navegación: NetworkFirst con fallback a CacheFirst para offline
         runtimeCaching: [
           {
