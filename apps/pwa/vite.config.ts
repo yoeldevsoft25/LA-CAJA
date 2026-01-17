@@ -4,12 +4,78 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 const buildId = process.env.PWA_BUILD_ID || new Date().toISOString();
+const buildIdJson = JSON.stringify(buildId);
 
 export default defineConfig(({ mode }) => ({
   plugins: [
     {
       name: 'emit-version',
       apply: 'build',
+      transformIndexHtml(html) {
+        const metaTag = `<meta name="pwa-build-id" content=${buildIdJson} />`;
+        const guardScript = `
+  <script>
+    (function () {
+      var buildId = ${buildIdJson};
+      var inFlight = false;
+
+      function clearServiceWorkerCaches() {
+        var unregisterPromise = Promise.resolve();
+        if ('serviceWorker' in navigator) {
+          unregisterPromise = navigator.serviceWorker.getRegistrations()
+            .then(function (registrations) {
+              return Promise.all(registrations.map(function (registration) {
+                return registration.unregister();
+              }));
+            });
+        }
+
+        return unregisterPromise.then(function () {
+          if (!('caches' in window)) return;
+          return caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (key) {
+              return caches.delete(key);
+            }));
+          });
+        });
+      }
+
+      function checkBuildMismatch() {
+        if (inFlight || !navigator.onLine) return;
+        inFlight = true;
+
+        fetch('/version.json', { cache: 'no-store' })
+          .then(function (response) {
+            if (!response.ok) return null;
+            return response.json().catch(function () {
+              return null;
+            });
+          })
+          .then(function (data) {
+            if (!data || typeof data.buildId !== 'string') return;
+            if (data.buildId === buildId) return;
+            return clearServiceWorkerCaches().then(function () {
+              window.location.reload();
+            });
+          })
+          .catch(function () {})
+          .finally(function () {
+            inFlight = false;
+          });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkBuildMismatch);
+      } else {
+        checkBuildMismatch();
+      }
+    })();
+  </script>
+`;
+
+        if (html.includes('pwa-build-id')) return html;
+        return html.replace('</head>', `  ${metaTag}${guardScript}\n</head>`);
+      },
       generateBundle() {
         this.emitFile({
           type: 'asset',
@@ -224,6 +290,26 @@ export default defineConfig(({ mode }) => ({
       '@la-caja/domain': path.resolve(__dirname, '../../packages/domain/src/index.ts'),
       '@la-caja/sync': path.resolve(__dirname, '../../packages/sync/src/index.ts'),
     },
+    dedupe: [
+      'react',
+      'react-dom',
+      'react-is',
+      'scheduler',
+      'use-sync-external-store',
+      'react-hot-toast',
+      'goober',
+    ],
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-is',
+      'scheduler',
+      'use-sync-external-store',
+      'react-hot-toast',
+      'goober',
+    ],
   },
   define: {
     __PWA_BUILD_ID__: JSON.stringify(buildId),
@@ -249,7 +335,9 @@ export default defineConfig(({ mode }) => ({
           if (
             id.includes('node_modules/react') ||
             id.includes('node_modules/react-dom') ||
-            id.includes('node_modules/scheduler')
+            id.includes('node_modules/react-is') ||
+            id.includes('node_modules/scheduler') ||
+            id.includes('node_modules/use-sync-external-store')
           ) {
             return 'react-vendor';
           }
