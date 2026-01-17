@@ -8,6 +8,16 @@ import { inventoryService, StockAdjustedRequest, StockStatus } from '@/services/
 import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +26,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
+import { AlertTriangle } from 'lucide-react'
+
+// Umbral para considerar un ajuste como "grande" (más del 50% del stock o más de 100 unidades)
+const LARGE_ADJUSTMENT_THRESHOLD_PERCENT = 50
+const LARGE_ADJUSTMENT_THRESHOLD_UNITS = 100
 
 interface StockAdjustModalProps {
   isOpen: boolean
@@ -50,6 +65,8 @@ export default function StockAdjustModal({
 }: StockAdjustModalProps) {
   const { user } = useAuth()
   const [warehouseId, setWarehouseId] = useState<string | null>(null)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [pendingData, setPendingData] = useState<StockAdjustForm | null>(null)
 
   // Obtener bodegas
   const { data: warehouses = [] } = useQuery({
@@ -127,12 +144,60 @@ export default function StockAdjustModal({
     },
   })
 
+  // Verificar si es un ajuste grande
+  const isLargeAdjustment = (delta: number): boolean => {
+    if (!product) return false
+    const absChange = Math.abs(delta)
+    const currentStock = product.current_stock || 0
+    
+    // Más de 100 unidades
+    if (absChange >= LARGE_ADJUSTMENT_THRESHOLD_UNITS) return true
+    
+    // Más del 50% del stock actual (si hay stock)
+    if (currentStock > 0) {
+      const percentChange = (absChange / currentStock) * 100
+      if (percentChange >= LARGE_ADJUSTMENT_THRESHOLD_PERCENT) return true
+    }
+    
+    // Stock resultante negativo
+    if (currentStock + delta < 0) return true
+    
+    return false
+  }
+
   const onSubmit = (data: StockAdjustForm) => {
+    if (!product) return
+    
+    // Verificar si necesita confirmación
+    if (isLargeAdjustment(data.qty_delta)) {
+      setPendingData(data)
+      setShowConfirmDialog(true)
+      return
+    }
+    
+    // Proceder directamente
+    executeAdjustment(data)
+  }
+
+  const executeAdjustment = (data: StockAdjustForm) => {
     if (!product) return
     stockAdjustMutation.mutate({
       ...data,
       product_id: product.product_id,
     })
+  }
+
+  const handleConfirmLargeAdjustment = () => {
+    if (pendingData) {
+      executeAdjustment(pendingData)
+      setShowConfirmDialog(false)
+      setPendingData(null)
+    }
+  }
+
+  const handleCancelConfirm = () => {
+    setShowConfirmDialog(false)
+    setPendingData(null)
   }
 
   if (!product) return null
@@ -300,6 +365,50 @@ export default function StockAdjustModal({
           </div>
         </form>
       </DialogContent>
+
+      {/* Confirmación para ajustes grandes */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmar ajuste grande
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Estás a punto de realizar un ajuste significativo de stock:
+              </p>
+              <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-3 border border-orange-200 dark:border-orange-800 text-sm">
+                <p className="font-medium text-orange-800 dark:text-orange-200">
+                  {product?.product_name}
+                </p>
+                <p className="text-orange-700 dark:text-orange-300 mt-1">
+                  {pendingData?.qty_delta && pendingData.qty_delta > 0 ? '+' : ''}
+                  {pendingData?.qty_delta} unidades
+                </p>
+                <p className="text-muted-foreground text-xs mt-1">
+                  Stock actual: {product?.current_stock} → 
+                  Stock final: {(product?.current_stock || 0) + (pendingData?.qty_delta || 0)}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                ¿Estás seguro de que deseas continuar?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelConfirm}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmLargeAdjustment}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Sí, ajustar stock
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }

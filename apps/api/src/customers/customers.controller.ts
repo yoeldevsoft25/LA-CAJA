@@ -49,4 +49,32 @@ export class CustomersController {
     const storeId = req.user.store_id;
     return this.customersService.update(storeId, id, dto);
   }
+
+  /**
+   * Get customer's purchase history including summary and recent sales
+   */
+  @Get(':id/purchase-history')
+  async getPurchaseHistory(
+    @Param('id') id: string,
+    @Query('limit') limit: string,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const limitNum = parseInt(limit, 10) || 10;
+    return this.customersService.getPurchaseHistory(storeId, id, limitNum);
+  }
+
+  /**
+   * Check if customer has available credit for a FIAO purchase
+   */
+  @Get(':id/credit-check')
+  async checkCredit(
+    @Param('id') id: string,
+    @Query('amount') amount: string,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const amountUsd = parseFloat(amount) || 0;
+    return this.customersService.checkCreditAvailable(storeId, id, amountUsd);
+  }
 }

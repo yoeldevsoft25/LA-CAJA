@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { X, CreditCard, Wallet, Banknote, User, Search, Check, Calculator, Split } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { X, CreditCard, Wallet, Banknote, User, Search, Check, Calculator, Split, UserPlus, Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { CartItem } from '@/stores/cart.store'
 import { exchangeService } from '@/services/exchange.service'
 import { customersService } from '@/services/customers.service'
@@ -92,9 +93,12 @@ export default function CheckoutModal({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [customerSearch, setCustomerSearch] = useState<string>('')
   const [showCustomerResults, setShowCustomerResults] = useState(false)
+  const [showQuickCreateCustomer, setShowQuickCreateCustomer] = useState(false)
+  const [quickCustomerName, setQuickCustomerName] = useState<string>('')
   const customerSearchRef = useRef<HTMLDivElement>(null)
   const confirmActionRef = useRef<() => void>(() => {})
   const [error, setError] = useState<string>('')
+  const queryClient = useQueryClient()
   
   // Estados para manejo de efectivo USD con cambio en Bs
   const [receivedUsd, setReceivedUsd] = useState<number>(0)
@@ -247,6 +251,43 @@ export default function CheckoutModal({
     enabled: isOpen && customerSearch.trim().length >= 2, // Buscar solo si hay 2+ caracteres
     staleTime: 1000 * 30, // 30 segundos de cache
   })
+
+  // Mutación para crear cliente rápido
+  const createCustomerMutation = useMutation({
+    mutationFn: (data: { name: string; document_id?: string; phone?: string }) =>
+      customersService.create(data),
+    onSuccess: (newCustomer) => {
+      toast.success('Cliente creado exitosamente')
+      // Seleccionar el cliente recién creado
+      setSelectedCustomerId(newCustomer.id)
+      setCustomerName(newCustomer.name)
+      setCustomerDocumentId(newCustomer.document_id || '')
+      setCustomerPhone(newCustomer.phone || '')
+      // Cerrar el formulario de creación rápida
+      setShowQuickCreateCustomer(false)
+      setQuickCustomerName('')
+      setShowCustomerResults(false)
+      // Invalidar cache de clientes
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al crear cliente')
+    },
+  })
+
+  // Handler para crear cliente rápido
+  const handleQuickCreateCustomer = () => {
+    const name = quickCustomerName.trim() || customerSearch.trim()
+    if (!name) {
+      toast.error('Ingresa un nombre para el cliente')
+      return
+    }
+    createCustomerMutation.mutate({
+      name,
+      document_id: customerDocumentId.trim() || undefined,
+      phone: customerPhone.trim() || undefined,
+    })
+  }
 
     // Limpiar campos cuando se cierra el modal
   useEffect(() => {
@@ -996,6 +1037,7 @@ export default function CheckoutModal({
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground font-semibold z-10">$</span>
                   <Input
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     min={total.usd}
                     value={receivedUsd || ''}
@@ -1097,6 +1139,7 @@ export default function CheckoutModal({
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground font-semibold z-10">Bs.</span>
                     <Input
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     min={totalBs}
                     value={receivedBs || ''}
@@ -1375,6 +1418,7 @@ export default function CheckoutModal({
             <div className="relative">
               <Input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={exchangeRate}
                 onChange={(e) => {
@@ -1459,8 +1503,25 @@ export default function CheckoutModal({
                         Buscando...
                       </div>
                     ) : customerSearchResults.length === 0 ? (
-                            <div className="p-3 text-center text-sm text-muted-foreground">
-                        No se encontraron clientes
+                      <div className="p-3 space-y-2">
+                        <p className="text-center text-sm text-muted-foreground">
+                          No se encontraron clientes
+                        </p>
+                        {/* Botón para crear cliente rápido */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/5"
+                          onClick={() => {
+                            setShowQuickCreateCustomer(true)
+                            setQuickCustomerName(customerSearch.trim())
+                          }}
+                          disabled={createCustomerMutation.isPending}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          Crear "{customerSearch.trim()}" como nuevo cliente
+                        </Button>
                       </div>
                     ) : (
                       <div className="py-1">
@@ -1495,6 +1556,85 @@ export default function CheckoutModal({
                     )}
                   </div>
                       </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Mini formulario de creación rápida */}
+                {showQuickCreateCustomer && (
+                  <Card className="absolute z-50 w-full mt-1 border border-primary/30 shadow-lg bg-primary/5">
+                    <CardContent className="p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-primary flex items-center gap-2">
+                          <UserPlus className="w-4 h-4" />
+                          Crear cliente rápido
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setShowQuickCreateCustomer(false)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          type="text"
+                          placeholder="Nombre del cliente *"
+                          value={quickCustomerName}
+                          onChange={(e) => setQuickCustomerName(e.target.value)}
+                          className="h-9"
+                          autoFocus
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            type="text"
+                            placeholder="Cédula/RIF (opcional)"
+                            value={customerDocumentId}
+                            onChange={(e) => setCustomerDocumentId(e.target.value)}
+                            className="h-9"
+                          />
+                          <Input
+                            type="tel"
+                            placeholder="Teléfono (opcional)"
+                            value={customerPhone}
+                            onChange={(e) => setCustomerPhone(e.target.value)}
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setShowQuickCreateCustomer(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="flex-1 gap-2"
+                          onClick={handleQuickCreateCustomer}
+                          disabled={createCustomerMutation.isPending || !quickCustomerName.trim()}
+                        >
+                          {createCustomerMutation.isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Creando...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Crear y seleccionar
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 )}

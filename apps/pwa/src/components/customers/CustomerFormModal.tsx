@@ -3,18 +3,21 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
-import { customersService, Customer } from '@/services/customers.service'
+import { customersService, Customer, CreateCustomerDto, UpdateCustomerDto } from '@/services/customers.service'
 import toast from 'react-hot-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { CreditCard, DollarSign, Mail, Phone, User, FileText, StickyNote } from 'lucide-react'
 
 const customerSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   document_id: z.string().optional(),
   phone: z.string().optional(),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  credit_limit: z.number().min(0, 'El límite de crédito no puede ser negativo').nullable(),
   note: z.string().optional(),
 })
 
@@ -46,6 +49,8 @@ export default function CustomerFormModal({
       name: '',
       document_id: '',
       phone: '',
+      email: '',
+      credit_limit: null,
       note: '',
     },
   })
@@ -57,6 +62,8 @@ export default function CustomerFormModal({
         name: '',
         document_id: '',
         phone: '',
+        email: '',
+        credit_limit: null,
         note: '',
       })
       return
@@ -72,6 +79,8 @@ export default function CustomerFormModal({
         name: customer.name,
         document_id: customer.document_id || '',
         phone: customer.phone || '',
+        email: customer.email || '',
+        credit_limit: customer.credit_limit,
         note: customer.note || '',
       })
     } else {
@@ -79,6 +88,8 @@ export default function CustomerFormModal({
         name: '',
         document_id: '',
         phone: '',
+        email: '',
+        credit_limit: null,
         note: '',
       })
     }
@@ -98,7 +109,7 @@ export default function CustomerFormModal({
   })
 
   const updateMutation = useMutation({
-    mutationFn: (data: CustomerFormData) => customersService.update(customer!.id, data),
+    mutationFn: (data: UpdateCustomerDto) => customersService.update(customer!.id, data),
     onSuccess: () => {
       toast.success('Cliente actualizado exitosamente')
       onSuccess?.()
@@ -111,10 +122,17 @@ export default function CustomerFormModal({
   })
 
   const onSubmit = (data: CustomerFormData) => {
+    // Limpiar datos vacíos
+    const cleanData: CreateCustomerDto | UpdateCustomerDto = {
+      ...data,
+      email: data.email || undefined,
+      credit_limit: data.credit_limit ?? undefined,
+    }
+    
     if (isEditing) {
-      updateMutation.mutate(data)
+      updateMutation.mutate(cleanData as UpdateCustomerDto)
     } else {
-      createMutation.mutate(data)
+      createMutation.mutate(cleanData as CreateCustomerDto)
     }
   }
 
@@ -137,7 +155,8 @@ export default function CustomerFormModal({
             <div className="space-y-4 sm:space-y-5">
               {/* Nombre */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-semibold">
+                <Label htmlFor="name" className="text-sm font-semibold flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
                   Nombre <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -154,36 +173,91 @@ export default function CustomerFormModal({
 
               {/* Cédula */}
               <div className="space-y-2">
-                <Label htmlFor="document_id" className="text-sm font-semibold">
-                  Cédula de Identidad
+                <Label htmlFor="document_id" className="text-sm font-semibold flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Cédula / RIF
                 </Label>
                 <Input
                   id="document_id"
                   type="text"
                   {...register('document_id')}
-                  placeholder="V-12345678 o E-12345678"
+                  placeholder="V-12345678 o J-12345678-9"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Formato: V-12345678 para venezolanos, E-12345678 para extranjeros
+                  Formato: V-12345678, E-12345678 o J-12345678-9
                 </p>
               </div>
 
-              {/* Teléfono */}
+              {/* Teléfono y Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Teléfono */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-sm font-semibold flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    Teléfono
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    {...register('phone')}
+                    placeholder="0414-1234567"
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-semibold flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register('email')}
+                    placeholder="cliente@email.com"
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Límite de Crédito */}
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-semibold">
-                  Teléfono
+                <Label htmlFor="credit_limit" className="text-sm font-semibold flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  Límite de Crédito (FIAO)
                 </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  {...register('phone')}
-                  placeholder="0414-1234567"
-                />
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="credit_limit"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register('credit_limit', {
+                      setValueAs: (value) => {
+                        if (value === '' || value === null || value === undefined) return null
+                        const num = Number(value)
+                        return isNaN(num) ? null : num
+                      },
+                    })}
+                    placeholder="0.00"
+                    className="pl-9"
+                  />
+                </div>
+                {errors.credit_limit && (
+                  <p className="text-sm text-destructive">{errors.credit_limit.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Monto máximo que el cliente puede adeudar. Dejar vacío para no permitir crédito.
+                </p>
               </div>
 
               {/* Nota */}
               <div className="space-y-2">
-                <Label htmlFor="note" className="text-sm font-semibold">
+                <Label htmlFor="note" className="text-sm font-semibold flex items-center gap-2">
+                  <StickyNote className="h-4 w-4 text-muted-foreground" />
                   Nota
                 </Label>
                 <Textarea

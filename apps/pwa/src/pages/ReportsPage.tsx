@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/stores/auth.store'
 import {
   BarChart3,
   TrendingUp,
@@ -95,6 +96,8 @@ function DatePicker({
 }
 
 export default function ReportsPage() {
+  const { user } = useAuth()
+  const isOwner = user?.role === 'owner'
   const [dateRange, setDateRange] = useState<DateRange>('today')
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined)
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined)
@@ -130,22 +133,25 @@ export default function ReportsPage() {
     }
   }, [dateRange, customStartDate, customEndDate])
 
-  // Query: Ventas por día
+  // Query: Ventas por día - SOLO si el usuario es owner
   const { data: salesReport, isLoading: loadingSales, refetch: refetchSales } = useQuery({
     queryKey: ['reports', 'sales-by-day', startDate, endDate],
     queryFn: () => reportsService.getSalesByDay({ start_date: startDate, end_date: endDate }),
+    enabled: isOwner, // Solo ejecutar si es owner
   })
 
-  // Query: Top productos
+  // Query: Top productos - SOLO si el usuario es owner
   const { data: topProducts, isLoading: loadingProducts } = useQuery({
     queryKey: ['reports', 'top-products', startDate, endDate],
     queryFn: () => reportsService.getTopProducts(10, { start_date: startDate, end_date: endDate }),
+    enabled: isOwner, // Solo ejecutar si es owner
   })
 
-  // Query: Resumen de deudas
+  // Query: Resumen de deudas - SOLO si el usuario es owner
   const { data: debtSummary, isLoading: loadingDebts } = useQuery({
     queryKey: ['reports', 'debt-summary'],
     queryFn: () => reportsService.getDebtSummary(),
+    enabled: isOwner, // Solo ejecutar si es owner
   })
 
   const isLoading = loadingSales || loadingProducts || loadingDebts

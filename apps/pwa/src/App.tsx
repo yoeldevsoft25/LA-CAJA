@@ -1,47 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import SimpleLoader from './components/loader/SimpleLoader'
-import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import MainLayout from './components/layout/MainLayout'
-import POSPage from './pages/POSPage'
-import ProductsPage from './pages/ProductsPage'
-import InventoryPage from './pages/InventoryPage'
-import SalesPage from './pages/SalesPage'
-import CashPage from './pages/CashPage'
-import ShiftsPage from './pages/ShiftsPage'
-import PaymentsPage from './pages/PaymentsPage'
-import DiscountsPage from './pages/DiscountsPage'
-import FastCheckoutPage from './pages/FastCheckoutPage'
-import CustomersPage from './pages/CustomersPage'
-import DebtsPage from './pages/DebtsPage'
-import ReportsPage from './pages/ReportsPage'
-import LotsPage from './pages/LotsPage'
-import InvoiceSeriesPage from './pages/InvoiceSeriesPage'
-import TablesPage from './pages/TablesPage'
-import PeripheralsPage from './pages/PeripheralsPage'
-import PriceListsPage from './pages/PriceListsPage'
-import PromotionsPage from './pages/PromotionsPage'
-import WarehousesPage from './pages/WarehousesPage'
-import TransfersPage from './pages/TransfersPage'
-import SuppliersPage from './pages/SuppliersPage'
-import PurchaseOrdersPage from './pages/PurchaseOrdersPage'
-import FiscalConfigPage from './pages/FiscalConfigPage'
-import FiscalInvoicesPage from './pages/FiscalInvoicesPage'
-import FiscalInvoiceDetailPage from './pages/FiscalInvoiceDetailPage'
-import DashboardPage from './pages/DashboardPage'
-import MLDashboardPage from './pages/MLDashboardPage'
-import DemandPredictionsPage from './pages/DemandPredictionsPage'
-import DemandEvaluationPage from './pages/DemandEvaluationPage'
-import AnomaliesPage from './pages/AnomaliesPage'
-import RealtimeAnalyticsPage from './pages/RealtimeAnalyticsPage'
-import LicenseBlockedPage from './pages/LicenseBlockedPage'
-import AdminPage from './pages/AdminPage'
-import LandingPageEnhanced from './pages/LandingPageEnhanced'
-import AccountingPage from './pages/AccountingPage'
-import ConflictsPage from './pages/ConflictsPage'
 import { useOnline } from './hooks/use-online'
 import { useAuth } from './stores/auth.store'
 import { getDefaultRoute } from './lib/permissions'
@@ -49,6 +12,66 @@ import { offlineIndicator } from './services/offline-indicator.service'
 import { syncService } from './services/sync.service'
 import { realtimeWebSocketService } from './services/realtime-websocket.service'
 import { usePushNotifications } from './hooks/usePushNotifications'
+import { Loader2 } from 'lucide-react'
+
+// Componente de loading para Suspense
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex flex-col items-center gap-3">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">Cargando...</p>
+    </div>
+  </div>
+)
+
+// Lazy loading de páginas - Críticas (login/landing/pos)
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const LandingPageEnhanced = lazy(() => import('./pages/LandingPageEnhanced'))
+const POSPage = lazy(() => import('./pages/POSPage'))
+
+// Lazy loading - Páginas de uso frecuente
+const SalesPage = lazy(() => import('./pages/SalesPage'))
+const ProductsPage = lazy(() => import('./pages/ProductsPage'))
+const InventoryPage = lazy(() => import('./pages/InventoryPage'))
+const CashPage = lazy(() => import('./pages/CashPage'))
+const CustomersPage = lazy(() => import('./pages/CustomersPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+
+// Lazy loading - Páginas secundarias
+const ShiftsPage = lazy(() => import('./pages/ShiftsPage'))
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'))
+const DiscountsPage = lazy(() => import('./pages/DiscountsPage'))
+const FastCheckoutPage = lazy(() => import('./pages/FastCheckoutPage'))
+const DebtsPage = lazy(() => import('./pages/DebtsPage'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage'))
+const LotsPage = lazy(() => import('./pages/LotsPage'))
+const InvoiceSeriesPage = lazy(() => import('./pages/InvoiceSeriesPage'))
+const TablesPage = lazy(() => import('./pages/TablesPage'))
+const PeripheralsPage = lazy(() => import('./pages/PeripheralsPage'))
+const PriceListsPage = lazy(() => import('./pages/PriceListsPage'))
+const PromotionsPage = lazy(() => import('./pages/PromotionsPage'))
+const WarehousesPage = lazy(() => import('./pages/WarehousesPage'))
+const TransfersPage = lazy(() => import('./pages/TransfersPage'))
+const SuppliersPage = lazy(() => import('./pages/SuppliersPage'))
+const PurchaseOrdersPage = lazy(() => import('./pages/PurchaseOrdersPage'))
+
+// Lazy loading - Páginas de configuración fiscal
+const FiscalConfigPage = lazy(() => import('./pages/FiscalConfigPage'))
+const FiscalInvoicesPage = lazy(() => import('./pages/FiscalInvoicesPage'))
+const FiscalInvoiceDetailPage = lazy(() => import('./pages/FiscalInvoiceDetailPage'))
+
+// Lazy loading - Páginas de ML/Analytics (menos frecuentes)
+const MLDashboardPage = lazy(() => import('./pages/MLDashboardPage'))
+const DemandPredictionsPage = lazy(() => import('./pages/DemandPredictionsPage'))
+const DemandEvaluationPage = lazy(() => import('./pages/DemandEvaluationPage'))
+const AnomaliesPage = lazy(() => import('./pages/AnomaliesPage'))
+const RealtimeAnalyticsPage = lazy(() => import('./pages/RealtimeAnalyticsPage'))
+
+// Lazy loading - Páginas de administración
+const LicenseBlockedPage = lazy(() => import('./pages/LicenseBlockedPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const AccountingPage = lazy(() => import('./pages/AccountingPage'))
+const ConflictsPage = lazy(() => import('./pages/ConflictsPage'))
 
 function App() {
   const { user, isAuthenticated, showLoader: authShowLoader, setShowLoader } = useAuth()
@@ -209,6 +232,7 @@ function App() {
       )}
       {(isLoaderComplete || !authShowLoader) && (
     <BrowserRouter>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Public routes */}
         <Route
@@ -443,6 +467,7 @@ function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
       )}
     </>

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/stores/auth.store'
 import {
   TrendingUp,
   TrendingDown,
@@ -10,13 +11,20 @@ import {
   ReceiptText,
   BarChart3,
   ArrowUpRight,
+  Printer,
+  FileSpreadsheet,
 } from 'lucide-react'
+import { exportDashboardToExcel } from '@/utils/export-excel'
+import toast from 'react-hot-toast'
+import ExpiringLotsAlert from '@/components/lots/ExpiringLotsAlert'
+import PendingOrdersIndicator from '@/components/suppliers/PendingOrdersIndicator'
 import { dashboardService } from '@/services/dashboard.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -25,8 +33,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { format } from 'date-fns'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatQuantity } from '@/lib/weight'
+import SalesTrendChart from '@/components/dashboard/SalesTrendChart'
+import TopProductsChart from '@/components/dashboard/TopProductsChart'
+import DashboardPrintView from '@/components/dashboard/DashboardPrintView'
 
 const formatCurrency = (amount: number, currency: 'BS' | 'USD' = 'BS') => {
   if (currency === 'USD') {
@@ -119,10 +130,14 @@ function KPICard({
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth()
+  const isOwner = user?.role === 'owner'
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
+  const [chartCurrency, setChartCurrency] = useState<'BS' | 'USD'>('BS')
+  const printRef = useRef<HTMLDivElement>(null)
 
-  // Obtener KPIs
+  // Obtener KPIs - SOLO si el usuario es owner
   const {
     data: kpis,
     isLoading: kpisLoading,
@@ -135,11 +150,12 @@ export default function DashboardPage() {
         startDate || undefined,
         endDate || undefined,
       ),
+    enabled: isOwner, // Solo ejecutar si es owner
     staleTime: 1000 * 60 * 2, // 2 minutos - más frecuente porque las queries son más rápidas con vistas materializadas
     refetchInterval: 1000 * 60 * 2, // Refrescar cada 2 minutos
   })
 
-  // Obtener tendencias
+  // Obtener tendencias - SOLO si el usuario es owner
   const {
     data: trends,
     isLoading: trendsLoading,
@@ -147,15 +163,38 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ['dashboard', 'trends'],
     queryFn: () => dashboardService.getTrends(),
+    enabled: isOwner, // Solo ejecutar si es owner
     staleTime: 1000 * 60 * 2, // 2 minutos
     refetchInterval: 1000 * 60 * 2, // Refrescar cada 2 minutos
   })
+
+  // Función para imprimir/exportar PDF
+  const handlePrint = useCallback(() => {
+    window.print()
+  }, [])
+
+  // Función para exportar a Excel/CSV
+  const handleExportExcel = useCallback(() => {
+    if (!kpis || !trends) {
+      toast.error('No hay datos disponibles para exportar')
+      return
+    }
+    
+    try {
+      exportDashboardToExcel(kpis, trends, { start: startDate, end: endDate })
+      toast.success('Reporte exportado exitosamente')
+    } catch (error) {
+      toast.error('Error al exportar reporte')
+      console.error('Error exporting to Excel:', error)
+    }
+  }, [kpis, trends, startDate, endDate])
 
   const isLoading = kpisLoading || trendsLoading
   const isFetching = kpisFetching || trendsFetching
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6">
+    <>
+    <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6 print:hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -182,7 +221,7 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 items-end">
           <div className="flex flex-col gap-1">
             <Label htmlFor="startDate" className="text-xs">
               Fecha Inicio
@@ -206,6 +245,29 @@ export default function DashboardPage() {
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full sm:w-[150px]"
             />
+          </div>
+          {/* Botones de exportar */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="default"
+              onClick={handleExportExcel}
+              disabled={isLoading || !kpis || !trends}
+              className="gap-2 print:hidden"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Excel</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="default"
+              onClick={handlePrint}
+              disabled={isLoading || !kpis || !trends}
+              className="gap-2 print:hidden"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -519,107 +581,146 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Gráfico de Tendencias de Ventas */}
+          {/* Alertas y Indicadores */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+            <ExpiringLotsAlert variant="card" />
+            <PendingOrdersIndicator variant="card" />
+          </div>
+
+          {/* Gráfico de Tendencias de Ventas - Interactivo */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base sm:text-lg">
                 Tendencias de Ventas (Últimos 7 Días)
               </CardTitle>
+              <Tabs
+                value={chartCurrency}
+                onValueChange={(v) => setChartCurrency(v as 'BS' | 'USD')}
+                className="w-auto"
+              >
+                <TabsList className="h-8">
+                  <TabsTrigger value="BS" className="text-xs px-3 h-7">
+                    Bs.
+                  </TabsTrigger>
+                  <TabsTrigger value="USD" className="text-xs px-3 h-7">
+                    USD
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-end justify-between gap-2 overflow-x-auto pb-4">
-                {trends.sales_trend.map((day) => {
-                  const maxAmount = Math.max(
-                    ...trends.sales_trend.map((d) => d.amount_bs),
-                  )
-                  const height = maxAmount > 0 ? (day.amount_bs / maxAmount) * 100 : 0
-                  return (
-                    <div
-                      key={day.date}
-                      className="flex-1 flex flex-col items-center min-w-[60px]"
-                    >
-                      <div
-                        className="w-full bg-primary rounded-t hover:bg-primary/80 transition-colors cursor-pointer"
-                        style={{ height: `${height}%` }}
-                        title={`${format(new Date(day.date), 'dd/MM/yyyy')}: ${formatCurrency(day.amount_bs, 'BS')} (${day.count} ventas)`}
-                      />
-                      <p className="text-xs text-muted-foreground mt-2 text-center">
-                        {format(new Date(day.date), 'dd/MM')}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {day.count}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="mt-4 flex justify-center">
-                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                  <span className="inline-block w-3 h-3 bg-primary rounded"></span>
-                  Monto en Bs.
-                </div>
-              </div>
+              <SalesTrendChart data={trends.sales_trend} currency={chartCurrency} />
             </CardContent>
           </Card>
 
-          {/* Top 10 Productos de la Semana */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base sm:text-lg">
-                Top 10 Productos (Últimos 7 Días)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead className="text-right">Cantidad</TableHead>
-                      <TableHead className="text-right">Ingresos BS</TableHead>
-                      <TableHead className="text-right">Ingresos USD</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {trends.top_products_trend.length > 0 ? (
-                      trends.top_products_trend.map((product, index) => (
-                        <TableRow key={product.product_id}>
-                          <TableCell>
-                            <Badge variant="secondary">#{index + 1}</Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {product.product_name}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatQuantity(
-                              product.quantity_sold,
-                              product.is_weight_product,
-                              product.weight_unit,
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatCurrency(product.revenue_bs, 'BS')}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {formatCurrency(product.revenue_usd, 'USD')}
+          {/* Top 10 Productos de la Semana - Grid con Gráfico y Tabla */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Gráfico de Barras Horizontal */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-base sm:text-lg">
+                  Top Productos por Ingresos
+                </CardTitle>
+                <Badge variant="outline" className="text-xs">
+                  {chartCurrency}
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                <TopProductsChart
+                  data={trends.top_products_trend}
+                  currency={chartCurrency}
+                  limit={10}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Tabla Detallada */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base sm:text-lg">
+                  Detalle Top 10 Productos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto max-h-[380px] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-right">Cant.</TableHead>
+                        <TableHead className="text-right">Ingresos</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {trends.top_products_trend.length > 0 ? (
+                        trends.top_products_trend.map((product, index) => (
+                          <TableRow key={product.product_id} className="hover:bg-muted/50">
+                            <TableCell>
+                              <Badge
+                                variant={index < 3 ? 'default' : 'secondary'}
+                                className={
+                                  index === 0
+                                    ? 'bg-amber-500 hover:bg-amber-600'
+                                    : index === 1
+                                      ? 'bg-slate-400 hover:bg-slate-500'
+                                      : index === 2
+                                        ? 'bg-orange-600 hover:bg-orange-700'
+                                        : ''
+                                }
+                              >
+                                {index + 1}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium max-w-[150px] truncate" title={product.product_name}>
+                              {product.product_name}
+                            </TableCell>
+                            <TableCell className="text-right text-sm">
+                              {formatQuantity(
+                                product.quantity_sold,
+                                product.is_weight_product,
+                                product.weight_unit,
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div>
+                                <span className="font-semibold text-sm">
+                                  {formatCurrency(product.revenue_bs, 'BS')}
+                                </span>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatCurrency(product.revenue_usd, 'USD')}
+                                </p>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            No hay datos disponibles
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
-                          No hay datos disponibles
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </>
       )}
+
     </div>
+
+    {/* Vista de Impresión (solo visible al imprimir) */}
+    {kpis && trends && (
+      <DashboardPrintView
+        ref={printRef}
+        kpis={kpis}
+        trends={trends}
+        dateRange={{ start: startDate, end: endDate }}
+      />
+    )}
+    </>
   )
 }

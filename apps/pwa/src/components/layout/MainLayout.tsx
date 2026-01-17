@@ -64,6 +64,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useNotificationsSync } from '@/hooks/useNotificationsSync'
 import { isRouteAllowed, type Role } from '@/lib/permissions'
+import ExchangeRateIndicator from '@/components/exchange/ExchangeRateIndicator'
+import InstallPrompt from '@/components/pwa/InstallPrompt'
 
 type NavItem = {
   path: string
@@ -225,7 +227,7 @@ export default function MainLayout() {
     const page = pathToPage[location.pathname]
     if (page) {
       // Prefetch en background - no bloquea la UI
-      prefetchPageData(page, user.store_id, queryClient).catch(() => {
+      prefetchPageData(page, user.store_id, queryClient, userRole).catch(() => {
         // Silenciar errores
       })
     }
@@ -635,6 +637,10 @@ export default function MainLayout() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            {/* Exchange Rate Indicator */}
+            <ExchangeRateIndicator className="hidden sm:flex" />
+            <ExchangeRateIndicator compact className="sm:hidden" />
+
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -803,6 +809,9 @@ export default function MainLayout() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { inventoryService, StockReceivedRequest, StockStatus } from '@/services/
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
 import { X, Plus, Trash2, Search, Scale } from 'lucide-react'
+import { useAuth } from '@/stores/auth.store'
 
 interface StockReceivedModalProps {
   isOpen: boolean
@@ -44,6 +45,7 @@ export default function StockReceivedModal({
   product,
   onSuccess,
 }: StockReceivedModalProps) {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showProductSearch, setShowProductSearch] = useState(false)
   const [productItems, setProductItems] = useState<ProductItem[]>([])
@@ -54,7 +56,7 @@ export default function StockReceivedModal({
   // Obtener productos para selección
   const { data: productsData } = useQuery({
     queryKey: ['products', 'list'],
-    queryFn: () => productsService.search({ limit: 1000 }),
+    queryFn: () => productsService.search({ limit: 1000 }, user?.store_id),
     enabled: isOpen,
   })
 

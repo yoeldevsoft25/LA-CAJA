@@ -11,6 +11,7 @@ import { authService, type LoginResponse } from '@/services/auth.service'
 import { useQueryClient } from '@tanstack/react-query'
 import { prefetchAllData } from '@/services/prefetch.service'
 import { syncService } from '@/services/sync.service'
+import { getDefaultRoute } from '@/lib/permissions'
 import { Loader2, Lock, ChevronRight, Store, User, KeyRound, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -94,7 +95,11 @@ export default function LoginPage() {
       }
 
       try {
-        await prefetchAllData({ storeId: response.store_id, queryClient })
+        await prefetchAllData({ 
+          storeId: response.store_id, 
+          queryClient,
+          userRole: response.role,
+        })
         console.log('[Prefetch] Cacheo completo')
       } catch (error) {
         console.warn('[Prefetch] Error al prefetch:', error)
@@ -102,7 +107,7 @@ export default function LoginPage() {
 
       const firstName = response.full_name?.split(' ')[0] || 'Usuario'
       toast.success(`¡Bienvenido, ${firstName}!`)
-      navigate('/app/dashboard')
+      navigate(getDefaultRoute(response.role))
     },
     onError: (error: Error) => {
       console.error('[Login] Error en login:', error)

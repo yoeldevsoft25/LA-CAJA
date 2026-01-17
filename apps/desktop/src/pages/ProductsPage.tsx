@@ -1,16 +1,44 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Upload, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Upload, AlertTriangle, ChevronLeft, ChevronRight, Layers, Boxes, Hash } from 'lucide-react'
 import { productsService, Product } from '@/services/products.service'
+import { inventoryService, StockStatus } from '@/services/inventory.service'
+import { warehousesService } from '@/services/warehouses.service'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/stores/auth.store'
 import ProductFormModal from '@/components/products/ProductFormModal'
 import ChangePriceModal from '@/components/products/ChangePriceModal'
 import BulkPriceChangeModal from '@/components/products/BulkPriceChangeModal'
-// TODO: Implementar estos componentes para desktop
-// import ImportCSVModal from '@/components/products/ImportCSVModal'
-// import CleanDuplicatesModal from '@/components/products/CleanDuplicatesModal'
+import ImportCSVModal from '@/components/products/ImportCSVModal'
+import CleanDuplicatesModal from '@/components/products/CleanDuplicatesModal'
+import ProductVariantsModal from '@/components/variants/ProductVariantsModal'
+import ProductLotsModal from '@/components/lots/ProductLotsModal'
+import ProductSerialsModal from '@/components/serials/ProductSerialsModal'
+
+type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
+
+const WEIGHT_UNIT_TO_KG: Record<WeightUnit, number> = {
+  kg: 1,
+  g: 0.001,
+  lb: 0.45359237,
+  oz: 0.028349523125,
+}
+
+const formatKg = (value: number) => {
+  const fixed = value.toFixed(3)
+  return fixed.replace(/\.?0+$/, '')
+}
+
+const formatStockValue = (product: Product, item: StockStatus) => {
+  const isWeight = item.is_weight_product ?? Boolean(product.is_weight_product)
+  if (!isWeight) return `${item.current_stock ?? 0}`
+  const unit = (item.weight_unit || product.weight_unit || 'kg') as WeightUnit
+  const kgValue = (item.current_stock ?? 0) * WEIGHT_UNIT_TO_KG[unit]
+  return `${formatKg(kgValue)} kg`
+}
 
 export default function ProductsPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
@@ -23,12 +51,36 @@ export default function ProductsPage() {
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false)
   const [isImportCSVOpen, setIsImportCSVOpen] = useState(false)
   const [isCleanDuplicatesOpen, setIsCleanDuplicatesOpen] = useState(false)
+  const [variantsProduct, setVariantsProduct] = useState<Product | null>(null)
+  const [lotsProduct, setLotsProduct] = useState<Product | null>(null)
+  const [serialsProduct, setSerialsProduct] = useState<Product | null>(null)
+  const [warehouseFilter, setWarehouseFilter] = useState<string>('all')
   const queryClient = useQueryClient()
 
   // Reset page cuando cambia búsqueda o filtros
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, categoryFilter, statusFilter])
+
+  const { data: stockStatus } = useQuery({
+    queryKey: ['inventory', 'status', warehouseFilter],
+    queryFn: () =>
+      inventoryService.getStockStatus({
+        warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
+      }),
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const stockByProduct = (stockStatus || []).reduce<Record<string, StockStatus>>((acc, item) => {
+    acc[item.product_id] = item
+    return acc
+  }, {})
+
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ['warehouses'],
+    queryFn: () => warehousesService.getAll(),
+    staleTime: 1000 * 60 * 5,
+  })
 
   const isActiveFilter =
     statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined
@@ -37,7 +89,7 @@ export default function ProductsPage() {
 
   // Búsqueda de productos con paginación
   const { data: productsData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['products', 'list', searchQuery, categoryFilter, statusFilter, currentPage, pageSize],
+    queryKey: ['products', 'list', user?.store_id, searchQuery, categoryFilter, statusFilter, currentPage, pageSize],
     queryFn: () =>
       productsService.search({
         q: searchQuery || undefined,
@@ -45,7 +97,7 @@ export default function ProductsPage() {
         is_active: isActiveFilter,
         limit: pageSize,
         offset: offset,
-      }),
+      }, user?.store_id),
     staleTime: 1000 * 60 * 5,
   })
 
@@ -55,7 +107,7 @@ export default function ProductsPage() {
 
   // Mutación para desactivar producto
   const deactivateMutation = useMutation({
-    mutationFn: productsService.deactivate,
+    mutationFn: (id: string) => productsService.deactivate(id, user?.store_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       toast.success('Producto desactivado exitosamente')
@@ -68,7 +120,7 @@ export default function ProductsPage() {
 
   // Mutación para activar producto
   const activateMutation = useMutation({
-    mutationFn: productsService.activate,
+    mutationFn: (id: string) => productsService.activate(id, user?.store_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       toast.success('Producto activado exitosamente')
@@ -109,6 +161,18 @@ export default function ProductsPage() {
   const handleChangePrice = (product: Product) => {
     setPriceProduct(product)
     setIsPriceModalOpen(true)
+  }
+
+  const handleManageVariants = (product: Product) => {
+    setVariantsProduct(product)
+  }
+
+  const handleManageLots = (product: Product) => {
+    setLotsProduct(product)
+  }
+
+  const handleManageSerials = (product: Product) => {
+    setSerialsProduct(product)
   }
 
   return (
@@ -191,6 +255,25 @@ export default function ProductsPage() {
               <option value="inactive">Inactivos</option>
             </select>
           </div>
+          {warehouses.length > 0 && (
+            <div className="w-full sm:w-56">
+              <label className="block text-xs text-gray-500 mb-1">Stock por bodega</label>
+              <select
+                value={warehouseFilter}
+                onChange={(e) => setWarehouseFilter(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Todas</option>
+                {warehouses
+                  .filter((warehouse) => warehouse.is_active)
+                  .map((warehouse) => (
+                    <option key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name} {warehouse.is_default ? '(Por defecto)' : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -242,6 +325,9 @@ export default function ProductsPage() {
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Precio
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+                      Stock
+                    </th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Estado
                     </th>
@@ -280,6 +366,22 @@ export default function ProductsPage() {
                           <p className="text-xs text-gray-500">Bs. {Number(product.price_bs).toFixed(2)}</p>
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-center hidden sm:table-cell">
+                        {stockByProduct[product.id] ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-sm font-semibold">
+                              {formatStockValue(product, stockByProduct[product.id])}
+                            </span>
+                            {stockByProduct[product.id].is_low_stock && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-700">
+                                Bajo
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500">-</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         {product.is_active ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -293,6 +395,27 @@ export default function ProductsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => handleManageVariants(product)}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors touch-manipulation"
+                            title="Variantes"
+                          >
+                            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleManageLots(product)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
+                            title="Lotes"
+                          >
+                            <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleManageSerials(product)}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors touch-manipulation"
+                            title="Seriales"
+                          >
+                            <Hash className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
                           <button
                             onClick={() => handleChangePrice(product)}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors touch-manipulation"
@@ -391,8 +514,7 @@ export default function ProductsPage() {
       />
 
       {/* Modal de importar CSV */}
-      {/* TODO: Implementar ImportCSVModal para desktop */}
-      {/* <ImportCSVModal
+      <ImportCSVModal
         isOpen={isImportCSVOpen}
         onClose={() => setIsImportCSVOpen(false)}
         onSuccess={() => {
@@ -401,14 +523,31 @@ export default function ProductsPage() {
       />
 
       {/* Modal de limpiar duplicados */}
-      {/* TODO: Implementar CleanDuplicatesModal para desktop */}
-      {/* <CleanDuplicatesModal
+      <CleanDuplicatesModal
         isOpen={isCleanDuplicatesOpen}
         onClose={() => setIsCleanDuplicatesOpen(false)}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['products'] })
         }}
-      /> */}
+      />
+
+      <ProductVariantsModal
+        isOpen={Boolean(variantsProduct)}
+        onClose={() => setVariantsProduct(null)}
+        product={variantsProduct}
+      />
+
+      <ProductLotsModal
+        isOpen={Boolean(lotsProduct)}
+        onClose={() => setLotsProduct(null)}
+        product={lotsProduct}
+      />
+
+      <ProductSerialsModal
+        isOpen={Boolean(serialsProduct)}
+        onClose={() => setSerialsProduct(null)}
+        product={serialsProduct}
+      />
     </div>
   )
 }

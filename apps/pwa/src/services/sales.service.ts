@@ -910,4 +910,55 @@ export const salesService = {
     const response = await api.get<{ sales: Sale[]; total: number }>('/sales', { params })
     return response.data
   },
+
+  /**
+   * Devuelve parcialmente items de una venta
+   * @param saleId - ID de la venta
+   * @param items - Items a devolver con cantidades
+   * @param reason - Razón opcional de la devolución
+   */
+  async returnItems(
+    saleId: string,
+    items: ReturnSaleItemDto[],
+    reason?: string
+  ): Promise<SaleReturn> {
+    const response = await api.post<SaleReturn>(`/sales/${saleId}/return`, {
+      items,
+      reason: reason || undefined,
+    })
+    return response.data
+  },
+}
+
+// DTO para item de devolución
+export interface ReturnSaleItemDto {
+  sale_item_id: string
+  qty: number
+  note?: string
+  serial_ids?: string[]
+}
+
+// Respuesta de devolución
+export interface SaleReturn {
+  id: string
+  store_id: string
+  sale_id: string
+  created_by: string | null
+  created_at: string
+  reason: string | null
+  total_bs: number
+  total_usd: number
+  items: SaleReturnItem[]
+}
+
+export interface SaleReturnItem {
+  id: string
+  return_id: string
+  sale_item_id: string
+  qty: number
+  unit_price_bs: number
+  unit_price_usd: number
+  subtotal_bs: number
+  subtotal_usd: number
+  note: string | null
 }

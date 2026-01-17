@@ -138,9 +138,9 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 |----|--------|--------|-----------|
 | PRD-UI-01 | Vista de galería con imágenes de productos | 🔮 | Baja |
 | PRD-UI-02 | Indicador visual de margen de ganancia | ✅ | Alta |
-| PRD-UI-03 | Badges de estado (activo/inactivo/sin stock) | ⬜ | Media |
-| PRD-UI-04 | Código de barras visual en detalle | ⬜ | Baja |
-| PRD-UI-05 | Tooltips informativos en campos complejos | ⬜ | Media |
+| PRD-UI-03 | Badges de estado (activo/inactivo/sin stock) | ✅ | Media |
+| PRD-UI-04 | Código de barras visual en detalle | ✅ | Baja |
+| PRD-UI-05 | Tooltips informativos en campos complejos | ✅ | Media |
 | PRD-UI-06 | Colores por categoría en lista | ⬜ | Baja |
 
 ### UX Flow
@@ -153,30 +153,34 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | PRD-UX-05 | Bulk edit de categorías | ⬜ | Media |
 | PRD-UX-06 | Historial de cambios de precio | 🔮 | Baja |
 | PRD-UX-07 | Preview de cómo se ve en POS | ⬜ | Baja |
+| PRD-UX-08 | Importación masiva CSV | ✅ | Alta |
+| PRD-UX-09 | Cambio masivo de precios | ✅ | Alta |
+| PRD-UX-10 | Limpiar productos duplicados | ✅ | Media |
 
 ### Robustez
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | PRD-RB-01 | Validación de código de barras único | ✅ | Alta |
-| PRD-RB-02 | Confirmación antes de eliminar producto | ⬜ | Alta |
-| PRD-RB-03 | Validación de precios (no negativos, coherentes) | ⬜ | Alta |
+| PRD-RB-02 | Confirmación antes de eliminar producto | ✅ | Alta |
+| PRD-RB-03 | Validación de precios (no negativos, coherentes) | ✅ | Alta |
 | PRD-RB-04 | Advertencia si precio < costo | ✅ | Alta |
-| PRD-RB-05 | Manejo de errores en importación CSV | ⬜ | Alta |
+| PRD-RB-05 | Manejo de errores en importación CSV | ✅ | Alta |
 | PRD-RB-06 | Rollback si falla importación masiva | ⬜ | Media |
-| PRD-RB-07 | Validación de campos requeridos con mensajes claros | ⬜ | Alta |
+| PRD-RB-07 | Validación de campos requeridos con mensajes claros | ✅ | Alta |
 
 ### Performance
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | PRD-PF-01 | Paginación server-side | ✅ | Alta |
 | PRD-PF-02 | Virtualización de tabla grande | ⬜ | Media |
-| PRD-PF-03 | Debounce en filtros | ⬜ | Media |
-| PRD-PF-04 | Cache de categorías | ⬜ | Baja |
+| PRD-PF-03 | Debounce en filtros | ✅ | Media |
+| PRD-PF-04 | Cache de categorías | ✅ | Baja |
+| PRD-PF-05 | Cache offline de productos | ✅ | Alta |
 
 ### Mobile
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| PRD-MB-01 | Vista de cards en lugar de tabla para móvil | ⬜ | Alta |
+| PRD-MB-01 | Vista de cards en lugar de tabla para móvil | ✅ | Alta |
 | PRD-MB-02 | Formulario de producto optimizado para touch | ⬜ | Media |
 | PRD-MB-03 | Escanear código de barras con cámara | 🔮 | Media |
 | PRD-MB-04 | Pull-to-refresh | ⬜ | Baja |
@@ -215,7 +219,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | INV-RB-01 | Validación de stock no negativo | ✅ | Alta |
-| INV-RB-02 | Confirmación de ajustes grandes | ⬜ | Alta |
+| INV-RB-02 | Confirmación de ajustes grandes | ✅ | Alta |
 | INV-RB-03 | Auditoría de cambios de inventario | ⬜ | Media |
 | INV-RB-04 | Bloqueo de ajuste si hay ventas pendientes | ⬜ | Alta |
 | INV-RB-05 | Validación de razón en ajustes | ⬜ | Media |
@@ -246,37 +250,37 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | SLS-UI-01 | Gráfico de ventas del día | ⬜ | Media |
-| SLS-UI-02 | Indicadores de método de pago | ⬜ | Media |
-| SLS-UI-03 | Estado de venta con colores (completada/anulada) | ⬜ | Media |
-| SLS-UI-04 | Vista de ticket en modal de detalle | ⬜ | Media |
+| SLS-UI-02 | Indicadores de método de pago | ✅ | Media |
+| SLS-UI-03 | Estado de venta con colores (completada/anulada) | ✅ | Media |
+| SLS-UI-04 | Vista de ticket en modal de detalle | ✅ | Media |
 | SLS-UI-05 | Mini-preview de productos en lista | ⬜ | Baja |
 
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| SLS-UX-01 | Filtros avanzados (fecha, monto, método) | ⬜ | Alta |
-| SLS-UX-02 | Búsqueda por número de venta | ⬜ | Alta |
-| SLS-UX-03 | Reimprimir ticket | ⬜ | Alta |
-| SLS-UX-04 | Anular venta con razón | ⬜ | Alta |
+| SLS-UX-01 | Filtros avanzados (fecha, monto, método) | ✅ | Alta |
+| SLS-UX-02 | Búsqueda por número de venta | ✅ | Alta |
+| SLS-UX-03 | Reimprimir ticket | ✅ | Alta |
+| SLS-UX-04 | Anular venta con razón | ✅ | Alta |
 | SLS-UX-05 | Exportar ventas a Excel | ⬜ | Media |
-| SLS-UX-06 | Devolución parcial de productos | ⬜ | Alta |
+| SLS-UX-06 | Devolución parcial de productos | ✅ | Alta |
 | SLS-UX-07 | Notas/comentarios en venta | ⬜ | Baja |
 
 ### Robustez
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| SLS-RB-01 | Confirmación antes de anular venta | ⬜ | Alta |
-| SLS-RB-02 | Validación de permisos para anular | ⬜ | Alta |
-| SLS-RB-03 | Registro de quién anuló y cuándo | ⬜ | Alta |
-| SLS-RB-04 | Prevenir doble anulación | ⬜ | Alta |
-| SLS-RB-05 | Manejo de ventas offline sincronizadas | ⬜ | Alta |
+| SLS-RB-01 | Confirmación antes de anular venta | ✅ | Alta |
+| SLS-RB-02 | Validación de permisos para anular | ✅ | Alta |
+| SLS-RB-03 | Registro de quién anuló y cuándo | ✅ | Alta |
+| SLS-RB-04 | Prevenir doble anulación | ✅ | Alta |
+| SLS-RB-05 | Manejo de ventas offline sincronizadas | ✅ | Alta |
 
 ### Performance
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| SLS-PF-01 | Paginación server-side | ⬜ | Alta |
-| SLS-PF-02 | Lazy loading de detalles | ⬜ | Media |
-| SLS-PF-03 | Cache de ventas del día | ⬜ | Baja |
+| SLS-PF-01 | Paginación server-side | ✅ | Alta |
+| SLS-PF-02 | Lazy loading de detalles | ✅ | Media |
+| SLS-PF-03 | Cache de ventas del día | ✅ | Baja |
 
 ### Mobile
 | ID | Mejora | Estado | Prioridad |
@@ -294,6 +298,8 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 - `pages/ShiftsPage.tsx`
 - `components/cash/OpenCashModal.tsx`
 - `components/cash/CloseCashModal.tsx`
+- `components/cash/CashSessionsList.tsx`
+- `components/payments/CashMovementsSummary.tsx`
 - `components/shifts/OpenShiftModal.tsx`
 - `components/shifts/CloseShiftModal.tsx`
 - `components/shifts/CutXModal.tsx`
@@ -302,36 +308,36 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 ### UI Visual
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| CSH-UI-01 | Dashboard de caja con métricas visuales | ⬜ | Media |
+| CSH-UI-01 | Dashboard de caja con métricas visuales | ✅ | Media |
 | CSH-UI-02 | Gráfico de efectivo vs digital | ⬜ | Baja |
 | CSH-UI-03 | Timeline de movimientos de caja | ⬜ | Baja |
-| CSH-UI-04 | Indicador de turno activo prominente | ⬜ | Alta |
-| CSH-UI-05 | Resumen visual en cierre | ⬜ | Media |
+| CSH-UI-04 | Indicador de turno activo prominente | ✅ | Alta |
+| CSH-UI-05 | Resumen visual en cierre | ✅ | Media |
 
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | CSH-UX-01 | Wizard de cierre de caja paso a paso | ⬜ | Media |
-| CSH-UX-02 | Calculadora de denominaciones | ⬜ | Alta |
-| CSH-UX-03 | Comparación automática efectivo físico vs sistema | ⬜ | Alta |
-| CSH-UX-04 | Alertas de diferencias significativas | ⬜ | Alta |
-| CSH-UX-05 | Historial de cortes X/Z | ⬜ | Media |
+| CSH-UX-02 | Calculadora de denominaciones | ✅ | Alta |
+| CSH-UX-03 | Comparación automática efectivo físico vs sistema | ✅ | Alta |
+| CSH-UX-04 | Alertas de diferencias significativas | ✅ | Alta |
+| CSH-UX-05 | Historial de cortes X/Z | ✅ | Media |
 | CSH-UX-06 | Imprimir resumen de turno | ⬜ | Media |
 
 ### Robustez
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | CSH-RB-01 | Prevenir ventas sin caja abierta | ✅ | Alta |
-| CSH-RB-02 | Validación de monto inicial | ⬜ | Alta |
+| CSH-RB-02 | Validación de monto inicial | ✅ | Alta |
 | CSH-RB-03 | Forzar cierre de caja al final del día | ⬜ | Media |
-| CSH-RB-04 | Auditoría de todos los movimientos | ⬜ | Alta |
+| CSH-RB-04 | Auditoría de todos los movimientos | ✅ | Alta |
 | CSH-RB-05 | Bloqueo de caja si diferencia > umbral | ⬜ | Media |
 
 ### Performance
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| CSH-PF-01 | Cálculos de resumen en tiempo real | ⬜ | Media |
-| CSH-PF-02 | Cache de sesión activa | ⬜ | Baja |
+| CSH-PF-01 | Cálculos de resumen en tiempo real | ✅ | Media |
+| CSH-PF-02 | Cache de sesión activa | ✅ | Baja |
 
 ### Mobile
 | ID | Mejora | Estado | Prioridad |
@@ -348,50 +354,53 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 - `pages/CustomersPage.tsx`
 - `pages/DebtsPage.tsx`
 - `components/customers/CustomerFormModal.tsx`
+- `components/customers/CustomerHistoryModal.tsx`
 - `components/debts/DebtDetailModal.tsx`
 - `components/debts/AddPaymentModal.tsx`
 
 ### UI Visual
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| CUS-UI-01 | Avatar/iniciales de cliente | ⬜ | Baja |
-| CUS-UI-02 | Indicador de saldo deudor prominente | ⬜ | Alta |
-| CUS-UI-03 | Timeline de pagos | ⬜ | Media |
-| CUS-UI-04 | Gráfico de historial de compras | 🔮 | Baja |
-| CUS-UI-05 | Código de colores por estado de deuda | ⬜ | Media |
+| CUS-UI-01 | Avatar/iniciales de cliente | ✅ | Baja |
+| CUS-UI-02 | Indicador de saldo deudor prominente | ✅ | Alta |
+| CUS-UI-03 | Timeline de pagos | ✅ | Media |
+| CUS-UI-04 | Gráfico de historial de compras | ✅ | Baja |
+| CUS-UI-05 | Código de colores por estado de deuda | ✅ | Media |
+| CUS-UI-06 | Badge de límite de crédito | ✅ | Media |
 
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| CUS-UX-01 | Búsqueda rápida por cédula/teléfono | ⬜ | Alta |
-| CUS-UX-02 | Crear cliente desde POS si no existe | ⬜ | Alta |
-| CUS-UX-03 | Historial de compras del cliente | ⬜ | Media |
+| CUS-UX-01 | Búsqueda rápida por cédula/teléfono/email | ✅ | Alta |
+| CUS-UX-02 | Crear cliente desde POS si no existe | ✅ | Alta |
+| CUS-UX-03 | Historial de compras del cliente | ✅ | Media |
 | CUS-UX-04 | Recordatorio de cobro (WhatsApp/SMS) | 🔮 | Media |
-| CUS-UX-05 | Límite de crédito configurable | ⬜ | Alta |
+| CUS-UX-05 | Límite de crédito configurable | ✅ | Alta |
 | CUS-UX-06 | Estado de cuenta imprimible | ⬜ | Media |
 | CUS-UX-07 | Abono parcial de deuda | ✅ | Alta |
+| CUS-UX-08 | Verificación de crédito disponible | ✅ | Alta |
 
 ### Robustez
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| CUS-RB-01 | Validación de cédula única | ⬜ | Alta |
-| CUS-RB-02 | Validación de teléfono | ⬜ | Media |
-| CUS-RB-03 | Bloqueo de venta fiada si excede límite | ⬜ | Alta |
+| CUS-RB-01 | Validación de cédula única | ✅ | Alta |
+| CUS-RB-02 | Validación de teléfono | ✅ | Media |
+| CUS-RB-03 | Bloqueo de venta fiada si excede límite | ✅ | Alta |
 | CUS-RB-04 | Confirmación antes de eliminar cliente con deuda | ⬜ | Alta |
-| CUS-RB-05 | Registro de quién registró el pago | ⬜ | Media |
+| CUS-RB-05 | Registro de quién registró el pago | ✅ | Media |
 
 ### Performance
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| CUS-PF-01 | Búsqueda con autocomplete | ⬜ | Media |
-| CUS-PF-02 | Cache de clientes frecuentes | ⬜ | Baja |
+| CUS-PF-01 | Búsqueda con autocomplete | ✅ | Media |
+| CUS-PF-02 | Cache de clientes frecuentes | ✅ | Baja |
 
 ### Mobile
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | CUS-MB-01 | Llamar directo desde lista | ⬜ | Media |
 | CUS-MB-02 | Enviar mensaje por WhatsApp | ⬜ | Media |
-| CUS-MB-03 | Vista de tarjeta para clientes | ⬜ | Media |
+| CUS-MB-03 | Vista de tarjeta para clientes | ✅ | Media |
 
 ---
 
@@ -410,7 +419,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 |----|--------|--------|-----------|
 | SUP-UI-01 | Estado de orden con colores | ⬜ | Media |
 | SUP-UI-02 | Timeline de estados de orden | ⬜ | Baja |
-| SUP-UI-03 | Indicador de órdenes pendientes | ⬜ | Alta |
+| SUP-UI-03 | Indicador de órdenes pendientes | ✅ | Alta |
 | SUP-UI-04 | Comparación de precios entre proveedores | 🔮 | Media |
 
 ### UX Flow
@@ -502,7 +511,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| LOT-UX-01 | Alerta automática de productos próximos a vencer | ⬜ | Alta |
+| LOT-UX-01 | Alerta automática de productos próximos a vencer | ✅ | Alta |
 | LOT-UX-02 | Selección de lote en venta (FIFO automático) | ⬜ | Alta |
 | LOT-UX-03 | Registro de serial en venta | ✅ | Alta |
 | LOT-UX-04 | Búsqueda de serial para garantía | ⬜ | Media |
@@ -564,36 +573,36 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 ### UI Visual
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| DSH-UI-01 | Gráficos interactivos de ventas | ⬜ | Alta |
-| DSH-UI-02 | KPIs con indicadores de tendencia | ⬜ | Alta |
-| DSH-UI-03 | Comparación período anterior | ⬜ | Media |
+| DSH-UI-01 | Gráficos interactivos de ventas | ✅ | Alta |
+| DSH-UI-02 | KPIs con indicadores de tendencia | ✅ | Alta |
+| DSH-UI-03 | Comparación período anterior | ✅ | Media |
 | DSH-UI-04 | Heatmap de ventas por hora/día | ⬜ | Media |
-| DSH-UI-05 | Top productos visualizado | ⬜ | Media |
+| DSH-UI-05 | Top productos visualizado | ✅ | Media |
 
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| DSH-UX-01 | Filtros de fecha rápidos (hoy, semana, mes) | ⬜ | Alta |
-| DSH-UX-02 | Exportar reportes a PDF | ⬜ | Alta |
-| DSH-UX-03 | Exportar reportes a Excel | ⬜ | Alta |
+| DSH-UX-01 | Filtros de fecha rápidos (hoy, semana, mes) | ✅ | Alta |
+| DSH-UX-02 | Exportar reportes a PDF | ✅ | Alta |
+| DSH-UX-03 | Exportar reportes a Excel | ✅ | Alta |
 | DSH-UX-04 | Dashboard personalizable | 🔮 | Baja |
 | DSH-UX-05 | Reportes programados por email | 🔮 | Baja |
-| DSH-UX-06 | Comparar períodos específicos | ⬜ | Media |
+| DSH-UX-06 | Comparar períodos específicos | ✅ | Media |
 
 ### Robustez
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| DSH-RB-01 | Manejo de datos vacíos con mensaje claro | ⬜ | Alta |
-| DSH-RB-02 | Loading states para gráficos | ⬜ | Media |
-| DSH-RB-03 | Validación de rangos de fecha válidos | ⬜ | Media |
-| DSH-RB-04 | Fallback si falla carga de datos | ⬜ | Alta |
+| DSH-RB-01 | Manejo de datos vacíos con mensaje claro | ✅ | Alta |
+| DSH-RB-02 | Loading states para gráficos | ✅ | Media |
+| DSH-RB-03 | Validación de rangos de fecha válidos | ✅ | Media |
+| DSH-RB-04 | Fallback si falla carga de datos | ✅ | Alta |
 
 ### Performance
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| DSH-PF-01 | Cache de métricas del día | ⬜ | Alta |
+| DSH-PF-01 | Cache de métricas del día | ✅ | Alta |
 | DSH-PF-02 | Lazy loading de gráficos pesados | ⬜ | Media |
-| DSH-PF-03 | Agregaciones server-side | ⬜ | Alta |
+| DSH-PF-03 | Agregaciones server-side | ✅ | Alta |
 
 ---
 
@@ -800,10 +809,10 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | GLB-RB-01 | Error boundary global | ✅ | Alta |
-| GLB-RB-02 | Manejo de sesión expirada | ⬜ | Alta |
+| GLB-RB-02 | Manejo de sesión expirada | ✅ | Alta |
 | GLB-RB-03 | Indicador de modo offline | ✅ | Alta |
 | GLB-RB-04 | Confirmación antes de salir con cambios | ⬜ | Alta |
-| GLB-RB-05 | Retry automático en errores de red | ⬜ | Alta |
+| GLB-RB-05 | Retry automático en errores de red | ✅ | Alta |
 
 ---
 
@@ -812,11 +821,11 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 ### General
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| PERF-01 | Code splitting por ruta | ⬜ | Alta |
-| PERF-02 | Lazy loading de componentes pesados | ⬜ | Alta |
-| PERF-03 | Memoización de componentes costosos | ⬜ | Media |
-| PERF-04 | Virtualización de listas largas | ⬜ | Alta |
-| PERF-05 | Optimización de re-renders | ⬜ | Media |
+| PERF-01 | Code splitting por ruta | ✅ | Alta |
+| PERF-02 | Lazy loading de componentes pesados | ✅ | Alta |
+| PERF-03 | Memoización de componentes costosos | ✅ | Media |
+| PERF-04 | Virtualización de listas largas | ✅ | Alta |
+| PERF-05 | Optimización de re-renders | ✅ | Media |
 | PERF-06 | Preload de rutas críticas | ⬜ | Media |
 | PERF-07 | Service Worker optimizado | ⬜ | Alta |
 | PERF-08 | Cache de queries estratégico | ⬜ | Alta |
@@ -850,9 +859,9 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | MOB-02 | Gestos swipe en listas | ⬜ | Media |
 | MOB-03 | Bottom navigation para móvil | ⬜ | Media |
 | MOB-04 | Pull to refresh | ⬜ | Media |
-| MOB-05 | Teclado numérico para campos de precio | ⬜ | Alta |
+| MOB-05 | Teclado numérico para campos de precio | ✅ | Alta |
 | MOB-06 | Orientación landscape para tablets | ⬜ | Media |
-| MOB-07 | PWA install prompt | ⬜ | Alta |
+| MOB-07 | PWA install prompt | ✅ | Alta |
 | MOB-08 | Splash screen optimizado | ⬜ | Baja |
 | MOB-09 | Offline mode UX | ⬜ | Alta |
 | MOB-10 | Haptic feedback | 🔮 | Baja |
@@ -864,17 +873,17 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 ### Alta Prioridad
 | ID | Módulo | Descripción | Estado | Fecha |
 |----|--------|-------------|--------|-------|
-| UI-001 | POS | Falta validación de stock antes de agregar al carrito | ⬜ Pendiente | 2026-01-15 |
-| UI-002 | Ventas | No hay función de reimprimir ticket | ⬜ Pendiente | 2026-01-15 |
-| UI-003 | Ventas | Falta función de devolución parcial | ⬜ Pendiente | 2026-01-15 |
-| UI-004 | Caja | Falta calculadora de denominaciones | ⬜ Pendiente | 2026-01-15 |
-| UI-005 | Global | No hay error boundary global | ⬜ Pendiente | 2026-01-15 |
+| UI-001 | POS | Falta validación de stock antes de agregar al carrito | ✅ Resuelto | 2026-01-15 |
+| UI-002 | Ventas | No hay función de reimprimir ticket | ✅ Resuelto | 2026-01-16 |
+| UI-003 | Ventas | Falta función de devolución parcial | ✅ Cerrado | 2026-01-17 |
+| UI-004 | Caja | Falta calculadora de denominaciones | ✅ Cerrado | 2026-01-17 |
+| UI-005 | Global | No hay error boundary global | ✅ Resuelto | 2026-01-15 |
 
 ### Media Prioridad
 | ID | Módulo | Descripción | Estado | Fecha |
 |----|--------|-------------|--------|-------|
-| UI-006 | Productos | Falta vista de cards para móvil | ⬜ Pendiente | 2026-01-15 |
-| UI-007 | Dashboard | Gráficos interactivos de ventas | ⬜ Pendiente | 2026-01-15 |
+| UI-006 | Productos | Falta vista de cards para móvil | ✅ Cerrado | 2026-01-17 |
+| UI-007 | Dashboard | Gráficos interactivos de ventas | ✅ Cerrado | 2026-01-17 |
 | UI-008 | Inventario | Virtualización de lista de movimientos | ⬜ Pendiente | 2026-01-15 |
 
 ---
@@ -906,6 +915,30 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | 2026-01-15 | POS | Virtualización de lista de productos | Codex |
 | 2026-01-15 | POS | Precarga de productos frecuentes | Codex |
 | 2026-01-15 | POS | Cache de búsquedas recientes | Codex |
+| 2026-01-16 | Ventas | Verificación: reimprimir ticket ya implementado | Codex |
+| 2026-01-16 | Ventas | Verificación: anular venta con confirmación ya implementado | Codex |
+| 2026-01-16 | Ventas | Verificación: paginación server-side ya implementado | Codex |
+| 2026-01-16 | Global | Verificación: retry automático en QueryClient | Codex |
+| 2026-01-16 | Clientes | Límite de crédito configurable (BE+FE) | Codex |
+| 2026-01-16 | Clientes | Historial de compras del cliente | Codex |
+| 2026-01-16 | Clientes | Avatar/iniciales + badge de crédito | Codex |
+| 2026-01-16 | Clientes | Verificación crédito disponible en POS | Codex |
+| 2026-01-16 | Productos | Verificación: badges estado, paginación, cache offline | Codex |
+| 2026-01-16 | Dashboard | Verificación: KPIs tendencia, filtros fecha, cache | Codex |
+| 2026-01-16 | Caja | Verificación: métricas, sesiones, auditoría | Codex |
+| 2026-01-17 | Dashboard | Gráficos interactivos de ventas con Recharts | Codex |
+| 2026-01-17 | Dashboard | Exportar reportes a PDF (vista de impresión) | Codex |
+| 2026-01-17 | Productos | Vista de cards responsive para móvil | Codex |
+| 2026-01-17 | Ventas | Devolución parcial de productos | Codex |
+| 2026-01-17 | Caja | Calculadora de denominaciones integrada | Codex |
+| 2026-01-17 | Performance | Code splitting y lazy loading de rutas (React.lazy) | Codex |
+| 2026-01-17 | Clientes | Crear cliente rápido desde POS checkout | Codex |
+| 2026-01-17 | PWA | Install prompt para instalación de app | Codex |
+| 2026-01-17 | Móvil | Teclado numérico (inputMode=decimal) para precios | Codex |
+| 2026-01-17 | Inventario | Confirmación de ajustes grandes (AlertDialog) | Codex |
+| 2026-01-17 | Dashboard | Exportar reportes a Excel (CSV) | Codex |
+| 2026-01-17 | Lotes | Alerta de productos próximos a vencer | Codex |
+| 2026-01-17 | Proveedores | Indicador de órdenes pendientes | Codex |
 
 ---
 
@@ -916,26 +949,26 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | Módulo | Total Items | Completados | % Progreso |
 |--------|-------------|-------------|------------|
 | POS | 35 | 25 | 71% |
-| Productos | 25 | 3 | 12% |
+| Productos | 31 | 17 | 55% |
 | Inventario | 22 | 5 | 23% |
-| Ventas | 22 | 0 | 0% |
-| Caja/Turnos | 20 | 1 | 5% |
-| Clientes/Deudas | 22 | 1 | 5% |
+| Ventas | 22 | 15 | 68% |
+| Caja/Turnos | 22 | 12 | 55% |
+| Clientes/Deudas | 24 | 18 | 75% |
 | Proveedores | 18 | 0 | 0% |
 | Descuentos | 13 | 0 | 0% |
 | Lotes/Seriales | 14 | 5 | 36% |
 | Bodegas | 13 | 0 | 0% |
-| Dashboard | 17 | 0 | 0% |
+| Dashboard | 17 | 12 | 71% |
 | Fiscal | 13 | 0 | 0% |
 | ML | 11 | 0 | 0% |
 | Realtime | 11 | 0 | 0% |
 | Mesas | 12 | 0 | 0% |
 | Periféricos | 10 | 0 | 0% |
-| Global | 16 | 3 | 19% |
-| Performance | 10 | 0 | 0% |
+| Global | 16 | 5 | 31% |
+| Performance | 10 | 3 | 30% |
 | A11y | 10 | 1 | 10% |
 | Mobile | 10 | 0 | 0% |
-| **TOTAL** | **324** | **42** | **13%** |
+| **TOTAL** | **334** | **118** | **35%** |
 
 ---
 
@@ -954,5 +987,5 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 
 ---
 
-**Última actualización:** 2026-01-15
+**Última actualización:** 2026-01-16
 **Próxima revisión programada:** Semanal

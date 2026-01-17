@@ -18,6 +18,7 @@ import { productsCacheService } from './products-cache.service'
 interface PrefetchOptions {
   storeId: string
   queryClient: QueryClient
+  userRole?: 'owner' | 'cashier'
   onProgress?: (progress: number, message: string) => void
 }
 
@@ -25,10 +26,11 @@ interface PrefetchOptions {
  * Prefetch inteligente de todos los datos críticos
  * Se ejecuta después del login para cachear todo en background
  */
-export async function prefetchAllData({ storeId, queryClient, onProgress }: PrefetchOptions): Promise<void> {
+export async function prefetchAllData({ storeId, queryClient, userRole, onProgress }: PrefetchOptions): Promise<void> {
   if (!storeId) return
 
-  const totalSteps = 9
+  const isOwner = userRole === 'owner'
+  const totalSteps = isOwner ? 9 : 8 // Reportes solo para owners
   let currentStep = 0
 
   const updateProgress = (message: string) => {
@@ -156,29 +158,31 @@ export async function prefetchAllData({ storeId, queryClient, onProgress }: Pref
       gcTime: Infinity,
     })
 
-    // 9. Prefetch reportes (hoy)
-    updateProgress('Cacheando reportes...')
-    const today = format(new Date(), 'yyyy-MM-dd')
-    try {
-      const [salesReport, topProducts, debtSummary] = await Promise.all([
-        reportsService.getSalesByDay({ start_date: today, end_date: today }).catch(() => null),
-        reportsService.getTopProducts(10, { start_date: today, end_date: today }).catch(() => null),
-        reportsService.getDebtSummary().catch(() => null),
-      ])
-      
-      // Establecer en las queryKeys que usa ReportsPage
-      if (salesReport) {
-        queryClient.setQueryData(['reports', 'sales-by-day', today, today], salesReport)
+    // 9. Prefetch reportes (hoy) - SOLO para owners
+    if (isOwner) {
+      updateProgress('Cacheando reportes...')
+      const today = format(new Date(), 'yyyy-MM-dd')
+      try {
+        const [salesReport, topProducts, debtSummary] = await Promise.all([
+          reportsService.getSalesByDay({ start_date: today, end_date: today }).catch(() => null),
+          reportsService.getTopProducts(10, { start_date: today, end_date: today }).catch(() => null),
+          reportsService.getDebtSummary().catch(() => null),
+        ])
+        
+        // Establecer en las queryKeys que usa ReportsPage
+        if (salesReport) {
+          queryClient.setQueryData(['reports', 'sales-by-day', today, today], salesReport)
+        }
+        if (topProducts) {
+          queryClient.setQueryData(['reports', 'top-products', today, today], topProducts)
+        }
+        if (debtSummary) {
+          queryClient.setQueryData(['reports', 'debt-summary'], debtSummary)
+        }
+      } catch (error) {
+        // Silenciar errores de reportes - no son críticos
+        console.warn('[Prefetch] Error cacheando reportes:', error)
       }
-      if (topProducts) {
-        queryClient.setQueryData(['reports', 'top-products', today, today], topProducts)
-      }
-      if (debtSummary) {
-        queryClient.setQueryData(['reports', 'debt-summary'], debtSummary)
-      }
-    } catch (error) {
-      // Silenciar errores de reportes - no son críticos
-      console.warn('[Prefetch] Error cacheando reportes:', error)
     }
 
     updateProgress('¡Cacheo completo!')
@@ -195,9 +199,12 @@ export async function prefetchAllData({ storeId, queryClient, onProgress }: Pref
 export async function prefetchPageData(
   page: 'pos' | 'products' | 'inventory' | 'sales' | 'cash' | 'customers' | 'debts' | 'reports',
   storeId: string,
-  queryClient: QueryClient
+  queryClient: QueryClient,
+  userRole?: 'owner' | 'cashier'
 ): Promise<void> {
   if (!storeId) return
+
+  const isOwner = userRole === 'owner'
 
   try {
     switch (page) {
@@ -280,6 +287,10 @@ export async function prefetchPageData(
         break
 
       case 'reports':
+        // Solo prefetch de reportes si el usuario es owner
+        if (!isOwner) {
+          break
+        }
         await Promise.all([
           queryClient.prefetchQuery({
             queryKey: ['exchange', 'bcv'],

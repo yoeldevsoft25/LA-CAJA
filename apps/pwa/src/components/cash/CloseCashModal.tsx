@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { DollarSign, AlertTriangle, CheckCircle2, Calculator, ChevronRight } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
+import DenominationCalculator from '@/components/cash/DenominationCalculator'
 
 const closeCashSchema = z.object({
   counted_bs: z
@@ -49,6 +50,7 @@ export default function CloseCashModal({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CloseCashSessionRequest>({
     resolver: zodResolver(closeCashSchema),
@@ -58,6 +60,15 @@ export default function CloseCashModal({
       note: '',
     },
   })
+
+  // Handler para la calculadora de denominaciones
+  const handleDenominationTotalChange = useCallback((currency: 'bs' | 'usd', total: number) => {
+    if (currency === 'bs') {
+      setValue('counted_bs', total, { shouldValidate: true })
+    } else {
+      setValue('counted_usd', total, { shouldValidate: true })
+    }
+  }, [setValue])
 
   const countedBs = watch('counted_bs')
   const countedUsd = watch('counted_usd')
@@ -254,6 +265,17 @@ export default function CloseCashModal({
                           <p className="mt-1 text-sm text-destructive">{errors.counted_usd.message}</p>
                         )}
                       </div>
+                    </div>
+
+                    {/* Calculadora de Denominaciones */}
+                    <div className="mt-6 pt-4 border-t border-border">
+                      <DenominationCalculator
+                        onTotalChange={handleDenominationTotalChange}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Usa la calculadora para contar billetes y el total se aplicará automáticamente
+                      </p>
                     </div>
                   </div>
 

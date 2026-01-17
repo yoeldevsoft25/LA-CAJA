@@ -20,6 +20,7 @@ export interface StockStatusResponse {
 
 export interface StockStatusSearchParams {
   product_id?: string
+  warehouse_id?: string
   search?: string
   low_stock_only?: boolean
   limit?: number
@@ -73,8 +74,7 @@ export const inventoryService = {
   /**
    * Obtener estado del stock (todos los productos o uno específico)
    */
-  async getStockStatus(productId?: string): Promise<StockStatus[]> {
-    const params = productId ? { product_id: productId } : {}
+  async getStockStatus(params?: { product_id?: string; warehouse_id?: string }): Promise<StockStatus[]> {
     const response = await api.get<StockStatus[] | StockStatusResponse>(
       '/inventory/stock/status',
       { params }

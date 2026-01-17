@@ -5,6 +5,7 @@ import { productsService } from '@/services/products.service'
 import { salesService } from '@/services/sales.service'
 import { cashService } from '@/services/cash.service'
 import { useCart } from '@/stores/cart.store'
+import { useAuth } from '@/stores/auth.store'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import WeightInputModal from '@/components/pos/WeightInputModal'
@@ -20,6 +21,7 @@ interface WeightProduct {
 }
 
 export default function POSPage() {
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCheckout, setShowCheckout] = useState(false)
   const [selectedWeightProduct, setSelectedWeightProduct] = useState<WeightProduct | null>(null)
@@ -34,13 +36,13 @@ export default function POSPage() {
 
   // Búsqueda de productos
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ['products', 'search', searchQuery],
+    queryKey: ['products', 'search', user?.store_id, searchQuery],
     queryFn: () =>
       productsService.search({
         q: searchQuery || undefined,
         is_active: true,
         limit: 50,
-      }),
+      }, user?.store_id),
     enabled: searchQuery.length >= 2 || searchQuery.length === 0,
   })
 

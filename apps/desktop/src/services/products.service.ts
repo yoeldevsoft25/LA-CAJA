@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { productsCacheService } from './products-cache.service'
 
 export interface Product {
   id: string
@@ -41,40 +42,130 @@ export interface ProductSearchResponse {
 }
 
 export const productsService = {
-  async search(params: ProductSearchParams): Promise<ProductSearchResponse> {
-    // El backend usa 'search' en lugar de 'q'
-    const backendParams = {
-      ...params,
-      search: params.q,
+  async search(params: ProductSearchParams, storeId?: string): Promise<ProductSearchResponse> {
+    const isOnline = navigator.onLine
+
+    let cachedData: ProductSearchResponse | null = null
+
+    if (storeId) {
+      try {
+        const cachedProducts = await productsCacheService.getProductsFromCache(storeId, {
+          search: params.q,
+          category: params.category,
+          is_active: params.is_active,
+          limit: params.limit,
+        })
+
+        if (cachedProducts.length > 0) {
+          cachedData = {
+            products: cachedProducts,
+            total: cachedProducts.length,
+          }
+        }
+      } catch {
+        // Silenciar errores de cache
+      }
     }
-    delete (backendParams as any).q
-    
-    const response = await api.get<ProductSearchResponse>('/products', { params: backendParams })
-    return response.data
+
+    if (!isOnline) {
+      if (cachedData) {
+        return cachedData
+      }
+      throw new Error('Sin conexión y sin datos en cache local')
+    }
+
+    try {
+      const backendParams = {
+        ...params,
+        search: params.q,
+      }
+      delete (backendParams as { q?: string }).q
+
+      const response = await api.get<ProductSearchResponse>('/products', { params: backendParams })
+
+      if (storeId && response.data.products.length > 0) {
+        await productsCacheService.cacheProducts(response.data.products, storeId).catch(() => {
+          // Silenciar errores de cache
+        })
+      }
+
+      return response.data
+    } catch (error) {
+      if (cachedData) {
+        return cachedData
+      }
+      throw error
+    }
   },
 
-  async getById(id: string): Promise<Product> {
-    const response = await api.get<Product>(`/products/${id}`)
-    return response.data
+  async getById(id: string, storeId?: string): Promise<Product> {
+    const isOnline = navigator.onLine
+
+    let cachedProduct: Product | null = null
+    if (storeId) {
+      cachedProduct = await productsCacheService.getProductByIdFromCache(id).catch(() => null)
+    }
+
+    if (!isOnline) {
+      if (cachedProduct) {
+        return cachedProduct
+      }
+      throw new Error('Sin conexión y sin datos en cache local')
+    }
+
+    try {
+      const response = await api.get<Product>(`/products/${id}`)
+      if (storeId) {
+        await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+          // Silenciar errores de cache
+        })
+      }
+      return response.data
+    } catch (error) {
+      if (cachedProduct) {
+        return cachedProduct
+      }
+      throw error
+    }
   },
 
-  async create(data: Partial<Product>): Promise<Product> {
+  async create(data: Partial<Product>, storeId?: string): Promise<Product> {
     const response = await api.post<Product>('/products', data)
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+        // Silenciar errores de cache
+      })
+    }
     return response.data
   },
 
-  async update(id: string, data: Partial<Product>): Promise<Product> {
+  async update(id: string, data: Partial<Product>, storeId?: string): Promise<Product> {
     const response = await api.patch<Product>(`/products/${id}`, data)
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+        // Silenciar errores de cache
+      })
+    }
     return response.data
   },
 
-  async deactivate(id: string): Promise<Product> {
+  async deactivate(id: string, storeId?: string): Promise<Product> {
     const response = await api.post<Product>(`/products/${id}/deactivate`)
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+        // Silenciar errores de cache
+      })
+    }
     return response.data
   },
 
-  async activate(id: string): Promise<Product> {
+  async activate(id: string, storeId?: string): Promise<Product> {
     const response = await api.post<Product>(`/products/${id}/activate`)
+    if (storeId) {
+      await productsCacheService.cacheProduct(response.data, storeId).catch(() => {
+        // Silenciar errores de cache
+      })
+    }
     return response.data
   },
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList } from 'lucide-react'
 import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
 import { productsCacheService } from '@/services/products-cache.service'
 import { warehousesService } from '@/services/warehouses.service'
@@ -15,6 +15,7 @@ import ProductLotsModal from '@/components/lots/ProductLotsModal'
 import ProductSerialsModal from '@/components/serials/ProductSerialsModal'
 import ImportCSVModal from '@/components/products/ImportCSVModal'
 import CleanDuplicatesModal from '@/components/products/CleanDuplicatesModal'
+import ProductCard from '@/components/products/ProductCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +23,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 
@@ -65,6 +67,8 @@ export default function ProductsPage() {
   const [lotsProduct, setLotsProduct] = useState<Product | null>(null)
   const [serialsProduct, setSerialsProduct] = useState<Product | null>(null)
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all')
+  // Vista: 'cards' para móvil, 'table' para desktop
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table')
   const queryClient = useQueryClient()
 
   // Reset page cuando cambia búsqueda
@@ -325,6 +329,26 @@ export default function ProductsPage() {
             </div>
           )}
         </div>
+
+        {/* Toggle de vista */}
+        <div className="flex items-center justify-end">
+          <Tabs
+            value={viewMode}
+            onValueChange={(v) => setViewMode(v as 'cards' | 'table')}
+            className="w-auto"
+          >
+            <TabsList className="h-9">
+              <TabsTrigger value="cards" className="px-3 gap-1.5">
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Cards</span>
+              </TabsTrigger>
+              <TabsTrigger value="table" className="px-3 gap-1.5">
+                <LayoutList className="w-4 h-4" />
+                <span className="hidden sm:inline">Tabla</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Lista de productos */}
@@ -376,7 +400,30 @@ export default function ProductsPage() {
             </p>
               </div>
           </div>
+        ) : viewMode === 'cards' ? (
+          /* Vista de Cards para móvil */
+          <div className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  stock={stockByProduct[product.id]}
+                  onEdit={handleEdit}
+                  onChangePrice={handleChangePrice}
+                  onManageVariants={handleManageVariants}
+                  onManageLots={handleManageLots}
+                  onManageSerials={handleManageSerials}
+                  onDeactivate={handleDeactivate}
+                  onActivate={handleActivate}
+                  isDeactivating={deactivateMutation.isPending}
+                  isActivating={activateMutation.isPending}
+                />
+              ))}
+            </div>
+          </div>
         ) : (
+          /* Vista de Tabla para desktop */
             <div className="overflow-x-auto">
             <table className="w-full table-fixed">
                 <thead className="bg-muted/50">

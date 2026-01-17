@@ -7,6 +7,7 @@ import { X } from 'lucide-react'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/stores/auth.store'
 
 const productSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -58,6 +59,7 @@ export default function ProductFormModal({
   product,
   onSuccess,
 }: ProductFormModalProps) {
+  const { user } = useAuth()
   const isEditing = !!product
 
   const {
@@ -308,7 +310,7 @@ export default function ProductFormModal({
 
   // Mutación para crear/actualizar
   const createMutation = useMutation({
-    mutationFn: productsService.create,
+    mutationFn: (data: Partial<Product>) => productsService.create(data, user?.store_id),
     onSuccess: () => {
       toast.success('Producto creado exitosamente')
       onSuccess?.()
@@ -320,7 +322,7 @@ export default function ProductFormModal({
   })
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<Product>) => productsService.update(product!.id, data),
+    mutationFn: (data: Partial<Product>) => productsService.update(product!.id, data, user?.store_id),
     onSuccess: () => {
       toast.success('Producto actualizado exitosamente')
       onSuccess?.()

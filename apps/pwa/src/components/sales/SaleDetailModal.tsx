@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { FileText, Package, DollarSign, Calendar, User, CreditCard, UserCircle, Receipt, ReceiptText, ExternalLink, Printer, Ban } from 'lucide-react'
+import { FileText, Package, DollarSign, Calendar, User, CreditCard, UserCircle, Receipt, ReceiptText, ExternalLink, Printer, Ban, Undo2 } from 'lucide-react'
 import { Sale, salesService } from '@/services/sales.service'
 import { fiscalInvoicesService, FiscalInvoice } from '@/services/fiscal-invoices.service'
 import { printService } from '@/services/print.service'
@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import CreateFiscalInvoiceFromSaleModal from '@/components/fiscal/CreateFiscalInvoiceFromSaleModal'
+import ReturnItemsModal from '@/components/sales/ReturnItemsModal'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +71,7 @@ export default function SaleDetailModal({
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [fiscalInvoice, setFiscalInvoice] = useState<FiscalInvoice | null>(null)
   const [showVoidDialog, setShowVoidDialog] = useState(false)
+  const [showReturnModal, setShowReturnModal] = useState(false)
   const [voidReason, setVoidReason] = useState('')
   const [voidedAt, setVoidedAt] = useState<string | null>(sale?.voided_at || null)
   const [voidedReason, setVoidedReason] = useState<string | null>(sale?.void_reason || null)
@@ -109,6 +111,7 @@ export default function SaleDetailModal({
       ? 'Esta venta tiene pagos asociados.'
       : null
   const canVoid = isOwner && !isVoided && !voidBlockReason
+  const canReturn = isOwner && !isVoided && sale.items.length > 0
 
   const totalItems = sale.items.reduce((sum, item) => sum + item.qty, 0)
 
@@ -679,7 +682,17 @@ export default function SaleDetailModal({
           {isOwner && !isVoided && voidBlockReason && (
             <p className="text-xs text-muted-foreground mb-2">{voidBlockReason}</p>
           )}
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            {canReturn && (
+              <Button
+                variant="outline"
+                onClick={() => setShowReturnModal(true)}
+                className="flex-1 border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+              >
+                <Undo2 className="w-4 h-4 mr-2" />
+                Devolución Parcial
+              </Button>
+            )}
             {isOwner && !isVoided && (
               <Button
                 variant="destructive"
@@ -758,6 +771,15 @@ export default function SaleDetailModal({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Devolución Parcial */}
+      {showReturnModal && (
+        <ReturnItemsModal
+          isOpen={showReturnModal}
+          onClose={() => setShowReturnModal(false)}
+          sale={sale}
+        />
+      )}
     </Dialog>
   )
 }
