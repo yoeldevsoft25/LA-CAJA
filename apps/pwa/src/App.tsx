@@ -29,6 +29,30 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const LandingPageEnhanced = lazy(() => import('./pages/LandingPageEnhanced'))
 const POSPage = lazy(() => import('./pages/POSPage'))
 
+// Preload de rutas críticas para mejor rendimiento
+const preloadCriticalRoutes = () => {
+  // Precargar rutas más usadas después de login
+  Promise.all([
+    import('./pages/POSPage'),
+    import('./pages/SalesPage'),
+    import('./pages/CashPage'),
+  ]).catch(() => {
+    // Silenciar errores de preload
+  })
+}
+
+const preloadOwnerRoutes = () => {
+  // Precargar rutas de owner después de autenticación
+  Promise.all([
+    import('./pages/DashboardPage'),
+    import('./pages/ProductsPage'),
+    import('./pages/InventoryPage'),
+    import('./pages/CustomersPage'),
+  ]).catch(() => {
+    // Silenciar errores de preload
+  })
+}
+
 // Lazy loading - Páginas de uso frecuente
 const SalesPage = lazy(() => import('./pages/SalesPage'))
 const ProductsPage = lazy(() => import('./pages/ProductsPage'))
@@ -208,6 +232,29 @@ function App() {
       setIsLoaderComplete(true)
     }
   }, [isAuthenticated])
+
+  // PERF-06: Preload de rutas críticas cuando el usuario se autentica
+  useEffect(() => {
+    if (isAuthenticated && isLoaderComplete) {
+      // Precargar rutas críticas para todos los usuarios
+      const criticalTimeout = setTimeout(() => {
+        preloadCriticalRoutes()
+      }, 1000)
+
+      // Precargar rutas de owner si corresponde
+      let ownerTimeout: NodeJS.Timeout | null = null
+      if (user?.role === 'owner') {
+        ownerTimeout = setTimeout(() => {
+          preloadOwnerRoutes()
+        }, 2000)
+      }
+
+      return () => {
+        clearTimeout(criticalTimeout)
+        if (ownerTimeout) clearTimeout(ownerTimeout)
+      }
+    }
+  }, [isAuthenticated, isLoaderComplete, user?.role])
 
   // Trigger loader when user logs in
   useEffect(() => {

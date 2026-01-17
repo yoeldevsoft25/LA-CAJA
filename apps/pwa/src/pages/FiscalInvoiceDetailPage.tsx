@@ -7,7 +7,6 @@ import {
   XCircle,
   Printer,
   FileText,
-  Eye,
 } from 'lucide-react'
 import { fiscalInvoicesService } from '@/services/fiscal-invoices.service'
 import { Button } from '@/components/ui/button'

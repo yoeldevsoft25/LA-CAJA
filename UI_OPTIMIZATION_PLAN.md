@@ -149,7 +149,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | PRD-UX-01 | Duplicar producto existente | ⬜ | Media |
 | PRD-UX-02 | Edición inline de precios en tabla | ⬜ | Media |
 | PRD-UX-03 | Filtros guardados/favoritos | 🔮 | Baja |
-| PRD-UX-04 | Exportar productos a Excel | ⬜ | Media |
+| PRD-UX-04 | Exportar productos a Excel | ✅ | Media |
 | PRD-UX-05 | Bulk edit de categorías | ⬜ | Media |
 | PRD-UX-06 | Historial de cambios de precio | 🔮 | Baja |
 | PRD-UX-07 | Preview de cómo se ve en POS | ⬜ | Baja |
@@ -826,7 +826,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | PERF-03 | Memoización de componentes costosos | ✅ | Media |
 | PERF-04 | Virtualización de listas largas | ✅ | Alta |
 | PERF-05 | Optimización de re-renders | ✅ | Media |
-| PERF-06 | Preload de rutas críticas | ⬜ | Media |
+| PERF-06 | Preload de rutas críticas | ✅ | Media |
 | PERF-07 | Service Worker optimizado | ⬜ | Alta |
 | PERF-08 | Cache de queries estratégico | ⬜ | Alta |
 | PERF-09 | Compresión de imágenes | ⬜ | Media |
@@ -841,7 +841,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | A11Y-01 | Navegación por teclado completa | ⬜ | Alta |
 | A11Y-02 | Labels en todos los inputs | ⬜ | Alta |
 | A11Y-03 | Contraste de colores WCAG AA | ⬜ | Alta |
-| A11Y-04 | Focus visible en todos los elementos | ⬜ | Alta |
+| A11Y-04 | Focus visible en todos los elementos | ✅ | Alta |
 | A11Y-05 | Aria labels en iconos | ⬜ | Media |
 | A11Y-06 | Anuncios de screen reader | ⬜ | Media |
 | A11Y-07 | Soporte de reduced motion | ✅ | Media |
@@ -949,6 +949,10 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | 2026-01-17 | Clientes | Confirmación antes de eliminar cliente con verificación de deuda | Codex |
 | 2026-01-17 | Ventas | Exportar ventas a Excel (CSV) | Codex |
 | 2026-01-17 | Mobile | Touch targets mínimo 44px en botones de acción | Codex |
+| 2026-01-17 | A11y | Focus visible en todos los elementos (:focus-visible) | Codex |
+| 2026-01-17 | A11y | Soporte de prefers-reduced-motion | Codex |
+| 2026-01-17 | Productos | Exportar productos a Excel (CSV) | Codex |
+| 2026-01-17 | Performance | Preload de rutas críticas (POS, Sales, Dashboard) | Codex |
 
 ---
 
@@ -959,7 +963,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | Módulo | Total Items | Completados | % Progreso |
 |--------|-------------|-------------|------------|
 | POS | 35 | 25 | 71% |
-| Productos | 31 | 17 | 55% |
+| Productos | 31 | 18 | 58% |
 | Inventario | 22 | 5 | 23% |
 | Ventas | 22 | 16 | 73% |
 | Caja/Turnos | 22 | 12 | 55% |
@@ -975,10 +979,10 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | Mesas | 12 | 0 | 0% |
 | Periféricos | 10 | 0 | 0% |
 | Global | 16 | 7 | 44% |
-| Performance | 10 | 5 | 50% |
-| A11y | 10 | 1 | 10% |
+| Performance | 10 | 6 | 60% |
+| A11y | 10 | 2 | 20% |
 | Mobile | 10 | 3 | 30% |
-| **TOTAL** | **334** | **123** | **37%** |
+| **TOTAL** | **334** | **127** | **38%** |
 
 ---
 

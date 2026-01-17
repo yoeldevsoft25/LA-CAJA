@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList, Download } from 'lucide-react'
 import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
 import { productsCacheService } from '@/services/products-cache.service'
 import { warehousesService } from '@/services/warehouses.service'
@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { exportToCSV } from '@/utils/export-excel'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 
@@ -220,6 +221,37 @@ export default function ProductsPage() {
     setSerialsProduct(product)
   }
 
+  // Exportar productos a Excel
+  const handleExportProducts = () => {
+    if (products.length === 0) {
+      toast.error('No hay productos para exportar')
+      return
+    }
+
+    const timestamp = new Date().toISOString().split('T')[0]
+
+    exportToCSV(
+      products,
+      [
+        { header: 'ID', accessor: 'id' },
+        { header: 'Nombre', accessor: 'name' },
+        { header: 'SKU', accessor: (p) => p.sku || '' },
+        { header: 'Código de Barras', accessor: (p) => p.barcode || '' },
+        { header: 'Categoría', accessor: (p) => p.category || '' },
+        { header: 'Precio USD', accessor: (p) => Number(p.price_usd), format: 'currency' },
+        { header: 'Precio Bs', accessor: (p) => Number(p.price_bs), format: 'currency' },
+        { header: 'Costo USD', accessor: (p) => p.cost_usd ? Number(p.cost_usd) : 0, format: 'currency' },
+        { header: 'Stock', accessor: (p) => stockByProduct[p.id]?.current_stock ?? 0, format: 'number' },
+        { header: 'Stock Mínimo', accessor: (p) => stockByProduct[p.id]?.low_stock_threshold ?? 0, format: 'number' },
+        { header: 'Estado', accessor: (p) => p.is_active ? 'Activo' : 'Inactivo' },
+        { header: 'Tipo', accessor: (p) => p.is_weight_product ? 'Por peso' : 'Por unidad' },
+      ],
+      { filename: `Productos_${timestamp}` }
+    )
+
+    toast.success(`${products.length} productos exportados a Excel`)
+  }
+
   return (
     <div className="h-full max-w-7xl mx-auto">
       {/* Header */}
@@ -233,9 +265,17 @@ export default function ProductsPage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
+              onClick={handleExportProducts}
+              variant="outline"
+              className="min-h-[44px]"
+            >
+              <Download className="w-5 h-5 mr-2" />
+              Exportar Excel
+            </Button>
+            <Button
               onClick={() => setIsCleanDuplicatesOpen(true)}
               variant="outline"
-              className="border-destructive text-destructive hover:bg-destructive/10"
+              className="border-destructive text-destructive hover:bg-destructive/10 min-h-[44px]"
             >
               <Trash2 className="w-5 h-5 mr-2" />
               Limpiar Duplicados
@@ -243,7 +283,7 @@ export default function ProductsPage() {
             <Button
               onClick={() => setIsImportCSVOpen(true)}
               variant="outline"
-              className="border-primary text-primary hover:bg-primary/10"
+              className="border-primary text-primary hover:bg-primary/10 min-h-[44px]"
             >
               <Upload className="w-5 h-5 mr-2" />
               Importar CSV
@@ -251,7 +291,7 @@ export default function ProductsPage() {
             <Button
               onClick={() => setIsBulkPriceModalOpen(true)}
               variant="default"
-              className="bg-success hover:bg-success/90"
+              className="bg-success hover:bg-success/90 min-h-[44px]"
             >
               <DollarSign className="w-5 h-5 mr-2" />
               Cambio Masivo
@@ -259,6 +299,7 @@ export default function ProductsPage() {
             <Button
               onClick={handleCreate}
               variant="default"
+              className="min-h-[44px]"
             >
               <Plus className="w-5 h-5 mr-2" />
               Nuevo Producto

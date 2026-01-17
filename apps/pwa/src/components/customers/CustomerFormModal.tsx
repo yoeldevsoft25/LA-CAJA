@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RIFInput } from '@/components/ui/rif-input'
 import { CreditCard, DollarSign, Mail, Phone, User, FileText, StickyNote } from 'lucide-react'
-import { looksLikeRIF, validateRIF } from '@/utils/rif-validator'
 
 const customerSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -184,7 +183,7 @@ export default function CustomerFormModal({
                 <RIFInput
                   id="document_id"
                   value={watch('document_id') || ''}
-                  onChange={(value, isValid) => {
+                  onChange={(value) => {
                     setValue('document_id', value)
                   }}
                   placeholder="V-12345678 o J-12345678-9"

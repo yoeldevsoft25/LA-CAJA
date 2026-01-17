@@ -1,5 +1,5 @@
 import { forwardRef } from 'react'
-import { FiscalInvoice, FiscalInvoiceItem } from '@/services/fiscal-invoices.service'
+import { FiscalInvoice } from '@/services/fiscal-invoices.service'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { formatRIF } from '@/utils/rif-validator'
@@ -7,13 +7,6 @@ import { formatRIF } from '@/utils/rif-validator'
 interface FiscalInvoicePrintViewProps {
   invoice: FiscalInvoice
   className?: string
-}
-
-const formatCurrency = (amount: number, currency: 'BS' | 'USD' = 'BS') => {
-  if (currency === 'USD') {
-    return `$${Number(amount).toFixed(2)}`
-  }
-  return `Bs. ${Number(amount).toFixed(2)}`
 }
 
 const formatNumber = (num: number, decimals = 2) => {
