@@ -396,39 +396,37 @@ export default defineConfig(({ mode }) => ({
       // Asegurar orden de dependencias para evitar problemas de carga
       preserveEntrySignatures: 'strict',
       output: {
-        // Separar chunks por vendor usando análisis de grafo de dependencias
-        // CRÍTICO: Usar getModuleInfo para analizar dependencias reales y evitar
-        // problemas de inicialización como "Cannot access 'rp' before initialization"
-        manualChunks: (id, { getModuleInfo }) => {
+        // SOLUCIÓN SIMPLIFICADA: Agrupar TODO React y dependencias en un solo chunk
+        // El análisis recursivo y separaciones complejas causan errores de inicialización
+        // "Cannot access 'kn' before initialization" debido a dependencias circulares
+        manualChunks: (id) => {
           // Solo procesar node_modules (el código propio se mantiene junto)
           if (!id.includes('node_modules')) {
             return undefined;
           }
 
-          // CRÍTICO: Verificar lista explícita PRIMERO para garantizar orden y dependencias correctas
-          // Esto evita problemas de inicialización como "Cannot access 'kn' before initialization"
-          for (const lib of reactVendorExplicitList) {
-            if (id.includes(`node_modules/${lib}`)) {
-              return 'react-vendor';
-            }
-          }
-
-          // Verificar React core directamente (debe estar en react-vendor)
-          if (reactDepRegex.test(id)) {
+          // CRÍTICO: Agrupar TODO React y ecosistema en react-vendor
+          // Esto evita problemas de orden de inicialización dentro del chunk
+          if (
+            reactDepRegex.test(id) || // React core
+            id.includes('node_modules/goober') ||
+            id.includes('node_modules/react-hot-toast') ||
+            id.includes('node_modules/react-router') ||
+            id.includes('node_modules/@tanstack') ||
+            id.includes('node_modules/@radix-ui') ||
+            id.includes('node_modules/react-hook-form') ||
+            id.includes('node_modules/react-day-picker') ||
+            id.includes('node_modules/react-helmet-async') ||
+            id.includes('node_modules/framer-motion') ||
+            id.includes('node_modules/@hookform/resolvers') ||
+            id.includes('node_modules/lucide-react') ||
+            id.includes('node_modules/dexie-react-hooks') ||
+            id.includes('node_modules/recharts')
+          ) {
             return 'react-vendor';
           }
 
-          // Analizar si el módulo depende de React (directa o indirectamente)
-          // Usar análisis de grafo de dependencias como respaldo
-          const stack = new Set<string>();
-          const isReact = isReactChunkModule(id, getModuleInfo, stack);
-
-          if (isReact) {
-            // Todos los módulos que dependen de React van en react-vendor
-            return 'react-vendor';
-          }
-
-          // Date-fns: biblioteca de fechas que NO depende de React
+          // Date-fns: biblioteca de fechas que NO depende de React (puede ir separada)
           if (id.includes('node_modules/date-fns')) {
             return 'date-fns-vendor';
           }
