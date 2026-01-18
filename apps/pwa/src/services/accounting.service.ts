@@ -19,6 +19,8 @@ import type {
   TrialBalanceReport,
   GeneralLedgerReport,
   CashFlowReport,
+  AccountingValidationResult,
+  AccountingReconciliationResult,
 } from '@/types/accounting.types'
 
 /**
@@ -305,6 +307,35 @@ export const accountingReportsService = {
     const response = await api.get<CashFlowReport>('/accounting/reports/cash-flow', {
       params,
     })
+    return response.data
+  },
+}
+
+/**
+ * Servicio para Validación y Reconciliación Contable
+ */
+export const accountingValidationService = {
+  /**
+   * Valida la integridad contable del sistema
+   */
+  async validateAccountingIntegrity(params?: {
+    start_date?: string
+    end_date?: string
+  }): Promise<AccountingValidationResult> {
+    const response = await api.get<AccountingValidationResult>('/accounting/validate', {
+      params,
+    })
+    return response.data
+  },
+
+  /**
+   * Reconcilia cuentas contables
+   */
+  async reconcileAccounts(params?: {
+    account_ids?: string[]
+    as_of_date?: string
+  }): Promise<AccountingReconciliationResult> {
+    const response = await api.post<AccountingReconciliationResult>('/accounting/reconcile', params || {})
     return response.data
   },
 }

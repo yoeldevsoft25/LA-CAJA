@@ -374,3 +374,47 @@ export interface CashFlowReport {
   cash_at_end_bs: number
   cash_at_end_usd: number
 }
+
+// Tipos para Validación y Reconciliación Contable
+export interface AccountingValidationError {
+  type: string
+  severity: 'error' | 'warning'
+  message: string
+  details?: any
+}
+
+export interface AccountingValidationWarning {
+  type: string
+  message: string
+  details?: any
+}
+
+export interface AccountingValidationResult {
+  is_valid: boolean
+  errors: AccountingValidationError[]
+  warnings: AccountingValidationWarning[]
+}
+
+export interface AccountingReconciliationDiscrepancy {
+  account_id: string
+  account_code: string
+  account_name: string
+  expected_balance_bs: number
+  actual_balance_bs: number
+  difference_bs: number
+  expected_balance_usd: number
+  actual_balance_usd: number
+  difference_usd: number
+}
+
+export interface AccountingReconciliationSummary {
+  total_accounts: number
+  reconciled_accounts: number
+  accounts_with_discrepancies: number
+}
+
+export interface AccountingReconciliationResult {
+  reconciled: number
+  discrepancies: AccountingReconciliationDiscrepancy[]
+  summary: AccountingReconciliationSummary
+}

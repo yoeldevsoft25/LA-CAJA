@@ -18,9 +18,11 @@ import IncomeStatementReport from '@/components/accounting/IncomeStatementReport
 import TrialBalanceReport from '@/components/accounting/TrialBalanceReport'
 import GeneralLedgerReport from '@/components/accounting/GeneralLedgerReport'
 import CashFlowReport from '@/components/accounting/CashFlowReport'
+import ValidationReport from '@/components/accounting/ValidationReport'
+import ReconciliationTool from '@/components/accounting/ReconciliationTool'
 import { chartOfAccountsService, accountMappingsService } from '@/services/accounting.service'
 import type { AccountingEntry, AccountMapping } from '@/types/accounting.types'
-import { FileText, BookOpen, Download, Settings, TrendingUp, Plus, BarChart3 } from 'lucide-react'
+import { FileText, BookOpen, Download, Settings, TrendingUp, Plus, BarChart3, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 /**
@@ -134,6 +136,11 @@ export default function AccountingPage() {
             <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             Reportes
           </TabsTrigger>
+          <TabsTrigger value="validations" className="text-xs sm:text-sm gap-1.5 sm:gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Validaciones</span>
+            <span className="sm:hidden">Valid.</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-4">
@@ -241,6 +248,21 @@ export default function AccountingPage() {
             </TabsContent>
             <TabsContent value="general-ledger">
               <GeneralLedgerReport />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="validations" className="space-y-4">
+          <Tabs defaultValue="validation" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="validation">Validación de Integridad</TabsTrigger>
+              <TabsTrigger value="reconciliation">Reconciliación de Cuentas</TabsTrigger>
+            </TabsList>
+            <TabsContent value="validation">
+              <ValidationReport />
+            </TabsContent>
+            <TabsContent value="reconciliation">
+              <ReconciliationTool />
             </TabsContent>
           </Tabs>
         </TabsContent>
