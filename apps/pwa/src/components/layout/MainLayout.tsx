@@ -58,6 +58,7 @@ import { useNotifications } from '@/stores/notifications.store'
 import { useOnline } from '@/hooks/use-online'
 import { inventoryService } from '@/services/inventory.service'
 import { cashService } from '@/services/cash.service'
+import { syncService } from '@/services/sync.service'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -169,6 +170,42 @@ export default function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { isOnline } = useOnline()
   const { add, addUnique } = useNotifications()
+  
+  // Detectar cuando el banner offline está visible (misma lógica que OfflineBanner)
+  const [showBanner, setShowBanner] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  
+  // Replicar lógica de visibilidad del banner
+  useEffect(() => {
+    if (!isOnline) {
+      setShowBanner(true)
+    } else {
+      // Delay para mostrar mensaje de reconexión (igual que en OfflineBanner)
+      const timer = setTimeout(() => {
+        setShowBanner(false)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [isOnline])
+  
+  // Obtener conteo de eventos pendientes
+  useEffect(() => {
+    const updatePendingCount = () => {
+      try {
+        const status = syncService.getStatus()
+        setPendingCount(status.pendingCount)
+      } catch {
+        setPendingCount(0)
+      }
+    }
+    
+    updatePendingCount()
+    const interval = setInterval(updatePendingCount, 5000)
+    return () => clearInterval(interval)
+  }, [])
+  
+  // El banner está visible si showBanner es true o hay eventos pendientes
+  const isBannerVisible = showBanner || pendingCount > 0
   // Usar el hook de sincronización que combina ambos sistemas
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationsSync()
   const storeId = user?.store_id
@@ -609,8 +646,8 @@ export default function MainLayout() {
       {/* Header */}
       <header className={cn(
         "sticky z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        // Ajustar posición cuando el banner offline está visible
-        !isOnline ? "top-[48px]" : "top-0"
+        // Ajustar posición cuando el banner está visible (offline o reconexión)
+        isBannerVisible ? "top-[48px]" : "top-0"
       )}>
         <div className="flex h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6">
           {/* Logo (Desktop) */}
@@ -813,7 +850,11 @@ export default function MainLayout() {
         )}
       </header>
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className={cn(
+        "flex",
+        // Ajustar altura para compensar el banner cuando está visible
+        isBannerVisible ? "h-[calc(100vh-4rem-48px)]" : "h-[calc(100vh-4rem)]"
+      )}>
         {/* Desktop Sidebar */}
         <aside
           id="main-navigation"
