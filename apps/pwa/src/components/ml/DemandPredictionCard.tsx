@@ -197,8 +197,8 @@ export default function DemandPredictionCard({
                   </div>
                 </div>
               </div>
-              <div className="h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-80 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                   <ComposedChart
                     data={chartData}
                     margin={{ top: 10, right: 10, left: 0, bottom: 20 }}

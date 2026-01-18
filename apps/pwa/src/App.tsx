@@ -192,25 +192,38 @@ function App() {
       return
     }
 
+    // Solo intentar suscribirse si hay conexión a internet
+    if (!isOnline) {
+      if (import.meta.env.DEV) {
+        console.debug('[PushNotifications] Sin conexión, omitiendo suscripción')
+      }
+      return
+    }
+
     let timeoutId: NodeJS.Timeout | null = null
 
     // Usar el service worker ya registrado por VitePWA
     navigator.serviceWorker.ready
       .then(() => {
-        console.log('[PushNotifications] SW listo')
+        if (import.meta.env.DEV) {
+          console.log('[PushNotifications] SW listo, intentando suscribirse...')
+        }
         // Intentar suscribirse después de un delay (solo una vez)
         timeoutId = setTimeout(() => {
           subscribe().catch((error) => {
             // Silenciar errores - push notifications son opcionales
+            // El servicio ya valida todos los campos antes de enviar
+            // Solo loguear en desarrollo para debugging
             if (import.meta.env.DEV) {
-              console.warn('[PushNotifications] No se pudo suscribir (opcional):', error?.message || error)
+              const errorMessage = error?.response?.data?.message || error?.message || 'Error desconocido'
+              console.debug('[PushNotifications] No se pudo suscribir (opcional):', errorMessage)
             }
           })
         }, 3000)
       })
       .catch((error) => {
         if (import.meta.env.DEV) {
-          console.error('[PushNotifications] Service Worker no disponible:', error)
+          console.debug('[PushNotifications] Service Worker no disponible:', error)
         }
       })
 
@@ -221,7 +234,7 @@ function App() {
     }
     // Solo ejecutar cuando cambia isAuthenticated, no cuando cambia subscribe
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, isSupported])
+  }, [isAuthenticated, isSupported, isOnline])
 
   // Set initial loader state
   useEffect(() => {

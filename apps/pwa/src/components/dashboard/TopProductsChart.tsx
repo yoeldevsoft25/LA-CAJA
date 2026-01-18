@@ -142,8 +142,8 @@ export default function TopProductsChart({
   }
 
   return (
-    <div className="h-[350px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-[350px] w-full min-h-0">
+      <ResponsiveContainer width="100%" height="100%" minHeight={0}>
         <BarChart
           data={chartData}
           layout="vertical"

@@ -3508,15 +3508,26 @@ export class AccountingService {
 
         // Si la diferencia es mayor a 0.01, necesitamos balancear las líneas
         if (absDiffBs > 0.01 || absDiffUsd > 0.01) {
-          // Si es crítico, requerir revisión manual
-          if (isCriticalBs || isCriticalUsd) {
+          // Determinar si es de alto riesgo (crítico)
+          const isHighRisk = isCriticalBs || isCriticalUsd;
+          
+          // Si es crítico Y el tipo de error no es corregible automáticamente, requerir revisión manual
+          // Errores corregibles: rounding, transposition, slide, omission
+          // Errores NO corregibles automáticamente: systematic, unknown
+          const isCorrectableError = 
+            (errorAnalysisBs.type !== 'systematic' && errorAnalysisBs.type !== 'unknown') ||
+            (errorAnalysisUsd.type !== 'systematic' && errorAnalysisUsd.type !== 'unknown');
+          
+          // Solo requerir revisión manual si es crítico Y el error no es corregible
+          if (isHighRisk && !isCorrectableError) {
             errors.push({
               entry_id: entry.id,
               entry_number: entry.entry_number,
-              error: `Diferencia crítica detectada: BS diff=${diffBs.toFixed(2)} (${errorAnalysisBs.suggestion}), USD diff=${diffUsd.toFixed(2)} (${errorAnalysisUsd.suggestion}). Requiere revisión manual.`,
+              error: `Diferencia crítica detectada: BS diff=${diffBs.toFixed(2)} (${errorAnalysisBs.suggestion}), USD diff=${diffUsd.toFixed(2)} (${errorAnalysisUsd.suggestion}). Tipo de error: ${errorAnalysisBs.type}/${errorAnalysisUsd.type}. Requiere revisión manual.`,
             });
             continue;
           }
+          // Si es crítico pero el error ES corregible, intentar corregir automáticamente con advertencia
           // Intentar balancear ajustando la última línea de crédito o débito según corresponda
           // Buscar una línea que podamos ajustar (preferiblemente una cuenta de ajuste o la última línea)
           const sortedLines = [...lines].sort((a, b) => b.line_number - a.line_number);
@@ -3550,7 +3561,9 @@ export class AccountingService {
             );
 
             // Actualizar la línea con información del tipo de error
-            const errorInfo = isMaterialBs || isMaterialUsd 
+            const errorInfo = isHighRisk
+              ? `[CRÍTICO - ${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`
+              : (isMaterialBs || isMaterialUsd)
               ? `[Material - ${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`
               : `[${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`;
             
@@ -3629,7 +3642,9 @@ export class AccountingService {
                 
                 // Crear nueva línea de ajuste con información del tipo de error
                 const maxLineNumber = Math.max(...lines.map((l) => l.line_number || 0));
-                const errorInfo = isMaterialBs || isMaterialUsd 
+                const errorInfo = isHighRisk
+                  ? `[CRÍTICO - ${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`
+                  : (isMaterialBs || isMaterialUsd)
                   ? `[Material - ${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`
                   : `[${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`;
                 
@@ -3688,7 +3703,9 @@ export class AccountingService {
 
             // Crear nueva línea de ajuste con información del tipo de error
             const maxLineNumber = Math.max(...lines.map((l) => l.line_number || 0));
-            const errorInfo = isMaterialBs || isMaterialUsd 
+            const errorInfo = isHighRisk
+              ? `[CRÍTICO - ${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`
+              : (isMaterialBs || isMaterialUsd)
               ? `[Material - ${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`
               : `[${errorAnalysisBs.type}/${errorAnalysisUsd.type}]`;
             

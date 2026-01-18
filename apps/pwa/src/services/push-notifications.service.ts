@@ -54,6 +54,12 @@ class PushNotificationsService {
         applicationServerKey: this.urlBase64ToUint8Array(this.VAPID_PUBLIC_KEY),
       })
 
+      // Validar que la suscripción tenga endpoint
+      if (!subscription || !subscription.endpoint || typeof subscription.endpoint !== 'string' || !subscription.endpoint.trim()) {
+        console.warn('[PushNotifications] La suscripción no tiene un endpoint válido')
+        return null
+      }
+
       // Convertir a formato para enviar al backend
       const p256dhKey = subscription.getKey('p256dh')
       const authKey = subscription.getKey('auth')
@@ -64,12 +70,40 @@ class PushNotificationsService {
         return null
       }
 
+      // Convertir claves a base64
+      const p256dhKeyBase64 = this.arrayBufferToBase64(p256dhKey)
+      const authKeyBase64 = this.arrayBufferToBase64(authKey)
+
+      // Validar que las conversiones a base64 fueron exitosas
+      if (!p256dhKeyBase64 || !p256dhKeyBase64.trim() || !authKeyBase64 || !authKeyBase64.trim()) {
+        console.warn('[PushNotifications] Error al convertir claves a base64')
+        return null
+      }
+
+      // Obtener device_id
+      const deviceId = this.getDeviceId()
+      if (!deviceId || !deviceId.trim()) {
+        console.warn('[PushNotifications] No se pudo obtener o generar device_id')
+        return null
+      }
+
       const pushSubscription: PushSubscription = {
-        device_id: this.getDeviceId(),
-        endpoint: subscription.endpoint,
-        p256dh_key: this.arrayBufferToBase64(p256dhKey),
-        auth_key: this.arrayBufferToBase64(authKey),
-        user_agent: navigator.userAgent,
+        device_id: deviceId,
+        endpoint: subscription.endpoint.trim(),
+        p256dh_key: p256dhKeyBase64.trim(),
+        auth_key: authKeyBase64.trim(),
+        user_agent: navigator.userAgent || undefined,
+      }
+
+      // Validar que todos los campos requeridos estén presentes
+      if (!pushSubscription.device_id || !pushSubscription.endpoint || !pushSubscription.p256dh_key || !pushSubscription.auth_key) {
+        console.error('[PushNotifications] Faltan campos requeridos en la suscripción:', {
+          hasDeviceId: !!pushSubscription.device_id,
+          hasEndpoint: !!pushSubscription.endpoint,
+          hasP256dhKey: !!pushSubscription.p256dh_key,
+          hasAuthKey: !!pushSubscription.auth_key,
+        })
+        return null
       }
 
       // Enviar al backend
@@ -77,8 +111,24 @@ class PushNotificationsService {
       console.log('[PushNotifications] Suscripción exitosa')
 
       return pushSubscription
-    } catch (error) {
-      console.error('[PushNotifications] Error suscribiéndose a push notifications', error)
+    } catch (error: any) {
+      // Log detallado del error para debugging
+      const errorMessage = error?.response?.data?.message || error?.message || 'Error desconocido'
+      const errorStatus = error?.response?.status
+      const errorData = error?.response?.data
+
+      if (import.meta.env.DEV) {
+        console.error('[PushNotifications] Error suscribiéndose a push notifications:', {
+          message: errorMessage,
+          status: errorStatus,
+          data: errorData,
+          fullError: error,
+        })
+      } else {
+        // En producción, solo loguear mensaje simplificado
+        console.warn(`[PushNotifications] Error al suscribirse: ${errorMessage}`)
+      }
+
       return null
     }
   }
