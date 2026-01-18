@@ -58,11 +58,17 @@ class PushNotificationsService {
       const p256dhKey = subscription.getKey('p256dh')
       const authKey = subscription.getKey('auth')
       
+      // Validar que las claves estén presentes antes de continuar
+      if (!p256dhKey || !authKey) {
+        console.warn('[PushNotifications] Las claves de suscripción no están disponibles')
+        return null
+      }
+
       const pushSubscription: PushSubscription = {
         device_id: this.getDeviceId(),
         endpoint: subscription.endpoint,
-        p256dh_key: p256dhKey ? this.arrayBufferToBase64(p256dhKey) : '',
-        auth_key: authKey ? this.arrayBufferToBase64(authKey) : '',
+        p256dh_key: this.arrayBufferToBase64(p256dhKey),
+        auth_key: this.arrayBufferToBase64(authKey),
         user_agent: navigator.userAgent,
       }
 

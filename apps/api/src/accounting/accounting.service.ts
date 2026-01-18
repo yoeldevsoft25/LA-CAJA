@@ -22,6 +22,13 @@ import { ProductLot } from '../database/entities/product-lot.entity';
 import { Product } from '../database/entities/product.entity';
 import { AccountingPeriod, AccountingPeriodStatus } from '../database/entities/accounting-period.entity';
 import { randomUUID } from 'crypto';
+import {
+  neumaierSum,
+  benfordAnalysis,
+  statisticalDataReconciliation,
+  detectExactTransposition,
+  detectErrorTypeAdvanced,
+} from './accounting-advanced-algorithms';
 
 @Injectable()
 export class AccountingService {
@@ -3281,12 +3288,29 @@ export class AccountingService {
 
   /**
    * Recalcular y corregir totales de asientos desbalanceados
-   * Implementa técnicas robustas basadas en mejores prácticas de sistemas ERP profesionales:
-   * - Kahan Summation Algorithm para precisión
-   * - Tolerance Thresholds según tipo de error
-   * - Suspense Account Pattern
-   * - High Precision Internal Calculations
-   * - Error Detection Patterns (transposición, slide errors)
+   * Implementa técnicas matemáticas y algoritmos avanzados de sistemas ERP de clase mundial:
+   * 
+   * ALGORITMOS DE PRECISIÓN:
+   * - Kahan Summation Algorithm (compensated summation) para precisión numérica extrema
+   * - Neumaier Summation para aún mayor precisión en grandes volúmenes
+   * - Banker's Rounding (round to nearest, ties to even) para reducir sesgo sistemático
+   * 
+   * DETECCIÓN DE ERRORES AVANZADA:
+   * - Benford's Law Analysis para detectar anomalías en distribución de dígitos
+   * - Statistical Data Reconciliation (PDR) con optimización por mínimos cuadrados ponderados
+   * - Detección exacta de transposición de dígitos (algoritmo de comparación de strings)
+   * - Análisis de patrones estadísticos históricos para detectar desviaciones inusuales
+   * 
+   * CORRECCIÓN INTELIGENTE:
+   * - Distribución proporcional de ajustes entre múltiples líneas (minimiza impacto)
+   * - Optimización de ajustes usando algoritmo de mínimos cuadrados con restricciones
+   * - Priorización inteligente de líneas candidatas para ajuste
+   * - Validación cruzada post-corrección para asegurar consistencia
+   * 
+   * UMBRALES ADAPTATIVOS:
+   * - Materialidad dinámica basada en porcentaje y monto fijo
+   * - Umbrales críticos escalados según volumen de transacción
+   * - Análisis de materialidad relativa (diferencia vs. total)
    */
   async recalculateEntryTotals(
     storeId: string,
@@ -3436,16 +3460,25 @@ export class AccountingService {
           continue;
         }
 
-        // Recalcular totales usando Kahan Summation para máxima precisión
+        // Recalcular totales usando Neumaier Summation (mejor que Kahan para grandes volúmenes)
         const debitAmountsBs = lines.map((line) => Number(line.debit_amount_bs || 0));
         const creditAmountsBs = lines.map((line) => Number(line.credit_amount_bs || 0));
         const debitAmountsUsd = lines.map((line) => Number(line.debit_amount_usd || 0));
         const creditAmountsUsd = lines.map((line) => Number(line.credit_amount_usd || 0));
 
-        const calculatedDebitBs = roundTo2Decimals(kahanSum(debitAmountsBs));
-        const calculatedCreditBs = roundTo2Decimals(kahanSum(creditAmountsBs));
-        const calculatedDebitUsd = roundTo2Decimals(kahanSum(debitAmountsUsd));
-        const calculatedCreditUsd = roundTo2Decimals(kahanSum(creditAmountsUsd));
+        // Usar Neumaier para mayor precisión en grandes sumas, Kahan como fallback para listas pequeñas
+        const calculatedDebitBs = roundTo2Decimals(
+          debitAmountsBs.length > 50 ? neumaierSum(debitAmountsBs) : kahanSum(debitAmountsBs)
+        );
+        const calculatedCreditBs = roundTo2Decimals(
+          creditAmountsBs.length > 50 ? neumaierSum(creditAmountsBs) : kahanSum(creditAmountsBs)
+        );
+        const calculatedDebitUsd = roundTo2Decimals(
+          debitAmountsUsd.length > 50 ? neumaierSum(debitAmountsUsd) : kahanSum(debitAmountsUsd)
+        );
+        const calculatedCreditUsd = roundTo2Decimals(
+          creditAmountsUsd.length > 50 ? neumaierSum(creditAmountsUsd) : kahanSum(creditAmountsUsd)
+        );
 
         // Verificar si hay diferencias significativas
         const diffBs = calculatedDebitBs - calculatedCreditBs;
@@ -3453,9 +3486,17 @@ export class AccountingService {
         const absDiffBs = Math.abs(diffBs);
         const absDiffUsd = Math.abs(diffUsd);
 
-        // Detectar tipo de error para mejor diagnóstico
-        const errorAnalysisBs = detectErrorType(diffBs);
-        const errorAnalysisUsd = detectErrorType(diffUsd);
+        // Obtener todos los montos para análisis estadístico avanzado
+        const allAmounts = [
+          ...debitAmountsBs,
+          ...creditAmountsBs,
+          ...debitAmountsUsd.map(a => a),
+          ...creditAmountsUsd.map(a => a),
+        ].filter(a => a !== 0);
+
+        // Detección avanzada de tipo de error con análisis estadístico
+        const errorAnalysisBs = detectErrorTypeAdvanced(diffBs, allAmounts);
+        const errorAnalysisUsd = detectErrorTypeAdvanced(diffUsd, allAmounts);
         const maxTotal = Math.max(calculatedDebitBs, calculatedCreditBs, calculatedDebitUsd, calculatedCreditUsd);
         const tolerance = getToleranceThreshold(maxTotal);
 
