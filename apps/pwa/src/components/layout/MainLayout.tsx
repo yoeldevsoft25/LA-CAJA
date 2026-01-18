@@ -607,7 +607,11 @@ export default function MainLayout() {
       <SkipLinks />
       
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className={cn(
+        "sticky z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        // Ajustar posición cuando el banner offline está visible
+        !isOnline ? "top-[48px]" : "top-0"
+      )}>
         <div className="flex h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6">
           {/* Logo (Desktop) */}
           <div className="hidden lg:flex items-center gap-3">
