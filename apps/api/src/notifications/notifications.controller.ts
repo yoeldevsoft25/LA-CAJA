@@ -109,8 +109,8 @@ export class NotificationsController {
    */
   @Post('push/subscribe')
   async subscribePush(@Request() req: any, @Body() dto: SubscribePushDto) {
-    const storeId = req.user.store_id;
-    const userId = req.user.user_id;
+    const storeId = req.user?.store_id;
+    const userId = req.user?.user_id || req.user?.sub; // Compatibilidad con diferentes formatos de token
 
     if (!storeId || !userId) {
       throw new BadRequestException('store_id o user_id faltante en el token');

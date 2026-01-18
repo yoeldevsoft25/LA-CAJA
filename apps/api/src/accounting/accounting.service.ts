@@ -3511,23 +3511,43 @@ export class AccountingService {
           // Determinar si es de alto riesgo (crítico)
           const isHighRisk = isCriticalBs || isCriticalUsd;
           
-          // Si es crítico Y el tipo de error no es corregible automáticamente, requerir revisión manual
-          // Errores corregibles: rounding, transposition, slide, omission
-          // Errores NO corregibles automáticamente: systematic, unknown
-          const isCorrectableError = 
-            (errorAnalysisBs.type !== 'systematic' && errorAnalysisBs.type !== 'unknown') ||
-            (errorAnalysisUsd.type !== 'systematic' && errorAnalysisUsd.type !== 'unknown');
+          // Umbral absoluto razonable para corrección automática
+          // Límites muy generosos: solo requerir revisión manual para diferencias extremadamente grandes
+          const ABSOLUTE_CORRECTION_LIMIT_BS = 10000; // 10,000 BS
+          const ABSOLUTE_CORRECTION_LIMIT_USD = 100;  // 100 USD
+          const isWithinAbsoluteLimit = 
+            absDiffBs <= ABSOLUTE_CORRECTION_LIMIT_BS && 
+            absDiffUsd <= ABSOLUTE_CORRECTION_LIMIT_USD;
           
-          // Solo requerir revisión manual si es crítico Y el error no es corregible
-          if (isHighRisk && !isCorrectableError) {
+          // Errores sistemáticos solo bloquean si:
+          // 1. La diferencia es MUY grande (> 10,000 BS o 100 USD) Y
+          // 2. Hay indicios claros de manipulación (Benford anómalo CON alta confianza)
+          const benfordChiSquareBs = errorAnalysisBs.analysis?.benford?.chiSquare;
+          const benfordChiSquareUsd = errorAnalysisUsd.analysis?.benford?.chiSquare;
+          const hasStrongSystematicError = 
+            (errorAnalysisBs.type === 'systematic' && 
+             benfordChiSquareBs !== undefined && benfordChiSquareBs > 30 && // Chi-Square muy alto
+             absDiffBs > ABSOLUTE_CORRECTION_LIMIT_BS) ||
+            (errorAnalysisUsd.type === 'systematic' && 
+             benfordChiSquareUsd !== undefined && benfordChiSquareUsd > 30 &&
+             absDiffUsd > ABSOLUTE_CORRECTION_LIMIT_USD);
+          
+          // Solo requerir revisión manual si excede límites absolutos razonables
+          // O si hay error sistemático muy fuerte con diferencias muy grandes
+          const requiresManualReview = 
+            hasStrongSystematicError ||
+            absDiffBs > ABSOLUTE_CORRECTION_LIMIT_BS || 
+            absDiffUsd > ABSOLUTE_CORRECTION_LIMIT_USD;
+          
+          if (requiresManualReview) {
             errors.push({
               entry_id: entry.id,
               entry_number: entry.entry_number,
-              error: `Diferencia crítica detectada: BS diff=${diffBs.toFixed(2)} (${errorAnalysisBs.suggestion}), USD diff=${diffUsd.toFixed(2)} (${errorAnalysisUsd.suggestion}). Tipo de error: ${errorAnalysisBs.type}/${errorAnalysisUsd.type}. Requiere revisión manual.`,
+              error: `Diferencia significativa detectada: BS diff=${diffBs.toFixed(2)} (${errorAnalysisBs.suggestion}), USD diff=${diffUsd.toFixed(2)} (${errorAnalysisUsd.suggestion}). Tipo de error: ${errorAnalysisBs.type}/${errorAnalysisUsd.type}. ${hasStrongSystematicError ? 'Posible manipulación detectada con alta confianza' : 'Diferencia excede límites razonables (10,000 BS / 100 USD)'}. Requiere revisión manual.`,
             });
             continue;
           }
-          // Si es crítico pero el error ES corregible, intentar corregir automáticamente con advertencia
+          // Intentar corregir automáticamente - enfoque permisivo para maximizar correcciones automáticas
           // Intentar balancear ajustando la última línea de crédito o débito según corresponda
           // Buscar una línea que podamos ajustar (preferiblemente una cuenta de ajuste o la última línea)
           const sortedLines = [...lines].sort((a, b) => b.line_number - a.line_number);
