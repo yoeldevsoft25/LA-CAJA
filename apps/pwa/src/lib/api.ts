@@ -27,20 +27,40 @@ function decodeJWT(token: string): any | null {
 
 // Detectar automáticamente la URL del API basándose en la URL actual
 function getApiUrl(): string {
-  // Si hay una variable de entorno, usarla
+  // 1. Si hay una variable de entorno, usarla (prioridad más alta)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  if (import.meta.env.PROD) {
-    throw new Error('VITE_API_URL is not set in production');
-  }
 
-  // Si estamos en localhost, usar localhost
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  // 2. Si estamos en localhost o preview local, usar localhost
+  if (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.port === '4173' || // Vite preview
+    window.location.port === '5173'    // Vite dev server
+  ) {
     return 'http://localhost:3000';
   }
 
-  // Si estamos accediendo desde la red (ej: 192.168.1.8:5173), usar la misma IP para el API
+  // 3. En producción, intentar detectar automáticamente la URL del API
+  if (import.meta.env.PROD) {
+    const hostname = window.location.hostname;
+    
+    // Si estamos en Netlify (la-caja.netlify.app), usar el backend de Render
+    if (hostname.includes('netlify.app')) {
+      return 'https://la-caja-8i4h.onrender.com';
+    }
+    
+    // Si estamos en otro dominio, intentar inferir el API URL
+    // Opción 1: Mismo dominio, puerto 3000 (si es local)
+    // Opción 2: Dominio API (si existe un patrón conocido)
+    // Por defecto, usar el mismo protocolo y hostname con puerto 3000
+    const protocol = window.location.protocol;
+    const port = protocol === 'https:' ? '' : ':3000';
+    return `${protocol}//${hostname}${port}`;
+  }
+
+  // 4. En desarrollo, si estamos accediendo desde la red, usar la misma IP para el API
   const hostname = window.location.hostname;
   return `http://${hostname}:3000`;
 }

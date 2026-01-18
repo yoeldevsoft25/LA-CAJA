@@ -8,6 +8,14 @@
     "preview": "vite preview",
     "preview:offline": "vite preview --host 0.0.0.0",
     "test:offline": "npm run build && npm run preview:offline",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:watch": "vitest --watch",
+    "test:e2e": "npm run test:e2e --workspace-root",
+    "test:e2e:ui": "npm run test:e2e:ui --workspace-root",
+    "test:e2e:debug": "npm run test:e2e:debug --workspace-root",
+    "test:e2e:headed": "npm run test:e2e:headed --workspace-root",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
@@ -56,20 +64,29 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^4.0.17",
+    "@vitest/ui": "^4.0.17",
     "autoprefixer": "^10.4.22",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "happy-dom": "^20.3.1",
+    "jsdom": "^27.4.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
-    "vite-plugin-pwa": "^0.17.4"
+    "vite-plugin-pwa": "^0.17.4",
+    "vitest": "^4.0.17"
   }
 }

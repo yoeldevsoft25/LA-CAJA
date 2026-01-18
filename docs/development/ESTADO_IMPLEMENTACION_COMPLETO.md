@@ -90,6 +90,11 @@ Sistema POS completo para Venezuela con manejo inteligente de efectivo, sincroni
 - [x] Validación de eventos
 - [x] Persistencia en tabla `events`
 - [x] Proyecciones a read models
+- [x] **Vector Clocks** para ordenamiento causal
+- [x] **Detección automática de conflictos**
+- [x] **Resolución automática con CRDT**
+- [x] **Endpoint `/sync/resolve-conflict`** para resolución manual
+- [x] **Tabla `sync_conflicts`** para conflictos pendientes
 
 ### Backup/Restore
 - [x] Creación de backups
@@ -278,6 +283,18 @@ LA-CAJA/
   - `calculateChange()`: Desglose por denominaciones
   - `calculateRoundedChange()`: Cálculo completo con redondeo
 
+### Sistema Offline-First (PWA)
+
+- **Vector Clocks**: Implementados en frontend y backend para ordenamiento causal
+- **Circuit Breaker**: Protección contra servidor caído en frontend
+- **CacheManager L1/L2**: Cache en memoria (L1) e IndexedDB (L2) para datos críticos
+- **Background Sync**: Sincronización cuando la app está cerrada (Chrome/Edge)
+- **Resolución de Conflictos**: Automática (CRDT) y manual (UI en ConflictsPage)
+- **Service Worker**: Configurado con Workbox para funcionamiento offline completo
+- **IndexedDB**: Persistencia local de eventos, productos, clientes
+- **Cache offline**: Productos y clientes disponibles sin conexión
+- **Sincronización automática**: Al volver la conexión
+
 ## 📝 API Endpoints Principales
 
 ### Autenticación
@@ -338,6 +355,7 @@ LA-CAJA/
 - `POST /sync/push` - Enviar eventos
 - `GET /sync/status` - Estado de sincronización
 - `GET /sync/last-seq` - Última secuencia procesada
+- `POST /sync/resolve-conflict` - Resolver conflicto manualmente
 
 ### Backup
 - `POST /backup` - Crear backup
@@ -385,6 +403,49 @@ LA-CAJA/
 7. Sistema guarda sesión cerrada
 8. Sistema muestra resumen completo
 
+## ✅ Modo Offline-First (PWA) - Implementado
+
+### Componentes Implementados
+
+#### Backend
+- [x] Vector Clocks en eventos
+- [x] Detección de conflictos con vector clocks
+- [x] Resolución automática con CRDT (LWW, AWSet, MVR)
+- [x] Endpoint de resolución manual de conflictos
+- [x] Tabla `sync_conflicts` para conflictos pendientes
+- [x] Campos offline-first en Event entity (vector_clock, causal_dependencies, delta_payload, full_payload_hash)
+
+#### Frontend
+- [x] VectorClockManager para ordenamiento causal
+- [x] CircuitBreaker para protección contra fallos
+- [x] CacheManager L1/L2/L3 integrado
+- [x] SyncService con sincronización automática
+- [x] Background Sync API para sincronización cuando la app está cerrada
+- [x] Cache offline para clientes (IndexedDB + CacheManager)
+- [x] Invalidación de cache después de sincronización
+- [x] UI de resolución de conflictos (ConflictsPage)
+
+#### Service Worker
+- [x] Service Worker configurado con Workbox
+- [x] Precache de assets estáticos
+- [x] Runtime caching para HTML y API
+- [x] NetworkFirst con fallback a cache
+- [x] Funcionamiento offline completo (F5 funciona offline)
+
+#### Testing
+- [x] Script de testing offline (`scripts/test-offline.sh`)
+- [x] Guía completa de testing offline (`docs/testing/OFFLINE_TESTING_GUIDE.md`)
+
+### Funcionalidades Offline
+- [x] Funcionamiento completo sin conexión
+- [x] Creación de ventas offline
+- [x] Modificación de productos offline
+- [x] Creación de clientes offline
+- [x] Acceso a productos y clientes cacheados offline
+- [x] Sincronización automática al volver la conexión
+- [x] Background Sync (cuando la app está cerrada)
+- [x] Resolución de conflictos manual y automática
+
 ## 🚧 Pendiente o En Desarrollo
 
 ### Funcionalidades Futuras
@@ -393,7 +454,6 @@ LA-CAJA/
 - [ ] Reportes avanzados (página dedicada)
 - [ ] Impresión de tickets (opcional)
 - [ ] Atajos de teclado para Desktop
-- [ ] Modo offline completo (PWA)
 - [ ] Instalador Windows (Tauri Desktop)
 
 ## 📚 Documentación Adicional
@@ -415,6 +475,10 @@ LA-CAJA/
 - [x] Export CSV
 - [x] **Sistema de efectivo venezolano completo**
 - [x] **Manejo inteligente de cambios y vueltas**
+- [x] **Offline-first completo con sincronización automática**
+- [x] **Vector Clocks y resolución de conflictos**
+- [x] **Background Sync para sincronización cuando la app está cerrada**
+- [x] **Cache offline para productos y clientes**
 
 ---
 

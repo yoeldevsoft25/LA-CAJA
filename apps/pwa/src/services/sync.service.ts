@@ -10,7 +10,7 @@ import {
   SyncMetricsCollector,
   VectorClockManager,
   CircuitBreaker,
-  // CacheManager, // TODO: Implementar cache L1/L2/L3
+  CacheManager,
 } from '@la-caja/sync';
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
@@ -63,8 +63,7 @@ class SyncServiceClass {
   // ===== OFFLINE-FIRST COMPONENTS =====
   private vectorClockManager: VectorClockManager | null = null;
   private circuitBreaker: CircuitBreaker;
-  // TODO: Implementar cache L1/L2/L3 para productos/clientes
-  // private cacheManager: CacheManager;
+  private cacheManager: CacheManager;
 
   // ===== CALLBACKS PARA INVALIDAR CACHE Y NOTIFICAR =====
   private onSyncCompleteCallbacks: Array<(syncedCount: number) => void> = [];
@@ -73,7 +72,7 @@ class SyncServiceClass {
   constructor() {
     this.metrics = new SyncMetricsCollector();
     this.circuitBreaker = new CircuitBreaker();
-    // this.cacheManager = new CacheManager('la-caja-cache');
+    this.cacheManager = new CacheManager('la-caja-cache');
     this.setupConnectivityListeners();
   }
 
@@ -94,16 +93,50 @@ class SyncServiceClass {
       } else {
         console.warn('[SyncService] ⚠️ Servicio no inicializado al recuperar conexión');
       }
+      
+      // Intentar registrar background sync (por si acaso)
+      this.registerBackgroundSync();
     };
 
     this.offlineListener = () => {
-      // Cuando se pierde la conexión, pausar sincronización periódica
-      // Los eventos seguirán guardándose localmente
+      // Cuando se pierde la conexión, registrar background sync para cuando vuelva
       console.log('[SyncService] 📵 Conexión perdida, eventos se guardarán localmente');
+      this.registerBackgroundSync();
     };
 
     window.addEventListener('online', this.onlineListener);
     window.addEventListener('offline', this.offlineListener);
+  }
+
+  /**
+   * Registra un background sync tag para sincronizar cuando vuelva la conexión
+   */
+  private async registerBackgroundSync(): Promise<void> {
+    if (!('serviceWorker' in navigator)) {
+      console.log('[SyncService] Service Worker no está disponible');
+      return;
+    }
+
+    // Background Sync API no está en tipos estándar de TypeScript
+    interface ServiceWorkerRegistrationWithSync extends ServiceWorkerRegistration {
+      sync?: {
+        register(tag: string): Promise<void>;
+        getTags(): Promise<string[]>;
+      };
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistrationWithSync;
+      if (!registration.sync) {
+        console.warn('[SyncService] Service Worker no soporta Background Sync');
+        return;
+      }
+
+      await registration.sync.register('sync-events');
+      console.log('[SyncService] ✅ Background sync registrado: sync-events');
+    } catch (error) {
+      console.error('[SyncService] Error registrando background sync:', error);
+    }
   }
 
   /**
@@ -189,7 +222,7 @@ class SyncServiceClass {
     // ✅ OFFLINE-FIRST: Agregar vector clock al evento
     if (this.vectorClockManager) {
       const vectorClock = this.vectorClockManager.tick();
-      (event as any).vector_clock = vectorClock;
+      event.vector_clock = vectorClock;
     }
 
     // Siempre guardar en base de datos local primero (incluso si no está inicializado)
@@ -200,15 +233,27 @@ class SyncServiceClass {
       store_id: event.store_id,
       device_id: event.device_id,
       seq: event.seq,
-      vector_clock: (event as any).vector_clock,
+      vector_clock: event.vector_clock,
     });
 
     // Si está inicializado, agregar a la cola de sincronización
     if (this.isInitialized && this.syncQueue) {
       this.syncQueue.enqueue(event);
       console.log('[SyncService] enqueue -> flush attempt');
+      
+      // Si estamos offline, registrar background sync
+      if (!navigator.onLine) {
+        await this.registerBackgroundSync();
+      }
+      
       this.syncQueue.flush().catch(() => {
         // Silenciar, ya hay flush periódico
+        // Si falla y estamos offline, registrar background sync
+        if (!navigator.onLine) {
+          this.registerBackgroundSync().catch(() => {
+            // Silenciar errores de background sync
+          });
+        }
       });
     } else {
       // Si no está inicializado, intentar inicializar automáticamente si tenemos los datos necesarios
@@ -219,7 +264,11 @@ class SyncServiceClass {
           await this.initialize(event.store_id, deviceId);
           // Después de inicializar, agregar a la cola
           if (this.syncQueue) {
-    this.syncQueue.enqueue(event);
+            this.syncQueue.enqueue(event);
+            // Si estamos offline, registrar background sync
+            if (!navigator.onLine) {
+              await this.registerBackgroundSync();
+            }
           }
         } catch (error) {
           // Si falla la inicialización, el evento ya está guardado en la BD
@@ -332,6 +381,12 @@ class SyncServiceClass {
    * Notifica a todos los callbacks registrados que se completó la sincronización
    */
   private notifySyncComplete(syncedCount: number): void {
+    // Invalidar cache de entidades críticas después de sincronizar
+    // Esto asegura que los datos se refresquen cuando se sincronizan eventos
+    this.invalidateCriticalCaches().catch((error) => {
+      console.error('[SyncService] Error invalidating caches:', error);
+    });
+
     this.onSyncCompleteCallbacks.forEach((callback) => {
       try {
         callback(syncedCount);
@@ -339,6 +394,19 @@ class SyncServiceClass {
         console.error('[SyncService] Error en callback onSyncComplete:', error);
       }
     });
+  }
+
+  /**
+   * Invalida cache de entidades críticas después de sincronización
+   */
+  private async invalidateCriticalCaches(): Promise<void> {
+    // Invalidar cache de productos activos
+    await this.cacheManager.invalidatePattern(/^products:/);
+    // Invalidar cache de clientes
+    await this.cacheManager.invalidatePattern(/^customers:/);
+    // Invalidar cache de configuración de tienda
+    await this.cacheManager.invalidatePattern(/^store:/);
+    console.log('[SyncService] ✅ Cache invalidado después de sincronización');
   }
 
   /**
@@ -449,19 +517,22 @@ class SyncServiceClass {
         }
         // Remover store_id y device_id del payload individual
         // El backend los recibe en el DTO principal
-        const { store_id, device_id, ...rest } = evt as any;
+        const { store_id, device_id, payload, ...rest } = evt;
         void store_id;
         void device_id;
+        // Crear evento sin store_id y device_id para enviar al backend
+        // Usar 'as any' porque el tipo BaseEvent requiere estos campos,
+        // pero el backend los espera solo en el DTO principal
         return {
           ...rest,
           payload: {
-            ...((rest as any).payload || {}),
+            ...(payload || {}),
             store_id: undefined,
             device_id: undefined,
           },
-        };
+        } as any;
       })
-      .filter(Boolean) as BaseEvent[];
+      .filter((evt): evt is any => evt !== null);
 
     console.log('[SyncService] Sanitized events', {
       original_count: events.length,

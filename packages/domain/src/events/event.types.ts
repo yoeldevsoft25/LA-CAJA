@@ -22,6 +22,16 @@ export interface BaseEvent {
   created_at: number;
   actor: EventActor;
   payload: Record<string, any>;
+  
+  // ===== OFFLINE-FIRST FIELDS =====
+  /** Vector clock del dispositivo: {device_id: seq, ...} */
+  vector_clock?: Record<string, number>;
+  /** IDs de eventos que causalmente preceden a este evento */
+  causal_dependencies?: string[];
+  /** Payload comprimido (solo campos modificados) */
+  delta_payload?: Record<string, any>;
+  /** Hash SHA-256 del payload completo para validación */
+  full_payload_hash?: string;
 }
 
 // Product Events

@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { VectorClockService, VectorClock, CausalRelation } from './vector-clock.service';
 import { CRDTService, LWWRegister, AWSet, MVRegister } from './crdt.service';
+import { Event } from '../database/entities/event.entity';
 
 /**
  * Conflict Resolution Service
@@ -35,6 +36,9 @@ export class ConflictResolutionService {
   constructor(
     private readonly vectorClockService: VectorClockService,
     private readonly crdtService: CRDTService,
+    @InjectRepository(Event)
+    private readonly eventRepository: Repository<Event>,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -417,5 +421,110 @@ export class ConflictResolutionService {
    */
   arePayloadsEqual(a: any, b: any): boolean {
     return this.hashPayload(a) === this.hashPayload(b);
+  }
+
+  /**
+   * Resuelve un conflicto manualmente desde la UI
+   *
+   * @param conflictId - ID del conflicto en sync_conflicts
+   * @param storeId - ID de la tienda
+   * @param resolution - 'keep_mine' (mantener evento del cliente) o 'take_theirs' (usar evento del servidor)
+   * @param userId - ID del usuario que resuelve el conflicto
+   */
+  async resolveManualConflict(
+    conflictId: string,
+    storeId: string,
+    resolution: 'keep_mine' | 'take_theirs',
+    userId: string,
+  ): Promise<void> {
+    this.logger.log(
+      `Resolving conflict ${conflictId} with resolution: ${resolution}`,
+    );
+
+    // 1. Leer conflicto de la base de datos
+    const conflict = await this.dataSource.query(
+      `SELECT * FROM sync_conflicts 
+       WHERE id = $1 AND store_id = $2 AND resolution_status = 'pending'`,
+      [conflictId, storeId],
+    );
+
+    if (!conflict || conflict.length === 0) {
+      throw new NotFoundException(
+        `Conflicto ${conflictId} no encontrado o ya resuelto`,
+      );
+    }
+
+    const conflictData = conflict[0];
+    const eventIdA = conflictData.event_id_a;
+    const eventIdB = conflictData.event_id_b;
+
+    // 2. Determinar qué evento mantener
+    // 'keep_mine' = eventIdB (el evento del cliente que está resuelviendo)
+    // 'take_theirs' = eventIdA (el evento del servidor/otro dispositivo)
+    const winningEventId =
+      resolution === 'keep_mine' ? eventIdB : eventIdA;
+    const losingEventId =
+      resolution === 'keep_mine' ? eventIdA : eventIdB;
+
+    // 3. Obtener los eventos
+    const winningEvent = await this.eventRepository.findOne({
+      where: { event_id: winningEventId },
+    });
+
+    const losingEvent = await this.eventRepository.findOne({
+      where: { event_id: losingEventId },
+    });
+
+    if (!winningEvent || !losingEvent) {
+      throw new NotFoundException(
+        `Uno o ambos eventos no encontrados: ${winningEventId}, ${losingEventId}`,
+      );
+    }
+
+    // 4. Si el evento perdedor aún no está aplicado, marcar su conflicto_status
+    // Si ya está aplicado, necesitamos revertirlo o actualizarlo (más complejo)
+    // Por ahora, solo marcamos el conflicto como resuelto
+
+    // 5. Actualizar el conflicto en la base de datos
+    await this.dataSource.query(
+      `UPDATE sync_conflicts
+       SET resolution_status = 'manual_resolved',
+           resolution_strategy = 'manual',
+           resolution_value = $1,
+           resolved_at = NOW(),
+           resolved_by = $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [
+        { winning_event_id: winningEventId, resolution },
+        userId,
+        conflictId,
+      ],
+    );
+
+    // 6. Si el evento perdedor no está aplicado (aún está en conflicto),
+    // actualizar su estado
+    if (losingEvent.conflict_status === 'pending') {
+      await this.eventRepository.update(
+        { event_id: losingEventId },
+        {
+          conflict_status: 'resolved',
+        },
+      );
+    }
+
+    // 7. Si el evento ganador estaba en conflicto, marcarlo como resuelto también
+    if (winningEvent.conflict_status === 'pending') {
+      await this.eventRepository.update(
+        { event_id: winningEventId },
+        {
+          conflict_status: 'resolved',
+        },
+      );
+    }
+
+    this.logger.log(
+      `Conflict ${conflictId} resolved: keeping event ${winningEventId}`,
+    );
   }
 }

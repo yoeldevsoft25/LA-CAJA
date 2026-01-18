@@ -1,0 +1,58 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - img "LA CAJA Logo" [ref=e11]
+      - heading "Bienvenido" [level=1] [ref=e12]
+      - paragraph [ref=e13]: Inicia sesión en tu punto de venta
+    - generic [ref=e14]:
+      - img [ref=e17]
+      - img [ref=e24]
+      - img [ref=e30]
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: Tienda
+        - combobox [ref=e39] [cursor=pointer]:
+          - generic: Dios es amor
+          - img [ref=e40]
+        - combobox [ref=e42]
+      - generic [ref=e43]:
+        - generic [ref=e44]: Empleado
+        - generic [ref=e46]:
+          - button "A Administradora Propietario" [ref=e47] [cursor=pointer]:
+            - generic [ref=e48]: A
+            - generic [ref=e49]:
+              - paragraph [ref=e50]: Administradora
+              - paragraph [ref=e51]:
+                - img [ref=e52]
+                - text: Propietario
+            - img [ref=e56]
+          - button "C Cajera Cajero" [ref=e58] [cursor=pointer]:
+            - generic [ref=e59]: C
+            - generic [ref=e60]:
+              - paragraph [ref=e61]: Cajera
+              - paragraph [ref=e62]: Cajero
+          - button "L Luz Propietario" [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]: L
+            - generic [ref=e65]:
+              - paragraph [ref=e66]: Luz
+              - paragraph [ref=e67]:
+                - img [ref=e68]
+                - text: Propietario
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - text: PIN
+          - generic [ref=e74]: de Administradora
+        - textbox "PIN de Administradora" [ref=e75]:
+          - /placeholder: ••••
+          - text: "999999"
+      - button "Iniciar sesión" [ref=e77] [cursor=pointer]:
+        - generic [ref=e78]:
+          - img
+          - text: Iniciar sesión
+    - paragraph [ref=e80]: ¿Problemas para acceder? Contacta al administrador.
+  - contentinfo [ref=e81]:
+    - paragraph [ref=e82]: © 2026 LA CAJA. Todos los derechos reservados.
+```

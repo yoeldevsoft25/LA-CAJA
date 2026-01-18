@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Clock, Info, GitCompare } from 'lucide-react';
 import { db, LocalConflict } from '@/db/database';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -69,15 +69,35 @@ export default function ConflictsPage() {
     <div className="h-full max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <AlertTriangle className="h-8 w-8 text-yellow-500" />
-          <h1 className="text-3xl font-bold text-foreground">Conflictos de Sincronización</h1>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+            <GitCompare className="h-8 w-8 text-yellow-600" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-foreground">Conflictos de Sincronización</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Resuelve conflictos cuando múltiples dispositivos modifican los mismos datos
+            </p>
+          </div>
+          {conflicts.length > 0 && (
+            <Badge variant="destructive" className="px-3 py-1 text-base">
+              {conflicts.length} {conflicts.length === 1 ? 'pendiente' : 'pendientes'}
+            </Badge>
+          )}
         </div>
-        <p className="text-muted-foreground">
-          {conflicts.length === 0
-            ? 'No hay conflictos pendientes ✅'
-            : `${conflicts.length} ${conflicts.length === 1 ? 'conflicto' : 'conflictos'} pendiente${conflicts.length === 1 ? '' : 's'} de resolución`}
-        </p>
+        
+        {conflicts.length > 0 && (
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <Info className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-amber-900">
+              <p className="font-medium mb-1">¿Qué son los conflictos?</p>
+              <p className="text-amber-700">
+                Ocurren cuando dos dispositivos modifican los mismos datos al mismo tiempo. 
+                Elige cuál versión mantener o usa la del servidor como referencia.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Lista de conflictos */}
@@ -117,56 +137,67 @@ function ConflictCard({
   isResolving: boolean;
 }) {
   const timeAgo = getTimeAgo(conflict.created_at);
+  const isCritical = conflict.requires_manual_review;
 
   return (
-    <Card className="border-l-4 border-l-yellow-500">
+    <Card className={`border-l-4 ${isCritical ? 'border-l-red-500' : 'border-l-yellow-500'} shadow-sm hover:shadow-md transition-shadow`}>
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Conflicto en Evento
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              ID: <code className="bg-muted px-1 rounded">{conflict.event_id.slice(0, 8)}...</code>
-            </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className={`h-5 w-5 ${isCritical ? 'text-red-500' : 'text-yellow-500'} flex-shrink-0`} />
+              <CardTitle className="text-lg">
+                {isCritical ? 'Conflicto Crítico' : 'Conflicto Detectado'}
+              </CardTitle>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                {conflict.event_id.slice(0, 8)}...
+              </code>
+              <Badge variant={isCritical ? 'destructive' : 'secondary'} className="text-xs">
+                {isCritical ? 'Revisión manual requerida' : 'Puede resolverse automáticamente'}
+              </Badge>
+            </div>
           </div>
-          <Badge variant={conflict.requires_manual_review ? 'destructive' : 'secondary'}>
-            {conflict.requires_manual_review ? 'Requiere revisión' : 'Automático'}
-          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Razón del conflicto */}
-        <div>
-          <h4 className="text-sm font-medium mb-1">Razón:</h4>
-          <p className="text-sm text-muted-foreground">{conflict.reason}</p>
+        <div className="bg-muted/50 p-3 rounded-lg">
+          <h4 className="text-sm font-semibold mb-1.5 flex items-center gap-1.5">
+            <Info className="h-4 w-4" />
+            Razón del conflicto:
+          </h4>
+          <p className="text-sm text-muted-foreground leading-relaxed">{conflict.reason}</p>
         </div>
 
         {/* Eventos en conflicto */}
         {conflict.conflicting_with.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-1">En conflicto con:</h4>
+            <h4 className="text-sm font-semibold mb-2">Eventos relacionados:</h4>
             <div className="flex flex-wrap gap-2">
               {conflict.conflicting_with.map((eventId) => (
                 <code
                   key={eventId}
-                  className="text-xs bg-muted px-2 py-1 rounded"
+                  className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono border border-slate-200 dark:border-slate-700"
                 >
-                  {eventId.slice(0, 8)}...
+                  {eventId.slice(0, 12)}...
                 </code>
               ))}
             </div>
           </div>
         )}
 
-        {/* Timestamp */}
-        <p className="text-xs text-muted-foreground">
-          Detectado hace {timeAgo}
-        </p>
+        {/* Metadata */}
+        <div className="flex items-center justify-between pt-2 border-t text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" />
+            Detectado hace {timeAgo}
+          </span>
+        </div>
 
         {/* Acciones */}
-        <div className="flex gap-3 pt-2 border-t">
+        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
           <Button
             onClick={() => onResolve(conflict, 'keep_mine')}
             disabled={isResolving}

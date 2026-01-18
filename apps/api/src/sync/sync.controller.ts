@@ -9,16 +9,22 @@ import {
   Request,
   Query,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { SyncService } from './sync.service';
+import { ConflictResolutionService } from './conflict-resolution.service';
 import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
+import { ResolveConflictDto } from './dto/resolve-conflict.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('sync')
 @UseGuards(JwtAuthGuard)
 export class SyncController {
-  constructor(private readonly syncService: SyncService) {}
+  constructor(
+    private readonly syncService: SyncService,
+    private readonly conflictResolutionService: ConflictResolutionService,
+  ) {}
 
   @Post('push')
   @HttpCode(HttpStatus.OK)
@@ -60,5 +66,36 @@ export class SyncController {
       deviceId,
     );
     return { last_seq: lastSeq };
+  }
+
+  @Post('resolve-conflict')
+  @HttpCode(HttpStatus.OK)
+  async resolveConflict(
+    @Body() dto: ResolveConflictDto,
+    @Request() req: any,
+  ): Promise<{ success: boolean; message: string }> {
+    const storeId = req.user.store_id;
+    const userId = req.user.user_id;
+
+    try {
+      await this.conflictResolutionService.resolveManualConflict(
+        dto.conflict_id,
+        storeId,
+        dto.resolution,
+        userId,
+      );
+
+      return {
+        success: true,
+        message: 'Conflicto resuelto correctamente',
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Error resolviendo conflicto',
+      );
+    }
   }
 }

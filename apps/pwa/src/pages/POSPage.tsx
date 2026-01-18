@@ -63,10 +63,17 @@ import {
 import { cn } from '@/lib/utils'
 import { SwipeableItem } from '@/components/ui/swipeable-item'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
+import { useOrientation } from '@/hooks/use-orientation'
 
 export default function POSPage() {
   const { user } = useAuth()
   const isMobile = useMobileDetection()
+  const { isLandscape } = useOrientation()
+  
+  // Detectar si es tablet (no móvil pero pantalla < 1024px)
+  const isTablet = !isMobile && window.innerWidth >= 640 && window.innerWidth < 1024
+  // Modo landscape optimizado para tablets en horizontal
+  const isTabletLandscape = isTablet && isLandscape
   const MAX_QTY_PER_PRODUCT = 999
   const queryClient = useQueryClient()
   const RECENT_SEARCHES_KEY = 'pos-recent-searches'
@@ -1308,10 +1315,16 @@ export default function POSPage() {
         )}
       </div>
 
-      {/* Layout: Mobile (stacked) / Tablet-Desktop (side by side) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
+      <div className={cn(
+        "grid gap-4 sm:gap-6",
+        isTabletLandscape ? "grid-cols-[1.8fr_1fr]" : "grid-cols-1 lg:grid-cols-3"
+      )}>
         {/* Búsqueda y Lista de Productos */}
-        <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+        <div className={cn(
+          "space-y-3 sm:space-y-4",
+          !isTabletLandscape && "lg:col-span-2"
+        )}>
           {/* Barra de búsqueda */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 sm:w-5 sm:h-5 z-10" />
@@ -1674,9 +1687,16 @@ export default function POSPage() {
           </Card>
         </div>
 
-        {/* Carrito - Sticky en desktop, normal en mobile */}
-        <div className="lg:col-span-1">
-          <Card className="lg:sticky lg:top-20 border border-border flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)] overflow-hidden min-h-0">
+        {/* Carrito - Sticky en desktop/tablet landscape, normal en mobile */}
+        <div className={cn(
+          !isTabletLandscape && "lg:col-span-1"
+        )}>
+          <Card className={cn(
+            "border border-border flex flex-col overflow-hidden min-h-0",
+            isTabletLandscape 
+              ? "sticky top-20 h-[calc(100vh-140px)]" 
+              : "lg:sticky lg:top-20 h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)]"
+          )}>
             <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">

@@ -12,9 +12,14 @@
     "dev:desktop": "npm run dev --workspace=apps/desktop",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
     "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/node": "^20.10.6",
     "typescript": "^5.3.3"
   },

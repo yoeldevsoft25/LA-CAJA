@@ -5,6 +5,7 @@ import {
   Package,
   ArrowRight,
   Eye,
+  Copy,
 } from 'lucide-react'
 import {
   purchaseOrdersService,
@@ -68,6 +69,7 @@ export default function PurchaseOrdersPage() {
   const [supplierFilter, setSupplierFilter] = useState<string>('all')
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [duplicateOrder, setDuplicateOrder] = useState<PurchaseOrder | null>(null)
 
   // Obtener supplier_id de URL params si existe
   const supplierIdParam = searchParams.get('supplier_id')
@@ -136,6 +138,13 @@ export default function PurchaseOrdersPage() {
   const handleCloseDetail = () => {
     setIsDetailOpen(false)
     setSelectedOrder(null)
+  }
+
+  const handleDuplicate = (order: PurchaseOrder) => {
+    // Guardar la orden a duplicar para pasarla al modal
+    setDuplicateOrder(order)
+    setSelectedOrder(null)
+    setIsFormOpen(true)
   }
 
   return (
@@ -270,14 +279,25 @@ export default function PurchaseOrdersPage() {
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewDetail(order)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Ver Detalles
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDuplicate(order)}
+                      title="Duplicar orden anterior"
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Duplicar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetail(order)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ver Detalles
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -319,10 +339,24 @@ export default function PurchaseOrdersPage() {
       {/* Modal de crear/editar orden */}
       <PurchaseOrderFormModal
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        initialSupplierId={supplierIdParam || undefined}
+        onClose={() => {
+          setIsFormOpen(false)
+          setDuplicateOrder(null)
+        }}
+        initialSupplierId={
+          duplicateOrder?.supplier_id || supplierIdParam || undefined
+        }
+        initialProducts={
+          duplicateOrder
+            ? duplicateOrder.items.map((item) => ({
+                product_id: item.product_id,
+                quantity: item.quantity,
+              }))
+            : undefined
+        }
         onSuccess={() => {
           setIsFormOpen(false)
+          setDuplicateOrder(null)
           queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
         }}
       />

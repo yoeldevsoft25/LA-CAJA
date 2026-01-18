@@ -8,7 +8,6 @@ import MainLayout from './components/layout/MainLayout'
 import { useOnline } from './hooks/use-online'
 import { useAuth } from './stores/auth.store'
 import { getDefaultRoute } from './lib/permissions'
-import { offlineIndicator } from './services/offline-indicator.service'
 import { syncService } from './services/sync.service'
 import { realtimeWebSocketService } from './services/realtime-websocket.service'
 import { usePushNotifications } from './hooks/usePushNotifications'
@@ -171,13 +170,11 @@ function App() {
   useEffect(() => {
     if (!isOnline) {
       console.log('[App] 📵 Conexión perdida');
-      offlineIndicator.showOffline();
       return;
     }
 
     if (wasOffline) {
       console.log('[App] 🌐 Conexión recuperada, sincronizando...');
-      offlineIndicator.showOnline();
       // Intentar sincronizar cuando se recupera la conexión
       syncService.syncNow().then(() => {
         console.log('[App] ✅ Sincronización manual completada');

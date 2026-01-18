@@ -13,9 +13,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { useMobileDetection } from '@/hooks/use-mobile-detection'
 
 export default function CashPage() {
   const queryClient = useQueryClient()
+  const isMobile = useMobileDetection()
   const [isOpenModalOpen, setIsOpenModalOpen] = useState(false)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
@@ -163,8 +165,63 @@ export default function CashPage() {
                 </AlertDescription>
               </Alert>
 
-            {/* Información básica */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Información básica - Vista simplificada en móvil */}
+            {isMobile ? (
+              <div className="space-y-2">
+                {/* Información compacta para móvil */}
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Apertura:</span>
+                  </div>
+                  <span className="text-xs font-medium text-foreground">
+                    {format(new Date(currentSession.opened_at), 'dd/MM HH:mm')}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-[10px] text-green-700 mb-1">Apertura Bs</p>
+                    <p className="text-base font-bold text-green-900">
+                      {Number(currentSession.opening_amount_bs).toFixed(2)} Bs
+                    </p>
+                  </div>
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-[10px] text-green-700 mb-1">Apertura USD</p>
+                    <p className="text-base font-bold text-green-900">
+                      ${Number(currentSession.opening_amount_usd).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                
+                {sessionSummary && (
+                  <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">Efectivo Esperado</span>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {sessionSummary.sales_count || 0} ventas
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-xs text-muted-foreground">Bs:</span>
+                        <span className="text-sm font-semibold text-foreground">
+                          {Number(sessionSummary.cash_flow.expected_bs).toFixed(2)} Bs
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-xs text-muted-foreground">USD:</span>
+                        <span className="text-sm font-semibold text-foreground">
+                          ${Number(sessionSummary.cash_flow.expected_usd).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Vista completa para desktop */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="p-4">
                 <div className="flex items-center mb-2">
@@ -212,78 +269,81 @@ export default function CashPage() {
                 </p>
                   </CardContent>
                 </Card>
-            </div>
+              </div>
+            )}
 
-            {/* Resumen de efectivo esperado */}
-              {isLoadingSummary ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              ) : sessionSummary ? (
-                <Card className="bg-muted/50 border-border">
-                  <CardHeader>
-                    <CardTitle className="text-base sm:text-lg">Resumen de Efectivo</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                        <p className="text-sm text-muted-foreground mb-2">Efectivo Esperado (Bs)</p>
-                        <p className="text-xl font-bold text-foreground">
-                      {Number(sessionSummary.cash_flow.expected_bs).toFixed(2)} Bs
-                    </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                      Apertura: {Number(sessionSummary.cash_flow.opening_bs).toFixed(2)} Bs + Ventas
-                      en efectivo: {Number(sessionSummary.cash_flow.sales_bs).toFixed(2)} Bs +
-                      Movimientos: {Number(sessionSummary.cash_flow.movements_bs).toFixed(2)} Bs
-                    </p>
+            {/* Resumen de efectivo esperado - Oculto en móvil si ya se mostró arriba */}
+              {!isMobile && (
+                isLoadingSummary ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-8 w-full" />
                   </div>
-                  <div>
-                        <p className="text-sm text-muted-foreground mb-2">Efectivo Esperado (USD)</p>
-                        <p className="text-xl font-bold text-foreground">
-                      ${Number(sessionSummary.cash_flow.expected_usd).toFixed(2)}
-                    </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                      Apertura: ${Number(sessionSummary.cash_flow.opening_usd).toFixed(2)} + Ventas
-                      en efectivo: ${Number(sessionSummary.cash_flow.sales_usd).toFixed(2)} +
-                      Movimientos: ${Number(sessionSummary.cash_flow.movements_usd).toFixed(2)}
-                    </p>
+                ) : sessionSummary ? (
+                  <Card className="bg-muted/50 border-border">
+                    <CardHeader>
+                      <CardTitle className="text-base sm:text-lg">Resumen de Efectivo</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                          <p className="text-sm text-muted-foreground mb-2">Efectivo Esperado (Bs)</p>
+                          <p className="text-xl font-bold text-foreground">
+                        {Number(sessionSummary.cash_flow.expected_bs).toFixed(2)} Bs
+                      </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                        Apertura: {Number(sessionSummary.cash_flow.opening_bs).toFixed(2)} Bs + Ventas
+                        en efectivo: {Number(sessionSummary.cash_flow.sales_bs).toFixed(2)} Bs +
+                        Movimientos: {Number(sessionSummary.cash_flow.movements_bs).toFixed(2)} Bs
+                      </p>
+                    </div>
+                    <div>
+                          <p className="text-sm text-muted-foreground mb-2">Efectivo Esperado (USD)</p>
+                          <p className="text-xl font-bold text-foreground">
+                        ${Number(sessionSummary.cash_flow.expected_usd).toFixed(2)}
+                      </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                        Apertura: ${Number(sessionSummary.cash_flow.opening_usd).toFixed(2)} + Ventas
+                        en efectivo: ${Number(sessionSummary.cash_flow.sales_usd).toFixed(2)} +
+                        Movimientos: ${Number(sessionSummary.cash_flow.movements_usd).toFixed(2)}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Totales por método de pago */}
-                    <div className="pt-4 border-t border-border">
-                      <p className="text-sm font-medium text-foreground mb-3">Ventas por Método de Pago</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground mb-1">Efectivo Bs:</span>
-                          <Badge variant="secondary" className="w-fit">
-                        {Number(sessionSummary.sales.by_method.CASH_BS || 0).toFixed(2)} Bs
-                          </Badge>
+                  {/* Totales por método de pago */}
+                      <div className="pt-4 border-t border-border">
+                        <p className="text-sm font-medium text-foreground mb-3">Ventas por Método de Pago</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground mb-1">Efectivo Bs:</span>
+                            <Badge variant="secondary" className="w-fit">
+                          {Number(sessionSummary.sales.by_method.CASH_BS || 0).toFixed(2)} Bs
+                            </Badge>
+                      </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground mb-1">Efectivo USD:</span>
+                            <Badge variant="secondary" className="w-fit">
+                          ${Number(sessionSummary.sales.by_method.CASH_USD || 0).toFixed(2)}
+                            </Badge>
+                      </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground mb-1">Pago Móvil:</span>
+                            <Badge variant="secondary" className="w-fit">
+                          {Number(sessionSummary.sales.by_method.PAGO_MOVIL || 0).toFixed(2)} Bs
+                            </Badge>
+                      </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground mb-1">Transferencia:</span>
+                            <Badge variant="secondary" className="w-fit">
+                          {Number(sessionSummary.sales.by_method.TRANSFER || 0).toFixed(2)} Bs
+                            </Badge>
+                      </div>
                     </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground mb-1">Efectivo USD:</span>
-                          <Badge variant="secondary" className="w-fit">
-                        ${Number(sessionSummary.sales.by_method.CASH_USD || 0).toFixed(2)}
-                          </Badge>
-                    </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground mb-1">Pago Móvil:</span>
-                          <Badge variant="secondary" className="w-fit">
-                        {Number(sessionSummary.sales.by_method.PAGO_MOVIL || 0).toFixed(2)} Bs
-                          </Badge>
-                    </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-muted-foreground mb-1">Transferencia:</span>
-                          <Badge variant="secondary" className="w-fit">
-                        {Number(sessionSummary.sales.by_method.TRANSFER || 0).toFixed(2)} Bs
-                          </Badge>
-                    </div>
-                  </div>
-                </div>
-                  </CardContent>
-                </Card>
-              ) : null}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null
+              )}
               </div>
             )}
         </CardContent>

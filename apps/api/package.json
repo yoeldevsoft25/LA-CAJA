@@ -4,7 +4,7 @@
   "description": "Backend API - NestJS + Fastify",
   "main": "dist/main.js",
   "scripts": {
-    "prebuild": "rm -rf dist",
+    "prebuild": "rimraf dist || true",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
