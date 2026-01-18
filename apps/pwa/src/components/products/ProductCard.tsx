@@ -28,6 +28,39 @@ import { cn } from '@/lib/utils'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 
+/**
+ * Genera un color consistente para una categoría usando hash
+ * Retorna una tupla [bgColor, textColor, borderColor]
+ */
+const getCategoryColor = (category: string): [string, string, string] => {
+  // Paleta de colores predefinida para mejor contraste y accesibilidad
+  const colorPalette: Array<[string, string, string]> = [
+    ['bg-blue-100', 'text-blue-700', 'border-blue-300'], // Azul
+    ['bg-green-100', 'text-green-700', 'border-green-300'], // Verde
+    ['bg-purple-100', 'text-purple-700', 'border-purple-300'], // Púrpura
+    ['bg-orange-100', 'text-orange-700', 'border-orange-300'], // Naranja
+    ['bg-pink-100', 'text-pink-700', 'border-pink-300'], // Rosa
+    ['bg-cyan-100', 'text-cyan-700', 'border-cyan-300'], // Cian
+    ['bg-amber-100', 'text-amber-700', 'border-amber-300'], // Ámbar
+    ['bg-indigo-100', 'text-indigo-700', 'border-indigo-300'], // Índigo
+    ['bg-teal-100', 'text-teal-700', 'border-teal-300'], // Verde azulado
+    ['bg-rose-100', 'text-rose-700', 'border-rose-300'], // Rosa oscuro
+    ['bg-violet-100', 'text-violet-700', 'border-violet-300'], // Violeta
+    ['bg-emerald-100', 'text-emerald-700', 'border-emerald-300'], // Esmeralda
+  ]
+
+  // Genera un hash simple del nombre de categoría
+  let hash = 0
+  for (let i = 0; i < category.length; i++) {
+    hash = ((hash << 5) - hash) + category.charCodeAt(i)
+    hash = hash & hash // Convierte a entero de 32 bits
+  }
+
+  // Usa el hash para seleccionar un color de la paleta
+  const index = Math.abs(hash) % colorPalette.length
+  return colorPalette[index]
+}
+
 const WEIGHT_UNIT_TO_KG: Record<WeightUnit, number> = {
   kg: 1,
   g: 0.001,
@@ -109,9 +142,15 @@ export default function ProductCard({
                 {product.name}
               </h3>
               {product.category && (
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    getCategoryColor(product.category),
+                    "border font-medium text-[10px] mt-0.5 w-fit"
+                  )}
+                >
                   {product.category}
-                </p>
+                </Badge>
               )}
               {product.barcode && (
                 <div className="flex items-center gap-1 mt-1">

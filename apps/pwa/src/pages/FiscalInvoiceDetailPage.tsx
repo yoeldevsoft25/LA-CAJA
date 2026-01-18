@@ -19,6 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import toast from 'react-hot-toast'
 import {
   Table,
@@ -49,6 +59,7 @@ export default function FiscalInvoiceDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showPrintPreview, setShowPrintPreview] = useState(false)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
   const { data: invoice, isLoading } = useQuery({
@@ -74,7 +85,8 @@ export default function FiscalInvoiceDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiscal-invoices', id] })
       queryClient.invalidateQueries({ queryKey: ['fiscal-invoices'] })
-      toast.success('Factura cancelada correctamente')
+      toast.success('Factura cancelada correctamente. Se ha generado una nota de crédito automáticamente.')
+      setShowCancelDialog(false)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Error al cancelar la factura')
@@ -87,12 +99,10 @@ export default function FiscalInvoiceDetailPage() {
   }
 
   const handleCancel = () => {
-    if (
-      !confirm(
-        '¿Está seguro de cancelar esta factura fiscal? Esta acción no se puede deshacer.',
-      )
-    )
-      return
+    setShowCancelDialog(true)
+  }
+
+  const handleConfirmCancel = () => {
     cancelMutation.mutate()
   }
 
@@ -401,6 +411,64 @@ export default function FiscalInvoiceDetailPage() {
           <FiscalInvoicePrintView ref={printRef} invoice={invoice} />
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de confirmación de cancelación */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-destructive" />
+              Cancelar Factura Fiscal
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2">
+              <p>
+                ¿Está seguro de cancelar esta factura fiscal? Esta acción no se puede deshacer.
+              </p>
+              <Alert className="bg-info/10 border-info/50">
+                <AlertDescription className="text-sm">
+                  <p className="font-semibold mb-1">Importante:</p>
+                  <p>
+                    Al cancelar esta factura fiscal, se generará automáticamente una{' '}
+                    <strong>Nota de Crédito</strong> que anulará la factura original.
+                    La nota de crédito quedará registrada en el sistema y podrá ser consultada
+                    junto con las demás facturas fiscales.
+                  </p>
+                </AlertDescription>
+              </Alert>
+              {invoice.status === 'issued' && (
+                <Alert className="bg-warning/10 border-warning/50">
+                  <AlertDescription className="text-sm">
+                    <p className="font-semibold mb-1">Nota adicional:</p>
+                    <p>
+                      Esta factura ya está emitida. La cancelación generará una nota de crédito
+                      que debe ser procesada según los procedimientos fiscales establecidos.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelMutation.isPending}>
+              No, mantener factura
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              disabled={cancelMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {cancelMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  Cancelando...
+                </>
+              ) : (
+                'Sí, cancelar y generar nota de crédito'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

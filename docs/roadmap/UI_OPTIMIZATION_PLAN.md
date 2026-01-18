@@ -141,18 +141,18 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | PRD-UI-03 | Badges de estado (activo/inactivo/sin stock) | ✅ | Media |
 | PRD-UI-04 | Código de barras visual en detalle | ✅ | Baja |
 | PRD-UI-05 | Tooltips informativos en campos complejos | ✅ | Media |
-| PRD-UI-06 | Colores por categoría en lista | ⬜ | Baja |
+| PRD-UI-06 | Colores por categoría en lista | ✅ | Baja |
 
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | PRD-UX-01 | Duplicar producto existente | ✅ | Media |
-| PRD-UX-02 | Edición inline de precios en tabla | ⬜ | Media |
+| PRD-UX-02 | Edición inline de precios en tabla | ✅ | Media |
 | PRD-UX-03 | Filtros guardados/favoritos | 🔮 | Baja |
 | PRD-UX-04 | Exportar productos a Excel | ✅ | Media |
 | PRD-UX-05 | Bulk edit de categorías | ⬜ | Media |
 | PRD-UX-06 | Variantes de producto (talla, color, etc.) | ✅ | Alta |
-| PRD-UX-07 | Preview de cómo se ve en POS | ⬜ | Baja |
+| PRD-UX-07 | Preview de cómo se ve en POS | ✅ | Baja |
 | PRD-UX-08 | Importación masiva CSV | ✅ | Alta |
 | PRD-UX-09 | Cambio masivo de precios | ✅ | Alta |
 | PRD-UX-10 | Limpiar productos duplicados | ✅ | Media |
@@ -264,7 +264,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | SLS-UX-04 | Anular venta con razón | ✅ | Alta |
 | SLS-UX-05 | Exportar ventas a Excel | ✅ | Media |
 | SLS-UX-06 | Devolución parcial de productos | ✅ | Alta |
-| SLS-UX-07 | Notas/comentarios en venta | ⬜ | Baja |
+| SLS-UX-07 | Notas/comentarios en venta | ✅ | Baja |
 
 ### Robustez
 | ID | Mejora | Estado | Prioridad |
@@ -287,7 +287,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 |----|--------|--------|-----------|
 | SLS-MB-01 | Vista de lista compacta | ✅ | Media |
 | SLS-MB-02 | Compartir ticket por WhatsApp | ✅ | Media |
-| SLS-MB-03 | Swipe para ver acciones rápidas | ⬜ | Baja |
+| SLS-MB-03 | Swipe para ver acciones rápidas | ✅ | Baja |
 
 ---
 
@@ -322,7 +322,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | CSH-UX-03 | Comparación automática efectivo físico vs sistema | ✅ | Alta |
 | CSH-UX-04 | Alertas de diferencias significativas | ✅ | Alta |
 | CSH-UX-05 | Historial de cortes X/Z | ✅ | Media |
-| CSH-UX-06 | Imprimir resumen de turno | ⬜ | Media |
+| CSH-UX-06 | Imprimir resumen de turno | ✅ | Media |
 
 ### Robustez
 | ID | Mejora | Estado | Prioridad |
@@ -465,10 +465,10 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 ### UI Visual
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| DSC-UI-01 | Indicador de descuentos activos | ⬜ | Media |
-| DSC-UI-02 | Preview de descuento aplicado | ⬜ | Media |
+| DSC-UI-01 | Indicador de descuentos activos | ✅ | Media |
+| DSC-UI-02 | Preview de descuento aplicado | ✅ | Media |
 | DSC-UI-03 | Calendario visual de promociones | 🔮 | Baja |
-| DSC-UI-04 | Badge de promoción en POS | ⬜ | Media |
+| DSC-UI-04 | Badge de promoción en POS | ✅ | Media |
 
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
@@ -627,9 +627,9 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | FSC-UX-01 | Generar factura desde venta | ✅ | Alta |
-| FSC-UX-02 | Anular factura con nota de crédito | ⬜ | Alta |
+| FSC-UX-02 | Anular factura con nota de crédito | ✅ | Alta |
 | FSC-UX-03 | Configuración de datos fiscales del negocio | ✅ | Alta |
-| FSC-UX-04 | Libro de ventas exportable | ⬜ | Alta |
+| FSC-UX-04 | Libro de ventas exportable | ✅ | Alta |
 | FSC-UX-05 | Validación de RIF de cliente | ✅ | Alta |
 
 ### Robustez
@@ -790,7 +790,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
 | GLB-UI-01 | Tema oscuro consistente | ⬜ | Media |
-| GLB-UI-02 | Transiciones suaves entre páginas | ⬜ | Baja |
+| GLB-UI-02 | Transiciones suaves entre páginas | ✅ | Baja |
 | GLB-UI-03 | Loading states consistentes | ✅ | Alta |
 | GLB-UI-04 | Empty states informativos | ✅ | Alta |
 | GLB-UI-05 | Error states con acciones claras | ✅ | Alta |
@@ -799,7 +799,7 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 ### UX Flow
 | ID | Mejora | Estado | Prioridad |
 |----|--------|--------|-----------|
-| GLB-UX-01 | Breadcrumbs de navegación | ⬜ | Media |
+| GLB-UX-01 | Breadcrumbs de navegación | ✅ | Media |
 | GLB-UX-02 | Búsqueda global (Cmd+K) | 🔮 | Baja |
 | GLB-UX-03 | Notificaciones con acciones | ✅ | Media |
 | GLB-UX-04 | Shortcuts de teclado documentados | ✅ | Media |
@@ -845,9 +845,9 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | A11Y-05 | Aria labels en iconos | ✅ | Media |
 | A11Y-06 | Anuncios de screen reader | ✅ | Media |
 | A11Y-07 | Soporte de reduced motion | ✅ | Media |
-| A11Y-08 | Skip links | ⬜ | Baja |
-| A11Y-09 | Roles ARIA correctos | ⬜ | Media |
-| A11Y-10 | Textos alternativos en imágenes | ⬜ | Media |
+| A11Y-08 | Skip links | ✅ | Baja |
+| A11Y-09 | Roles ARIA correctos | ✅ | Media |
+| A11Y-10 | Textos alternativos en imágenes | ✅ | Media |
 
 ---
 
@@ -1033,6 +1033,22 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | 2026-01-17 | Fiscal | FSC-UX-03: Verificación - Configuración de datos fiscales del negocio ya implementado (FiscalConfigPage con formulario completo) | Codex |
 | 2026-01-17 | Proveedores | SUP-UX-04: Verificación - Historial de compras por proveedor ya implementado (SuppliersPage pestaña Órdenes, getPurchaseOrders) | Codex |
 | 2026-01-17 | Proveedores | SUP-PF-02: Verificación - Autocomplete de productos en orden ya implementado (PurchaseOrderFormModal búsqueda con dropdown de sugerencias) | Codex |
+| 2026-01-18 | Global | GLB-UX-01: Breadcrumbs de navegación implementado (componente Breadcrumbs reutilizable con generación automática desde ruta, integrado en MainLayout solo desktop) | Codex |
+| 2026-01-18 | A11y | A11Y-09: Roles ARIA correctos implementados en MainLayout (aria-label en navegación, aria-current en items activos, aria-expanded en botones, aria-hidden en iconos decorativos) | Codex |
+| 2026-01-18 | A11y | A11Y-10: Verificación - Textos alternativos (alt) en imágenes ya implementados en todas las imágenes encontradas (LandingPage, LoginPage, MainLayout, FiscalInvoiceDetailPage) | Codex |
+| 2026-01-18 | A11y | A11Y-08: Skip links para navegación por teclado implementado (componente SkipLinks con enlaces a contenido principal y navegación, visible solo con focus, respeta prefers-reduced-motion) | Codex |
+| 2026-01-18 | Descuentos | DSC-UI-01: Indicador visual de descuentos activos implementado (badge en header de DiscountsPage mostrando estado activo/inactivo según configuración) | Codex |
+| 2026-01-18 | Productos | PRD-UI-06: Colores por categoría en lista implementado (función getCategoryColor con hash para asignar colores consistentes, aplicado en ProductsPage tabla y ProductCard) | Codex |
+| 2026-01-18 | Descuentos | DSC-UI-02: Preview de descuento aplicado implementado (card visual en POSPage mostrando subtotal, descuento con porcentaje, y total final cuando hay descuentos) | Codex |
+| 2026-01-18 | Descuentos | DSC-UI-04: Badge de promoción en POS implementado (badge visible en header del carrito mostrando cantidad de promociones activas disponibles) | Codex |
+| 2026-01-18 | Global | GLB-UI-02: Transiciones suaves entre páginas mejorado (transición optimizada en MainLayout con easing mejorado, duración 0.25s, ease-out cubic bezier) | Codex |
+| 2026-01-18 | Ventas | SLS-UX-07: Notas/comentarios en venta implementado (campo textarea en CheckoutModal para agregar notas a la venta, integrado con CreateSaleRequest) | Codex |
+| 2026-01-18 | Productos | PRD-UX-02: Edición inline de precios en tabla implementado (doble clic en precio para editar directamente en la celda, guarda con Enter o blur, muestra loading durante actualización) | Codex |
+| 2026-01-18 | Caja y Turnos | CSH-UX-06: Imprimir resumen de turno implementado (botones de impresión en CloseCashModal y CloseShiftModal, servicio de impresión extendido con funciones para imprimir resúmenes de sesión de caja y turno, formato HTML optimizado para impresoras térmicas) | Codex |
+| 2026-01-18 | Fiscal | FSC-UX-02: Anular factura con nota de crédito implementado (AlertDialog de confirmación mejorado que explica claramente que se generará una nota de crédito al cancelar, mensajes informativos sobre el proceso, alertas adicionales para facturas emitidas, aplicado en FiscalInvoiceDetailPage y FiscalInvoicesPage) | Codex |
+| 2026-01-18 | Fiscal | FSC-UX-04: Libro de ventas exportable implementado (botón de exportar en FiscalInvoicesPage, función handleExportSalesBook que exporta solo facturas emitidas a CSV con todos los campos relevantes para el libro de ventas fiscal, incluye número fiscal, fecha, cliente, RIF, montos, impuestos, etc.) | Codex |
+| 2026-01-18 | Productos | PRD-UX-07: Preview de cómo se ve en POS implementado (sección de preview en ProductFormModal que muestra cómo se verá el producto en el POS, incluye iconos de categoría y peso, formato similar a POSPage, actualización en tiempo real con useWatch) | Codex |
+| 2026-01-18 | Ventas | SLS-MB-03: Swipe para ver acciones rápidas implementado (vista de cards swipeables para móvil en SalesPage, gestos swipe izquierda/derecha para Ver Detalles e Imprimir, vista condicional que muestra cards en móvil y tabla en desktop) | Codex |
 
 ---
 
@@ -1043,26 +1059,26 @@ Este documento contiene el checklist completo de optimizaciones UI/UX para el fr
 | Módulo | Total Items | Completados | % Progreso |
 |--------|-------------|-------------|------------|
 | POS | 35 | 28 | 80% |
-| Productos | 31 | 20 | 65% |
+| Productos | 31 | 23 | 74% |
 | Inventario | 22 | 13 | 59% |
-| Ventas | 22 | 20 | 91% |
-| Caja/Turnos | 22 | 15 | 68% |
+| Ventas | 22 | 22 | 100% |
+| Caja/Turnos | 22 | 16 | 73% |
 | Clientes/Deudas | 24 | 20 | 83% |
 | Proveedores | 18 | 11 | 61% |
-| Descuentos | 13 | 6 | 46% |
+| Descuentos | 13 | 9 | 69% |
 | Lotes/Seriales | 14 | 8 | 57% |
 | Bodegas | 13 | 7 | 54% |
 | Dashboard | 17 | 12 | 71% |
-| Fiscal | 13 | 5 | 38% |
+| Fiscal | 13 | 7 | 54% |
 | ML | 11 | 0 | 0% |
 | Realtime | 11 | 4 | 36% |
 | Mesas | 12 | 5 | 42% |
 | Periféricos | 10 | 0 | 0% |
-| Global | 16 | 10 | 63% |
+| Global | 16 | 12 | 75% |
 | Performance | 10 | 9 | 90% |
-| A11y | 10 | 6 | 60% |
+| A11y | 10 | 9 | 90% |
 | Mobile | 10 | 10 | 100% |
-| **TOTAL** | **334** | **190** | **57%** |
+| **TOTAL** | **334** | **206** | **62%** |
 
 ---
 

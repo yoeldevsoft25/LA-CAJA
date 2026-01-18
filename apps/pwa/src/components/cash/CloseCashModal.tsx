@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { DollarSign, AlertTriangle, CheckCircle2, Calculator, ChevronRight } from 'lucide-react'
+import { DollarSign, AlertTriangle, CheckCircle2, Calculator, ChevronRight, Printer } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { CashSession, CashSessionSummary, CloseCashSessionRequest } from '@/services/cash.service'
+import { printService } from '@/services/print.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -503,6 +504,16 @@ export default function CloseCashModal({
                 disabled={isLoading}
               >
                 {confirmStep === 1 ? 'Cancelar' : 'Atrás'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => printService.printCashSessionSummary(sessionSummary)}
+                className="flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">Imprimir</span>
               </Button>
               <Button
                 type="submit"

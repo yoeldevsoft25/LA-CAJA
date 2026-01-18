@@ -55,14 +55,14 @@ export default function ProductRecommendations({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <CardTitle className="flex items-center gap-2 flex-shrink-0">
             <Package className="w-5 h-5" />
             Recomendaciones
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
             <Select value={recommendationType} onValueChange={setRecommendationType}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -73,8 +73,8 @@ export default function ProductRecommendations({
               </SelectContent>
             </Select>
             {limit && filteredRecommendations.length >= limit && (
-              <Link to="/app/ml">
-                <Button variant="ghost" size="sm">
+              <Link to="/app/ml" className="flex-shrink-0">
+                <Button variant="ghost" size="sm" className="whitespace-nowrap">
                   Ver todas <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </Link>

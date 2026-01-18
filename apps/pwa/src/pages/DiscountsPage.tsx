@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Percent, Settings } from 'lucide-react'
+import { Percent, Settings, CheckCircle2, AlertCircle } from 'lucide-react'
 import {
   discountsService,
   CreateDiscountConfigRequest,
@@ -52,12 +52,36 @@ export default function DiscountsPage() {
     <div className="h-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            Configuración de Descuentos
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Gestiona límites, autorizaciones y reglas de descuentos
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Configuración de Descuentos
+            </h1>
+            {/* Indicador de descuentos activos */}
+            {config ? (
+              <Badge 
+                variant="default" 
+                className="bg-green-600/10 text-green-600 border-green-600/20 hover:bg-green-600/20 flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Descuentos Activos</span>
+                <span className="sm:hidden">Activo</span>
+              </Badge>
+            ) : (
+              <Badge 
+                variant="secondary" 
+                className="flex items-center gap-1.5"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">No Configurado</span>
+                <span className="sm:hidden">Inactivo</span>
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            {config 
+              ? 'Los descuentos están configurados y activos en el sistema'
+              : 'Gestiona límites, autorizaciones y reglas de descuentos'}
           </p>
         </div>
         <Button onClick={() => setIsConfigModalOpen(true)}>

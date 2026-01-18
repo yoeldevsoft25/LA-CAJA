@@ -6,6 +6,7 @@ import {
   Minus,
   ShoppingCart,
   Trash2,
+  Tag,
   Scale,
   Barcode,
   Apple,
@@ -35,6 +36,7 @@ import { productVariantsService, ProductVariant } from '@/services/product-varia
 import { productSerialsService } from '@/services/product-serials.service'
 import { warehousesService } from '@/services/warehouses.service'
 import { inventoryService } from '@/services/inventory.service'
+import { promotionsService } from '@/services/promotions.service'
 import toast from 'react-hot-toast'
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import QuickProductsGrid from '@/components/fast-checkout/QuickProductsGrid'
@@ -244,6 +246,14 @@ export default function POSPage() {
     queryKey: ['warehouses', 'default'],
     queryFn: () => warehousesService.getDefault(),
     staleTime: 1000 * 60 * 5, // 5 minutos
+  })
+
+  // Obtener promociones activas
+  const { data: activePromotions = [] } = useQuery({
+    queryKey: ['promotions', 'active'],
+    queryFn: () => promotionsService.getActive(),
+    staleTime: 1000 * 60 * 2, // 2 minutos
+    enabled: !!user?.store_id,
   })
 
   // Prellenar bodega por defecto
@@ -854,7 +864,6 @@ export default function POSPage() {
     (item) => (item.discount_usd || 0) > 0 || (item.discount_bs || 0) > 0
   )
   const totalDiscountUsd = items.reduce((sum, item) => sum + Number(item.discount_usd || 0), 0)
-  const totalDiscountBs = items.reduce((sum, item) => sum + Number(item.discount_bs || 0), 0)
 
   const resolveItemRate = (item: CartItem) => {
     const unitUsd = Number(item.unit_price_usd || 0)
@@ -1032,6 +1041,7 @@ export default function POSPage() {
     customer_document_id?: string
     customer_phone?: string
     customer_note?: string
+    note?: string // Nota/comentario de la venta
     serials?: Record<string, string[]> // product_id -> serial_numbers[]
     invoice_series_id?: string | null // ID de la serie de factura
     price_list_id?: string | null // ID de la lista de precio
@@ -1103,7 +1113,7 @@ export default function POSPage() {
       customer_document_id: checkoutData.customer_document_id,
       customer_phone: checkoutData.customer_phone,
       customer_note: checkoutData.customer_note,
-      note: null,
+      note: checkoutData.note || null,
       invoice_series_id: checkoutData.invoice_series_id || undefined,
       price_list_id: checkoutData.price_list_id || undefined,
       promotion_id: checkoutData.promotion_id || undefined,
@@ -1668,23 +1678,35 @@ export default function POSPage() {
         <div className="lg:col-span-1">
           <Card className="lg:sticky lg:top-20 border border-border flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)] overflow-hidden min-h-0">
             <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between flex-shrink-0">
-              <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
-                <ShoppingCart
-                  className={cn(
-                    'w-4 h-4 sm:w-5 sm:h-5 transition-transform',
-                    cartPulse && 'animate-scale-in text-primary'
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+                  <ShoppingCart
+                    className={cn(
+                      'w-4 h-4 sm:w-5 sm:h-5 transition-transform',
+                      cartPulse && 'animate-scale-in text-primary'
+                    )}
+                  />
+                  Carrito
+                  {totalQty > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className={cn('ml-1 transition-transform', cartPulse && 'animate-scale-in')}
+                    >
+                      {totalQty}
+                    </Badge>
                   )}
-                />
-                Carrito
-                {totalQty > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className={cn('ml-1 transition-transform', cartPulse && 'animate-scale-in')}
+                </h2>
+                {/* Badge de promoción activa */}
+                {activePromotions.length > 0 && (
+                  <Badge 
+                    variant="default" 
+                    className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 flex items-center gap-1 text-[10px] sm:text-xs"
                   >
-                    {totalQty}
+                    <Tag className="w-3 h-3" />
+                    {activePromotions.length} Promoción{activePromotions.length !== 1 ? 'es' : ''}
                   </Badge>
                 )}
-              </h2>
+              </div>
               {items.length > 0 && (
                 <Button
                   variant="ghost"
@@ -1939,26 +1961,55 @@ export default function POSPage() {
                       </div>
                       <Switch checked={shouldPrint} onCheckedChange={setShouldPrint} />
                     </div>
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-sm font-medium text-muted-foreground">Total USD:</span>
-                      <span className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
-                        ${total.usd.toFixed(2)}
-                      </span>
-                    </div>
-                    {totalDiscountUsd > 0 && (
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-xs text-muted-foreground">Descuento:</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          -${totalDiscountUsd.toFixed(2)} / Bs. {totalDiscountBs.toFixed(2)}
-                        </span>
+                    {/* Preview de descuento aplicado */}
+                    {totalDiscountUsd > 0 ? (
+                      <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">Subtotal:</span>
+                          <span className="text-sm font-semibold text-foreground tabular-nums">
+                            ${(total.usd + totalDiscountUsd).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border/50 pt-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium text-primary">Descuento:</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              ({((totalDiscountUsd / (total.usd + totalDiscountUsd)) * 100).toFixed(1)}%)
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold text-primary tabular-nums">
+                            -${totalDiscountUsd.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border/50 pt-2">
+                          <span className="text-sm font-medium text-foreground">Total USD:</span>
+                          <span className="text-lg font-bold text-foreground tabular-nums">
+                            ${total.usd.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-xs text-muted-foreground">Total Bs:</span>
+                          <span className="text-sm text-muted-foreground tabular-nums">
+                            Bs. {total.bs.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-sm font-medium text-muted-foreground">Total USD:</span>
+                          <span className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
+                            ${total.usd.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-xs text-muted-foreground">Total Bs:</span>
+                          <span className="text-sm text-muted-foreground tabular-nums">
+                            Bs. {total.bs.toFixed(2)}
+                          </span>
+                        </div>
+                      </>
                     )}
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-xs text-muted-foreground">Total Bs:</span>
-                      <span className="text-sm text-muted-foreground tabular-nums">
-                        Bs. {total.bs.toFixed(2)}
-                      </span>
-                    </div>
                   </div>
                   <Button
                     onClick={() => setShowCheckout(true)}

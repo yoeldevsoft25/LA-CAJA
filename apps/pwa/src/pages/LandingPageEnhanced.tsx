@@ -191,25 +191,25 @@ export default function LandingPageEnhanced() {
         )}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
             {/* Logo */}
             <motion.div
-              className="flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-2 cursor-pointer flex-shrink-0 min-w-0"
               whileHover={{ scale: 1.05 }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               <img 
                 src="/favicon.svg" 
                 alt="LA CAJA Logo" 
-                className="w-10 h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20 hover:border-slate-600/70 transition-all duration-300"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20 hover:border-slate-600/70 transition-all duration-300 flex-shrink-0"
               />
-              <span className="text-xl font-black text-white">
+              <span className="text-lg sm:text-xl font-black text-white whitespace-nowrap">
                 LA CAJA
               </span>
             </motion.div>
 
             {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
+            <nav className="hidden md:flex items-center gap-8 flex-shrink-0">
               <a
                 href="#features"
                 className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
@@ -231,22 +231,22 @@ export default function LandingPageEnhanced() {
             </nav>
 
             {/* CTAs */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               <Button
                 variant="ghost"
                 onClick={() => navigate('/login')}
-                className="text-slate-300 hover:text-white hover:bg-slate-800/50 hover:shadow-md rounded-lg px-4 py-2 transition-all duration-300 hover:scale-105"
+                className="hidden sm:flex text-slate-300 hover:text-white hover:bg-slate-800/50 hover:shadow-md rounded-lg px-3 sm:px-4 py-2 transition-all duration-300 hover:scale-105 text-xs sm:text-sm"
               >
-                Iniciar Sesión
+                <span className="whitespace-nowrap">Iniciar Sesión</span>
               </Button>
               <Button
                 variant="gradient"
                 onClick={() => navigate('/login')}
-                className="rounded-lg px-5 py-2.5 font-semibold relative overflow-hidden group"
+                className="rounded-lg px-3 sm:px-5 py-2 sm:py-2.5 font-semibold relative overflow-hidden group text-xs sm:text-sm"
               >
-                <span className="relative z-10 flex items-center gap-2">
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2 whitespace-nowrap">
                   Empezar Gratis
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </span>
                 <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Button>
@@ -1597,10 +1597,10 @@ function PricingSection() {
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : { opacity: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex items-center justify-center gap-4 mb-12"
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12"
         >
           <span className={cn(
-            "text-sm font-semibold transition-colors duration-300",
+            "text-sm sm:text-base font-semibold transition-colors duration-300 whitespace-nowrap",
             billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'
           )}>
             Mensual
@@ -1608,27 +1608,29 @@ function PricingSection() {
           <button
             onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
             className={cn(
-              "relative w-16 h-8 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900",
+              "relative flex items-center w-12 h-6 sm:w-14 sm:h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900",
               billingCycle === 'annual' 
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30' 
-                : 'bg-slate-700 hover:bg-slate-600'
+                : 'bg-slate-700 hover:bg-slate-600 border border-slate-600'
             )}
             aria-label="Toggle billing cycle"
           >
             <div className={cn(
-              "absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md",
-              billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-0'
+              "absolute flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out",
+              billingCycle === 'annual' ? 'translate-x-6 sm:translate-x-7' : 'translate-x-0.5 sm:translate-x-0.5'
             )} />
           </button>
-          <span className={cn(
-            "text-sm font-semibold transition-colors duration-300",
-            billingCycle === 'annual' ? 'text-white' : 'text-slate-400'
-          )}>
-            Anual
-          </span>
-          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs px-3 py-1 shadow-lg shadow-emerald-500/20">
-            Ahorra 20%
-          </Badge>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "text-sm sm:text-base font-semibold transition-colors duration-300 whitespace-nowrap",
+              billingCycle === 'annual' ? 'text-white' : 'text-slate-400'
+            )}>
+              Anual
+            </span>
+            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs px-2 sm:px-3 py-1 shadow-lg shadow-emerald-500/20 whitespace-nowrap">
+              Ahorra 20%
+            </Badge>
+          </div>
         </motion.div>
 
         {/* Plans */}

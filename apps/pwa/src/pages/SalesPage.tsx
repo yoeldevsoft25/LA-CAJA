@@ -47,6 +47,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
 import { printService } from '@/services/print.service'
+import { SwipeableItem } from '@/components/ui/swipeable-item'
+import { useMobileDetection } from '@/hooks/use-mobile-detection'
 
 const paymentMethodLabels: Record<string, string> = {
   CASH_BS: 'Efectivo Bs',
@@ -107,6 +109,7 @@ export default function SalesPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const isOwner = user?.role === 'owner'
+  const isMobile = useMobileDetection()
   const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date())
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date())
   const [selectedStoreId, setSelectedStoreId] = useState<string>('')
@@ -838,6 +841,107 @@ export default function SalesPage() {
           </div>
         ) : (
           <>
+            {/* Vista de cards swipeables para móvil */}
+            {isMobile ? (
+              <div className="space-y-2">
+                {sales.map((sale: Sale) => {
+                  const itemCount = sale.items.length
+                  const isFIAO = sale.payment.method === 'FIAO'
+                  const debtStatus = sale.debt?.status || null
+                  const isPending = isFIAO && (debtStatus === 'open' || debtStatus === 'partial')
+                  const isPaid = isFIAO && debtStatus === 'paid'
+                  const isVoided = Boolean(sale.voided_at)
+
+                  return (
+                    <SwipeableItem
+                      key={sale.id}
+                      onSwipeRight={() => handleViewDetail(sale)}
+                      rightAction={
+                        <div className="flex items-center gap-3 px-4">
+                          <Eye className="w-5 h-5" />
+                          <span className="font-medium">Ver Detalles</span>
+                        </div>
+                      }
+                      onSwipeLeft={() => handlePrint(sale)}
+                      leftAction={
+                        <div className="flex items-center gap-3 px-4">
+                          <Printer className="w-5 h-5" />
+                          <span className="font-medium">Imprimir</span>
+                        </div>
+                      }
+                      enabled={isMobile}
+                      threshold={80}
+                    >
+                      <Card
+                        className={cn(
+                          'transition-colors cursor-pointer',
+                          isVoided && 'bg-muted/40 border-muted',
+                          isPending && 'bg-orange-50 border-orange-200 border-l-4',
+                          isPaid && 'bg-green-50 border-green-200 border-l-4'
+                        )}
+                        onClick={() => handleViewDetail(sale)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <p className="font-semibold text-foreground text-sm">
+                                  {format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}
+                                </p>
+                                {isVoided && (
+                                  <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
+                                    Anulada
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              {sale.invoice_full_number && (
+                                <div className="flex items-center gap-1 mb-1">
+                                  <Receipt className="w-3.5 h-3.5 text-primary" />
+                                  <p className="font-mono font-semibold text-primary text-xs">
+                                    {sale.invoice_full_number}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <p className="text-xs text-muted-foreground mb-2">
+                                {itemCount} producto{itemCount !== 1 ? 's' : ''}
+                              </p>
+                              
+                              {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
+                                <p className="text-xs font-medium text-orange-600 mt-1">
+                                  Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-bold text-foreground text-base">
+                                {Number(sale.totals.total_bs).toFixed(2)} Bs
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                ${Number(sale.totals.total_usd).toFixed(2)} USD
+                              </p>
+                              <Badge variant="secondary" className="mt-1 text-[10px]">
+                                {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Desliza para acciones →</span>
+                            {sale.customer && (
+                              <span className="truncate max-w-[150px]">{sale.customer.name}</span>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </SwipeableItem>
+                  )
+                })}
+              </div>
+            ) : (
+              /* Vista de tabla para desktop */
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -889,9 +993,9 @@ export default function SalesPage() {
                     }
 
                     return (
-                        <TableRow
+                      <TableRow
                         key={sale.id}
-                          className={cn('transition-colors', rowClassName)}
+                        className={cn('transition-colors', rowClassName)}
                       >
                           <TableCell>
                           <div className="text-sm sm:text-base">
@@ -1084,40 +1188,41 @@ export default function SalesPage() {
                   })}
                   </TableBody>
                 </Table>
-            </div>
+              </div>
+            )}
 
             {/* Paginación */}
             {totalPages > 1 && (
-                <div className="border-t border-border px-4 py-3 sm:px-6">
-                  <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
-                    <div className="text-sm text-muted-foreground">
+              <div className="border-t border-border px-4 py-3 sm:px-6">
+                <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
+                  <div className="text-sm text-muted-foreground">
                     Mostrando{' '}
-                      <span className="font-medium text-foreground">
+                    <span className="font-medium text-foreground">
                       {(currentPage - 1) * limit + 1}
                     </span>{' '}
                     a{' '}
-                      <span className="font-medium text-foreground">
+                    <span className="font-medium text-foreground">
                       {Math.min(currentPage * limit, total)}
                     </span>{' '}
-                      de <span className="font-medium text-foreground">{total}</span> ventas
+                    de <span className="font-medium text-foreground">{total}</span> ventas
                   </div>
                   <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                     >
                       Anterior
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
                     >
                       Siguiente
-                      </Button>
+                    </Button>
                   </div>
                 </div>
               </div>

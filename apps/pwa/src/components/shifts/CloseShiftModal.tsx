@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { DollarSign, AlertTriangle, CheckCircle2, Calculator, ChevronRight, Clock } from 'lucide-react'
+import { DollarSign, AlertTriangle, CheckCircle2, Calculator, ChevronRight, Clock, Printer } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Shift, ShiftSummary, CloseShiftRequest } from '@/services/shifts.service'
+import { printService } from '@/services/print.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -519,6 +520,16 @@ export default function CloseShiftModal({
                 disabled={isLoading}
               >
                 {confirmStep === 1 ? 'Cancelar' : 'Atrás'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => printService.printShiftSummary(shiftSummary)}
+                className="flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">Imprimir</span>
               </Button>
               <Button
                 type="submit"

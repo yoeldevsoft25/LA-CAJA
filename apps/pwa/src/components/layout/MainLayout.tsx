@@ -67,6 +67,8 @@ import ExchangeRateIndicator from '@/components/exchange/ExchangeRateIndicator'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import OfflineBanner from '@/components/offline/OfflineBanner'
 import { KeyboardShortcutsHelp, useKeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help'
+import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+import { SkipLinks } from '@/components/ui/skip-links'
 
 type NavItem = {
   path: string
@@ -548,6 +550,8 @@ export default function MainLayout() {
                           ? "bg-primary text-primary-foreground shadow-sm"
                                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
                       )}
+                      aria-current={active ? 'page' : undefined}
+                      aria-label={active ? `${item.label}, página actual` : item.label}
                     >
                               <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
                           <span className="flex-1 text-left truncate">{item.label}</span>
@@ -599,6 +603,9 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Skip Links for accessibility */}
+      <SkipLinks />
+      
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6">
@@ -618,8 +625,14 @@ export default function MainLayout() {
           {/* Mobile Menu */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden flex-shrink-0">
-                <Menu className="w-5 h-5" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="lg:hidden flex-shrink-0"
+                aria-label="Abrir menú de navegación"
+                aria-expanded={mobileOpen}
+              >
+                <Menu className="w-5 h-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-72 flex flex-col max-h-screen overflow-hidden">
@@ -654,10 +667,19 @@ export default function MainLayout() {
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="w-5 h-5" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative"
+                  aria-label={`Notificaciones${unreadCount > 0 ? `, ${unreadCount} sin leer` : ''}`}
+                  aria-expanded={false}
+                >
+                  <Bell className="w-5 h-5" aria-hidden="true" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-destructive text-[10px] leading-[18px] rounded-full text-white text-center">
+                    <span 
+                      className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-destructive text-[10px] leading-[18px] rounded-full text-white text-center"
+                      aria-hidden="true"
+                    >
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -790,25 +812,39 @@ export default function MainLayout() {
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Desktop Sidebar */}
         <aside
+          id="main-navigation"
           className={cn(
             "hidden lg:flex flex-col border-r border-border bg-background transition-all duration-300 h-full",
             sidebarCollapsed ? "w-20" : "w-64"
           )}
+          aria-label="Navegación principal"
         >
           <SidebarContent />
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+        <main 
+          id="main-content"
+          className="flex-1 overflow-x-hidden overflow-y-auto" 
+          role="main" 
+          aria-label="Contenido principal"
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ 
+                duration: 0.25, 
+                ease: [0.4, 0, 0.2, 1] // ease-out cubic bezier para transición más suave
+              }}
               className="p-6 lg:p-8"
             >
+              {/* Breadcrumbs - Solo en desktop para no ocupar espacio en móvil */}
+              <div className="hidden md:block mb-4">
+                <Breadcrumbs />
+              </div>
               <Outlet />
             </motion.div>
           </AnimatePresence>

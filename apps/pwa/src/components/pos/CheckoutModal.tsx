@@ -70,6 +70,7 @@ interface CheckoutModalProps {
     customer_document_id?: string
     customer_phone?: string
     customer_note?: string
+    note?: string // Nota/comentario de la venta
     serials?: Record<string, string[]> // product_id -> serial_numbers[]
     invoice_series_id?: string | null // ID de la serie de factura a usar
     price_list_id?: string | null // ID de la lista de precio a usar
@@ -96,6 +97,7 @@ export default function CheckoutModal({
   const [customerDocumentId, setCustomerDocumentId] = useState<string>('')
   const [customerPhone, setCustomerPhone] = useState<string>('')
   const [customerNote, setCustomerNote] = useState<string>('')
+  const [saleNote, setSaleNote] = useState<string>('')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [customerSearch, setCustomerSearch] = useState<string>('')
   const [showCustomerResults, setShowCustomerResults] = useState(false)
@@ -305,6 +307,7 @@ export default function CheckoutModal({
       setCustomerDocumentId('')
       setCustomerPhone('')
       setCustomerNote('')
+      setSaleNote('')
       setSelectedCustomerId(null)
       setCustomerSearch('')
       setShowCustomerResults(false)
@@ -711,6 +714,7 @@ export default function CheckoutModal({
       customer_document_id: customerDocumentId.trim() || undefined,
       customer_phone: customerPhone.trim() || undefined,
       customer_note: customerNote.trim() || undefined,
+      note: saleNote.trim() || undefined,
       serials: Object.keys(selectedSerials).length > 0 ? selectedSerials : undefined,
       invoice_series_id: selectedInvoiceSeriesId,
       price_list_id: selectedPriceListId,
@@ -723,6 +727,20 @@ export default function CheckoutModal({
   useEffect(() => {
     confirmActionRef.current = handleConfirm
   }, [handleConfirm])
+
+  // Resetear campos cuando se cierra el modal
+  useEffect(() => {
+    if (!isOpen) {
+      setSaleNote('')
+      setCustomerNote('')
+      setCustomerName('')
+      setCustomerDocumentId('')
+      setCustomerPhone('')
+      setSelectedCustomerId(null)
+      setCustomerSearch('')
+      setError('')
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -1729,6 +1747,27 @@ export default function CheckoutModal({
                 ? 'Los datos del cliente son requeridos para ventas FIAO (nombre y cédula)'
                 : 'Opcional: Si proporcionas el nombre, la cédula es obligatoria'}
             </p>
+            </CardContent>
+          </Card>
+
+          {/* Notas de la venta */}
+          <Card>
+            <CardContent className="p-3 sm:p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Notas de la venta <span className="text-muted-foreground/70">(Opcional)</span>
+                </label>
+                <textarea
+                  value={saleNote}
+                  onChange={(e) => {
+                    setSaleNote(e.target.value)
+                    setError('')
+                  }}
+                  placeholder="Notas adicionales sobre esta venta (ej: entrega especial, instrucciones, etc.)"
+                  rows={2}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring resize-none bg-background text-foreground"
+                />
+              </div>
             </CardContent>
           </Card>
 

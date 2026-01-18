@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { X, Search } from 'lucide-react'
+import { X, Search, Scale, Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Monitor } from 'lucide-react'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
 import { suppliersService } from '@/services/suppliers.service'
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 
 const productSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -495,6 +496,60 @@ export default function ProductFormModal({
     const parsed = Number(value)
     return Number.isNaN(parsed) ? null : parsed.toFixed(4)
   }
+
+  // Función para obtener icono de categoría (similar a POSPage)
+  const getCategoryIcon = useCallback((category?: string | null) => {
+    if (!category) return Package
+    const normalized = category.toLowerCase()
+
+    if (normalized.includes('bebida') || normalized.includes('drink') || normalized.includes('refresco')) {
+      return Coffee
+    }
+    if (normalized.includes('fruta') || normalized.includes('verdura') || normalized.includes('vegetal')) {
+      return Apple
+    }
+    if (normalized.includes('carne') || normalized.includes('pollo') || normalized.includes('proteina')) {
+      return Beef
+    }
+    if (normalized.includes('ropa') || normalized.includes('vestir') || normalized.includes('moda')) {
+      return Shirt
+    }
+    if (normalized.includes('hogar') || normalized.includes('casa')) {
+      return Home
+    }
+    if (normalized.includes('electron') || normalized.includes('tecno') || normalized.includes('gadget')) {
+      return Cpu
+    }
+    if (normalized.includes('farmacia') || normalized.includes('salud') || normalized.includes('medic')) {
+      return Pill
+    }
+    if (normalized.includes('accesorio') || normalized.includes('general')) {
+      return ShoppingBag
+    }
+
+    return Package
+  }, [])
+
+  // Función para obtener decimales de precio por peso
+  const getWeightPriceDecimals = useCallback((unit?: string | null) => {
+    return unit === 'g' || unit === 'oz' ? 4 : 2
+  }, [])
+
+  // Obtener valores del formulario para el preview
+  const watchedValues = useWatch({ control })
+  const previewProduct = useMemo(() => {
+    return {
+      name: watchedValues.name || 'Nombre del producto',
+      category: watchedValues.category || null,
+      barcode: watchedValues.barcode || null,
+      is_weight_product: watchedValues.is_weight_product || false,
+      weight_unit: watchedValues.weight_unit || 'kg',
+      price_usd: Number(watchedValues.price_usd) || 0,
+      price_bs: Number(watchedValues.price_bs) || 0,
+      price_per_weight_usd: Number(watchedValues.price_per_weight_usd) || 0,
+      price_per_weight_bs: Number(watchedValues.price_per_weight_bs) || 0,
+    }
+  }, [watchedValues])
 
   const handleApplySupplierPrice = (
     item: SupplierPriceListItem,
@@ -1085,6 +1140,69 @@ export default function ProductFormModal({
                   <p className="mt-1 text-xs text-muted-foreground">
                     Número de departamento para la balanza
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Preview de cómo se ve en POS */}
+          {previewProduct.name && previewProduct.name !== 'Nombre del producto' && (
+            <div className="px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
+              <Separator className="my-4" />
+              <div className="rounded-lg border border-border p-3 sm:p-4 bg-muted/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <Monitor className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Vista Previa en POS</p>
+                </div>
+                <div className="p-3 bg-background rounded-lg border border-border">
+                  <div className="flex items-start justify-between gap-3 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base text-foreground break-words leading-snug flex items-center gap-1.5">
+                        {previewProduct.is_weight_product && (
+                          <Scale className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                        )}
+                        {previewProduct.category && (() => {
+                          const CategoryIcon = getCategoryIcon(previewProduct.category)
+                          return <CategoryIcon className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0" />
+                        })()}
+                        {previewProduct.name}
+                      </h3>
+                      {previewProduct.category && (
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
+                          {previewProduct.category}
+                        </p>
+                      )}
+                      {previewProduct.barcode && (
+                        <p className="text-xs text-muted-foreground/70 mt-0.5 truncate font-mono">
+                          {previewProduct.barcode}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      {previewProduct.is_weight_product && previewProduct.price_per_weight_usd > 0 ? (
+                        <>
+                          <Badge variant="secondary" className="mb-1 text-[10px] sm:text-xs">
+                            Precio por {previewProduct.weight_unit || 'kg'}
+                          </Badge>
+                          <p className="font-bold text-base sm:text-lg text-foreground">
+                            ${previewProduct.price_per_weight_usd.toFixed(getWeightPriceDecimals(previewProduct.weight_unit))}/{previewProduct.weight_unit}
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            Bs. {previewProduct.price_per_weight_bs.toFixed(getWeightPriceDecimals(previewProduct.weight_unit))}/{previewProduct.weight_unit}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-bold text-base sm:text-lg text-foreground">
+                            ${previewProduct.price_usd.toFixed(2)}
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
+                            Bs. {previewProduct.price_bs.toFixed(2)}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

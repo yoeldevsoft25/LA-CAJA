@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, FileText, Eye, CheckCircle2, XCircle } from 'lucide-react'
-import { fiscalInvoicesService, FiscalInvoiceStatus } from '@/services/fiscal-invoices.service'
+import { Search, FileText, Eye, CheckCircle2, XCircle, Download } from 'lucide-react'
+import { format } from 'date-fns'
+import { fiscalInvoicesService, FiscalInvoiceStatus, FiscalInvoice } from '@/services/fiscal-invoices.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,6 +18,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { exportToCSV } from '@/utils/export-excel'
 
 const statusLabels: Record<FiscalInvoiceStatus, string> = {
   draft: 'Borrador',
@@ -55,11 +68,16 @@ export default function FiscalInvoicesPage() {
     },
   })
 
+  const [cancelInvoiceId, setCancelInvoiceId] = useState<string | null>(null)
+  const [cancelInvoice, setCancelInvoice] = useState<FiscalInvoice | null>(null)
+
   const cancelMutation = useMutation({
     mutationFn: (id: string) => fiscalInvoicesService.cancel(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiscal-invoices'] })
-      toast.success('Factura cancelada correctamente')
+      toast.success('Factura cancelada correctamente. Se ha generado una nota de crédito automáticamente.')
+      setCancelInvoiceId(null)
+      setCancelInvoice(null)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Error al cancelar la factura')
@@ -72,13 +90,15 @@ export default function FiscalInvoicesPage() {
   }
 
   const handleCancel = async (id: string) => {
-    if (
-      !confirm(
-        '¿Está seguro de cancelar esta factura fiscal? Esta acción no se puede deshacer.',
-      )
-    )
-      return
-    cancelMutation.mutate(id)
+    const invoiceToCancel = invoices.find((inv) => inv.id === id)
+    setCancelInvoice(invoiceToCancel || null)
+    setCancelInvoiceId(id)
+  }
+
+  const handleConfirmCancel = () => {
+    if (cancelInvoiceId) {
+      cancelMutation.mutate(cancelInvoiceId)
+    }
   }
 
   const filteredInvoices = invoices.filter((inv) => {
@@ -92,17 +112,144 @@ export default function FiscalInvoicesPage() {
     )
   })
 
+  // Exportar libro de ventas (facturas fiscales)
+  const handleExportSalesBook = () => {
+    // Solo exportar facturas emitidas (estas son las que van en el libro de ventas)
+    const issuedInvoices = filteredInvoices.filter((inv) => inv.status === 'issued')
+    
+    if (issuedInvoices.length === 0) {
+      toast.error('No hay facturas emitidas para exportar')
+      return
+    }
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd')
+
+    exportToCSV(
+      issuedInvoices,
+      [
+        {
+          header: 'Número Factura',
+          accessor: (inv) => inv.invoice_number,
+        },
+        {
+          header: 'Número Fiscal',
+          accessor: (inv) => inv.fiscal_number || '-',
+        },
+        {
+          header: 'Fecha Emisión',
+          accessor: (inv) => inv.issued_at ? format(new Date(inv.issued_at), 'dd/MM/yyyy') : '-',
+        },
+        {
+          header: 'Tipo',
+          accessor: (inv) => {
+            switch (inv.invoice_type) {
+              case 'invoice': return 'Factura'
+              case 'credit_note': return 'Nota de Crédito'
+              case 'debit_note': return 'Nota de Débito'
+              default: return inv.invoice_type
+            }
+          },
+        },
+        {
+          header: 'Cliente',
+          accessor: (inv) => inv.customer_name || 'Consumidor Final',
+        },
+        {
+          header: 'RIF Cliente',
+          accessor: (inv) => inv.customer_tax_id || '-',
+        },
+        {
+          header: 'Subtotal Bs',
+          accessor: (inv) => Number(inv.subtotal_bs),
+          format: 'currency',
+        },
+        {
+          header: 'Subtotal USD',
+          accessor: (inv) => Number(inv.subtotal_usd),
+          format: 'currency',
+        },
+        {
+          header: 'Impuesto Bs',
+          accessor: (inv) => Number(inv.tax_amount_bs),
+          format: 'currency',
+        },
+        {
+          header: 'Impuesto USD',
+          accessor: (inv) => Number(inv.tax_amount_usd),
+          format: 'currency',
+        },
+        {
+          header: 'Descuento Bs',
+          accessor: (inv) => Number(inv.discount_bs || 0),
+          format: 'currency',
+        },
+        {
+          header: 'Descuento USD',
+          accessor: (inv) => Number(inv.discount_usd || 0),
+          format: 'currency',
+        },
+        {
+          header: 'Total Bs',
+          accessor: (inv) => Number(inv.total_bs),
+          format: 'currency',
+        },
+        {
+          header: 'Total USD',
+          accessor: (inv) => Number(inv.total_usd),
+          format: 'currency',
+        },
+        {
+          header: 'Tasa Cambio',
+          accessor: (inv) => Number(inv.exchange_rate).toFixed(2),
+        },
+        {
+          header: 'Moneda',
+          accessor: (inv) => {
+            switch (inv.currency) {
+              case 'BS': return 'Bolívares'
+              case 'USD': return 'Dólares'
+              case 'MIXED': return 'Mixto'
+              default: return inv.currency
+            }
+          },
+        },
+        {
+          header: 'Método de Pago',
+          accessor: (inv) => inv.payment_method || '-',
+        },
+      ],
+      {
+        filename: `Libro_Ventas_Fiscal_${timestamp}`,
+      }
+    )
+
+    toast.success(`${issuedInvoices.length} facturas emitidas exportadas a Excel`)
+  }
+
   return (
     <div className="h-full max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
-          <FileText className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
-          Facturas Fiscales
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Gestión de facturas fiscales y tributarias
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+              <FileText className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+              Facturas Fiscales
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Gestión de facturas fiscales y tributarias
+            </p>
+          </div>
+          <Button
+            onClick={handleExportSalesBook}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Exportar Libro de Ventas</span>
+            <span className="sm:hidden">Exportar</span>
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -288,6 +435,69 @@ export default function FiscalInvoicesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Diálogo de confirmación de cancelación */}
+      <AlertDialog open={!!cancelInvoiceId} onOpenChange={(open) => {
+        if (!open) {
+          setCancelInvoiceId(null)
+          setCancelInvoice(null)
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-destructive" />
+              Cancelar Factura Fiscal
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2">
+              <p>
+                ¿Está seguro de cancelar esta factura fiscal? Esta acción no se puede deshacer.
+              </p>
+              <Alert className="bg-info/10 border-info/50">
+                <AlertDescription className="text-sm">
+                  <p className="font-semibold mb-1">Importante:</p>
+                  <p>
+                    Al cancelar esta factura fiscal, se generará automáticamente una{' '}
+                    <strong>Nota de Crédito</strong> que anulará la factura original.
+                    La nota de crédito quedará registrada en el sistema y podrá ser consultada
+                    junto con las demás facturas fiscales.
+                  </p>
+                </AlertDescription>
+              </Alert>
+              {cancelInvoice?.status === 'issued' && (
+                <Alert className="bg-warning/10 border-warning/50">
+                  <AlertDescription className="text-sm">
+                    <p className="font-semibold mb-1">Nota adicional:</p>
+                    <p>
+                      Esta factura ya está emitida. La cancelación generará una nota de crédito
+                      que debe ser procesada según los procedimientos fiscales establecidos.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelMutation.isPending}>
+              No, mantener factura
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              disabled={cancelMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {cancelMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  Cancelando...
+                </>
+              ) : (
+                'Sí, cancelar y generar nota de crédito'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

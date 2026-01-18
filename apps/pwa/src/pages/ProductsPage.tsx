@@ -28,6 +28,7 @@ import { exportToCSV } from '@/utils/export-excel'
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
 import { PullToRefreshIndicator } from '@/components/ui/pull-to-refresh-indicator'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
+import { cn } from '@/lib/utils'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 
@@ -53,6 +54,39 @@ const formatStockValue = (product: Product, item?: StockStatus) => {
   return `${formatKg(kgValue)} kg`
 }
 
+/**
+ * Genera un color consistente para una categoría usando hash
+ * Retorna una tupla [bgColor, textColor, borderColor]
+ */
+const getCategoryColor = (category: string): [string, string, string] => {
+  // Paleta de colores predefinida para mejor contraste y accesibilidad
+  const colorPalette: Array<[string, string, string]> = [
+    ['bg-blue-100', 'text-blue-700', 'border-blue-300'], // Azul
+    ['bg-green-100', 'text-green-700', 'border-green-300'], // Verde
+    ['bg-purple-100', 'text-purple-700', 'border-purple-300'], // Púrpura
+    ['bg-orange-100', 'text-orange-700', 'border-orange-300'], // Naranja
+    ['bg-pink-100', 'text-pink-700', 'border-pink-300'], // Rosa
+    ['bg-cyan-100', 'text-cyan-700', 'border-cyan-300'], // Cian
+    ['bg-amber-100', 'text-amber-700', 'border-amber-300'], // Ámbar
+    ['bg-indigo-100', 'text-indigo-700', 'border-indigo-300'], // Índigo
+    ['bg-teal-100', 'text-teal-700', 'border-teal-300'], // Verde azulado
+    ['bg-rose-100', 'text-rose-700', 'border-rose-300'], // Rosa oscuro
+    ['bg-violet-100', 'text-violet-700', 'border-violet-300'], // Violeta
+    ['bg-emerald-100', 'text-emerald-700', 'border-emerald-300'], // Esmeralda
+  ]
+
+  // Genera un hash simple del nombre de categoría
+  let hash = 0
+  for (let i = 0; i < category.length; i++) {
+    hash = ((hash << 5) - hash) + category.charCodeAt(i)
+    hash = hash & hash // Convierte a entero de 32 bits
+  }
+
+  // Usa el hash para seleccionar un color de la paleta
+  const index = Math.abs(hash) % colorPalette.length
+  return colorPalette[index]
+}
+
 export default function ProductsPage() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
@@ -72,6 +106,9 @@ export default function ProductsPage() {
   const [lotsProduct, setLotsProduct] = useState<Product | null>(null)
   const [serialsProduct, setSerialsProduct] = useState<Product | null>(null)
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all')
+  // Estado para edición inline de precios
+  const [editingPriceProductId, setEditingPriceProductId] = useState<string | null>(null)
+  const [editingPriceValue, setEditingPriceValue] = useState<string>('')
   const isMobile = useMobileDetection()
   // Vista: 'cards' para móvil, 'table' para desktop
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => 
@@ -247,6 +284,52 @@ export default function ProductsPage() {
   const handleChangePrice = (product: Product) => {
     setPriceProduct(product)
     setIsPriceModalOpen(true)
+  }
+
+  // Mutación para edición inline de precios
+  const inlinePriceMutation = useMutation({
+    mutationFn: ({ productId, priceUsd }: { productId: string; priceUsd: number }) =>
+      productsService.changePrice(productId, {
+        price_usd: priceUsd,
+        price_bs: 0, // El backend calculará el precio en Bs usando la tasa BCV
+      }, user?.store_id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      toast.success('Precio actualizado exitosamente')
+      setEditingPriceProductId(null)
+      setEditingPriceValue('')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error al actualizar el precio'
+      toast.error(message)
+      setEditingPriceProductId(null)
+      setEditingPriceValue('')
+    },
+  })
+
+  // Handler para iniciar edición inline
+  const handleStartInlinePriceEdit = (product: Product) => {
+    setEditingPriceProductId(product.id)
+    setEditingPriceValue(Number(product.price_usd).toFixed(2))
+  }
+
+  // Handler para guardar precio inline
+  const handleSaveInlinePrice = (productId: string) => {
+    const parsed = parseFloat(editingPriceValue)
+    if (isNaN(parsed) || parsed < 0) {
+      toast.error('El precio debe ser un número válido mayor o igual a 0')
+      setEditingPriceProductId(null)
+      setEditingPriceValue('')
+      return
+    }
+    inlinePriceMutation.mutate({ productId, priceUsd: parsed })
+  }
+
+  // Handler para cancelar edición inline
+  const handleCancelInlinePriceEdit = () => {
+    setEditingPriceProductId(null)
+    setEditingPriceValue('')
   }
 
   const handleManageVariants = (product: Product) => {
@@ -563,19 +646,65 @@ export default function ProductsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                      {product.category || '-'}
+                    <td className="px-4 py-3 text-sm hidden sm:table-cell">
+                      {product.category ? (
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            ...getCategoryColor(product.category),
+                            "border font-medium text-xs"
+                          )}
+                        >
+                          {product.category}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">
                       {product.sku || '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="text-sm sm:text-base">
-                        <p className="font-semibold text-foreground">
-                          ${Number(product.price_usd).toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Bs. {Number(product.price_bs).toFixed(2)}</p>
-                      </div>
+                      {editingPriceProductId === product.id ? (
+                        <div className="flex items-center gap-2 justify-end">
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              min={0}
+                              value={editingPriceValue}
+                              onChange={(e) => setEditingPriceValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveInlinePrice(product.id)
+                                } else if (e.key === 'Escape') {
+                                  handleCancelInlinePriceEdit()
+                                }
+                              }}
+                              onBlur={() => handleSaveInlinePrice(product.id)}
+                              className="h-8 w-20 text-sm text-right"
+                              autoFocus
+                              disabled={inlinePriceMutation.isPending}
+                            />
+                          </div>
+                          {inlinePriceMutation.isPending && (
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          )}
+                        </div>
+                      ) : (
+                        <div 
+                          className="text-sm sm:text-base cursor-pointer hover:bg-accent/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors"
+                          onDoubleClick={() => handleStartInlinePriceEdit(product)}
+                          title="Doble clic para editar precio"
+                        >
+                          <p className="font-semibold text-foreground">
+                            ${Number(product.price_usd).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Bs. {Number(product.price_bs).toFixed(2)}</p>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       {stockByProduct[product.id] ? (
