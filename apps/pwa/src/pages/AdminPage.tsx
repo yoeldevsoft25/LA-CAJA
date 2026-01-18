@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { adminService, AdminStore, AdminMember } from '@/services/admin.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -55,6 +56,7 @@ function statusBadge(store: AdminStore) {
 
 export default function AdminPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [planFilter, setPlanFilter] = useState<string>('all')
   const [expiringIn, setExpiringIn] = useState<string>('none')
@@ -333,6 +335,14 @@ export default function AdminPage() {
               </h1>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/admin/license-payments')}
+                className="border-slate-700 text-white bg-slate-900/70 hover:bg-slate-800"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Pagos de Licencias
+              </Button>
               <div className="text-xs text-slate-400">
                 Sincronizado {stores ? <span className="text-emerald-300">OK</span> : <span className="text-slate-400">pendiente</span>}
               </div>

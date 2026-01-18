@@ -93,6 +93,7 @@ const RealtimeAnalyticsPage = lazy(() => import('./pages/RealtimeAnalyticsPage')
 // Lazy loading - Páginas de administración
 const LicenseBlockedPage = lazy(() => import('./pages/LicenseBlockedPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
+const LicensePaymentsPage = lazy(() => import('./pages/admin/LicensePaymentsPage'))
 const AccountingPage = lazy(() => import('./pages/AccountingPage'))
 const ConflictsPage = lazy(() => import('./pages/ConflictsPage'))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
@@ -316,6 +317,7 @@ function App() {
         />
         {/* Panel admin: acceso directo con admin key, no requiere sesión */}
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/license-payments" element={<LicensePaymentsPage />} />
         <Route
           path="/onboarding"
           element={

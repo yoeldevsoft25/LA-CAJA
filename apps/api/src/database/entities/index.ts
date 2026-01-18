@@ -110,6 +110,24 @@ export { AccountingExport } from './accounting-export.entity';
 export { AccountingERPSync } from './accounting-erp-sync.entity';
 export { AccountingPeriod, AccountingPeriodStatus } from './accounting-period.entity';
 
+// License payment entities
+export {
+  LicensePayment,
+  LicensePaymentStatus,
+  LicensePaymentMethod,
+  LicensePlan,
+  BillingPeriod,
+} from './license-payment.entity';
+export {
+  LicensePaymentDocument,
+  DocumentFileType,
+} from './license-payment-document.entity';
+export {
+  LicensePaymentVerification,
+  VerificationMethod,
+  VerificationStatus,
+} from './license-payment-verification.entity';
+
 // Export all entities as an array for TypeORM configuration
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
@@ -193,6 +211,9 @@ import { AccountingPeriod } from './accounting-period.entity';
 import { Event } from './event.entity';
 import { SecurityAuditLog } from './security-audit-log.entity';
 import { RefreshToken } from './refresh-token.entity';
+import { LicensePayment } from './license-payment.entity';
+import { LicensePaymentDocument } from './license-payment-document.entity';
+import { LicensePaymentVerification } from './license-payment-verification.entity';
 
 /**
  * Array con todas las entidades de TypeORM para configuración centralizada
@@ -282,4 +303,7 @@ export const ALL_ENTITIES = [
   Event,
   SecurityAuditLog,
   RefreshToken,
+  LicensePayment,
+  LicensePaymentDocument,
+  LicensePaymentVerification,
 ];
