@@ -96,8 +96,9 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
     // 4. Tasa BCV ya fue cacheada al inicio (prioridad máxima)
 
     // 5. Prefetch ventas recientes (últimas 50)
+    // NOTA: No enviar store_id - el backend usará el del JWT del usuario
     updateProgress('Cacheando ventas recientes...')
-    const salesData = await salesService.list({ limit: 50, store_id: storeId })
+    const salesData = await salesService.list({ limit: 50 })
     
     // Establecer en la queryKey que usa el prefetch
     queryClient.setQueryData(['sales', 'list', storeId, { limit: 50 }], salesData)
@@ -241,9 +242,10 @@ export async function prefetchPageData(
         break
 
       case 'sales':
+        // NOTA: No enviar store_id - el backend usará el del JWT del usuario
         await queryClient.prefetchQuery({
           queryKey: ['sales', 'list', storeId],
-          queryFn: () => salesService.list({ limit: 100, store_id: storeId }),
+          queryFn: () => salesService.list({ limit: 100 }),
           staleTime: 1000 * 60 * 10,
         })
         break

@@ -8,6 +8,8 @@ import { PriceList } from '../database/entities/price-list.entity';
 import { InvoiceSeries } from '../database/entities/invoice-series.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
 import { AccountingModule } from '../accounting/accounting.module';
+import { FiscalConfigsModule } from '../fiscal-configs/fiscal-configs.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { AccountingModule } from '../accounting/accounting.module';
       ChartOfAccount,
     ]),
     AccountingModule,
+    FiscalConfigsModule,
+    PaymentsModule,
   ],
   controllers: [SetupController],
   providers: [SetupService],

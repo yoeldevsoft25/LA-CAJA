@@ -59,6 +59,7 @@ class SyncServiceClass {
   private readonly SYNC_PRIORITIZE_CRITICAL = true; // ventas salen inmediato si hay red
   private onlineListener: (() => void) | null = null;
   private offlineListener: (() => void) | null = null;
+  private pendingSyncOnInit = false; // Bandera para sincronizar después de inicializar si hubo evento online
 
   // ===== OFFLINE-FIRST COMPONENTS =====
   private vectorClockManager: VectorClockManager | null = null;
@@ -84,6 +85,7 @@ class SyncServiceClass {
       // Cuando vuelve la conexión, sincronizar inmediatamente
       console.log('[SyncService] 🌐 Conexión recuperada, sincronizando eventos pendientes...');
       if (this.isInitialized && this.syncQueue) {
+        // Si está inicializado, sincronizar inmediatamente
         this.syncQueue.flush().then(() => {
           console.log('[SyncService] ✅ Sincronización completada después de recuperar conexión');
         }).catch((err: any) => {
@@ -91,7 +93,9 @@ class SyncServiceClass {
           // Silenciar errores, el sync periódico lo intentará de nuevo
         });
       } else {
-        console.warn('[SyncService] ⚠️ Servicio no inicializado al recuperar conexión');
+        // Si no está inicializado, marcar para sincronizar cuando se inicialice
+        console.log('[SyncService] ⏳ Servicio no inicializado aún, se sincronizará cuando esté listo');
+        this.pendingSyncOnInit = true;
       }
       
       // Intentar registrar background sync (por si acaso)
@@ -211,6 +215,17 @@ class SyncServiceClass {
 
     this.isInitialized = true;
     console.log('[SyncService] ✅ Servicio de sincronización inicializado correctamente');
+
+    // Si había un evento online pendiente antes de inicializar, sincronizar ahora
+    if (this.pendingSyncOnInit && navigator.onLine && this.syncQueue) {
+      console.log('[SyncService] 🔄 Ejecutando sincronización pendiente después de inicializar...');
+      this.pendingSyncOnInit = false;
+      this.syncQueue.flush().then(() => {
+        console.log('[SyncService] ✅ Sincronización pendiente completada');
+      }).catch((err: any) => {
+        console.warn('[SyncService] ⚠️ Error en sincronización pendiente (se reintentará):', err?.message || err);
+      });
+    }
   }
 
   /**
@@ -310,10 +325,19 @@ class SyncServiceClass {
 
   /**
    * Fuerza la sincronización inmediata de eventos pendientes
+   * Si el servicio no está inicializado, retorna silenciosamente (no lanza error)
    */
   async syncNow(): Promise<void> {
-    if (!this.syncQueue) {
-      throw new Error('SyncService no está inicializado');
+    if (!this.isInitialized || !this.syncQueue) {
+      console.warn('[SyncService] syncNow() llamado pero el servicio no está inicializado');
+      // No lanzar error, simplemente retornar silenciosamente
+      // El sync periódico lo intentará cuando el servicio esté listo
+      return;
+    }
+
+    if (!navigator.onLine) {
+      console.log('[SyncService] syncNow() omitido: sin conexión');
+      return;
     }
 
     await this.syncQueue.flush();

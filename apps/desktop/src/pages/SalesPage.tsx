@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, FileText, Eye, Calendar, DollarSign, Store, AlertCircle } from 'lucide-react'
+import { Search, FileText, Eye, Calendar, DollarSign } from 'lucide-react'
 import { salesService, Sale } from '@/services/sales.service'
-import { authService } from '@/services/auth.service'
 import { useAuth } from '@/stores/auth.store'
 import SaleDetailModal from '@/components/sales/SaleDetailModal'
 import { format } from 'date-fns'
@@ -26,21 +25,12 @@ const currencyLabels: Record<string, string> = {
 
 export default function SalesPage() {
   const { user } = useAuth()
-  const isOwner = user?.role === 'owner'
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
-  const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const limit = 20
-
-  // Obtener lista de tiendas (solo para owners)
-  const { data: stores } = useQuery({
-    queryKey: ['stores'],
-    queryFn: () => authService.getStores(),
-    enabled: isOwner,
-  })
 
   // Calcular fechas por defecto (hoy)
   const getDefaultDateFrom = () => {
@@ -54,8 +44,8 @@ export default function SalesPage() {
   const effectiveDateFrom = dateFrom || getDefaultDateFrom()
   const effectiveDateTo = dateTo || getDefaultDateTo()
 
-  // Determinar store_id a usar
-  const effectiveStoreId = selectedStoreId || user?.store_id || ''
+  // SIEMPRE usar solo el store_id del usuario - no permitir ver otras tiendas
+  const effectiveStoreId = user?.store_id || ''
 
   // Obtener ventas
   const { data: salesData, isLoading, error: salesError } = useQuery({
@@ -64,7 +54,7 @@ export default function SalesPage() {
       salesService.list({
         date_from: effectiveDateFrom,
         date_to: effectiveDateTo,
-        store_id: effectiveStoreId !== user?.store_id ? effectiveStoreId : undefined,
+        // NO enviar store_id - el backend usará el del JWT del usuario
         limit,
         offset: (currentPage - 1) * limit,
       }),
@@ -72,7 +62,7 @@ export default function SalesPage() {
 
   // Manejar errores manualmente
   if (salesError && (salesError as any).response?.status === 401) {
-    toast.error('No tienes permisos para ver ventas de otras tiendas')
+    toast.error('No tienes permisos para ver esta información')
   }
 
   const sales = (salesData as any)?.sales || []
@@ -138,46 +128,6 @@ export default function SalesPage() {
       {/* Filtros */}
       <div className="mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm">
         <div className="space-y-3 sm:space-y-4">
-          {/* Selector de tienda (solo para owners) */}
-          {isOwner && stores && stores.length > 1 && (
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
-                <Store className="inline w-4 h-4 mr-1" />
-                Filtrar por Tienda
-              </label>
-              <select
-                value={selectedStoreId}
-                onChange={(e) => {
-                  setSelectedStoreId(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Todas las tiendas</option>
-                {stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Mensaje para cashiers si intentan filtrar por otra tienda */}
-          {!isOwner && selectedStoreId && selectedStoreId !== user?.store_id && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-800">
-                  No tienes permisos
-                </p>
-                <p className="text-xs text-yellow-700 mt-1">
-                  Solo los administradores pueden ver ventas de otras tiendas
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Filtros de fecha */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div>

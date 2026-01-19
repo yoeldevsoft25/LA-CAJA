@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, Calendar as CalendarIcon, Store, AlertCircle, Printer, Receipt, Download, Filter, X } from 'lucide-react'
+import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { salesService, Sale } from '@/services/sales.service'
-import { authService } from '@/services/auth.service'
 import { reportsService } from '@/services/reports.service'
 import { useAuth } from '@/stores/auth.store'
 import SaleDetailModal from '@/components/sales/SaleDetailModal'
@@ -13,7 +12,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { exportToCSV } from '@/utils/export-excel'
 import toast from 'react-hot-toast'
 import {
@@ -112,7 +110,6 @@ export default function SalesPage() {
   const isMobile = useMobileDetection()
   const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date())
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date())
-  const [selectedStoreId, setSelectedStoreId] = useState<string>('')
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -127,19 +124,12 @@ export default function SalesPage() {
   const [customerSearch, setCustomerSearch] = useState<string>('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
-  // Obtener lista de tiendas (solo para owners)
-  const { data: stores } = useQuery({
-    queryKey: ['stores'],
-    queryFn: () => authService.getStores(),
-    enabled: isOwner,
-  })
-
   // Convertir fechas a formato string para la API (usando zona horaria configurada)
   const effectiveDateFrom = dateFrom ? formatDateInAppTimeZone(dateFrom) : formatDateInAppTimeZone()
   const effectiveDateTo = dateTo ? formatDateInAppTimeZone(dateTo) : formatDateInAppTimeZone()
 
-  // Determinar store_id a usar
-  const effectiveStoreId = selectedStoreId || user?.store_id || ''
+  // SIEMPRE usar solo el store_id del usuario - no permitir ver otras tiendas
+  const effectiveStoreId = user?.store_id || ''
 
   // Obtener datos del prefetch como placeholderData (últimas 50 ventas)
   const prefetchedSales = queryClient.getQueryData<{ sales: Sale[]; total: number }>(['sales', 'list', effectiveStoreId, { limit: 50 }])
@@ -151,7 +141,7 @@ export default function SalesPage() {
       salesService.list({
         date_from: effectiveDateFrom,
         date_to: effectiveDateTo,
-        store_id: effectiveStoreId !== user?.store_id ? effectiveStoreId : undefined,
+        // NO enviar store_id - el backend usará el del JWT del usuario
         limit,
         offset: (currentPage - 1) * limit,
       }),
@@ -445,46 +435,6 @@ export default function SalesPage() {
       <Card className="mb-4 sm:mb-6 border border-border">
         <CardContent className="p-3 sm:p-4">
         <div className="space-y-3 sm:space-y-4">
-          {/* Selector de tienda (solo para owners) */}
-          {isOwner && stores && stores.length > 1 && (
-              <div className="space-y-2">
-                <Label className="text-xs sm:text-sm font-semibold flex items-center gap-1">
-                  <Store className="w-4 h-4" />
-                Filtrar por Tienda
-                </Label>
-                <Select
-                value={selectedStoreId || 'all'}
-                  onValueChange={(value) => {
-                    setSelectedStoreId(value === 'all' ? '' : value)
-                  setCurrentPage(1)
-                }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas las tiendas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las tiendas</SelectItem>
-                {stores.map((store) => (
-                      <SelectItem key={store.id} value={store.id}>
-                    {store.name}
-                      </SelectItem>
-                ))}
-                  </SelectContent>
-                </Select>
-            </div>
-          )}
-
-          {/* Mensaje para cashiers si intentan filtrar por otra tienda */}
-          {!isOwner && selectedStoreId && selectedStoreId !== user?.store_id && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No tienes permisos</AlertTitle>
-                <AlertDescription>
-                  Solo los administradores pueden ver ventas de otras tiendas
-                </AlertDescription>
-              </Alert>
-          )}
-
           {/* Filtros de fecha */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <DatePicker

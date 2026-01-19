@@ -15,6 +15,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { CreateCashierDto } from './dto/create-cashier.dto';
+import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RefreshTokenDto, RefreshTokenResponseDto } from './dto/refresh-token.dto';
@@ -97,6 +98,72 @@ export class AuthController {
   ): Promise<any> {
     const ownerUserId = req.user.sub;
     return this.authService.createCashier(dto, ownerUserId);
+  }
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 intentos por minuto (más estricto que login)
+  async register(
+    @Body() dto: RegisterDto,
+    @Request() req: any,
+  ): Promise<{
+    store_id: string;
+    store_name: string;
+    owner_id: string;
+    cashier_id: string;
+    license_status: string;
+    license_plan: string;
+    license_expires_at: Date | null;
+    license_grace_days: number;
+    trial_days_remaining: number;
+  }> {
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    this.logger.log(`Intento de registro para tienda: ${dto.store_name}`);
+
+    try {
+      const result = await this.authService.register(dto, ipAddress);
+
+      // ✅ Registrar registro exitoso
+      await this.securityAudit.log({
+        event_type: 'registration_success',
+        store_id: result.store_id,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        request_path: '/auth/register',
+        request_method: 'POST',
+        status: 'success',
+        details: {
+          store_name: dto.store_name,
+          owner_name: dto.owner_name,
+        },
+      });
+
+      this.logger.log(
+        `Registro exitoso: tienda ${result.store_id} - ${dto.store_name}`,
+      );
+      return result;
+    } catch (error) {
+      // ✅ Registrar registro fallido
+      await this.securityAudit.log({
+        event_type: 'registration_failure',
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        request_path: '/auth/register',
+        request_method: 'POST',
+        status: 'failure',
+        details: {
+          error: error instanceof Error ? error.message : String(error),
+          store_name: dto.store_name,
+        },
+      });
+
+      this.logger.warn(
+        `Registro fallido para tienda: ${dto.store_name} - ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
   }
 
   @Post('login')

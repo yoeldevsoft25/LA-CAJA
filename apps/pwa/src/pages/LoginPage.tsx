@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -84,6 +84,7 @@ export default function LoginPage() {
         full_name: response.full_name,
         license_status: response.license_status,
         license_expires_at: response.license_expires_at || null,
+        license_plan: response.license_plan || null,
       }
 
       login(response.access_token, response.refresh_token, user)
@@ -121,8 +122,6 @@ export default function LoginPage() {
         }
       }
 
-      const firstName = response.full_name?.split(' ')[0] || 'Usuario'
-      toast.success(`¡Bienvenido, ${firstName}!`)
       navigate(getDefaultRoute(response.role))
     },
     onError: (error: Error) => {
@@ -154,27 +153,13 @@ export default function LoginPage() {
       >
         {/* Header */}
         <div className="text-center mb-10">
-          <motion.div
-            className="inline-flex items-center justify-center mb-6"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
-          >
+          <div className="inline-flex items-center justify-center mb-6">
             <div className="relative">
-              {/* Glow ring */}
-              <motion.div
+              {/* Glow ring - sin animación flotante */}
+              <div
                 className="absolute -inset-3 rounded-3xl opacity-60"
                 style={{
                   background: `radial-gradient(circle, ${colors.brand.primaryLight} 0%, transparent 70%)`,
-                }}
-                animate={{
-                  scale: [1, 1.1, 1],
-                  opacity: [0.4, 0.6, 0.4],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
                 }}
               />
               <img
@@ -186,7 +171,7 @@ export default function LoginPage() {
                 }}
               />
             </div>
-          </motion.div>
+          </div>
 
           <motion.h1
             className="text-4xl font-bold tracking-tight mb-2"
@@ -556,14 +541,26 @@ export default function LoginPage() {
         </GlassCard>
 
         {/* Footer hint */}
-        <motion.p
-          className="text-center text-xs text-slate-400 mt-6"
+        <motion.div
+          className="text-center mt-6 space-y-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          ¿Problemas para acceder? Contacta al administrador.
-        </motion.p>
+          <p className="text-xs text-slate-400">
+            ¿Problemas para acceder? Contacta al administrador.
+          </p>
+          <p className="text-sm text-slate-500">
+            ¿No tienes una cuenta?{' '}
+            <Link
+              to="/register"
+              className="font-semibold hover:underline"
+              style={{ color: colors.brand.primary }}
+            >
+              Regístrate aquí
+            </Link>
+          </p>
+        </motion.div>
       </motion.div>
     </AuthLayout>
   )

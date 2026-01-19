@@ -7,5 +7,6 @@ export class AuthResponseDto {
   full_name: string | null;
   license_status?: string;
   license_expires_at?: Date | null;
+  license_plan?: string | null;
   expires_in?: number; // Tiempo de expiración del access token en segundos
 }

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -1040,6 +1041,11 @@ export class SalesService {
   }
 
   async findOne(storeId: string, saleId: string): Promise<Sale> {
+    // Validar que storeId esté presente
+    if (!storeId) {
+      throw new BadRequestException('Store ID es requerido');
+    }
+    
     const sale = await this.saleRepository
       .createQueryBuilder('sale')
       .leftJoinAndSelect('sale.items', 'items')
@@ -1059,6 +1065,13 @@ export class SalesService {
 
     if (!sale) {
       throw new NotFoundException('Venta no encontrada');
+    }
+    
+    // Validación adicional de seguridad: asegurar que la venta pertenece a la tienda
+    if (sale.store_id !== storeId) {
+      throw new UnauthorizedException(
+        'No tienes permisos para ver esta venta',
+      );
     }
 
     // Agregar información de pagos si hay deuda (optimizado)

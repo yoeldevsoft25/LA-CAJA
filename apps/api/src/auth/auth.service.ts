@@ -17,6 +17,7 @@ import { StoreMember } from '../database/entities/store-member.entity';
 import { RefreshToken } from '../database/entities/refresh-token.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { CreateCashierDto } from './dto/create-cashier.dto';
+import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RefreshTokenResponseDto } from './dto/refresh-token.dto';
@@ -40,7 +41,7 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  private getTrialExpiration(): {
+  private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;
     plan: string;
     graceDays: number;
@@ -50,7 +51,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
     return {
       expiresAt,
-      plan: 'trial',
+      plan,
       graceDays: Number.isFinite(graceDays) ? graceDays : 3,
     };
   }
@@ -142,6 +143,103 @@ export class AuthService {
     await this.storeMemberRepository.save(member);
 
     return profile;
+  }
+
+  /**
+   * Registra una nueva tienda con owner y cashier, asignando licencia freemium
+   */
+  async register(
+    dto: RegisterDto,
+    ipAddress?: string,
+  ): Promise<{
+    store_id: string;
+    store_name: string;
+    owner_id: string;
+    cashier_id: string;
+    license_status: string;
+    license_plan: string;
+    license_expires_at: Date | null;
+    license_grace_days: number;
+    trial_days_remaining: number;
+  }> {
+    this.logger.log(`Intento de registro para tienda: ${dto.store_name}`);
+
+    // Crear tienda con licencia freemium
+    const freemiumLicense = this.getTrialExpiration('freemium');
+    const storeId = randomUUID();
+    const store = this.storeRepository.create({
+      id: storeId,
+      name: dto.store_name,
+      license_status: 'active',
+      license_plan: freemiumLicense.plan,
+      license_expires_at: freemiumLicense.expiresAt,
+      license_grace_days: freemiumLicense.graceDays,
+    });
+
+    const savedStore = await this.storeRepository.save(store);
+
+    // Crear perfil del owner
+    const ownerId = randomUUID();
+    const ownerProfile = this.profileRepository.create({
+      id: ownerId,
+      full_name: dto.owner_name,
+    });
+    await this.profileRepository.save(ownerProfile);
+
+    // Hashear PIN del owner
+    const ownerPinHash = await bcrypt.hash(dto.owner_pin, 10);
+
+    // Crear store member como owner (con PIN)
+    const ownerMember = this.storeMemberRepository.create({
+      store_id: savedStore.id,
+      user_id: ownerId,
+      role: 'owner',
+      pin_hash: ownerPinHash,
+    });
+    await this.storeMemberRepository.save(ownerMember);
+
+    // Crear perfil del cashier
+    const cashierId = randomUUID();
+    const cashierProfile = this.profileRepository.create({
+      id: cashierId,
+      full_name: dto.cashier_name,
+    });
+    await this.profileRepository.save(cashierProfile);
+
+    // Hashear PIN del cashier
+    const pinHash = await bcrypt.hash(dto.cashier_pin, 10);
+
+    // Crear store member como cashier (con PIN)
+    const cashierMember = this.storeMemberRepository.create({
+      store_id: savedStore.id,
+      user_id: cashierId,
+      role: 'cashier',
+      pin_hash: pinHash,
+    });
+    await this.storeMemberRepository.save(cashierMember);
+
+    // Calcular días restantes de prueba
+    const now = Date.now();
+    const expiresAt = freemiumLicense.expiresAt.getTime();
+    const trialDaysRemaining = Math.ceil(
+      (expiresAt - now) / (1000 * 60 * 60 * 24),
+    );
+
+    this.logger.log(
+      `Registro exitoso: tienda ${savedStore.id}, owner ${ownerId}, cashier ${cashierId}`,
+    );
+
+    return {
+      store_id: savedStore.id,
+      store_name: savedStore.name,
+      owner_id: ownerId,
+      cashier_id: cashierId,
+      license_status: savedStore.license_status,
+      license_plan: savedStore.license_plan || 'freemium',
+      license_expires_at: savedStore.license_expires_at,
+      license_grace_days: savedStore.license_grace_days,
+      trial_days_remaining: trialDaysRemaining,
+    };
   }
 
   async login(
@@ -273,6 +371,7 @@ export class AuthService {
       full_name: validMember.profile.full_name,
       license_status: store.license_status,
       license_expires_at: store.license_expires_at,
+      license_plan: store.license_plan,
       expires_in: this.ACCESS_TOKEN_EXPIRES_IN,
     };
   }

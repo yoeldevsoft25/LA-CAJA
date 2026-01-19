@@ -42,22 +42,17 @@ export class SalesController {
     @Query('offset') offset: string,
     @Query('date_from') dateFrom: string,
     @Query('date_to') dateTo: string,
-    @Query('store_id') requestedStoreId: string,
     @Request() req: any,
   ) {
-    const userRole = req.user.role;
     const userStoreId = req.user.store_id;
 
-    // Validar permisos: solo owners pueden ver otras tiendas
-    let targetStoreId = userStoreId;
-    if (requestedStoreId && requestedStoreId !== userStoreId) {
-      if (userRole !== 'owner') {
-        throw new UnauthorizedException(
-          'No tienes permisos para ver ventas de otras tiendas',
-        );
-      }
-      targetStoreId = requestedStoreId;
+    // SIEMPRE usar solo la tienda del usuario - NO permitir ver otras tiendas
+    // Todos los usuarios (owners y cashiers) solo pueden ver ventas de su propia tienda
+    if (!userStoreId) {
+      throw new UnauthorizedException('Store ID no válido');
     }
+
+    const targetStoreId = userStoreId;
 
     // Ajustar fechas: desde inicio del día, hasta fin del día
     let dateFromAdjusted: Date | undefined;
@@ -107,7 +102,23 @@ export class SalesController {
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req: any) {
     const storeId = req.user.store_id;
-    return this.salesService.findOne(storeId, id);
+    
+    // Validar que storeId esté presente
+    if (!storeId) {
+      throw new UnauthorizedException('Store ID no válido');
+    }
+    
+    // El servicio valida store_id en la query, pero reforzamos aquí
+    const sale = await this.salesService.findOne(storeId, id);
+    
+    // Validación adicional: TODOS los usuarios solo pueden ver ventas de su tienda
+    if (sale.store_id !== storeId) {
+      throw new UnauthorizedException(
+        'No tienes permisos para ver esta venta',
+      );
+    }
+    
+    return sale;
   }
 
   @Post(':id/void')
@@ -123,6 +134,22 @@ export class SalesController {
     }
     const storeId = req.user.store_id;
     const userId = req.user.sub;
+    
+    // Validar que storeId esté presente
+    if (!storeId) {
+      throw new UnauthorizedException('Store ID no válido');
+    }
+    
+    // Obtener la venta para validar que pertenece a la tienda del usuario
+    const sale = await this.salesService.findOne(storeId, id);
+    
+    // Validación adicional: asegurar que la venta pertenece a la tienda del usuario
+    if (sale.store_id !== storeId) {
+      throw new UnauthorizedException(
+        'No tienes permisos para anular esta venta',
+      );
+    }
+    
     return this.salesService.voidSale(storeId, id, userId, dto.reason);
   }
 
@@ -136,6 +163,22 @@ export class SalesController {
   ) {
     const storeId = req.user.store_id;
     const userId = req.user.sub;
+    
+    // Validar que storeId esté presente
+    if (!storeId) {
+      throw new UnauthorizedException('Store ID no válido');
+    }
+    
+    // Obtener la venta para validar que pertenece a la tienda del usuario
+    const sale = await this.salesService.findOne(storeId, id);
+    
+    // Validación adicional: asegurar que la venta pertenece a la tienda del usuario
+    if (sale.store_id !== storeId) {
+      throw new UnauthorizedException(
+        'No tienes permisos para devolver items de esta venta',
+      );
+    }
+    
     return this.salesService.returnItems(storeId, id, dto, userId);
   }
 }

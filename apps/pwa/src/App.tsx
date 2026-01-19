@@ -25,6 +25,7 @@ const PageLoader = () => (
 
 // Lazy loading de páginas - Críticas (login/landing/pos)
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const LandingPageEnhanced = lazy(() => import('./pages/LandingPageEnhanced'))
 const POSPage = lazy(() => import('./pages/POSPage'))
 
@@ -179,9 +180,12 @@ function App() {
     if (wasOffline) {
       console.log('[App] 🌐 Conexión recuperada, sincronizando...');
       // Intentar sincronizar cuando se recupera la conexión
+      // syncNow() ahora maneja silenciosamente el caso cuando el servicio no está inicializado
       syncService.syncNow().then(() => {
         console.log('[App] ✅ Sincronización manual completada');
       }).catch((err) => {
+        // syncNow() ya no debería lanzar errores si no está inicializado,
+        // pero capturamos por si acaso hay otros errores
         console.warn('[App] ⚠️ Error en sincronización manual (se reintentará):', err?.message || err);
         // Silenciar errores, el sync periódico lo intentará de nuevo
       });
@@ -306,6 +310,12 @@ function App() {
           path="/login"
           element={
             isAuthenticated ? <Navigate to={defaultRoute} replace /> : <LoginPage />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            isAuthenticated ? <Navigate to={defaultRoute} replace /> : <RegisterPage />
           }
         />
         <Route

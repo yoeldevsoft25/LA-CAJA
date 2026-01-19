@@ -12,7 +12,9 @@ export type AuditEventType =
   | 'admin_action'
   | 'sensitive_data_access'
   | 'unauthorized_access'
-  | 'rate_limit_exceeded';
+  | 'rate_limit_exceeded'
+  | 'registration_success'
+  | 'registration_failure';
 
 export interface AuditLogData {
   event_type: AuditEventType;

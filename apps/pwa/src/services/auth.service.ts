@@ -14,6 +14,7 @@ export interface LoginResponse {
   full_name: string | null
   license_status?: string
   license_expires_at?: string | null
+  license_plan?: string | null
   expires_in?: number
 }
 
@@ -28,6 +29,26 @@ export interface Cashier {
   user_id: string
   full_name: string | null
   role: string
+}
+
+export interface RegisterRequest {
+  store_name: string
+  owner_name: string
+  owner_pin: string
+  cashier_name: string
+  cashier_pin: string
+}
+
+export interface RegisterResponse {
+  store_id: string
+  store_name: string
+  owner_id: string
+  cashier_id: string
+  license_status: string
+  license_plan: string
+  license_expires_at: string
+  license_grace_days: number
+  trial_days_remaining: number
 }
 
 export const authService = {
@@ -51,6 +72,11 @@ export const authService = {
       '/auth/refresh',
       { refresh_token: refreshToken }
     )
+    return response.data
+  },
+
+  async register(data: RegisterRequest): Promise<RegisterResponse> {
+    const response = await api.post<RegisterResponse>('/auth/register', data)
     return response.data
   },
 }

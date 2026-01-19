@@ -12,6 +12,13 @@ import { PriceList } from '../database/entities/price-list.entity';
 import { InvoiceSeries } from '../database/entities/invoice-series.entity';
 import { ChartOfAccountsService } from '../accounting/chart-of-accounts.service';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
+import { FiscalConfigsService } from '../fiscal-configs/fiscal-configs.service';
+import { PaymentMethodConfigsService } from '../payments/payment-method-configs.service';
+import { CreateFiscalConfigDto } from '../fiscal-configs/dto/create-fiscal-config.dto';
+import {
+  CreatePaymentMethodConfigDto,
+  PaymentMethod,
+} from '../payments/dto/create-payment-method-config.dto';
 
 export type BusinessType = 'retail' | 'services' | 'restaurant' | 'general';
 
@@ -41,6 +48,8 @@ export class SetupService {
     @InjectRepository(ChartOfAccount)
     private chartOfAccountRepository: Repository<ChartOfAccount>,
     private chartOfAccountsService: ChartOfAccountsService,
+    private fiscalConfigsService: FiscalConfigsService,
+    private paymentMethodConfigsService: PaymentMethodConfigsService,
   ) {}
 
   /**
@@ -59,6 +68,7 @@ export class SetupService {
       price_list_created?: boolean;
       chart_of_accounts_initialized?: boolean;
       invoice_series_created?: boolean;
+      fiscal_config_created?: boolean;
       payment_methods_configured?: boolean;
     };
   }> {
@@ -112,11 +122,27 @@ export class SetupService {
         details.invoice_series_created = false;
       }
 
-      // 5. Configurar Métodos de Pago Básicos
-      // Nota: Los métodos de pago se configuran a nivel de store en otra tabla
-      // Por ahora solo marcamos como completado si se requieren acciones adicionales
-      stepsCompleted.push('payment_methods');
-      details.payment_methods_configured = true;
+      // 5. Crear Configuración Fiscal
+      try {
+        await this.createDefaultFiscalConfig(storeId, config);
+        stepsCompleted.push('fiscal_config');
+        details.fiscal_config_created = true;
+      } catch (error) {
+        this.logger.error(`Error creando configuración fiscal: ${error}`);
+        stepsFailed.push('fiscal_config');
+        details.fiscal_config_created = false;
+      }
+
+      // 6. Configurar Métodos de Pago Básicos
+      try {
+        await this.createDefaultPaymentMethods(storeId);
+        stepsCompleted.push('payment_methods');
+        details.payment_methods_configured = true;
+      } catch (error) {
+        this.logger.error(`Error configurando métodos de pago: ${error}`);
+        stepsFailed.push('payment_methods');
+        details.payment_methods_configured = false;
+      }
 
       return {
         success: stepsFailed.length === 0,
@@ -230,6 +256,72 @@ export class SetupService {
   }
 
   /**
+   * Crear configuración fiscal por defecto
+   */
+  private async createDefaultFiscalConfig(
+    storeId: string,
+    config: SetupConfig,
+  ): Promise<void> {
+    const existing = await this.fiscalConfigsService.findOne(storeId);
+
+    if (existing) {
+      // Ya existe configuración fiscal, no hacer nada
+      return;
+    }
+
+    const fiscalConfigDto: CreateFiscalConfigDto = {
+      tax_id: config.fiscal_id || 'J-00000000-0',
+      business_name: config.business_name || 'Mi Negocio',
+      business_address: config.address || 'Dirección no especificada',
+      business_phone: config.phone || undefined,
+      business_email: config.email || undefined,
+      default_tax_rate: 16.0,
+    };
+
+    await this.fiscalConfigsService.upsert(storeId, fiscalConfigDto);
+  }
+
+  /**
+   * Crear métodos de pago básicos por defecto
+   */
+  private async createDefaultPaymentMethods(storeId: string): Promise<void> {
+    const defaultMethods: Array<{
+      method: PaymentMethod;
+      sortOrder: number;
+    }> = [
+      { method: 'CASH_BS' as PaymentMethod, sortOrder: 20 },
+      { method: 'CASH_USD' as PaymentMethod, sortOrder: 10 },
+      { method: 'PAGO_MOVIL' as PaymentMethod, sortOrder: 30 },
+    ];
+
+    for (const { method, sortOrder } of defaultMethods) {
+      const existing = await this.paymentMethodConfigsService.getConfig(
+        storeId,
+        method,
+      );
+
+      if (!existing) {
+        const paymentMethodDto: CreatePaymentMethodConfigDto = {
+          method: method,
+          enabled: true,
+          requires_authorization: false,
+          sort_order: sortOrder,
+          min_amount_bs: null,
+          min_amount_usd: null,
+          max_amount_bs: null,
+          max_amount_usd: null,
+          commission_percentage: 0,
+        };
+
+        await this.paymentMethodConfigsService.upsertConfig(
+          storeId,
+          paymentMethodDto,
+        );
+      }
+    }
+  }
+
+  /**
    * Validar configuración completa de una tienda
    */
   async validateSetup(storeId: string): Promise<{
@@ -240,6 +332,8 @@ export class SetupService {
       has_price_list: boolean;
       has_chart_of_accounts: boolean;
       has_invoice_series: boolean;
+      has_fiscal_config: boolean;
+      has_payment_methods: boolean;
       has_products?: boolean;
     };
   }> {
@@ -260,11 +354,23 @@ export class SetupService {
       where: { store_id: storeId, is_active: true },
     });
 
+    // Verificar configuración fiscal
+    const fiscalConfig = await this.fiscalConfigsService.findOne(storeId);
+
+    // Verificar métodos de pago habilitados
+    const paymentMethods = await this.paymentMethodConfigsService.getConfigs(
+      storeId,
+    );
+    const enabledPaymentMethods = paymentMethods.filter((pm) => pm.enabled);
+
     const missingSteps: string[] = [];
     if (!warehouse) missingSteps.push('warehouse');
     if (!priceList) missingSteps.push('price_list');
     if (chartOfAccountsCount === 0) missingSteps.push('chart_of_accounts');
     if (!invoiceSeries) missingSteps.push('invoice_series');
+    if (!fiscalConfig) missingSteps.push('fiscal_config');
+    if (enabledPaymentMethods.length === 0)
+      missingSteps.push('payment_methods');
 
     return {
       is_complete: missingSteps.length === 0,
@@ -274,6 +380,8 @@ export class SetupService {
         has_price_list: !!priceList,
         has_chart_of_accounts: chartOfAccountsCount > 0,
         has_invoice_series: !!invoiceSeries,
+        has_fiscal_config: !!fiscalConfig,
+        has_payment_methods: enabledPaymentMethods.length > 0,
       },
     };
   }
