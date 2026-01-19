@@ -60,11 +60,18 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] sm:w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
+          // Clases base: solo aplicar si no hay clases personalizadas de posicionamiento
+          !className?.includes('bottom-0') && !className?.includes('top-auto') && "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
+          // Tamaño y estilos base
+          "z-50 w-[calc(100%-2rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
+          // Solo aplicar grid si no hay clases personalizadas
+          !className?.includes('flex') && "grid",
           // Animaciones optimizadas para mobile
-          isMobile
+          isMobile && !className?.includes('bottom-0')
             ? "data-[state=open]:opacity-100 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=closed]:scale-95 transition-all duration-150"
-            : "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+            : !className?.includes('bottom-0') && "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          // Para bottom sheet mobile
+          className?.includes('bottom-0') && isMobile && "data-[state=open]:translate-y-0 data-[state=closed]:translate-y-full transition-transform duration-300 ease-out",
           className
         )}
         style={{ willChange: isMobile ? 'opacity, transform' : undefined }}

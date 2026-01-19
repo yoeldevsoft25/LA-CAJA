@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useNavigate } from 'react-router-dom'
+import { useMobileDetection } from '@/hooks/use-mobile-detection'
 
 interface SaleDetailModalProps {
   isOpen: boolean
@@ -125,6 +126,7 @@ export default function SaleDetailModal({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const isMobile = useMobileDetection()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [fiscalInvoice, setFiscalInvoice] = useState<FiscalInvoice | null>(null)
   const [showVoidDialog, setShowVoidDialog] = useState(false)
@@ -198,23 +200,43 @@ export default function SaleDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
+      <DialogContent className={cn(
+        "flex flex-col p-0 gap-0 overflow-hidden",
+        isMobile 
+          ? "max-w-full max-h-[95vh] rounded-t-2xl rounded-b-none top-auto bottom-0 translate-y-0" 
+          : "max-w-3xl max-h-[90vh]"
+      )}>
+        <DialogHeader className={cn(
+          "border-b border-border flex-shrink-0",
+          isMobile ? "px-4 py-3" : "px-4 md:px-6 py-4"
+        )}>
+          <DialogTitle className={cn(
+            "flex items-center gap-2 flex-wrap",
+            isMobile ? "text-lg" : "text-xl"
+          )}>
             Detalle de Venta
             {sale.invoice_full_number && (
-              <Badge variant="default" className="ml-2 font-mono">
-                <Receipt className="w-3 h-3 mr-1" />
+              <Badge variant="default" className={cn(
+                "font-mono",
+                isMobile ? "text-xs" : "text-sm"
+              )}>
+                <Receipt className={cn("mr-1", isMobile ? "w-3 h-3" : "w-4 h-4")} />
                 {sale.invoice_full_number}
               </Badge>
             )}
           </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm mt-0.5">
+          <DialogDescription className={cn(
+            "mt-0.5",
+            isMobile ? "text-xs" : "text-sm"
+          )}>
             ID: {sale.id.substring(0, 8)}...
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+        <div className={cn(
+          "flex-1 min-h-0 overflow-y-auto overscroll-contain",
+          isMobile ? "px-4 py-4" : "px-4 md:px-6 py-6"
+        )}>
           <div className="space-y-4 sm:space-y-6">
               {isVoided && (
                 <Card className="bg-destructive/10 border-destructive/30">
@@ -526,60 +548,57 @@ export default function SaleDetailModal({
                 <h3 className="text-sm sm:text-base font-semibold text-foreground mb-3">
                   Productos Vendidos
                 </h3>
-                <Card className="border-border">
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Producto</TableHead>
-                          <TableHead className="text-center">Cantidad</TableHead>
-                          <TableHead className="text-right">Precio Unit.</TableHead>
-                          <TableHead className="text-right">Descuento</TableHead>
-                          <TableHead className="text-right">Subtotal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sale.items.map((item) => {
-                          const unitPriceBs = Number(item.unit_price_bs)
-                          const unitPriceUsd = Number(item.unit_price_usd)
-                          const discountBs = Number(item.discount_bs || 0)
-                          const discountUsd = Number(item.discount_usd || 0)
-                          const subtotalBs = unitPriceBs * item.qty - discountBs
-                          const subtotalUsd = unitPriceUsd * item.qty - discountUsd
-                          const isWeightProduct = Boolean(item.is_weight_product)
-                          const weightValue = Number(item.weight_value ?? item.qty ?? 0)
-                          const unitPriceDecimals =
-                            item.weight_unit === 'g' || item.weight_unit === 'oz' ? 4 : 2
+                
+                {/* Vista de Cards para Mobile */}
+                {isMobile ? (
+                  <div className="space-y-3">
+                    {sale.items.map((item) => {
+                      const unitPriceBs = Number(item.unit_price_bs)
+                      const unitPriceUsd = Number(item.unit_price_usd)
+                      const discountBs = Number(item.discount_bs || 0)
+                      const discountUsd = Number(item.discount_usd || 0)
+                      const subtotalBs = unitPriceBs * item.qty - discountBs
+                      const subtotalUsd = unitPriceUsd * item.qty - discountUsd
+                      const isWeightProduct = Boolean(item.is_weight_product)
+                      const weightValue = Number(item.weight_value ?? item.qty ?? 0)
+                      const unitPriceDecimals =
+                        item.weight_unit === 'g' || item.weight_unit === 'oz' ? 4 : 2
 
-                          return (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <Package className="w-4 h-4 text-muted-foreground mr-2 flex-shrink-0" />
-                                  <div>
-                                    <p className="font-semibold text-foreground text-sm sm:text-base">
-                                      {item.product?.name || `Producto ${item.product_id.substring(0, 8)}`}
-                                    </p>
-                                    {item.product?.sku && (
-                                      <p className="text-xs text-muted-foreground">SKU: {item.product.sku}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="font-semibold text-foreground">
+                      return (
+                        <Card key={item.id} className="border-border">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="rounded-full bg-primary/10 p-2 flex-shrink-0">
+                                <Package className="w-5 h-5 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-foreground text-base mb-1">
+                                  {item.product?.name || `Producto ${item.product_id.substring(0, 8)}`}
+                                </p>
+                                {item.product?.sku && (
+                                  <p className="text-xs text-muted-foreground mb-2">SKU: {item.product.sku}</p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2 border-t border-border pt-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Cantidad:</span>
+                                <span className="font-semibold text-foreground text-sm">
                                   {isWeightProduct
                                     ? formatWeightValue(weightValue, item.weight_unit)
                                     : item.qty}
                                 </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className="text-sm text-foreground">
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Precio Unit.:</span>
+                                <span className="text-sm text-foreground font-medium">
                                   {isWeightProduct ? (
                                     <>
                                       ${unitPriceUsd.toFixed(unitPriceDecimals)} /{' '}
-                                      {unitPriceBs.toFixed(unitPriceDecimals)} Bs /{' '}
-                                      {item.weight_unit || 'kg'}
+                                      {unitPriceBs.toFixed(unitPriceDecimals)} Bs
+                                      <span className="text-xs ml-1">/ {item.weight_unit || 'kg'}</span>
                                     </>
                                   ) : (
                                     <>
@@ -587,28 +606,115 @@ export default function SaleDetailModal({
                                     </>
                                   )}
                                 </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {(discountBs > 0 || discountUsd > 0) ? (
+                              </div>
+                              
+                              {(discountBs > 0 || discountUsd > 0) && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-muted-foreground">Descuento:</span>
                                   <span className="text-sm font-semibold text-destructive">
-                                    ${discountUsd.toFixed(2)} / {discountBs.toFixed(2)} Bs
+                                    -${discountUsd.toFixed(2)} / -{discountBs.toFixed(2)} Bs
                                   </span>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className="font-bold text-foreground">
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between items-center pt-2 border-t border-border">
+                                <span className="text-sm font-semibold text-foreground">Subtotal:</span>
+                                <span className="font-bold text-foreground text-base">
                                   ${subtotalUsd.toFixed(2)} / {subtotalBs.toFixed(2)} Bs
                                 </span>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  /* Vista de Tabla para Desktop */
+                  <Card className="border-border">
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Producto</TableHead>
+                            <TableHead className="text-center">Cantidad</TableHead>
+                            <TableHead className="text-right">Precio Unit.</TableHead>
+                            <TableHead className="text-right">Descuento</TableHead>
+                            <TableHead className="text-right">Subtotal</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sale.items.map((item) => {
+                            const unitPriceBs = Number(item.unit_price_bs)
+                            const unitPriceUsd = Number(item.unit_price_usd)
+                            const discountBs = Number(item.discount_bs || 0)
+                            const discountUsd = Number(item.discount_usd || 0)
+                            const subtotalBs = unitPriceBs * item.qty - discountBs
+                            const subtotalUsd = unitPriceUsd * item.qty - discountUsd
+                            const isWeightProduct = Boolean(item.is_weight_product)
+                            const weightValue = Number(item.weight_value ?? item.qty ?? 0)
+                            const unitPriceDecimals =
+                              item.weight_unit === 'g' || item.weight_unit === 'oz' ? 4 : 2
+
+                            return (
+                              <TableRow key={item.id}>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <Package className="w-4 h-4 text-muted-foreground mr-2 flex-shrink-0" />
+                                    <div>
+                                      <p className="font-semibold text-foreground text-sm sm:text-base">
+                                        {item.product?.name || `Producto ${item.product_id.substring(0, 8)}`}
+                                      </p>
+                                      {item.product?.sku && (
+                                        <p className="text-xs text-muted-foreground">SKU: {item.product.sku}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <span className="font-semibold text-foreground">
+                                    {isWeightProduct
+                                      ? formatWeightValue(weightValue, item.weight_unit)
+                                      : item.qty}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className="text-sm text-foreground">
+                                    {isWeightProduct ? (
+                                      <>
+                                        ${unitPriceUsd.toFixed(unitPriceDecimals)} /{' '}
+                                        {unitPriceBs.toFixed(unitPriceDecimals)} Bs /{' '}
+                                        {item.weight_unit || 'kg'}
+                                      </>
+                                    ) : (
+                                      <>
+                                        ${unitPriceUsd.toFixed(2)} / {unitPriceBs.toFixed(2)} Bs
+                                      </>
+                                    )}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {(discountBs > 0 || discountUsd > 0) ? (
+                                    <span className="text-sm font-semibold text-destructive">
+                                      ${discountUsd.toFixed(2)} / {discountBs.toFixed(2)} Bs
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className="font-bold text-foreground">
+                                    ${subtotalUsd.toFixed(2)} / {subtotalBs.toFixed(2)} Bs
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               {/* Totales */}
@@ -735,16 +841,26 @@ export default function SaleDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+        <div className={cn(
+          "flex-shrink-0 border-t border-border",
+          isMobile ? "px-3 py-3" : "px-4 md:px-6 py-4"
+        )}>
           {isOwner && !isVoided && voidBlockReason && (
             <p className="text-xs text-muted-foreground mb-2">{voidBlockReason}</p>
           )}
-          <div className="flex gap-3 flex-wrap">
+          <div className={cn(
+            "flex gap-2",
+            isMobile ? "flex-col" : "flex-wrap gap-3"
+          )}>
             {canReturn && (
               <Button
                 variant="outline"
                 onClick={() => setShowReturnModal(true)}
-                className="flex-1 border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                className={cn(
+                  "border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700",
+                  isMobile ? "w-full" : "flex-1"
+                )}
+                size={isMobile ? "lg" : "default"}
               >
                 <Undo2 className="w-4 h-4 mr-2" />
                 Devolución Parcial
@@ -755,7 +871,8 @@ export default function SaleDetailModal({
                 variant="destructive"
                 onClick={() => setShowVoidDialog(true)}
                 disabled={!canVoid}
-                className="flex-1"
+                className={isMobile ? "w-full" : "flex-1"}
+                size={isMobile ? "lg" : "default"}
               >
                 <Ban className="w-4 h-4 mr-2" />
                 Anular Venta
@@ -775,7 +892,8 @@ export default function SaleDetailModal({
                   console.error('[SaleDetail] Error printing:', error)
                 }
               }}
-              className="flex-1"
+              className={isMobile ? "w-full" : "flex-1"}
+              size={isMobile ? "lg" : "default"}
             >
               <Printer className="w-4 h-4 mr-2" />
               Reimprimir Ticket
@@ -794,12 +912,17 @@ export default function SaleDetailModal({
                   console.error('[SaleDetail] Error sharing to WhatsApp:', error)
                 }
               }}
-              className="flex-1"
+              className={isMobile ? "w-full" : "flex-1"}
+              size={isMobile ? "lg" : "default"}
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Compartir por WhatsApp
             </Button>
-            <Button onClick={onClose} className="flex-1">
+            <Button 
+              onClick={onClose} 
+              className={isMobile ? "w-full" : "flex-1"}
+              size={isMobile ? "lg" : "default"}
+            >
               Cerrar
             </Button>
           </div>
