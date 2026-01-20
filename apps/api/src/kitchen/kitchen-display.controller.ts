@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, Put, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { KitchenDisplayService } from './kitchen-display.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -32,5 +32,33 @@ export class KitchenDisplayController {
       return { success: false, message: 'Orden no encontrada' };
     }
     return { success: true, order };
+  }
+
+  /**
+   * PUT /kitchen/orders/:orderId/items/:itemId/status
+   * Actualiza el estado de un item de orden
+   */
+  @Put('orders/:orderId/items/:itemId/status')
+  @HttpCode(HttpStatus.OK)
+  async updateOrderItemStatus(
+    @Param('orderId') orderId: string,
+    @Param('itemId') itemId: string,
+    @Body() body: { status: 'pending' | 'preparing' | 'ready' },
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const updatedItem = await this.kitchenDisplayService.updateOrderItemStatus(
+      storeId,
+      orderId,
+      itemId,
+      body.status,
+    );
+    return {
+      success: true,
+      item: {
+        id: updatedItem.id,
+        status: updatedItem.status,
+      },
+    };
   }
 }

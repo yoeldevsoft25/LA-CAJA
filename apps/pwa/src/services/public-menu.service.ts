@@ -132,4 +132,58 @@ export const publicMenuService = {
     })
     return response.data
   },
+
+  /**
+   * Obtiene la orden actual de una mesa por código QR
+   */
+  async getCurrentOrder(qrCode: string): Promise<{
+    success: boolean
+    has_order: boolean
+    order: {
+      id: string
+      order_number: string
+      status: string
+      opened_at: string
+    } | null
+    items: Array<{
+      id: string
+      product_name: string
+      qty: number
+      status: 'pending' | 'preparing' | 'ready'
+    }>
+    progress: {
+      totalItems: number
+      pendingItems: number
+      preparingItems: number
+      readyItems: number
+      orderStatus: string
+    }
+  }> {
+    const response = await publicApi.get<{
+      success: boolean
+      has_order: boolean
+      order: {
+        id: string
+        order_number: string
+        status: string
+        opened_at: string
+      } | null
+      items: Array<{
+        id: string
+        product_name: string
+        qty: number
+        status: 'pending' | 'preparing' | 'ready'
+      }>
+      progress: {
+        totalItems: number
+        pendingItems: number
+        preparingItems: number
+        readyItems: number
+        orderStatus: string
+      }
+    }>('/public/menu/orders/current', {
+      params: { qr_code: qrCode },
+    })
+    return response.data
+  },
 }

@@ -37,4 +37,19 @@ export const kitchenService = {
     )
     return response.data.order || null
   },
+
+  /**
+   * Actualiza el estado de un item de orden
+   */
+  async updateOrderItemStatus(
+    orderId: string,
+    itemId: string,
+    status: 'pending' | 'preparing' | 'ready'
+  ): Promise<{ success: boolean; item: { id: string; status: string } }> {
+    const response = await api.put<{ success: boolean; item: { id: string; status: string } }>(
+      `/kitchen/orders/${orderId}/items/${itemId}/status`,
+      { status }
+    )
+    return response.data
+  },
 }

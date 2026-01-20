@@ -121,4 +121,61 @@ export class MenuController {
       throw new BadRequestException('Error al crear la orden');
     }
   }
+
+  /**
+   * GET /public/menu/orders/current
+   * Obtiene la orden actual de una mesa por código QR
+   */
+  @Get('orders/current')
+  async getCurrentOrder(@Query('qr_code') qrCode: string) {
+    try {
+      if (!qrCode) {
+        throw new BadRequestException('Código QR requerido');
+      }
+
+      const { order, items } = await this.publicOrdersService.getCurrentOrderByQR(qrCode);
+
+      if (!order) {
+        return {
+          success: true,
+          has_order: false,
+          order: null,
+          items: [],
+        };
+      }
+
+      // Calcular progreso
+      const totalItems = items.length;
+      const pendingItems = items.filter((item) => item.status === 'pending').length;
+      const preparingItems = items.filter((item) => item.status === 'preparing').length;
+      const readyItems = items.filter((item) => item.status === 'ready').length;
+
+      return {
+        success: true,
+        has_order: true,
+        order: {
+          id: order.id,
+          order_number: order.order_number,
+          status: order.status,
+          opened_at: order.opened_at.toISOString(),
+        },
+        items,
+        progress: {
+          totalItems,
+          pendingItems,
+          preparingItems,
+          readyItems,
+          orderStatus: order.status,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException('Error al obtener la orden');
+    }
+  }
 }

@@ -1836,7 +1836,7 @@ export default function CheckoutModal({
 
   // Modal en desktop
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-1 sm:p-4">
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-1 sm:p-4">
       <Card className="w-full max-w-md lg:max-w-4xl xl:max-w-5xl h-[85vh] sm:h-[90vh] lg:h-[85vh] flex flex-col border border-border overflow-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-background border-b border-border px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex items-center justify-between z-10 rounded-t-lg">

@@ -13,6 +13,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { TablesService } from './tables.service';
+import { QRCodesService } from './qr-codes.service';
 import { CreateTableDto } from './dto/create-table.dto';
 import { UpdateTableDto } from './dto/update-table.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,7 +25,10 @@ import { TableStatus } from '../database/entities/table.entity';
 @Controller('tables')
 @UseGuards(JwtAuthGuard)
 export class TablesController {
-  constructor(private readonly tablesService: TablesService) {}
+  constructor(
+    private readonly tablesService: TablesService,
+    private readonly qrCodesService: QRCodesService,
+  ) {}
 
   /**
    * Crea una nueva mesa
@@ -94,5 +98,37 @@ export class TablesController {
   async deleteTable(@Param('id') id: string, @Request() req: any) {
     const storeId = req.user.store_id;
     await this.tablesService.deleteTable(storeId, id);
+  }
+
+  /**
+   * Regenera el código QR de una mesa
+   */
+  @Post(':id/qr/regenerate')
+  async regenerateQRCode(@Param('id') id: string, @Request() req: any) {
+    const storeId = req.user.store_id;
+    const qrCode = await this.qrCodesService.regenerateQRCode(storeId, id);
+    return {
+      success: true,
+      qrCode: {
+        id: qrCode.id,
+        qr_code: qrCode.qr_code,
+        public_url: qrCode.public_url,
+        is_active: qrCode.is_active,
+      },
+    };
+  }
+
+  /**
+   * Actualiza las URLs de todos los QR codes de la tienda
+   */
+  @Post('qr/update-urls')
+  async updateAllQRUrls(@Request() req: any) {
+    const storeId = req.user.store_id;
+    const updated = await this.qrCodesService.updateAllQRUrls(storeId);
+    return {
+      success: true,
+      updated,
+      message: `Se actualizaron ${updated} códigos QR`,
+    };
   }
 }

@@ -62,7 +62,7 @@ const DialogContent = React.forwardRef<
         className={cn(
           // Clases base: solo aplicar si no hay clases personalizadas de posicionamiento
           !className?.includes('bottom-0') && !className?.includes('top-auto') && "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
-          // Tamaño y estilos base
+          // Tamaño y estilos base - z-index menor que CheckoutModal (que usa z-[60])
           "z-50 w-[calc(100%-2rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
           // Solo aplicar grid si no hay clases personalizadas
           !className?.includes('flex') && "grid",

@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { TablesController } from './tables.controller';
 import { TablesService } from './tables.service';
 import { QRCodesService } from './qr-codes.service';
@@ -13,6 +14,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Table, QRCode]),
+    ConfigModule,
     forwardRef(() => NotificationsModule),
   ],
   controllers: [TablesController],

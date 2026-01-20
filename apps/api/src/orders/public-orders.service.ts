@@ -136,4 +136,71 @@ export class PublicOrdersService {
 
     return finalOrder;
   }
+
+  /**
+   * Obtiene la orden actual de una mesa por código QR
+   */
+  async getCurrentOrderByQR(qrCode: string): Promise<{
+    order: Order | null;
+    items: Array<{
+      id: string;
+      product_name: string;
+      qty: number;
+      status: 'pending' | 'preparing' | 'ready';
+    }>;
+  }> {
+    // Validar código QR
+    const qrCodeEntity = await this.qrCodeRepository.findOne({
+      where: { qr_code: qrCode },
+      relations: ['table'],
+    });
+
+    if (!qrCodeEntity || !qrCodeEntity.is_active) {
+      throw new BadRequestException('Código QR inválido o inactivo');
+    }
+
+    if (qrCodeEntity.expires_at && qrCodeEntity.expires_at < new Date()) {
+      throw new BadRequestException('Código QR expirado');
+    }
+
+    const table = await this.tableRepository.findOne({
+      where: { id: qrCodeEntity.table_id },
+    });
+
+    if (!table || !table.current_order_id) {
+      return {
+        order: null,
+        items: [],
+      };
+    }
+
+    // Obtener la orden actual
+    const order = await this.orderRepository.findOne({
+      where: {
+        id: table.current_order_id,
+        store_id: table.store_id,
+      },
+      relations: ['items', 'items.product'],
+    });
+
+    if (!order || order.status !== 'open') {
+      return {
+        order: null,
+        items: [],
+      };
+    }
+
+    // Mapear items con estado real
+    const items = order.items.map((item) => ({
+      id: item.id,
+      product_name: (item.product as any)?.name || 'Producto desconocido',
+      qty: item.qty,
+      status: (item.status || 'pending') as 'pending' | 'preparing' | 'ready',
+    }));
+
+    return {
+      order,
+      items,
+    };
+  }
 }

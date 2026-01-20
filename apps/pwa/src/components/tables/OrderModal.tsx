@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import {
-  X,
   Plus,
   Trash2,
   Pause,
@@ -310,9 +309,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                   )}
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="w-5 h-5" />
-              </Button>
+              {/* El botón X se maneja automáticamente por DialogContent, no necesita duplicado */}
             </div>
           </DialogHeader>
 

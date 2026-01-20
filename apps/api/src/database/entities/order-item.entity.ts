@@ -47,6 +47,9 @@ export class OrderItem {
   @Column({ type: 'text', nullable: true })
   note: string | null; // Nota especial del item
 
+  @Column({ type: 'varchar', length: 20, default: 'pending' })
+  status: 'pending' | 'preparing' | 'ready'; // Estado en cocina
+
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   added_at: Date;
 

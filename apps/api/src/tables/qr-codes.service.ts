@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { QRCode } from '../database/entities/qr-code.entity';
 import { Table } from '../database/entities/table.entity';
 import { randomUUID } from 'crypto';
@@ -20,6 +21,7 @@ export class QRCodesService {
     private qrCodeRepository: Repository<QRCode>,
     @InjectRepository(Table)
     private tableRepository: Repository<Table>,
+    private configService: ConfigService,
   ) {}
 
   /**
@@ -38,8 +40,22 @@ export class QRCodesService {
    * Genera la URL pública para acceder al menú de la mesa
    */
   private generatePublicUrl(qrCode: string): string {
-    // En producción esto debería usar la URL base del frontend
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Obtener URL del frontend desde configuración
+    // Prioridad: FRONTEND_URL > detección automática > localhost
+    let baseUrl = this.configService.get<string>('FRONTEND_URL');
+    
+    if (!baseUrl) {
+      // Si no está configurado, intentar detectar desde NODE_ENV
+      const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+      if (nodeEnv === 'production') {
+        // En producción, usar la URL de Netlify
+        baseUrl = 'https://la-caja.netlify.app';
+      } else {
+        // En desarrollo, usar localhost
+        baseUrl = 'http://localhost:5173';
+      }
+    }
+    
     return `${baseUrl}/public/qr/${qrCode}`;
   }
 
@@ -65,10 +81,14 @@ export class QRCodesService {
     });
 
     if (qrCode) {
-      // Si existe pero está inactivo o expirado, reactivarlo
+      // Si existe pero está inactivo o expirado, reactivarlo y actualizar URL
       if (!qrCode.is_active || (qrCode.expires_at && qrCode.expires_at < new Date())) {
+        // Actualizar URL por si cambió la configuración
+        const newPublicUrl = this.generatePublicUrl(qrCode.qr_code);
+        
         qrCode.is_active = true;
         qrCode.expires_at = null;
+        qrCode.public_url = newPublicUrl; // Actualizar URL
         qrCode.updated_at = new Date();
         qrCode = await this.qrCodeRepository.save(qrCode);
 
@@ -78,6 +98,15 @@ export class QRCodesService {
 
         return qrCode;
       }
+      
+      // Si está activo, verificar si la URL necesita actualizarse
+      const expectedUrl = this.generatePublicUrl(qrCode.qr_code);
+      if (qrCode.public_url !== expectedUrl) {
+        qrCode.public_url = expectedUrl;
+        qrCode.updated_at = new Date();
+        qrCode = await this.qrCodeRepository.save(qrCode);
+      }
+      
       return qrCode;
     }
 
@@ -117,6 +146,14 @@ export class QRCodesService {
 
     if (!qrCode) {
       throw new NotFoundException('Código QR no encontrado para esta mesa');
+    }
+
+    // Verificar y actualizar URL si es necesario
+    const expectedUrl = this.generatePublicUrl(qrCode.qr_code);
+    if (qrCode.public_url !== expectedUrl) {
+      qrCode.public_url = expectedUrl;
+      qrCode.updated_at = new Date();
+      await this.qrCodeRepository.save(qrCode);
     }
 
     return qrCode;
@@ -173,7 +210,32 @@ export class QRCodesService {
       await this.qrCodeRepository.save(existingQR);
     }
 
-    // Crear nuevo
+    // Crear nuevo con URL actualizada
     return this.createOrUpdateQRCode(storeId, tableId);
+  }
+
+  /**
+   * Actualiza las URLs de todos los QR codes activos (útil después de cambiar FRONTEND_URL)
+   */
+  async updateAllQRUrls(storeId?: string): Promise<number> {
+    const where: any = { is_active: true };
+    if (storeId) {
+      where.store_id = storeId;
+    }
+
+    const qrCodes = await this.qrCodeRepository.find({ where });
+    let updated = 0;
+
+    for (const qrCode of qrCodes) {
+      const expectedUrl = this.generatePublicUrl(qrCode.qr_code);
+      if (qrCode.public_url !== expectedUrl) {
+        qrCode.public_url = expectedUrl;
+        qrCode.updated_at = new Date();
+        await this.qrCodeRepository.save(qrCode);
+        updated++;
+      }
+    }
+
+    return updated;
   }
 }
