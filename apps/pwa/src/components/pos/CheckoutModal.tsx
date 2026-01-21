@@ -30,7 +30,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetOverlay,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
