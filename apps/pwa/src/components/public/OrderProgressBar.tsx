@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, ChefHat, Sparkles } from 'lucide-react'
+import { CheckCircle2, Clock, ChefHat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type OrderItemStatus = 'pending' | 'preparing' | 'ready'
@@ -167,12 +167,6 @@ export default function OrderProgressBar({
                     </div>
                   )}
 
-                  {/* Checkmark para completados */}
-                  {isCompleted && step.key === 'ready' && (
-                    <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 rounded-full p-0.5">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                    </div>
-                  )}
                 </div>
 
                 {/* Label */}
@@ -304,12 +298,6 @@ export default function OrderProgressBar({
                     </div>
                   )}
 
-                  {/* Checkmark animado para completados */}
-                  {isCompleted && step.key === 'ready' && (
-                    <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1 shadow-lg animate-in zoom-in duration-500">
-                      <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                    </div>
-                  )}
 
                   {/* Efecto de brillo en estado actual - debe estar sobre todo */}
                   {isCurrent && (
@@ -420,10 +408,6 @@ export default function OrderProgressBar({
             "shadow-lg animate-in slide-in-from-bottom-4 duration-500"
           )}
         >
-          <div className="relative">
-            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 animate-in zoom-in duration-500" />
-            <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-green-500 animate-pulse" />
-          </div>
           <div>
             <p className="text-sm sm:text-base font-black text-green-900">
               ¡Tu pedido está listo!

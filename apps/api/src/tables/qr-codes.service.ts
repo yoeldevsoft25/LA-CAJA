@@ -41,19 +41,12 @@ export class QRCodesService {
    */
   private generatePublicUrl(qrCode: string): string {
     // Obtener URL del frontend desde configuración
-    // Prioridad: FRONTEND_URL > detección automática > localhost
+    // Prioridad: FRONTEND_URL > URL de producción por defecto
     let baseUrl = this.configService.get<string>('FRONTEND_URL');
     
     if (!baseUrl) {
-      // Si no está configurado, intentar detectar desde NODE_ENV
-      const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
-      if (nodeEnv === 'production') {
-        // En producción, usar la URL de Netlify
-        baseUrl = 'https://la-caja.netlify.app';
-      } else {
-        // En desarrollo, usar localhost
-        baseUrl = 'http://localhost:5173';
-      }
+      // Si no está configurado, usar la URL de producción de Netlify
+      baseUrl = 'http://la-caja.netlify.app';
     }
     
     return `${baseUrl}/public/qr/${qrCode}`;

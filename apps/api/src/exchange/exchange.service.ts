@@ -30,6 +30,23 @@ interface DolarAPIOfficialResponse {
   fechaActualizacion: string;
 }
 
+interface DolarVZLAResponse {
+  current: {
+    usd: number;
+    eur: number;
+    date: string;
+  };
+  previous: {
+    usd: number;
+    eur: number;
+    date: string;
+  };
+  changePercentage: {
+    usd: number;
+    eur: number;
+  };
+}
+
 export interface MultiRateResponse {
   bcv: number | null;
   parallel: number | null;
@@ -150,6 +167,7 @@ export class ExchangeService {
   private readonly CACHE_DURATION_MS = 1000 * 60 * 60; // 1 hora
   private readonly axiosInstance: AxiosInstance;
   private readonly DOLAR_API_URL = 'https://ve.dolarapi.com/v1/dolares/oficial';
+  private readonly DOLAR_VZLA_API_URL = 'https://api.dolarvzla.com/public/exchange-rate';
   private fetchPromise: Promise<BCVRateResponse | null> | null = null;
 
   constructor(
@@ -560,7 +578,32 @@ export class ExchangeService {
 
   private async fetchFromBCVAPI(): Promise<number | null> {
     try {
-      this.logger.log('Obteniendo tasa BCV desde DolarAPI...');
+      // Intentar primero con DolarVZLA (nuevo endpoint más actualizado)
+      this.logger.log('Obteniendo tasa BCV desde DolarVZLA...');
+      
+      try {
+        const response = await this.axiosInstance.get<DolarVZLAResponse>(
+          this.DOLAR_VZLA_API_URL,
+        );
+
+        const data = response.data;
+
+        if (!data.current?.usd || data.current.usd <= 0) {
+          this.logger.warn('DolarVZLA devolvió un valor USD inválido, intentando fallback...');
+        } else {
+          this.logger.log(
+            `Tasa BCV obtenida desde DolarVZLA: ${data.current.usd} (fecha: ${data.current.date})`,
+          );
+          return data.current.usd;
+        }
+      } catch (dolarVzlaError: any) {
+        this.logger.warn(
+          `Error al obtener tasa desde DolarVZLA: ${dolarVzlaError.message}, intentando fallback...`,
+        );
+      }
+
+      // Fallback al endpoint anterior si DolarVZLA falla
+      this.logger.log('Obteniendo tasa BCV desde DolarAPI (fallback)...');
 
       const response = await this.axiosInstance.get<DolarAPIOfficialResponse>(
         this.DOLAR_API_URL,
@@ -574,7 +617,7 @@ export class ExchangeService {
       }
 
       this.logger.log(
-        `Tasa BCV obtenida: ${data.promedio} (actualizada: ${data.fechaActualizacion})`,
+        `Tasa BCV obtenida desde DolarAPI: ${data.promedio} (actualizada: ${data.fechaActualizacion})`,
       );
 
       return data.promedio;

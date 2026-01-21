@@ -158,9 +158,9 @@ export default function OrderCart({
           )}
         >
           <div className={cn(
-            "p-3 sm:p-4",
-            // En móvil, padding extra para que el scroll sea más visible
-            "lg:p-4"
+            "p-3 sm:p-4 lg:p-4",
+            // En móvil, padding extra para que el scroll sea más visible y el contenido no se oculte
+            "pb-4 sm:pb-6"
           )}>
             {items.length === 0 ? (
               <div className="text-center py-8 sm:py-12 text-muted-foreground">

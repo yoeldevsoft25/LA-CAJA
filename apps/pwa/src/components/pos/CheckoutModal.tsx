@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, CreditCard, Wallet, Banknote, User, Search, Check, Calculator, Split, UserPlus, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -29,6 +30,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetOverlay,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
@@ -224,8 +226,13 @@ export default function CheckoutModal({
   const [promotionCode, setPromotionCode] = useState<string>('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null)
   
-  // Detectar si es móvil para usar bottom sheet
-  const [isMobile, setIsMobile] = useState(false)
+  // Detectar si es móvil para usar bottom sheet - inicializar correctamente
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1024 // lg breakpoint
+    }
+    return false
+  })
 
   // Prellenar la tasa cuando se obtiene del backend
   useEffect(() => {
@@ -1805,12 +1812,23 @@ export default function CheckoutModal({
     </>
   )
 
+  // No renderizar si no está abierto
+  if (!isOpen) return null
+
   // Usar Sheet en móvil, modal en desktop
   if (isMobile) {
     return (
       <>
-        <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-          <SheetContent side="bottom" className="h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <Sheet open={isOpen} onOpenChange={(open) => {
+          if (!open) {
+            onClose()
+          }
+        }}>
+          <SheetContent 
+            side="bottom" 
+            className="h-[90vh] max-h-[90vh] overflow-hidden flex flex-col p-0 z-[100]"
+            overlayClassName="z-[100]"
+          >
             <SheetHeader className="px-4 py-3 border-b">
               <SheetTitle>Procesar Venta</SheetTitle>
             </SheetHeader>
@@ -1834,10 +1852,26 @@ export default function CheckoutModal({
     )
   }
 
-  // Modal en desktop
-  return (
-    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-1 sm:p-4">
-      <Card className="w-full max-w-md lg:max-w-4xl xl:max-w-5xl h-[85vh] sm:h-[90vh] lg:h-[85vh] flex flex-col border border-border overflow-hidden">
+  // Modal en desktop - usar portal para estar fuera del Dialog
+  const modalContentDesktop = (
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-1 sm:p-4"
+      style={{ zIndex: 100 }}
+      onClick={(e) => {
+        // Solo cerrar si el click es directamente en el contenedor (no en hijos)
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+    >
+      <Card 
+        className="w-full max-w-md lg:max-w-4xl xl:max-w-5xl h-[85vh] sm:h-[90vh] lg:h-[85vh] flex flex-col border border-border overflow-hidden relative z-10"
+        style={{ zIndex: 101 }}
+        onClick={(e) => {
+          // Prevenir que el click se propague al contenedor padre
+          e.stopPropagation()
+        }}
+      >
         {/* Header */}
         <div className="sticky top-0 bg-background border-b border-border px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex items-center justify-between z-10 rounded-t-lg">
           <h2 className="text-lg sm:text-xl font-bold text-foreground">Procesar Venta</h2>
@@ -1851,7 +1885,9 @@ export default function CheckoutModal({
             <X className="w-5 h-5" />
           </Button>
         </div>
-        {modalContent}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          {modalContent}
+        </div>
         {/* Selector de seriales */}
         {serialSelectorItem && (
           <SerialSelector
@@ -1866,4 +1902,11 @@ export default function CheckoutModal({
       </Card>
     </div>
   )
+
+  // Renderizar en portal para estar fuera del Dialog
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContentDesktop, document.body)
+  }
+
+  return modalContentDesktop
 }

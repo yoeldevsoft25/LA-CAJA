@@ -395,9 +395,9 @@ export default function MenuViewer({
         </div>
       </div>
 
-      {/* Carrito móvil (bottom sheet) - Altura limitada para mostrar solo 1 producto */}
+      {/* Carrito móvil (bottom sheet) - Altura aumentada para mostrar más productos */}
       {showCart && (
-        <div className="lg:hidden fixed inset-x-0 bottom-0 bg-background border-t shadow-2xl z-50 rounded-t-2xl flex flex-col" style={{ height: '280px', maxHeight: '50vh' }}>
+        <div className="lg:hidden fixed inset-x-0 bottom-0 bg-background border-t shadow-2xl z-50 rounded-t-2xl flex flex-col" style={{ height: '700px', maxHeight: '85vh' }}>
           <OrderCart
             items={cartItems}
             onRemove={handleRemoveFromCart}

@@ -80,11 +80,27 @@ export class TablesService {
    * Obtiene todas las mesas de una tienda
    */
   async getTablesByStore(storeId: string): Promise<Table[]> {
-    return this.tableRepository.find({
+    const tables = await this.tableRepository.find({
       where: { store_id: storeId },
       order: { table_number: 'ASC' },
       relations: ['currentOrder', 'qrCode'],
     });
+
+    // Actualizar URLs de QR codes si es necesario (en segundo plano, sin bloquear)
+    for (const table of tables) {
+      if (table.qrCode) {
+        try {
+          await this.qrCodesService.getQRCodeByTable(storeId, table.id);
+          // Actualizar la referencia en memoria
+          const updatedQR = await this.qrCodesService.getQRCodeByTable(storeId, table.id);
+          table.qrCode = updatedQR;
+        } catch (error) {
+          // Ignorar errores si no hay QR code
+        }
+      }
+    }
+
+    return tables;
   }
 
   /**
@@ -100,6 +116,17 @@ export class TablesService {
       throw new NotFoundException('Mesa no encontrada');
     }
 
+    // Actualizar URL del QR code si es necesario
+    if (table.qrCode) {
+      try {
+        const updatedQR = await this.qrCodesService.getQRCodeByTable(storeId, tableId);
+        // Actualizar la referencia en memoria
+        table.qrCode = updatedQR;
+      } catch (error) {
+        // Ignorar errores si no hay QR code
+      }
+    }
+
     return table;
   }
 
@@ -110,11 +137,26 @@ export class TablesService {
     storeId: string,
     status: TableStatus,
   ): Promise<Table[]> {
-    return this.tableRepository.find({
+    const tables = await this.tableRepository.find({
       where: { store_id: storeId, status },
       order: { table_number: 'ASC' },
       relations: ['currentOrder', 'qrCode'],
     });
+
+    // Actualizar URLs de QR codes si es necesario (en segundo plano, sin bloquear)
+    for (const table of tables) {
+      if (table.qrCode) {
+        try {
+          const updatedQR = await this.qrCodesService.getQRCodeByTable(storeId, table.id);
+          // Actualizar la referencia en memoria
+          table.qrCode = updatedQR;
+        } catch (error) {
+          // Ignorar errores si no hay QR code
+        }
+      }
+    }
+
+    return tables;
   }
 
   /**

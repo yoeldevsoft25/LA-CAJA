@@ -21,10 +21,10 @@ const DialogOverlay = React.forwardRef<
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
   
   return (
-    <DialogPrimitive.Overlay
+      <DialogPrimitive.Overlay
       ref={ref}
       className={cn(
-        "fixed inset-0 z-50 bg-black/80",
+        "fixed inset-0 z-[99] bg-black/80",
         // Animaciones más simples en mobile para mejor rendimiento
         isMobile 
           ? "data-[state=open]:opacity-100 data-[state=closed]:opacity-0 transition-opacity duration-150"
@@ -56,14 +56,14 @@ const DialogContent = React.forwardRef<
   
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay style={{ pointerEvents: 'none' }} />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
           // Clases base: solo aplicar si no hay clases personalizadas de posicionamiento
           !className?.includes('bottom-0') && !className?.includes('top-auto') && "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
-          // Tamaño y estilos base - z-index menor que CheckoutModal (que usa z-[60])
-          "z-50 w-[calc(100%-2rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
+          // Tamaño y estilos base - z-index mucho mayor que overlay para estar por encima
+          "z-[100] pointer-events-auto [&>*]:pointer-events-auto [&_*]:pointer-events-auto w-[calc(100%-2rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
           // Solo aplicar grid si no hay clases personalizadas
           !className?.includes('flex') && "grid",
           // Animaciones optimizadas para mobile
@@ -74,7 +74,21 @@ const DialogContent = React.forwardRef<
           className?.includes('bottom-0') && isMobile && "data-[state=open]:translate-y-0 data-[state=closed]:translate-y-full transition-transform duration-300 ease-out",
           className
         )}
-        style={{ willChange: isMobile ? 'opacity, transform' : undefined }}
+        style={{ 
+          willChange: isMobile ? 'opacity, transform' : undefined, 
+          pointerEvents: 'auto',
+          zIndex: 100
+        }}
+        onInteractOutside={(e) => {
+          // Permitir cerrar solo si el click es fuera del contenido
+          // No prevenir el cierre si el click es en el overlay
+          const target = e.target as HTMLElement
+          const content = e.currentTarget as HTMLElement
+          // Si el target está dentro del contenido, prevenir el cierre
+          if (content.contains(target) && target !== content) {
+            e.preventDefault()
+          }
+        }}
         {...props}
       >
         {children}

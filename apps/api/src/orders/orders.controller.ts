@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -13,6 +14,7 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { AddOrderItemDto } from './dto/add-order-item.dto';
+import { UpdateOrderItemDto } from './dto/update-order-item.dto';
 import { CreatePartialPaymentDto } from './dto/create-partial-payment.dto';
 import { MoveOrderDto } from './dto/move-order.dto';
 import { MergeOrdersDto } from './dto/merge-orders.dto';
@@ -68,6 +70,20 @@ export class OrdersController {
   ) {
     const storeId = req.user.store_id;
     return this.ordersService.addOrderItem(storeId, id, dto);
+  }
+
+  /**
+   * Actualiza la cantidad de un item de una orden
+   */
+  @Patch(':id/items/:itemId')
+  async updateOrderItemQuantity(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateOrderItemDto,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    return this.ordersService.updateOrderItemQuantity(storeId, id, itemId, dto.qty);
   }
 
   /**

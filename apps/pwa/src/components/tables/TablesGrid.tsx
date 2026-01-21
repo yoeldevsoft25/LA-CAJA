@@ -12,6 +12,7 @@ import {
   QrCode,
   MoreVertical,
 } from 'lucide-react'
+import OrderProgressBar, { type OrderProgressData } from '@/components/public/OrderProgressBar'
 import {
   tablesService,
   Table,
@@ -192,6 +193,52 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
     return { bs: Math.max(0, totalBs), usd: Math.max(0, totalUsd) }
   }
 
+  const calculateElapsedTime = (order: Order) => {
+    if (!order.opened_at) return 0
+    const openedAt = new Date(order.opened_at).getTime()
+    const now = Date.now()
+    return Math.floor((now - openedAt) / (1000 * 60)) // minutos
+  }
+
+  const formatTime = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes}m`
+    }
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours}h ${mins}m`
+  }
+
+  const getTimeColor = (minutes: number) => {
+    if (minutes < 15) return 'text-green-600'
+    if (minutes < 30) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const getOrderProgress = (order: Order): OrderProgressData => {
+    if (!order.items || !Array.isArray(order.items)) {
+      return {
+        totalItems: 0,
+        pendingItems: 0,
+        preparingItems: 0,
+        readyItems: 0,
+        orderStatus: order.status,
+      }
+    }
+
+    const pendingItems = order.items.filter((item: any) => item.status === 'pending' || !item.status).length
+    const preparingItems = order.items.filter((item: any) => item.status === 'preparing').length
+    const readyItems = order.items.filter((item: any) => item.status === 'ready').length
+
+    return {
+      totalItems: order.items.length,
+      pendingItems,
+      preparingItems,
+      readyItems,
+      orderStatus: order.status,
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -239,19 +286,24 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
             {tables?.map((table) => {
               const order = getTableOrder(table.id)
               const totals = order ? calculateOrderTotal(order) : null
+              const elapsedTime = order ? calculateElapsedTime(order) : 0
+              const isLongWait = elapsedTime > 30
 
               return (
                 <div
                   key={table.id}
                   onClick={() => onTableClick(table)}
                   className={cn(
-                    'relative p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer hover:shadow-md',
+                    'relative p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer hover:shadow-lg',
+                    'bg-card backdrop-blur-sm',
                     table.status === 'occupied'
-                      ? 'border-primary bg-primary/5'
+                      ? isLongWait
+                        ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20'
+                        : 'border-primary/50 bg-primary/5'
                       : table.status === 'reserved'
-                        ? 'border-warning bg-warning/5'
+                        ? 'border-warning/50 bg-warning/5'
                         : table.status === 'out_of_service'
-                          ? 'border-destructive bg-destructive/5 opacity-60'
+                          ? 'border-destructive/50 bg-destructive/5 opacity-60'
                           : 'border-border bg-card hover:border-primary/50'
                   )}
                 >
@@ -340,27 +392,55 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                     )}
 
                     {order && (
-                      <div className="mt-3 pt-3 border-t border-border space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Orden:</span>
-                          <span className="font-mono font-semibold text-foreground">
-                            {order.order_number}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Coffee className="w-3.5 h-3.5" />
-                          <span>{order.items.length} items</span>
-                        </div>
-                        {totals && (
-                          <div className="flex items-center gap-1 text-xs font-semibold text-primary">
-                            <DollarSign className="w-3.5 h-3.5" />
-                            <span>${totals.usd.toFixed(2)}</span>
+                      <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                        {/* Información de la orden */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Orden:</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              {order.order_number}
+                            </span>
                           </div>
-                        )}
-                        {order.status === 'paused' && (
-                          <div className="flex items-center gap-1 text-xs text-warning">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>Pausada</span>
+                          
+                          {/* Tiempo transcurrido */}
+                          {elapsedTime > 0 && (
+                            <div className={cn(
+                              'flex items-center gap-1.5 text-xs font-medium',
+                              getTimeColor(elapsedTime)
+                            )}>
+                              <Clock className={cn('w-3.5 h-3.5', getTimeColor(elapsedTime))} />
+                              <span>{formatTime(elapsedTime)}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Coffee className="w-3.5 h-3.5" />
+                            <span>{order.items?.length || 0} items</span>
+                          </div>
+                          
+                          {totals && (
+                            <div className="flex items-center gap-1 text-xs font-semibold text-primary">
+                              <DollarSign className="w-3.5 h-3.5" />
+                              <span>${totals.usd.toFixed(2)}</span>
+                            </div>
+                          )}
+                          
+                          {order.status === 'paused' && (
+                            <div className="flex items-center gap-1 text-xs text-warning">
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>Pausada</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Barra de progreso de la orden */}
+                        {order.items && order.items.length > 0 && (
+                          <div className="pt-2 border-t border-border/30">
+                            <OrderProgressBar 
+                              progress={getOrderProgress(order)} 
+                              compact={true}
+                              showLabels={false}
+                            />
                           </div>
                         )}
                       </div>

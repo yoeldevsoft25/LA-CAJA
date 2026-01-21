@@ -14,6 +14,7 @@ export interface OrderItem {
   discount_bs: number | string
   discount_usd: number | string
   note: string | null
+  status?: 'pending' | 'preparing' | 'ready' // Estado en cocina
   added_at: string
   created_at: string
   product?: {
@@ -141,6 +142,14 @@ export const ordersService = {
    */
   async addOrderItem(orderId: string, data: AddOrderItemRequest): Promise<OrderItem> {
     const response = await api.post<OrderItem>(`/orders/${orderId}/items`, data)
+    return response.data
+  },
+
+  /**
+   * Actualiza la cantidad de un item de una orden
+   */
+  async updateOrderItemQuantity(orderId: string, itemId: string, qty: number): Promise<OrderItem> {
+    const response = await api.patch<OrderItem>(`/orders/${orderId}/items/${itemId}`, { qty })
     return response.data
   },
 

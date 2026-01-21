@@ -279,6 +279,46 @@ export class OrdersService {
   }
 
   /**
+   * Actualiza la cantidad de un item de una orden
+   */
+  async updateOrderItemQuantity(
+    storeId: string,
+    orderId: string,
+    itemId: string,
+    qty: number,
+  ): Promise<OrderItem> {
+    const order = await this.getOrderById(storeId, orderId);
+
+    if (order.status !== 'open') {
+      throw new BadRequestException(
+        `Solo se pueden actualizar items de órdenes abiertas. Estado actual: ${order.status}`,
+      );
+    }
+
+    const item = await this.orderItemRepository.findOne({
+      where: { id: itemId, order_id: orderId },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Item de orden no encontrado');
+    }
+
+    if (qty < 1) {
+      throw new BadRequestException('La cantidad debe ser al menos 1');
+    }
+
+    item.qty = qty;
+    const updatedItem = await this.orderItemRepository.save(item);
+    
+    // Recargar orden completa para emitir
+    const updatedOrder = await this.getOrderById(storeId, orderId);
+    this.notificationsGateway.emitOrderUpdate(storeId, updatedOrder);
+    this.notificationsGateway.emitKitchenUpdate(storeId, updatedOrder);
+    
+    return updatedItem;
+  }
+
+  /**
    * Elimina un item de una orden
    */
   async removeOrderItem(
