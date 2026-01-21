@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Phone, CreditCard, DollarSign, Clock, CheckCircle, AlertCircle, Eye, Plus } from 'lucide-react'
+import { Phone, CreditCard, DollarSign, Clock, CheckCircle, AlertCircle, Eye, Plus, MessageCircle } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
-import { debtsService, Debt, calculateDebtTotals } from '@/services/debts.service'
+import { debtsService, Debt, calculateDebtTotals, DebtSummary } from '@/services/debts.service'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Card } from '@/components/ui/card'
@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
+import { createWhatsAppUrl } from '@/utils/whatsapp'
+import toast from 'react-hot-toast'
 
 interface CustomerDebtCardProps {
   customer: Customer
@@ -46,6 +48,87 @@ const statusConfig = {
   },
 }
 
+/**
+ * Formatea la información de deudas de un cliente para enviar por WhatsApp
+ */
+function formatCustomerDebtsForWhatsApp(
+  customer: Customer,
+  debts: Debt[],
+  summary?: DebtSummary,
+  storeName: string = 'SISTEMA POS'
+): string {
+  // Filtrar solo deudas activas (abiertas y parciales)
+  const activeDebts = debts.filter((d) => d.status !== 'paid')
+  
+  if (activeDebts.length === 0) {
+    return `💳 *${storeName}*\n📋 Estado de Fiados\n\n*CLIENTE:*\n${customer.name}${customer.document_id ? `\nCédula: ${customer.document_id}` : ''}${customer.phone ? `\nTeléfono: ${customer.phone}` : ''}\n\n✅ *Sin deudas pendientes*`
+  }
+
+  // Calcular totales solo de deudas activas
+  // Usamos calculateDebtTotals para cada deuda activa para obtener abonos y pendiente actualizado
+  let totalDebtUsd = 0
+  let totalPaidUsd = 0
+  let totalRemainingUsd = 0
+
+  activeDebts.forEach((debt) => {
+    const calc = calculateDebtTotals(debt)
+    totalDebtUsd += Number(debt.amount_usd)
+    totalPaidUsd += calc.total_paid_usd
+    totalRemainingUsd += calc.remaining_usd
+  })
+
+  // summary está disponible pero calculamos de activeDebts para consistencia
+  // Mantenemos el parámetro para compatibilidad con la firma de función
+  void summary
+
+  let text = `💳 *${storeName}*\n`
+  text += `📋 Estado de Fiados\n`
+  text += `\n`
+  text += `*CLIENTE:*\n`
+  text += `${customer.name}\n`
+  
+  if (customer.document_id) {
+    text += `Cédula: ${customer.document_id}\n`
+  }
+  
+  if (customer.phone) {
+    text += `Teléfono: ${customer.phone}\n`
+  }
+  
+  text += `\n`
+  text += `*DEUDAS PENDIENTES:*\n`
+  text += `\n`
+
+  // Listar cada deuda activa
+  activeDebts.forEach((debt, index) => {
+    const calc = calculateDebtTotals(debt)
+    const debtId = debt.id.slice(0, 8).toUpperCase()
+    const debtDate = format(new Date(debt.created_at), 'dd MMM yyyy', { locale: es })
+    
+    const emoji = index === 0 ? '1️⃣' : index === 1 ? '2️⃣' : index === 2 ? '3️⃣' : `${index + 1}.`
+    
+    text += `${emoji} Deuda #${debtId}\n`
+    text += `   📅 Fecha: ${debtDate}\n`
+    text += `   💵 Monto: $${Number(debt.amount_usd).toFixed(2)}\n`
+    text += `   ✅ Abonado: $${calc.total_paid_usd.toFixed(2)}\n`
+    text += `   ⏳ Pendiente: $${calc.remaining_usd.toFixed(2)}\n`
+    
+    if (index < activeDebts.length - 1) {
+      text += `\n`
+    }
+  })
+
+  text += `\n`
+  text += `━━━━━━━━━━━━━━━━\n`
+  text += `*RESUMEN:*\n`
+  text += `Total Fiado: $${totalDebtUsd.toFixed(2)}\n`
+  text += `Total Abonado: $${totalPaidUsd.toFixed(2)}\n`
+  text += `💰 Total Pendiente: $${totalRemainingUsd.toFixed(2)}\n`
+  text += `━━━━━━━━━━━━━━━━`
+
+  return text
+}
+
 export default function CustomerDebtCard({
   customer,
   debts,
@@ -78,6 +161,29 @@ export default function CustomerDebtCard({
         },
         { usd: 0, bs: 0 }
       )
+
+  // Handler para enviar por WhatsApp
+  const handleSendWhatsApp = () => {
+    if (!customer.phone) {
+      toast.error('El cliente no tiene teléfono registrado')
+      return
+    }
+
+    if (!hasOpenDebts) {
+      toast.error('El cliente no tiene deudas pendientes para enviar')
+      return
+    }
+
+    try {
+      const message = formatCustomerDebtsForWhatsApp(customer, debtsArray, summary)
+      const whatsappUrl = createWhatsAppUrl(customer.phone, message)
+      window.open(whatsappUrl, '_blank')
+      toast.success('Abriendo WhatsApp...')
+    } catch (error) {
+      console.error('[CustomerDebtCard] Error sharing to WhatsApp:', error)
+      toast.error('Error al compartir por WhatsApp')
+    }
+  }
 
   return (
     <Card className={cn(
@@ -120,6 +226,22 @@ export default function CustomerDebtCard({
               </div>
 
               <div className="flex items-center gap-3 ml-3">
+                {/* Botón WhatsApp - solo si hay deudas activas y teléfono */}
+                {hasOpenDebts && customer.phone && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSendWhatsApp()
+                    }}
+                    className="h-9 w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    title="Enviar estado de fiados por WhatsApp"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </Button>
+                )}
+                
                 {/* Total pendiente */}
                 <div className="text-right">
                   {hasOpenDebts ? (

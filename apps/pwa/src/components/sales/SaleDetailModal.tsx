@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useNavigate } from 'react-router-dom'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
+import { encodeWhatsAppText } from '@/utils/whatsapp'
 
 interface SaleDetailModalProps {
   isOpen: boolean
@@ -1024,7 +1025,7 @@ export default function SaleDetailModal({
               onClick={() => {
                 try {
                   const text = formatSaleForWhatsApp(sale, 'SISTEMA POS')
-                  const encodedText = encodeURIComponent(text)
+                  const encodedText = encodeWhatsAppText(text)
                   const whatsappUrl = `https://wa.me/?text=${encodedText}`
                   window.open(whatsappUrl, '_blank')
                   toast.success('Abriendo WhatsApp...')
