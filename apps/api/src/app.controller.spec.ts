@@ -24,10 +24,11 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('health', () => {
-    it('should return health status', async () => {
-      const health = await appController.getHealth();
-      expect(health).toHaveProperty('status', 'ok');
+  describe('ping', () => {
+    it('should return ping status', () => {
+      const ping = appController.ping();
+      expect(ping).toHaveProperty('status', 'ok');
+      expect(ping).toHaveProperty('message', 'Service is alive');
     });
   });
 });
