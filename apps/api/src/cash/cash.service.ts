@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull, Brackets } from 'typeorm';
@@ -18,6 +19,8 @@ import { randomUUID } from 'crypto';
 
 @Injectable()
 export class CashService {
+  private readonly logger = new Logger(CashService.name);
+
   constructor(
     @InjectRepository(CashSession)
     private cashSessionRepository: Repository<CashSession>,
@@ -330,7 +333,10 @@ export class CashService {
         });
       } catch (error) {
         // Log error pero no fallar el cierre de sesión
-        console.error(`Error generando asiento contable para cierre de caja ${verifySession.id}`, error);
+        this.logger.error(
+          `Error generando asiento contable para cierre de caja ${verifySession.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
       }
     });
 

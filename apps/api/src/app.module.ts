@@ -108,10 +108,12 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
           configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'false';
         
         // Configuración SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
-        // Se puede override con DB_SSL_REJECT_UNAUTHORIZED=true para forzar verificación estricta
+        // En produccion, SIEMPRE rechazar certificados no autorizados
+        // En desarrollo, se puede usar DB_SSL_REJECT_UNAUTHORIZED=true para forzar verificacion
+        const sslRejectUnauthorizedEnv =
+          configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED');
         const sslRejectUnauthorized =
-          configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'true' ||
-          (!isCloudDatabase && isProduction);
+          isProduction || sslRejectUnauthorizedEnv === 'true';
         
         // Timeouts configurables: más largos en desarrollo local (útil para VPN)
         const connectionTimeoutEnv = configService.get<number>('DB_CONNECTION_TIMEOUT');

@@ -12,6 +12,7 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RealTimeAnalyticsService } from './realtime-analytics.service';
 import { ConfigService } from '@nestjs/config';
+import { wsCorsOptions } from '../common/utils/ws-cors';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -19,10 +20,7 @@ interface AuthenticatedSocket extends Socket {
 }
 
 @WebSocketGateway({
-  cors: {
-    origin: '*', // En producción, restringir a orígenes específicos
-    credentials: true,
-  },
+  cors: wsCorsOptions,
   namespace: '/realtime',
 })
 export class RealTimeAnalyticsGateway

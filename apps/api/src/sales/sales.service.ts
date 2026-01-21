@@ -164,6 +164,329 @@ export class SalesService {
     }
   }
 
+  /**
+   * Valida disponibilidad de stock ANTES de la transacción
+   * Esta es una validación rápida sin locks para rechazar rápidamente si no hay stock.
+   * La validación definitiva con locks se hace dentro de la transacción.
+   */
+  private async validateStockAvailability(
+    storeId: string,
+    dto: CreateSaleDto,
+    userId?: string,
+  ): Promise<void> {
+    // Determinar bodega de venta
+    let warehouseId: string | null = null;
+    if (dto.warehouse_id) {
+      // Validar que la bodega existe y pertenece a la tienda
+      await this.warehousesService.findOne(storeId, dto.warehouse_id);
+      warehouseId = dto.warehouse_id;
+    } else {
+      // Usar bodega por defecto si no se especifica
+      const defaultWarehouse =
+        await this.warehousesService.getDefaultOrFirst(storeId);
+      warehouseId = defaultWarehouse.id;
+    }
+
+    // Validar stock para cada item
+    for (const cartItem of dto.items) {
+      const product = await this.productRepository.findOne({
+        where: {
+          id: cartItem.product_id,
+          store_id: storeId,
+          is_active: true,
+        },
+      });
+
+      if (!product) {
+        throw new NotFoundException(
+          `Producto ${cartItem.product_id} no encontrado o inactivo`,
+        );
+      }
+
+      // Manejar variante si se proporciona
+      let variant: ProductVariant | null = null;
+      if (cartItem.variant_id) {
+        variant = await this.dataSource.getRepository(ProductVariant).findOne({
+          where: { id: cartItem.variant_id, product_id: product.id },
+        });
+
+        if (!variant) {
+          throw new NotFoundException(
+            `Variante ${cartItem.variant_id} no encontrada para el producto ${product.name}`,
+          );
+        }
+
+        if (!variant.is_active) {
+          throw new BadRequestException(
+            `La variante ${variant.variant_type}: ${variant.variant_value} está desactivada`,
+          );
+        }
+      }
+
+      const isWeightProduct = Boolean(
+        cartItem.is_weight_product || product.is_weight_product,
+      );
+      const weightValue = isWeightProduct
+        ? Number(cartItem.weight_value ?? cartItem.qty)
+        : 0;
+
+      if (isWeightProduct && weightValue <= 0) {
+        throw new BadRequestException(
+          `Peso inválido para el producto ${product.name}`,
+        );
+      }
+
+      const requestedQty = isWeightProduct ? weightValue : cartItem.qty;
+
+      // Verificar si el producto tiene lotes
+      const productLots = await this.dataSource.getRepository(ProductLot).find({
+        where: { product_id: product.id },
+      });
+
+      if (productLots.length > 0) {
+        // Producto con lotes: validar que haya suficiente stock en lotes disponibles
+        const availableLots = productLots.filter(
+          (lot) => lot.remaining_quantity > 0,
+        );
+
+        if (availableLots.length === 0) {
+          throw new BadRequestException(
+            `No hay stock disponible en lotes para ${product.name}`,
+          );
+        }
+
+        // Calcular stock total disponible en lotes
+        const totalAvailableInLots = availableLots.reduce(
+          (sum, lot) => sum + Number(lot.remaining_quantity),
+          0,
+        );
+
+        if (totalAvailableInLots < requestedQty) {
+          throw new BadRequestException(
+            `Stock insuficiente en lotes para ${product.name}. Disponible: ${totalAvailableInLots}, Solicitado: ${requestedQty}`,
+          );
+        }
+      } else {
+        // Producto sin lotes: validar stock normal
+        const currentStock = warehouseId
+          ? await this.warehousesService.getStockQuantity(
+              storeId,
+              warehouseId,
+              product.id,
+              variant?.id || null,
+            )
+          : await this.warehousesService.getTotalStockQuantity(
+              storeId,
+              product.id,
+              variant?.id || null,
+            );
+
+        if (currentStock < requestedQty) {
+          const variantInfo = variant
+            ? ` (${variant.variant_type}: ${variant.variant_value})`
+            : '';
+          throw new BadRequestException(
+            `Stock insuficiente para ${product.name}${variantInfo}. Disponible: ${currentStock}, Solicitado: ${requestedQty}`,
+          );
+        }
+      }
+
+      // Si el producto tiene seriales, validar que haya suficientes disponibles
+      if (!isWeightProduct) {
+        const productSerials = await this.dataSource.getRepository(ProductSerial).find({
+          where: { product_id: product.id },
+        });
+
+        if (productSerials.length > 0) {
+          const availableSerials = productSerials.filter(
+            (s) => s.status === 'available',
+          );
+
+          if (availableSerials.length < requestedQty) {
+            throw new BadRequestException(
+              `No hay suficientes seriales disponibles para ${product.name}. Disponibles: ${availableSerials.length}, Solicitados: ${requestedQty}`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Valida y bloquea stock de una bodega específica usando SELECT FOR UPDATE
+   * Retorna el stock disponible después de bloquear
+   */
+  private async validateAndLockStock(
+    manager: EntityManager,
+    storeId: string,
+    warehouseId: string,
+    productId: string,
+    variantId: string | null,
+    requestedQty: number,
+  ): Promise<number> {
+    // Usar SELECT FOR UPDATE para bloquear la fila durante la transacción
+    const result = await manager.query(
+      `SELECT stock, reserved
+       FROM warehouse_stock
+       WHERE warehouse_id = $1
+         AND product_id = $2
+         AND (($3::uuid IS NULL AND variant_id IS NULL) OR variant_id = $3::uuid)
+       FOR UPDATE
+       LIMIT 1`,
+      [warehouseId, productId, variantId],
+    );
+
+    if (!result || result.length === 0) {
+      // No hay registro de stock, significa stock = 0
+      if (requestedQty > 0) {
+        throw new BadRequestException(
+          `No hay stock disponible para el producto solicitado`,
+        );
+      }
+      return 0;
+    }
+
+    const availableStock = Number(result[0].stock || 0) - Number(result[0].reserved || 0);
+    return Math.max(0, availableStock);
+  }
+
+  /**
+   * Valida y bloquea stock total (suma de todas las bodegas) usando SELECT FOR UPDATE
+   * Retorna el stock total disponible después de bloquear
+   */
+  private async validateAndLockTotalStock(
+    manager: EntityManager,
+    storeId: string,
+    productId: string,
+    variantId: string | null,
+    requestedQty: number,
+  ): Promise<number> {
+    // Bloquear todas las filas de stock para este producto en todas las bodegas de la tienda
+    const result = await manager.query(
+      `SELECT COALESCE(SUM(stock - COALESCE(reserved, 0)), 0) as total_available
+       FROM warehouse_stock ws
+       INNER JOIN warehouses w ON ws.warehouse_id = w.id
+       WHERE w.store_id = $1
+         AND ws.product_id = $2
+         AND (($3::uuid IS NULL AND ws.variant_id IS NULL) OR ws.variant_id = $3::uuid)
+       FOR UPDATE OF ws`,
+      [storeId, productId, variantId],
+    );
+
+    const totalAvailable = Number(result[0]?.total_available || 0);
+    return Math.max(0, totalAvailable);
+  }
+
+  /**
+   * Valida que el cliente tenga crédito disponible para una venta FIAO
+   */
+  private async validateFIAOCredit(
+    storeId: string,
+    dto: CreateSaleDto,
+    totalUsd: number,
+  ): Promise<void> {
+    let customerId: string | null = null;
+
+    // Determinar customer_id
+    if (dto.customer_id) {
+      customerId = dto.customer_id;
+    } else if (dto.customer_document_id) {
+      const customer = await this.customerRepository.findOne({
+        where: {
+          store_id: storeId,
+          document_id: dto.customer_document_id.trim(),
+        },
+      });
+      if (customer) {
+        customerId = customer.id;
+      }
+    }
+
+    if (!customerId) {
+      throw new BadRequestException(
+        'FIAO requiere un cliente existente. Proporciona customer_id o customer_document_id',
+      );
+    }
+
+    // Obtener cliente
+    const customer = await this.customerRepository.findOne({
+      where: { id: customerId, store_id: storeId },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Cliente no encontrado');
+    }
+
+    // Validar que tenga crédito habilitado
+    if (customer.credit_limit === null || customer.credit_limit <= 0) {
+      throw new BadRequestException(
+        'El cliente no tiene crédito habilitado para compras FIAO',
+      );
+    }
+
+    // Calcular deuda actual
+    const debtResult = await this.dataSource.query(
+      `
+      SELECT COALESCE(SUM(
+        amount_usd - COALESCE((
+          SELECT SUM(amount_usd) FROM debt_payments WHERE debt_id = d.id
+        ), 0)
+      ), 0) as current_debt
+      FROM debts d
+      WHERE store_id = $1 
+        AND customer_id = $2
+        AND status != 'paid'
+    `,
+      [storeId, customerId],
+    );
+
+    const currentDebt = parseFloat(debtResult[0]?.current_debt || '0');
+    const availableCredit = Number(customer.credit_limit) - currentDebt;
+
+    // Validar que el crédito disponible sea suficiente
+    if (availableCredit < totalUsd) {
+      throw new BadRequestException(
+        `Crédito insuficiente. Disponible: $${availableCredit.toFixed(2)} USD, Solicitado: $${totalUsd.toFixed(2)} USD`,
+      );
+    }
+  }
+
+  /**
+   * Ejecuta una transacción con retry logic para manejar deadlocks
+   * Reintenta hasta 3 veces con backoff exponencial si hay deadlock (código 40P01)
+   */
+  private async transactionWithRetry<T>(
+    callback: (manager: EntityManager) => Promise<T>,
+    maxRetries: number = 3,
+  ): Promise<T> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await this.dataSource.transaction(callback);
+      } catch (error: any) {
+        // Código de error PostgreSQL para deadlock
+        const isDeadlock = error?.code === '40P01' || 
+                          error?.message?.includes('deadlock') ||
+                          error?.message?.includes('Deadlock');
+
+        if (isDeadlock && attempt < maxRetries - 1) {
+          // Backoff exponencial: 100ms, 200ms, 400ms
+          const delay = 100 * Math.pow(2, attempt);
+          this.logger.warn(
+            `Deadlock detectado en transacción (intento ${attempt + 1}/${maxRetries}). Reintentando en ${delay}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        // Si no es deadlock o ya se agotaron los reintentos, lanzar el error
+        throw error;
+      }
+    }
+
+    // Esto no debería ejecutarse nunca, pero TypeScript lo requiere
+    throw new Error('Error inesperado en transactionWithRetry');
+  }
+
   private async getNextSaleNumber(
     manager: EntityManager,
     storeId: string,
@@ -242,9 +565,28 @@ export class SalesService {
       throw new BadRequestException(errorMessage);
     }
 
-    // Validar que hay items
+    // ⚠️ EDGE CASE: Validar que hay items
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('El carrito no puede estar vacío');
+    }
+
+    // ⚠️ EDGE CASE: Validar que todos los items tengan cantidad > 0
+    for (const item of dto.items) {
+      const qty = item.is_weight_product && item.weight_value
+        ? Number(item.weight_value)
+        : Number(item.qty) || 0;
+      if (qty <= 0) {
+        throw new BadRequestException(
+          `La cantidad debe ser mayor a 0 para el producto ${item.product_id}`,
+        );
+      }
+    }
+
+    // ⚠️ EDGE CASE: Validar que exchange_rate sea válido
+    if (!dto.exchange_rate || dto.exchange_rate <= 0) {
+      throw new BadRequestException(
+        'La tasa de cambio debe ser mayor a 0',
+      );
     }
 
     // Validar modo caja rápida si aplica
@@ -302,8 +644,33 @@ export class SalesService {
     // Forzar asociación a la sesión abierta (incluye casos en los que no se envió cash_session_id)
     dto.cash_session_id = openSession.id;
 
-    // Usar transacción para asegurar consistencia (incluye creación/actualización de cliente)
-    const saleWithDebt = await this.dataSource.transaction(async (manager) => {
+    // ⚠️ VALIDACIÓN INICIAL DE STOCK (antes de la transacción para rechazar rápidamente)
+    // Esta es una validación rápida sin locks. La validación definitiva con locks se hace dentro de la transacción.
+    await this.validateStockAvailability(storeId, dto, userId);
+
+    // ⚠️ VALIDACIÓN DE CRÉDITO FIAO (antes de la transacción)
+    // Calcular total aproximado para validación (sin descuentos de promoción aún)
+    if (dto.payment_method === 'FIAO') {
+      // Calcular subtotal aproximado para validación rápida
+      let approximateTotalUsd = 0;
+      for (const item of dto.items) {
+        const product = await this.productRepository.findOne({
+          where: { id: item.product_id, store_id: storeId },
+        });
+        if (product) {
+          const qty = item.is_weight_product && item.weight_value
+            ? Number(item.weight_value)
+            : Number(item.qty) || 0;
+          const priceUsd = item.price_per_weight_usd || product.price_usd || 0;
+          const discountUsd = item.discount_usd || 0;
+          approximateTotalUsd += (priceUsd * qty) - discountUsd;
+        }
+      }
+      await this.validateFIAOCredit(storeId, dto, approximateTotalUsd);
+    }
+
+    // Usar transacción con retry logic para deadlocks
+    const saleWithDebt = await this.transactionWithRetry(async (manager) => {
       // Manejar información del cliente (opcional para todas las ventas)
       let finalCustomerId: string | null = null;
 
@@ -500,13 +867,15 @@ export class SalesService {
 
         // Si el producto tiene lotes, usar lógica FIFO
         if (productLots.length > 0) {
-          // Filtrar lotes disponibles (con stock) - getLotsForSale también filtra vencidos,
-          // pero hacerlo aquí mejora la claridad del código
-          const availableLots = productLots.filter(
-            (lot) => lot.remaining_quantity > 0,
-          );
+          // ⚠️ VALIDACIÓN CON LOCK: Bloquear lotes con SELECT FOR UPDATE
+          const lockedLots = await manager
+            .createQueryBuilder(ProductLot, 'lot')
+            .where('lot.product_id = :productId', { productId: product.id })
+            .andWhere('lot.remaining_quantity > 0')
+            .setLock('pessimistic_write')
+            .getMany();
 
-          if (availableLots.length === 0) {
+          if (lockedLots.length === 0) {
             throw new BadRequestException(
               `No hay stock disponible en lotes para ${product.name}`,
             );
@@ -516,7 +885,7 @@ export class SalesService {
           const allocations = this.inventoryRulesService.getLotsForSale(
             product.id,
             requestedQty,
-            availableLots,
+            lockedLots,
           );
 
           // Usar el primer lote asignado (puede haber múltiples si se agota uno)
@@ -524,9 +893,9 @@ export class SalesService {
           // uno por cada lote asignado, pero por simplicidad usamos el primero
           lotId = allocations[0]?.lot_id || null;
 
-          // Actualizar remaining_quantity de los lotes asignados
+          // Actualizar remaining_quantity de los lotes asignados (ya están bloqueados)
           for (const allocation of allocations) {
-            const lot = availableLots.find((l) => l.id === allocation.lot_id);
+            const lot = lockedLots.find((l) => l.id === allocation.lot_id);
             if (lot) {
               lot.remaining_quantity = Number(lot.remaining_quantity) - allocation.quantity;
               lot.updated_at = new Date();
@@ -546,18 +915,23 @@ export class SalesService {
             }
           }
         } else {
-          // Si no tiene lotes, verificar stock normal (por variante si aplica)
+          // ⚠️ VALIDACIÓN CON LOCK: Verificar stock normal con SELECT FOR UPDATE para evitar race conditions
+          // Esta validación se hace DENTRO de la transacción con lock para garantizar atomicidad
           const currentStock = warehouseId
-            ? await this.warehousesService.getStockQuantity(
+            ? await this.validateAndLockStock(
+                manager,
                 storeId,
                 warehouseId,
                 product.id,
                 variant?.id || null,
+                requestedQty,
               )
-            : await this.warehousesService.getTotalStockQuantity(
+            : await this.validateAndLockTotalStock(
+                manager,
                 storeId,
                 product.id,
                 variant?.id || null,
+                requestedQty,
               );
 
           if (currentStock < requestedQty) {
@@ -797,7 +1171,10 @@ export class SalesService {
       } catch (error) {
         // Si no hay series configuradas, la venta se crea sin número de factura
         // Esto permite que el sistema funcione aunque no se hayan configurado series
-        console.warn('No se pudo generar número de factura:', error);
+        this.logger.warn(
+          'No se pudo generar número de factura',
+          error instanceof Error ? error.stack : String(error),
+        );
       }
 
       const saleNumber = await this.getNextSaleNumber(manager, storeId);
@@ -894,7 +1271,49 @@ export class SalesService {
       }
 
       // Si es venta FIAO, crear la deuda automáticamente
+      // ⚠️ EDGE CASE: Validar crédito nuevamente dentro de la transacción (con el total real)
       if (dto.payment_method === 'FIAO' && finalCustomerId) {
+        // Validar crédito nuevamente con el total real calculado (puede diferir del aproximado)
+        const customer = await manager.findOne(Customer, {
+          where: { id: finalCustomerId, store_id: storeId },
+        });
+
+        if (!customer) {
+          throw new NotFoundException('Cliente no encontrado');
+        }
+
+        if (customer.credit_limit === null || customer.credit_limit <= 0) {
+          throw new BadRequestException(
+            'El cliente no tiene crédito habilitado para compras FIAO',
+          );
+        }
+
+        // Calcular deuda actual dentro de la transacción
+        const debtResult = await manager.query(
+          `
+          SELECT COALESCE(SUM(
+            amount_usd - COALESCE((
+              SELECT SUM(amount_usd) FROM debt_payments WHERE debt_id = d.id
+            ), 0)
+          ), 0) as current_debt
+          FROM debts d
+          WHERE store_id = $1 
+            AND customer_id = $2
+            AND status != 'paid'
+        `,
+          [storeId, finalCustomerId],
+        );
+
+        const currentDebt = parseFloat(debtResult[0]?.current_debt || '0');
+        const availableCredit = Number(customer.credit_limit) - currentDebt;
+
+        // Validar que el crédito disponible sea suficiente con el total real
+        if (availableCredit < totalUsd) {
+          throw new BadRequestException(
+            `Crédito insuficiente. Disponible: $${availableCredit.toFixed(2)} USD, Total de venta: $${totalUsd.toFixed(2)} USD`,
+          );
+        }
+
         const debt = manager.create(Debt, {
           id: randomUUID(),
           store_id: storeId,

@@ -11,6 +11,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -29,6 +30,8 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 @UseGuards(JwtAuthGuard)
 @Roles('owner')
 export class RealTimeAnalyticsController {
+  private readonly logger = new Logger(RealTimeAnalyticsController.name);
+
   constructor(
     private readonly analyticsService: RealTimeAnalyticsService,
     private readonly gateway: RealTimeAnalyticsGateway,
@@ -131,7 +134,10 @@ export class RealTimeAnalyticsController {
         }
       } catch (error) {
         // Log error pero no fallar el proceso
-        console.error('Error creando notificación desde alerta', error);
+        this.logger.error(
+          'Error creando notificación desde alerta',
+          error instanceof Error ? error.stack : String(error),
+        );
       }
     }
 

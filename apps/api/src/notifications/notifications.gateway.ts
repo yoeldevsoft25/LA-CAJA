@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { NotificationsService } from './notifications.service';
+import { wsCorsOptions } from '../common/utils/ws-cors';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -18,10 +19,7 @@ interface AuthenticatedSocket extends Socket {
 }
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-    credentials: true,
-  },
+  cors: wsCorsOptions,
   namespace: '/notifications',
 })
 export class NotificationsGateway

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -6,6 +6,8 @@ import { AuthService } from '../auth.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private readonly logger = new Logger(JwtStrategy.name);
+
   constructor(
     private configService: ConfigService,
     private authService: AuthService,
@@ -26,12 +28,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    console.log('[JwtStrategy] Validando token:', {
-      userId: payload.sub,
-      storeId: payload.store_id,
-      roleInToken: payload.role,
-      fullPayload: payload,
-    });
+    // Logging solo en desarrollo para no exponer información sensible
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.debug('Validando token', {
+        userId: payload.sub,
+        storeId: payload.store_id,
+        roleInToken: payload.role,
+      });
+    }
     
     // Validar que el usuario existe en la tienda
     const member = await this.authService.validateUser(
@@ -42,20 +46,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Usuario no autorizado para esta tienda');
     }
 
-    console.log('[JwtStrategy] Usuario validado:', {
-      userId: payload.sub,
-      storeId: payload.store_id,
-      roleInToken: payload.role,
-      roleInDB: member.role,
-      rolesMatch: payload.role === member.role,
-      fullMember: member,
-    });
-
     // ⚠️ IMPORTANTE: Usar el rol de la base de datos (member.role), NO el del token
     // Esto asegura que si el rol del usuario cambió en la DB, se use el rol actual
     // El token puede tener un rol desactualizado si el usuario cambió de rol después del login
     if (payload.role !== member.role) {
-      console.warn('[JwtStrategy] ⚠️ Discrepancia de rol detectada:', {
+      this.logger.warn('Discrepancia de rol detectada', {
         userId: payload.sub,
         storeId: payload.store_id,
         roleInToken: payload.role,

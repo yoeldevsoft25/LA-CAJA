@@ -3,12 +3,15 @@ import {
   ExecutionContext,
   Injectable,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger(RolesGuard.name);
+
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -26,24 +29,24 @@ export class RolesGuard implements CanActivate {
     const userId = request?.user?.sub || 'unknown';
     const storeId = request?.user?.store_id || 'unknown';
     
-    // Logging para depuración
-    console.log('[RolesGuard] Validando acceso:', {
-      endpoint: `${request.method} ${request.path}`,
-      userId,
-      storeId,
-      userRole,
-      requiredRoles,
-      requestUser: request?.user,
-    });
-    
-    if (!requiredRoles.includes(userRole)) {
-      console.warn('[RolesGuard] Acceso denegado:', {
+    // Logging para depuración (solo en desarrollo)
+    if (process.env.NODE_ENV === 'development') {
+      this.logger.debug('Validando acceso', {
         endpoint: `${request.method} ${request.path}`,
         userId,
         storeId,
         userRole,
         requiredRoles,
-        fullUser: request?.user,
+      });
+    }
+    
+    if (!requiredRoles.includes(userRole)) {
+      this.logger.warn('Acceso denegado', {
+        endpoint: `${request.method} ${request.path}`,
+        userId,
+        storeId,
+        userRole,
+        requiredRoles,
       });
       throw new ForbiddenException(
         `Este endpoint requiere uno de los siguientes roles: ${requiredRoles.join(', ')}. Tu rol actual es: ${userRole}`,

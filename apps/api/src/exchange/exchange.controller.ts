@@ -8,6 +8,7 @@ import {
   Body,
   Request,
   Param,
+  Logger,
 } from '@nestjs/common';
 import { ExchangeService } from './exchange.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,6 +20,8 @@ import { ExchangeRateType } from '../database/entities/exchange-rate.entity';
 @Controller('exchange')
 @UseGuards(JwtAuthGuard)
 export class ExchangeController {
+  private readonly logger = new Logger(ExchangeController.name);
+
   constructor(private readonly exchangeService: ExchangeService) {}
 
   // ============================================
@@ -234,7 +237,10 @@ export class ExchangeController {
         message: 'Tasa BCV no disponible automáticamente. Ingrese manualmente.',
       };
     } catch (error) {
-      console.error('Error en getBCVRate:', error);
+      this.logger.error(
+        'Error en getBCVRate',
+        error instanceof Error ? error.stack : String(error),
+      );
       return {
         rate: null,
         source: null,
@@ -266,7 +272,10 @@ export class ExchangeController {
         available: true,
       };
     } catch (error) {
-      console.error('Error en getCurrentRate:', error);
+      this.logger.error(
+        'Error en getCurrentRate',
+        error instanceof Error ? error.stack : String(error),
+      );
       const fallbackRate = fallback ? parseFloat(fallback) : 36;
       return {
         rate: fallbackRate,

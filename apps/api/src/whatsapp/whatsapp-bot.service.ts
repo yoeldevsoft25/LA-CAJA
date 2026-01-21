@@ -10,7 +10,7 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import * as QRCode from 'qrcode';
 import { join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, rmSync } from 'fs';
 import pino from 'pino';
 
 interface BotInstance {
@@ -41,11 +41,45 @@ export class WhatsAppBotService implements OnModuleDestroy {
 
   /**
    * Inicializa un bot para una tienda
+   * Si el bot ya existe pero no está conectado y no hay QR, lo reinicializa
    */
-  async initializeBot(storeId: string): Promise<void> {
-    if (this.bots.has(storeId)) {
-      this.logger.log(`Bot ya inicializado para tienda ${storeId}`);
-      return;
+  async initializeBot(storeId: string, forceReinit: boolean = false): Promise<void> {
+    const existingBot = this.bots.get(storeId);
+    
+    // Si se fuerza reinicialización, desconectar y eliminar bot existente
+    if (forceReinit && existingBot) {
+      this.logger.log(`Forzando reinicialización del bot para tienda ${storeId}`);
+      if (existingBot.socket) {
+        try {
+          existingBot.socket.end(undefined);
+        } catch (error) {
+          this.logger.warn(`Error cerrando socket existente:`, error);
+        }
+      }
+      this.bots.delete(storeId);
+    } else if (existingBot && !forceReinit) {
+      // Si el bot está conectado, no hacer nada
+      if (existingBot.isConnected) {
+        this.logger.log(`Bot ya conectado para tienda ${storeId}`);
+        return;
+      }
+      
+      // Si hay QR disponible, no reinicializar
+      if (existingBot.qrCode) {
+        this.logger.log(`Bot ya inicializado con QR disponible para tienda ${storeId}`);
+        return;
+      }
+      
+      // Si no está conectado y no hay QR, reinicializar automáticamente
+      this.logger.log(`Bot existe pero sin QR ni conexión, reinicializando para tienda ${storeId}`);
+      if (existingBot.socket) {
+        try {
+          existingBot.socket.end(undefined);
+        } catch (error) {
+          this.logger.warn(`Error cerrando socket existente:`, error);
+        }
+      }
+      this.bots.delete(storeId);
     }
 
     const sessionPath = join(this.sessionsDir, storeId);
@@ -141,6 +175,9 @@ export class WhatsAppBotService implements OnModuleDestroy {
             botInstance.whatsappNumber = number;
             this.logger.log(`Bot conectado para tienda ${storeId}. Número: ${number}`);
           }
+        } else if (connection === 'connecting') {
+          // Cuando está conectando, el QR puede estar disponible
+          // No hacer nada, solo esperar
         }
       });
 
@@ -154,6 +191,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
 
   /**
    * Obtiene el QR code para autenticación
+   * Si no hay QR y no está conectado, intenta reinicializar
    */
   async getQRCode(storeId: string): Promise<string | null> {
     const bot = this.bots.get(storeId);
@@ -163,6 +201,9 @@ export class WhatsAppBotService implements OnModuleDestroy {
       const newBot = this.bots.get(storeId);
       return newBot?.qrCode || null;
     }
+    
+    // Si no hay QR y no está conectado, puede que necesite reinicialización
+    // Pero no lo hacemos aquí para evitar loops, se hace en el controller
     return bot.qrCode;
   }
 
@@ -247,6 +288,26 @@ export class WhatsAppBotService implements OnModuleDestroy {
       bot.socket.end(undefined);
       this.bots.delete(storeId);
       this.logger.log(`Bot desconectado para tienda ${storeId}`);
+    }
+  }
+
+  /**
+   * Limpia la sesión guardada para forzar nueva autenticación
+   */
+  async clearSession(storeId: string): Promise<void> {
+    const sessionPath = join(this.sessionsDir, storeId);
+    
+    // Desconectar bot si existe
+    await this.disconnect(storeId);
+    
+    // Eliminar archivos de sesión
+    if (existsSync(sessionPath)) {
+      try {
+        rmSync(sessionPath, { recursive: true, force: true });
+        this.logger.log(`Sesión eliminada para tienda ${storeId}`);
+      } catch (error) {
+        this.logger.error(`Error eliminando sesión para tienda ${storeId}:`, error);
+      }
     }
   }
 

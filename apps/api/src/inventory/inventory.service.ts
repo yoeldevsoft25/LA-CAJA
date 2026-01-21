@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +19,8 @@ import { GetStockStatusDto } from './dto/get-stock-status.dto';
 
 @Injectable()
 export class InventoryService {
+  private readonly logger = new Logger(InventoryService.name);
+
   private readonly weightUnitToKg: Record<'kg' | 'g' | 'lb' | 'oz', number> = {
     kg: 1,
     g: 0.001,
@@ -335,7 +338,10 @@ export class InventoryService {
         }
       } catch (error) {
         // Log error pero no fallar el ajuste de inventario
-        console.error(`Error generando asiento contable para ajuste ${savedMovement.id}`, error);
+        this.logger.error(
+          `Error generando asiento contable para ajuste ${savedMovement.id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
       }
     });
 
