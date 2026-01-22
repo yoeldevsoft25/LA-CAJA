@@ -1181,12 +1181,15 @@ CREATE POLICY "Users can manage shifts" ON shifts
         )
     );
 
--- shift_cuts: Solo pueden acceder a cortes de turno de sus tiendas
+-- shift_cuts: Solo pueden acceder a cortes de turno de sus tiendas (a través de shifts)
+-- Nota: shift_cuts NO tiene store_id, solo tiene shift_id que referencia a shifts
 DROP POLICY IF EXISTS "Users can manage shift cuts" ON shift_cuts;
 CREATE POLICY "Users can manage shift cuts" ON shift_cuts
     FOR ALL USING (
-        store_id IN (
-            SELECT sm.store_id FROM store_members sm WHERE sm.user_id = (select auth.uid())
+        shift_id IN (
+            SELECT s.id FROM shifts s
+            JOIN store_members sm ON sm.store_id = s.store_id
+            WHERE sm.user_id = (select auth.uid())
         )
     );
 
@@ -1200,10 +1203,11 @@ CREATE POLICY "Users can manage supplier price lists" ON supplier_price_lists
     );
 
 -- supplier_price_list_items: Solo pueden acceder a items de listas de precios de proveedores de sus tiendas
+-- Nota: La tabla usa list_id, no price_list_id
 DROP POLICY IF EXISTS "Users can manage supplier price list items" ON supplier_price_list_items;
 CREATE POLICY "Users can manage supplier price list items" ON supplier_price_list_items
     FOR ALL USING (
-        price_list_id IN (
+        list_id IN (
             SELECT spl.id FROM supplier_price_lists spl
             JOIN store_members sm ON sm.store_id = spl.store_id
             WHERE sm.user_id = (select auth.uid())
