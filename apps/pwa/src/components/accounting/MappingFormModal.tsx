@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { accountMappingsService, chartOfAccountsService } from '@/services/accounting.service'
 import type { AccountMapping, CreateMappingDto, UpdateMappingDto } from '@/types/accounting.types'
 import { MappingTransactionType } from '@/types/accounting.types'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 const mappingSchema = z.object({
   transaction_type: z.enum([

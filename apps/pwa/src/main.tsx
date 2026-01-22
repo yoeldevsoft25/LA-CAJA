@@ -4,7 +4,7 @@ import App from './App.tsx'
 import './index.css'
 import './styles/mobile-optimizations.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'react-hot-toast'
+import { Toaster } from '@/components/ui/sonner'
 import ErrorBoundary from './components/errors/ErrorBoundary'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -136,16 +136,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <App />
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          }}
-        />
+        <Toaster />
       </ErrorBoundary>
     </QueryClientProvider>
   </React.StrictMode>,

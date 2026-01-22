@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import {
   Table,
   TableBody,

@@ -21,7 +21,7 @@ import {
   UpdateTableRequest,
 } from '@/services/tables.service'
 import { ordersService, Order } from '@/services/orders.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import TableModal from './TableModal'
 import TableQRCodeModal from './TableQRCodeModal'
 import { Button } from '@/components/ui/button'

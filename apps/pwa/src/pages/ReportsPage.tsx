@@ -21,7 +21,7 @@ import {
 import { reportsService } from '@/services/reports.service'
 import { format, subDays, startOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'

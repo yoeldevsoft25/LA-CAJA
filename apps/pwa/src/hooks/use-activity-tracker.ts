@@ -40,12 +40,11 @@ export function useActivityTracker() {
         const timeRemaining = Math.ceil(
           (INACTIVITY_TIMEOUT_MS - WARNING_BEFORE_TIMEOUT_MS) / 1000 / 60,
         )
-        import('react-hot-toast').then(({ default: toast }) => {
+        import('@/lib/toast').then(({ default: toast }) => {
           toast(
             `Tu sesión expirará por inactividad en ${timeRemaining} minutos. Mueve el mouse o toca la pantalla para mantenerte conectado.`,
             {
               duration: 10000,
-              icon: '⏰',
             },
           )
         })
@@ -53,7 +52,7 @@ export function useActivityTracker() {
 
       // Timer de timeout (30 minutos)
       inactivityTimer = setTimeout(() => {
-        import('react-hot-toast').then(({ default: toast }) => {
+        import('@/lib/toast').then(({ default: toast }) => {
           toast.error('Tu sesión ha expirado por inactividad. Serás redirigido al login.', {
             duration: 5000,
           })

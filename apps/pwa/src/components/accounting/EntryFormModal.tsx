@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarIcon, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 const entryLineSchema = z.object({
   account_code: z.string().min(1, 'Cuenta requerida'),

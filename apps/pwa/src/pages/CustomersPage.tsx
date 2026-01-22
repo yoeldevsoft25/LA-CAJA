@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState('')

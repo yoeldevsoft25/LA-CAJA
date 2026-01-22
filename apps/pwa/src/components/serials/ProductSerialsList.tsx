@@ -8,7 +8,7 @@ import {
   CreateSerialsBatchRequest,
   SerialStatus,
 } from '@/services/product-serials.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import ProductSerialModal from './ProductSerialModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

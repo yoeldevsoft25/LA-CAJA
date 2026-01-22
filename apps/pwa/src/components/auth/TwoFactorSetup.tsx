@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { authService } from '@/services/auth.service'
 import { Shield, CheckCircle2, XCircle, Copy, Download, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'

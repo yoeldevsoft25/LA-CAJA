@@ -21,7 +21,7 @@ import {
   CreatePeripheralConfigRequest,
   UpdatePeripheralConfigRequest,
 } from '@/services/peripherals.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import PeripheralConfigModal from './PeripheralConfigModal'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

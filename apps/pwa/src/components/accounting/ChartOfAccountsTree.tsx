@@ -8,7 +8,7 @@ import type { ChartOfAccountTree, AccountType } from '@/types/accounting.types'
 import { ChevronRight, ChevronDown, Plus, Edit, Trash2 } from 'lucide-react'
 import AccountFormModal from './AccountFormModal'
 import { cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 const accountTypeLabels: Record<AccountType, string> = {
   asset: 'Activo',

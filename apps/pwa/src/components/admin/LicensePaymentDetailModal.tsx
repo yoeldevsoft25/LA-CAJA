@@ -19,7 +19,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/toast';
 import {
   CheckCircle2,
   XCircle,

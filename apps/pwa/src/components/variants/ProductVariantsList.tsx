@@ -6,7 +6,7 @@ import {
   ProductVariant,
   CreateProductVariantRequest,
 } from '@/services/product-variants.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import ProductVariantModal from './ProductVariantModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

@@ -13,17 +13,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { exportToCSV } from '@/utils/export-excel'
-import toast from 'react-hot-toast'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts'
+import toast from '@/lib/toast'
+import DailySalesChart from '@/components/sales/DailySalesChart'
 import {
   Table,
   TableBody,
@@ -167,16 +158,70 @@ export default function SalesPage() {
     return isSameDay(dateFrom, dateTo)
   }, [dateFrom, dateTo])
 
-  // Obtener datos de ventas por día para el gráfico (solo si es el mismo día y es owner)
-  const { data: dailySalesData, isLoading: isLoadingDailySales } = useQuery({
-    queryKey: ['reports', 'sales-by-day', effectiveDateFrom, effectiveDateTo, effectiveStoreId],
-    queryFn: () => reportsService.getSalesByDay({
-      start_date: effectiveDateFrom,
-      end_date: effectiveDateTo,
-    }),
+  // Obtener TODAS las ventas del día para el gráfico (sin paginación, solo si es el mismo día y es owner)
+  const { data: allDaySalesData, isLoading: isLoadingAllDaySales } = useQuery<{ sales: Sale[]; total: number }>({
+    queryKey: ['sales', 'list-all-day', effectiveDateFrom, effectiveDateTo, effectiveStoreId],
+    queryFn: () =>
+      salesService.list({
+        date_from: effectiveDateFrom,
+        date_to: effectiveDateTo,
+        limit: 10000, // Obtener todas las ventas del día
+        offset: 0,
+      }),
     enabled: isOwner && isSameDaySelected && !!effectiveDateFrom && !!effectiveDateTo,
     staleTime: 1000 * 60 * 5, // 5 minutos
   })
+
+  // Filtrar ventas del día (aplicar mismos filtros que las ventas principales, pero sin anuladas para el gráfico)
+  const daySalesForChart = useMemo(() => {
+    if (!allDaySalesData?.sales) return []
+    
+    return allDaySalesData.sales.filter((sale: Sale) => {
+      // No mostrar ventas anuladas en el gráfico
+      if (sale.voided_at) return false
+      
+      // Aplicar filtros de método de pago
+      if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
+        return false
+      }
+      
+      // Aplicar filtro de deuda
+      if (debtFilter === 'with_debt') {
+        if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'without_debt') {
+        if (sale.debt && (sale.debt.status === 'open' || sale.debt.status === 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'paid') {
+        if (!sale.debt || sale.debt.status !== 'paid') {
+          return false
+        }
+      }
+      
+      // Aplicar filtro de rango de montos
+      const amountUsd = Number(sale.totals.total_usd)
+      if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
+        return false
+      }
+      if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+        return false
+      }
+      
+      // Aplicar filtro de búsqueda de cliente
+      if (customerSearch.trim()) {
+        const searchLower = customerSearch.toLowerCase().trim()
+        const customerName = sale.customer?.name?.toLowerCase() || ''
+        const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
+        if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
+          return false
+        }
+      }
+      
+      return true
+    })
+  }, [allDaySalesData, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
   
   // Aplicar filtros avanzados (filtrado en frontend)
   const sales = rawSales.filter((sale: Sale) => {
@@ -608,123 +653,12 @@ export default function SalesPage() {
       </Card>
 
       {/* Gráfico de ventas del día (solo si es el mismo día y es owner) */}
-      {isOwner && isSameDaySelected && dailySalesData && (
-        <Card className="mb-4 sm:mb-6 border border-border">
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">
-              Ventas del Día - {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : ''}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoadingDailySales ? (
-              <div className="h-[300px] flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
-              </div>
-            ) : dailySalesData.daily && dailySalesData.daily.length > 0 ? (
-              <div className="h-[300px] w-full min-h-0">
-                <ResponsiveContainer width="100%" height="100%" minHeight={0}>
-                  <LineChart
-                    data={dailySalesData.daily.map((day) => ({
-                      ...day,
-                      formattedDate: format(parseISO(day.date), 'HH:mm'),
-                      total_bs: Number(day.total_bs),
-                      total_usd: Number(day.total_usd),
-                      sales_count: day.sales_count,
-                    }))}
-                    margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis
-                      dataKey="formattedDate"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      dy={10}
-                    />
-                    <YAxis
-                      yAxisId="left"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      tickFormatter={(value) =>
-                        value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value.toString()
-                      }
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                    />
-                    <RechartsTooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-                              <p className="text-sm font-semibold mb-2">
-                                {payload[0]?.payload?.formattedDate}
-                              </p>
-                              {payload.map((entry, index) => (
-                                <p key={index} className="text-xs" style={{ color: entry.color }}>
-                                  {entry.name === 'total_bs' && `Total Bs: ${Number(entry.value).toFixed(2)}`}
-                                  {entry.name === 'total_usd' && `Total USD: $${Number(entry.value).toFixed(2)}`}
-                                  {entry.name === 'sales_count' && `Ventas: ${entry.value}`}
-                                </p>
-                              ))}
-                            </div>
-                          )
-                        }
-                        return null
-                      }}
-                    />
-                    <Legend
-                      verticalAlign="top"
-                      height={36}
-                      formatter={(value) => {
-                        if (value === 'total_bs') return 'Total Bs'
-                        if (value === 'total_usd') return 'Total USD'
-                        if (value === 'sales_count') return 'Cantidad de Ventas'
-                        return value
-                      }}
-                    />
-                    <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="total_bs"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      name="total_bs"
-                    />
-                    <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="total_usd"
-                      stroke="hsl(var(--chart-2))"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      name="total_usd"
-                    />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="sales_count"
-                      stroke="hsl(var(--chart-3))"
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      name="sales_count"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                No hay datos de ventas para mostrar
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {isOwner && isSameDaySelected && dateFrom && (
+        <DailySalesChart
+          sales={daySalesForChart}
+          date={dateFrom}
+          isLoading={isLoadingAllDaySales}
+        />
       )}
 
       {/* Lista de ventas */}

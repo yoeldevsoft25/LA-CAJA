@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/stores/auth.store'
 import { api } from '@/lib/api'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { useNavigate } from 'react-router-dom'
 
 interface LicenseStatus {

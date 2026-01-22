@@ -5,7 +5,7 @@ import {
   fastCheckoutService,
   CreateFastCheckoutConfigRequest,
 } from '@/services/fast-checkout.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import FastCheckoutConfigModal from '@/components/fast-checkout/FastCheckoutConfigModal'
 import QuickProductsManager from '@/components/fast-checkout/QuickProductsManager'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

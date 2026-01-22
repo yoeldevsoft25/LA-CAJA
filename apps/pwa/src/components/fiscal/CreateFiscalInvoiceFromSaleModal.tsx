@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FileText, AlertCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { useNavigate } from 'react-router-dom'
 
 interface CreateFiscalInvoiceFromSaleModalProps {

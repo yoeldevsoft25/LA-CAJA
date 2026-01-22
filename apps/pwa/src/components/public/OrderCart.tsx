@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { useMutation } from '@tanstack/react-query'
 import { publicMenuService } from '@/services/public-menu.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import type { PublicProduct } from '@/services/public-menu.service'
 import { cn } from '@/lib/utils'
 

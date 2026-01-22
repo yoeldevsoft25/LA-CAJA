@@ -19,7 +19,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { exportDashboardToExcel } from '@/utils/export-excel'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import ExpiringLotsAlert from '@/components/lots/ExpiringLotsAlert'
 import PendingOrdersIndicator from '@/components/suppliers/PendingOrdersIndicator'
 import { dashboardService } from '@/services/dashboard.service'

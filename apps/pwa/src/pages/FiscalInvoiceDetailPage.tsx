@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import {
   Table,
   TableBody,

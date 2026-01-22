@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 interface MenuViewerProps {
   tableId: string

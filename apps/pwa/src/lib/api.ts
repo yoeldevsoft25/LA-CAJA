@@ -252,7 +252,7 @@ api.interceptors.response.use(
                 }
               );
               // Mostrar toast de advertencia al usuario
-              import('react-hot-toast').then(({ default: toast }) => {
+              import('@/lib/toast').then(({ default: toast }) => {
                 toast.error(
                   `Tu rol ha cambiado a: ${updatedUser.role === 'owner' ? 'Propietario' : 'Cajero'}. Recarga la página.`,
                   { duration: 5000 }

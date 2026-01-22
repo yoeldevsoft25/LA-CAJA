@@ -5,7 +5,7 @@ import {
   discountsService,
   CreateDiscountConfigRequest,
 } from '@/services/discounts.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import DiscountConfigModal from '@/components/discounts/DiscountConfigModal'
 import DiscountAuthorizationsList from '@/components/discounts/DiscountAuthorizationsList'
 import DiscountSummary from '@/components/discounts/DiscountSummary'

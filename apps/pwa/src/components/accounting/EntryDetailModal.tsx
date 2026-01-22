@@ -18,7 +18,7 @@ import {
 import { accountingEntriesService } from '@/services/accounting.service'
 import type { AccountingEntry, EntryType, EntryStatus } from '@/types/accounting.types'
 import { CheckCircle2, XCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 const entryTypeLabels: Record<EntryType, string> = {
   sale: 'Venta',

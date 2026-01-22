@@ -18,7 +18,7 @@ import {
   PurchaseOrder,
   PurchaseOrderStatus,
 } from '@/services/purchase-orders.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import PurchaseOrderReceptionModal from './PurchaseOrderReceptionModal'
 import PurchaseOrderFormModal from './PurchaseOrderFormModal'
 

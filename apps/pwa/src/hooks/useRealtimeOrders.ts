@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/stores/auth.store'
 import { notificationsWebSocketService } from '@/services/notifications-websocket.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 /**
  * Hook para escuchar actualizaciones de órdenes en tiempo real

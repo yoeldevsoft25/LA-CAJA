@@ -6,7 +6,7 @@ import {
   ProductLot,
   CreateProductLotRequest,
 } from '@/services/product-lots.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import ProductLotModal from './ProductLotModal'
 import LotMovementsList from './LotMovementsList'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

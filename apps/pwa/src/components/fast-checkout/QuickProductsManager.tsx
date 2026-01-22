@@ -6,7 +6,7 @@ import {
   QuickProduct,
   CreateQuickProductRequest,
 } from '@/services/fast-checkout.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import QuickProductModal from './QuickProductModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

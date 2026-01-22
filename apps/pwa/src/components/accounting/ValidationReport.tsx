@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { accountingValidationService } from '@/services/accounting.service'
 import { Calendar as CalendarIcon, ShieldCheck, AlertTriangle, ChevronDown, Loader2, CheckCircle2, XCircle, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 /**
  * Componente para mostrar reporte de validación contable

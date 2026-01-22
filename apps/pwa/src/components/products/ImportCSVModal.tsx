@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { productsService } from '@/services/products.service'
 import { useAuth } from '@/stores/auth.store'
 

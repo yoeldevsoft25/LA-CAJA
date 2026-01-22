@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { formatAnomalyType, formatAnomalySeverity } from '@/utils/ml-formatters'
 import { AlertTriangle } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 interface ResolveAnomalyModalProps {
   isOpen: boolean

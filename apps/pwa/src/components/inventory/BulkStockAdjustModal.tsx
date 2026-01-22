@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { inventoryService, StockStatus, StockAdjustedRequest } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
 import { productsService } from '@/services/products.service'

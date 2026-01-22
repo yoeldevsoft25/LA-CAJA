@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 interface CustomerDebtCardProps {
   customer: Customer

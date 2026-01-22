@@ -30,7 +30,7 @@ import { suppliersService } from '@/services/suppliers.service'
 import { warehousesService } from '@/services/warehouses.service'
 import { productsService, Product } from '@/services/products.service'
 import { useAuth } from '@/stores/auth.store'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 interface PurchaseOrderItemForm {
   product_id: string

@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { toast } from 'react-hot-toast'
+import { toast } from '@/lib/toast'
 import { addDays, format, formatDistanceToNowStrict, isAfter, parseISO } from 'date-fns'
 import { MoreHorizontal, ShieldCheck, ShieldOff, Sparkles, CreditCard, Calendar, Trash2, AlertTriangle } from 'lucide-react'
 

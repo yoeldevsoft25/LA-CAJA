@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import SimpleLoader from './components/loader/SimpleLoader'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import MainLayout from './components/layout/MainLayout'

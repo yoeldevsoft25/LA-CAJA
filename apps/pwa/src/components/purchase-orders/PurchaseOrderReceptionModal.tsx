@@ -19,7 +19,7 @@ import {
   ReceivePurchaseOrderDto,
 } from '@/services/purchase-orders.service'
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 interface PurchaseOrderReceptionModalProps {
   isOpen: boolean

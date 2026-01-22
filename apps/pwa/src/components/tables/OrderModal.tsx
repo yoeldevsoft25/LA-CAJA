@@ -16,7 +16,7 @@ import { ordersService, Order, AddOrderItemRequest, CreatePartialPaymentRequest 
 import { CreateSaleRequest } from '@/services/sales.service'
 import { inventoryService } from '@/services/inventory.service'
 import { useOnline } from '@/hooks/use-online'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import OrderItemModal from './OrderItemModal'
 import PartialPaymentModal from './PartialPaymentModal'
 import SplitBillModal from './SplitBillModal'

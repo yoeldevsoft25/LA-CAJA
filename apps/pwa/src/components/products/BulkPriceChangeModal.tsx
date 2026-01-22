@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
 import { X, RefreshCw } from 'lucide-react'

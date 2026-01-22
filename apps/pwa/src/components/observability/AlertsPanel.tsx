@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, XCircle, Info, CheckCircle2 } from 'lucide-react';
 import { observabilityService } from '@/services/observability.service';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import toast from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 interface AlertsPanelProps {

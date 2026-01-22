@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { chartOfAccountsService } from '@/services/accounting.service'
 import type { ChartOfAccount, CreateAccountDto, UpdateAccountDto, AccountType } from '@/types/accounting.types'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 const accountSchema = z.object({
   code: z.string().min(1, 'El código es requerido'),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { FileText, Upload } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { supplierPriceListsService, ImportSupplierPriceListResponse } from '@/services/supplier-price-lists.service'
 import { Supplier } from '@/services/suppliers.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'

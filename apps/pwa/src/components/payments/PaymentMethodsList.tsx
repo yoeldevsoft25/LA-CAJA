@@ -15,7 +15,7 @@ import {
   PaymentMethod,
   PaymentMethodConfig,
 } from '@/services/payments.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import PaymentMethodConfigModal from './PaymentMethodConfigModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

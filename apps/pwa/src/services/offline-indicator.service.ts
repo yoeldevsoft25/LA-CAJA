@@ -3,11 +3,11 @@
  * Notifica cuando se pierde/recupera la conexión
  */
 
-import toast from 'react-hot-toast';
+import toast from '@/lib/toast';
 
 class OfflineIndicatorService {
-  private offlineToastId: string | null = null;
-  private reconnectToastId: string | null = null;
+  private offlineToastId: string | number | null = null;
+  private reconnectToastId: string | number | null = null;
 
   /**
    * Muestra notificación cuando se pierde la conexión

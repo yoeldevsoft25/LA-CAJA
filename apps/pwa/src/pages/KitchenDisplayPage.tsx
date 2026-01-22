@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders'
 import OrderProgressBar, { type OrderProgressData } from '@/components/public/OrderProgressBar'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 export default function KitchenDisplayPage() {
   // Escuchar actualizaciones en tiempo real

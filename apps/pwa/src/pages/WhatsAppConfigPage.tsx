@@ -19,7 +19,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 const whatsappConfigSchema = z.object({
   thank_you_message: z.string().max(500, 'El mensaje no puede exceder 500 caracteres').optional().or(z.literal('')),

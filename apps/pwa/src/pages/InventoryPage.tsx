@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 

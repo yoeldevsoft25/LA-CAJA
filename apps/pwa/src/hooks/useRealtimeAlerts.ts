@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { realtimeAnalyticsService } from '@/services/realtime-analytics.service'
 import { realtimeWebSocketService } from '@/services/realtime-websocket.service'
 import { RealTimeAlert, AlertSeverity } from '@/types/realtime-analytics.types'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 export function useRealtimeAlerts(params?: {
   is_read?: boolean

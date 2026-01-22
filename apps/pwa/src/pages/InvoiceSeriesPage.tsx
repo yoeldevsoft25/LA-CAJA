@@ -7,7 +7,7 @@ import {
   CreateInvoiceSeriesRequest,
   UpdateInvoiceSeriesRequest,
 } from '@/services/invoice-series.service'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import InvoiceSeriesModal from '@/components/invoice-series/InvoiceSeriesModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

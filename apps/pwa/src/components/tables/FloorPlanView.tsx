@@ -5,7 +5,7 @@ import { tablesService, Table } from '@/services/tables.service'
 import { ordersService, Order } from '@/services/orders.service'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 interface FloorPlanViewProps {
   onTableClick: (table: Table) => void

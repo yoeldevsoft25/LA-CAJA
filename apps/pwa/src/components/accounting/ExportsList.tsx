@@ -14,7 +14,7 @@ import {
 import { accountingExportsService } from '@/services/accounting.service'
 import type { AccountingExport, ExportFormat } from '@/types/accounting.types'
 import { Download, FileText } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 const formatLabels: Record<ExportFormat, string> = {
   csv: 'CSV',

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { motion } from 'framer-motion'
 import { authService } from '@/services/auth.service'
 import { CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react'

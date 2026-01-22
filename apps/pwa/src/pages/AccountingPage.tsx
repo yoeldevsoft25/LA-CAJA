@@ -23,7 +23,7 @@ import ReconciliationTool from '@/components/accounting/ReconciliationTool'
 import { chartOfAccountsService, accountMappingsService } from '@/services/accounting.service'
 import type { AccountingEntry, AccountMapping } from '@/types/accounting.types'
 import { FileText, BookOpen, Download, Settings, TrendingUp, Plus, BarChart3, ShieldCheck } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 
 /**
  * Página principal del módulo contable

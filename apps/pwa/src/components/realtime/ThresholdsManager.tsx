@@ -38,7 +38,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Settings, Plus, Trash2, Edit } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { Badge } from '@/components/ui/badge'
 // Helper para formatear severidad de alertas
 const formatAlertSeverity = (severity: string): { label: string; bgColor: string } => {
