@@ -6,6 +6,8 @@ import axios, { AxiosInstance } from 'axios';
 @Injectable()
 export class ExternalApisHealthIndicator extends HealthIndicator {
   private axiosInstance: AxiosInstance;
+  private readonly DOLAR_VZLA_API_URL = 'https://api.dolarvzla.com/public/exchange-rate';
+  private readonly DOLAR_API_URL = 'https://ve.dolarapi.com/v1/dolares/oficial';
 
   constructor(private configService: ConfigService) {
     super();
@@ -20,26 +22,40 @@ export class ExternalApisHealthIndicator extends HealthIndicator {
     const requireHealthy =
       this.configService.get<string>('EXTERNAL_APIS_HEALTH_REQUIRED') === 'true';
 
-    // Verificar API de tasas de cambio (BCV)
-    try {
-      const startTime = Date.now();
-      const response = await this.axiosInstance.get('https://bcv.gov.ve/', {
-        timeout: 5000,
-        validateStatus: () => true, // Aceptar cualquier status para verificar conectividad
-      });
-      const responseTime = Date.now() - startTime;
-      checks.bcv = {
-        status: response.status < 500 ? 'up' : 'down',
-        responseTime: `${responseTime}ms`,
-      };
-      if (response.status >= 500) allHealthy = false;
-    } catch (error) {
-      checks.bcv = {
-        status: 'down',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-      allHealthy = false;
+    // Verificar API de tasas de cambio (BCV) usando los mismos proveedores que ExchangeService
+    const bcvSources = [
+      { name: 'dolarvzla', url: this.DOLAR_VZLA_API_URL },
+      { name: 'dolarapi', url: this.DOLAR_API_URL },
+    ];
+    let bcvHealthy = false;
+    checks.bcv = { status: 'down', sources: {} as Record<string, any> };
+
+    for (const source of bcvSources) {
+      try {
+        const startTime = Date.now();
+        const response = await this.axiosInstance.get(source.url, {
+          timeout: 5000,
+          validateStatus: () => true, // Aceptar cualquier status para verificar conectividad
+        });
+        const responseTime = Date.now() - startTime;
+        const sourceHealthy = response.status < 500;
+        if (sourceHealthy) bcvHealthy = true;
+        checks.bcv.sources[source.name] = {
+          status: sourceHealthy ? 'up' : 'down',
+          httpStatus: response.status,
+          responseTime: `${responseTime}ms`,
+        };
+      } catch (error: any) {
+        checks.bcv.sources[source.name] = {
+          status: 'down',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          code: error?.code,
+        };
+      }
     }
+
+    checks.bcv.status = bcvHealthy ? 'up' : 'down';
+    if (!bcvHealthy) allHealthy = false;
 
     // Verificar servicio de email (Resend)
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
@@ -52,11 +68,13 @@ export class ExternalApisHealthIndicator extends HealthIndicator {
           validateStatus: () => true,
         });
         const responseTime = Date.now() - startTime;
+        const resendHealthy = response.status === 200;
         checks.resend = {
-          status: response.status === 200 ? 'up' : 'down',
+          status: resendHealthy ? 'up' : 'down',
+          httpStatus: response.status,
           responseTime: `${responseTime}ms`,
         };
-        if (response.status !== 200) allHealthy = false;
+        if (!resendHealthy) allHealthy = false;
       } catch (error) {
         checks.resend = {
           status: 'down',

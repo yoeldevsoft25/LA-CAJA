@@ -167,17 +167,33 @@ export class HealthController {
       -moz-osx-font-smoothing: grayscale;
     }
     
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
     .container {
       max-width: 1400px;
       margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
     
     .header {
       background: var(--card);
-      border-radius: var(--radius);
-      padding: 3rem 2.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      border-radius: calc(var(--radius) + 4px);
+      padding: 3.5rem 2.5rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
       border: 1px solid var(--border);
       text-align: center;
       position: relative;
@@ -199,47 +215,32 @@ export class HealthController {
       z-index: 1;
     }
     
-    .header-icon {
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 1.5rem;
-      background: linear-gradient(135deg, var(--primary) 0%, hsl(221, 83%, 45%) 100%);
-      border-radius: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
-    }
-    
     .header h1 {
       color: var(--foreground);
-      font-size: 2.5rem;
+      font-size: 2.75rem;
       font-weight: 800;
-      margin-bottom: 0.5rem;
-      letter-spacing: -0.025em;
-      background: linear-gradient(135deg, var(--foreground) 0%, hsl(215, 16%, 47%) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
     }
     
     .header p {
       color: var(--muted-foreground);
       font-size: 1.125rem;
       font-weight: 400;
-      margin-bottom: 0.75rem;
+      margin-bottom: 1rem;
     }
     
     .header-subtitle {
       color: var(--muted-foreground);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
-      margin-top: 1rem;
+      margin-top: 0.5rem;
       display: inline-block;
-      padding: 0.5rem 1rem;
+      padding: 0.375rem 0.875rem;
       background: var(--muted);
       border-radius: 9999px;
+      letter-spacing: 0.01em;
     }
     
     .status-badge {
@@ -283,15 +284,16 @@ export class HealthController {
     
     .card {
       background: var(--card);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: calc(var(--radius) + 2px);
+      padding: 1.75rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       border: 1px solid var(--border);
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      backdrop-filter: blur(10px);
     }
     
     .card::before {
@@ -307,8 +309,8 @@ export class HealthController {
     }
     
     .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.12), 0 8px 16px -6px rgba(0, 0, 0, 0.08);
       border-color: var(--primary);
     }
     
@@ -332,15 +334,23 @@ export class HealthController {
     }
     
     .card-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 0.5rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 0.625rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.25rem;
-      background: var(--muted);
+      font-size: 1.375rem;
+      background: linear-gradient(135deg, var(--muted) 0%, hsl(210, 40%, 92%) 100%);
       flex-shrink: 0;
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+    }
+    
+    .card:hover .card-icon {
+      background: linear-gradient(135deg, var(--primary) 0%, hsl(221, 83%, 45%) 100%);
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
     }
     
     .card-title {
@@ -354,7 +364,8 @@ export class HealthController {
     .card-description {
       font-size: 0.75rem;
       color: var(--muted-foreground);
-      margin-top: 0.25rem;
+      margin-top: 0.375rem;
+      line-height: 1.4;
     }
     
     .status-indicator-wrapper {
@@ -447,16 +458,22 @@ export class HealthController {
     .component-item {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.625rem;
       padding: 0.5rem 0;
       font-size: 0.8125rem;
+      transition: all 0.15s ease;
+    }
+    
+    .component-item:hover {
+      padding-left: 0.25rem;
     }
     
     .component-status {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
     }
     
     .component-status.up {
@@ -487,23 +504,24 @@ export class HealthController {
       background: var(--primary);
       color: var(--primary-foreground);
       border: none;
-      padding: 0.75rem 2rem;
-      border-radius: var(--radius);
+      padding: 0.875rem 2.25rem;
+      border-radius: calc(var(--radius) + 2px);
       font-size: 0.9375rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s ease;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      box-shadow: 0 2px 4px 0 rgba(59, 130, 246, 0.2);
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.625rem;
       font-family: inherit;
+      letter-spacing: 0.01em;
     }
     
     .refresh-btn:hover {
       background: hsl(221, 83%, 48%);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px -2px rgba(59, 130, 246, 0.3), 0 4px 8px -4px rgba(59, 130, 246, 0.2);
     }
     
     .refresh-btn:active {
@@ -546,25 +564,36 @@ export class HealthController {
     }
     
     .stat-card {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      border-radius: calc(var(--radius) + 2px);
+      padding: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.25);
       text-align: center;
+      transition: all 0.2s ease;
+    }
+    
+    .stat-card:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     }
     
     .stat-value {
-      font-size: 2rem;
-      font-weight: 700;
+      font-size: 2.5rem;
+      font-weight: 800;
       color: white;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      letter-spacing: -0.02em;
     }
     
     .stat-label {
       font-size: 0.875rem;
-      color: rgba(255, 255, 255, 0.9);
-      font-weight: 500;
+      color: rgba(255, 255, 255, 0.95);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     
     @media (max-width: 768px) {
@@ -590,7 +619,6 @@ export class HealthController {
   <div class="container">
     <div class="header">
       <div class="header-content">
-        <div class="header-icon">🏥</div>
         <h1>Health Dashboard</h1>
         <p>Monitoreo en tiempo real del sistema LA CAJA</p>
         <div class="header-subtitle">Sistema POS Offline-First para Venezuela</div>
@@ -637,7 +665,7 @@ export class HealthController {
   <script>
     const services = [
       { name: 'General', endpoint: '/health', icon: '🌐', description: 'Estado general del sistema' },
-      { name: 'Base de Datos', endpoint: '/health/database', icon: '🗄️', description: 'PostgreSQL' },
+      { name: 'Base de Datos', endpoint: '/health/database', icon: '💾', description: 'PostgreSQL' },
       { name: 'Redis', endpoint: '/health/redis', icon: '⚡', description: 'Cache y sesiones' },
       { name: 'Colas', endpoint: '/health/queues', icon: '📬', description: 'BullMQ' },
       { name: 'WebSocket', endpoint: '/health/websocket', icon: '🔌', description: 'Conexiones en tiempo real' },
