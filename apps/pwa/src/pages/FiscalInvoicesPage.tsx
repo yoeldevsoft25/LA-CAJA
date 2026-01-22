@@ -28,7 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Label } from '@/components/ui/label'
 import { exportToCSV } from '@/utils/export-excel'
 
@@ -436,8 +435,8 @@ export default function FiscalInvoicesPage() {
                                 onClick={() => handleCancel(invoice.id)}
                                 disabled={isCancelPending}
                                 className="h-8 w-8 text-red-600 hover:text-red-700"
-                                title={invoice.status === 'issued' ? 'Crear nota de crédito' : 'Cancelar'}
-                                aria-label={invoice.status === 'issued' ? 'Crear nota de crédito' : 'Cancelar factura fiscal'}
+                                title="Cancelar"
+                                aria-label="Cancelar factura fiscal"
                               >
                                 <XCircle className="w-4 h-4" aria-hidden="true" />
                               </Button>
@@ -450,7 +449,8 @@ export default function FiscalInvoicesPage() {
                               onClick={() => handleCancel(invoice.id)}
                               disabled={isCancelPending}
                               className="h-8 w-8 text-red-600 hover:text-red-700"
-                              title={invoice.status === 'issued' ? 'Crear nota de crédito' : 'Cancelar'}
+                              title="Crear nota de crédito"
+                              aria-label="Crear nota de crédito"
                             >
                               <XCircle className="w-4 h-4" />
                             </Button>

@@ -953,7 +953,7 @@ export class SalesService {
             .createQueryBuilder(ProductLot, 'lot')
             .where('lot.product_id = :productId', { productId: product.id })
             .andWhere('lot.remaining_quantity > 0')
-            .orderBy('lot.expires_at', 'ASC', 'NULLS LAST') // FIFO: lotes más antiguos primero
+            .orderBy('lot.expiration_date', 'ASC', 'NULLS LAST') // FIFO: lotes más antiguos primero
             .setLock('pessimistic_write', undefined, ['SKIP LOCKED'])
             .getMany();
 

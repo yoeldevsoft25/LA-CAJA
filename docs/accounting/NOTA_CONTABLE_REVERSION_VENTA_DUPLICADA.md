@@ -112,15 +112,95 @@ Así la reversión queda registrada y reflejada en reportes y mayor.
 
 ---
 
+---
+
+## 6. CASO ESPECIAL: Venta duplicada con factura fiscal emitida
+
+Si la venta duplicada tiene una **factura fiscal emitida**, el proceso es diferente porque según SENIAT no se pueden cancelar facturas emitidas directamente. Debes crear una **nota de crédito**.
+
+### Paso a paso completo:
+
+#### Paso 1: Crear la nota de crédito
+
+**Opción A: Desde el detalle de la factura**
+
+1. Ve al menú lateral y selecciona **"Facturas Fiscales"**.
+2. Busca la factura duplicada (puedes usar el buscador por número de factura o cliente).
+3. Haz clic en la factura para abrir su detalle.
+4. Verás un botón rojo **"Crear nota de crédito"** (en lugar de "Cancelar").
+5. Haz clic en ese botón.
+6. Se abrirá un diálogo explicando que se creará una nota de crédito con los mismos datos.
+7. **Opcional:** Escribe un motivo en el campo "Motivo", por ejemplo: *"Venta duplicada por error"*.
+8. Confirma con **"Sí, crear nota de crédito"**.
+
+**Opción B: Desde la lista de facturas**
+
+1. Ve a **Facturas Fiscales**.
+2. En la fila de la factura duplicada, localiza el ícono rojo de cancelar (X) en la columna de acciones.
+3. Haz clic en ese ícono.
+4. Sigue los pasos 6-8 de la Opción A.
+
+#### Paso 2: Revisar y emitir la nota de crédito
+
+Después de crear la nota de crédito:
+
+1. **El sistema te redirige automáticamente** al detalle de la nueva nota de crédito.
+2. Verifica que los datos sean correctos:
+   - **Cliente:** Debe ser el mismo que la factura original.
+   - **Ítems:** Mismos productos y cantidades.
+   - **Totales:** Mismos montos en BS y USD.
+   - **Tipo:** Debe decir **"Nota de Crédito"** (no "Factura").
+   - **Estado:** Debe estar en **"Borrador"**.
+   - **Nota:** Debe mencionar la factura original que anula.
+3. Si todo está correcto, haz clic en el botón verde **"Emitir Factura"**.
+4. Confirma la emisión.
+5. La nota de crédito queda **emitida** y anula la factura original según normativa SENIAT.
+
+#### Paso 3: Reversión contable (si aplica)
+
+Si la factura original generó un asiento contable automático, ahora tienes dos opciones:
+
+**Opción 1: Verificar si el sistema genera el asiento automáticamente**
+
+1. Ve a **Contabilidad → Asientos contables**.
+2. Busca si se creó un asiento para la nota de crédito (filtra por tipo "Factura Fiscal" o busca por número de nota de crédito).
+3. Si existe, revísalo y postéalo si está en borrador.
+
+**Opción 2: Crear reversión contable manual**
+
+Si el sistema no genera asientos automáticos para notas de crédito, o si necesitas ajustar algo:
+
+1. Ve a **Contabilidad → Asientos contables**.
+2. Busca el asiento de la **factura original** (filtra por tipo "Factura Fiscal" o busca por número de factura).
+3. Abre ese asiento y anota:
+   - Todas las cuentas usadas.
+   - Los montos de débito y crédito en BS y USD.
+4. Crea un nuevo asiento:
+   - **Tipo:** "Ajuste" o "Manual".
+   - **Descripción:** *"Reversión nota de crédito [número NC]. Anula factura [número factura] duplicada."*
+   - **Líneas:** Invierte débitos y créditos en las mismas cuentas (ver sección 3 de esta guía).
+5. Verifica que los totales cuadren (débitos = créditos en BS y USD).
+6. Guarda y **postea** el asiento.
+
+---
+
+## Resumen rápido por escenario
+
+### Escenario 1: Venta duplicada SIN factura fiscal
+
+1. ✅ Anular venta: **Ventas** → abrir venta → **Anular**.
+2. ✅ Crear nota contable de reversión: **Contabilidad** → **Nuevo asiento** → tipo "Ajuste" → invertir débitos/créditos.
+
+### Escenario 2: Venta duplicada CON factura fiscal emitida
+
+1. ✅ Crear nota de crédito: **Facturas Fiscales** → abrir factura → **Crear nota de crédito** → indicar motivo → confirmar.
+2. ✅ Emitir la nota de crédito: Revisar datos → **Emitir Factura**.
+3. ✅ Reversión contable: **Contabilidad** → revisar/crear asiento de reversión si aplica.
+
+---
+
 ## Notas adicionales
 
-- **Venta con factura fiscal emitida:** No se puede anular desde Ventas. Hay que crear una **nota de crédito** desde Facturas Fiscales:
-  1. Ir a **Facturas Fiscales** → abrir la factura duplicada.
-  2. Clic en **Crear nota de crédito** (o el ícono de cancelar en la lista).
-  3. Opcional: indicar motivo, ej. *"Venta duplicada por error"*.
-  4. Confirmar. Se crea una nota de crédito en **borrador** con los mismos datos.
-  5. Revisar la nota, emitirla y luego hacer la reversión contable si aplica.
 - **Venta FIAO con pagos:** Primero hay que reversar los pagos de la deuda; luego se puede anular la venta y hacer la reversión contable.
 - Los **mapeos de cuentas** (ingresos, caja, costo, inventario) se definen en **Contabilidad** → **Mapeos de cuentas**. Las cuentas del asiento de la venta salen de ahí.
-
-Si tu flujo difiere (por ejemplo, solo trabajas en USD o no usas costo de venta), adapta las líneas de la reversión manteniendo siempre débitos = créditos en cada moneda.
+- Si tu flujo difiere (por ejemplo, solo trabajas en USD o no usas costo de venta), adapta las líneas de la reversión manteniendo siempre débitos = créditos en cada moneda.

@@ -58,7 +58,7 @@ CREATE INDEX IF NOT EXISTS idx_products_store_barcode
 -- Índice optimizado para queries FIFO de lotes (usado en ventas)
 -- Ordenado por fecha de expiración para facilitar selección FIFO
 CREATE INDEX IF NOT EXISTS idx_product_lots_product_fifo 
-  ON product_lots(product_id, expires_at ASC NULLS LAST, remaining_quantity DESC) 
+  ON product_lots(product_id, expiration_date ASC NULLS LAST, remaining_quantity DESC) 
   WHERE remaining_quantity > 0;
 
 -- ============================================
