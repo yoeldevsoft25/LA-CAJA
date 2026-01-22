@@ -293,43 +293,69 @@ export class SyncService {
       await this.eventRepository.save(eventsToSave);
 
       // 8. Encolar proyecciones de forma asíncrona (no bloquear respuesta)
-      // Solo encolar eventos de ventas en la cola de alta prioridad
-      // Otros eventos se procesan síncronamente para mantener compatibilidad
-      for (const event of eventsToSave) {
+      // ⚡ OPTIMIZACIÓN 2025: Batch processing para mejor performance
+      // Agrupar eventos por tipo y procesar en batches
+      const saleEvents = eventsToSave.filter((e) => e.type === 'SaleCreated');
+      const otherEvents = eventsToSave.filter((e) => e.type !== 'SaleCreated');
+
+      // Batch processing para eventos de venta (más eficiente que individual)
+      if (saleEvents.length > 0) {
         try {
-          if (event.type === 'SaleCreated') {
-            // Encolar proyección de venta de forma asíncrona
-            await this.salesProjectionQueue.add(
-              'project-sale-event',
-              { event },
-              {
-                priority: 10, // Alta prioridad para ventas
-                jobId: `projection-${event.event_id}`, // Evitar duplicados
-                attempts: 3, // Reintentar hasta 3 veces
-                backoff: {
-                  type: 'exponential',
-                  delay: 2000, // 2s, 4s, 8s
-                },
-                removeOnComplete: {
-                  age: 3600, // Mantener jobs completados por 1 hora
-                  count: 1000, // Mantener últimos 1000 jobs
-                },
-                removeOnFail: {
-                  age: 86400, // Mantener jobs fallidos por 24 horas para debugging
-                },
+          // Usar addBulk para encolar múltiples jobs de una vez (mejor performance)
+          const jobs = saleEvents.map((event) => ({
+            name: 'project-sale-event',
+            data: { event },
+            opts: {
+              priority: 10, // Alta prioridad para ventas
+              jobId: `projection-${event.event_id}`, // Evitar duplicados
+              attempts: 3, // Reintentar hasta 3 veces
+              backoff: {
+                type: 'exponential',
+                delay: 2000, // 2s, 4s, 8s
               },
-            );
-            this.logger.debug(
-              `Proyección de venta ${event.event_id} encolada para procesamiento asíncrono`,
-            );
-          } else {
-            // Procesar otros eventos síncronamente (son más rápidos)
-            await this.projectionsService.projectEvent(event);
+              removeOnComplete: {
+                age: 3600, // Mantener jobs completados por 1 hora
+                count: 1000, // Mantener últimos 1000 jobs
+              },
+              removeOnFail: {
+                age: 86400, // Mantener jobs fallidos por 24 horas para debugging
+              },
+            },
+          }));
+
+          await this.salesProjectionQueue.addBulk(jobs);
+          this.logger.debug(
+            `✅ ${saleEvents.length} proyecciones de venta encoladas en batch para procesamiento asíncrono`,
+          );
+        } catch (error) {
+          // Fallback: encolar individualmente si addBulk falla
+          this.logger.warn(
+            `Error en batch processing, encolando individualmente:`,
+            error instanceof Error ? error.message : String(error),
+          );
+          for (const event of saleEvents) {
+            try {
+              await this.salesProjectionQueue.add('project-sale-event', {
+                event,
+              });
+            } catch (err) {
+              this.logger.error(
+                `Error encolando evento ${event.event_id}:`,
+                err instanceof Error ? err.stack : String(err),
+              );
+            }
           }
+        }
+      }
+
+      // Procesar otros eventos síncronamente (son más rápidos y no bloquean tanto)
+      for (const event of otherEvents) {
+        try {
+          await this.projectionsService.projectEvent(event);
         } catch (error) {
           // Log error pero no fallar el sync
           this.logger.error(
-            `Error encolando/procesando evento ${event.event_id}:`,
+            `Error procesando evento ${event.event_id}:`,
             error instanceof Error ? error.stack : String(error),
           );
         }
