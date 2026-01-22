@@ -129,6 +129,23 @@ export class WhatsAppController {
   async getStatus(@Request() req: any) {
     const storeId = req.user.store_id;
 
+    // Si el bot no está inicializado pero hay una sesión guardada, inicializarlo
+    // Esto restaura automáticamente la conexión si la sesión es válida
+    const botExists = this.whatsappBotService.hasBot(storeId);
+    const hasSession = this.whatsappBotService.hasSavedSession(storeId);
+    
+    if (!botExists && hasSession) {
+      this.logger.log(`Bot no inicializado pero hay sesión guardada para tienda ${storeId}, restaurando conexión...`);
+      try {
+        await this.whatsappBotService.initializeBot(storeId);
+        // Esperar un momento para que Baileys restaure la conexión desde la sesión guardada
+        // Baileys se conecta automáticamente si hay credenciales válidas
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (error) {
+        this.logger.warn(`Error restaurando bot para tienda ${storeId}:`, error);
+      }
+    }
+
     const isConnected = this.whatsappBotService.isConnected(storeId);
     const whatsappNumber = this.whatsappBotService.getWhatsAppNumber(storeId);
     const connectionState = this.whatsappBotService.getConnectionState(storeId);

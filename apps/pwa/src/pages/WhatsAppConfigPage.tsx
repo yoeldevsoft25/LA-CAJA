@@ -50,6 +50,9 @@ export default function WhatsAppConfigPage() {
     queryFn: () => whatsappConfigService.getStatus(),
     enabled: !!user?.store_id,
     refetchInterval: 5000, // Polling cada 5 segundos
+    // Refetch inmediatamente cuando la página se monta o se enfoca
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   })
 
   const {

@@ -10,7 +10,7 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import * as QRCode from 'qrcode';
 import { join } from 'path';
-import { existsSync, mkdirSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import pino from 'pino';
 
 interface BotInstance {
@@ -205,6 +205,33 @@ export class WhatsAppBotService implements OnModuleDestroy {
     // Si no hay QR y no está conectado, puede que necesite reinicialización
     // Pero no lo hacemos aquí para evitar loops, se hace en el controller
     return bot.qrCode;
+  }
+
+  /**
+   * Verifica si existe un bot para la tienda (inicializado o no)
+   */
+  hasBot(storeId: string): boolean {
+    return this.bots.has(storeId);
+  }
+
+  /**
+   * Verifica si hay una sesión guardada para la tienda
+   */
+  hasSavedSession(storeId: string): boolean {
+    const sessionPath = join(this.sessionsDir, storeId);
+    if (!existsSync(sessionPath)) {
+      return false;
+    }
+    
+    // Verificar si hay archivos de sesión (creds.json o archivos de keys)
+    try {
+      const files = readdirSync(sessionPath);
+      // Baileys guarda creds.json y archivos de keys
+      // Si hay al menos creds.json, hay una sesión guardada
+      return files.some(file => file === 'creds.json' || file.startsWith('app-state-sync-key'));
+    } catch {
+      return false;
+    }
   }
 
   /**
