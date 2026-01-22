@@ -43,7 +43,14 @@ export class CashController {
   ) {
     const storeId = req.user.store_id;
     const userId = req.user.sub; // ID del usuario autenticado
-    return this.cashService.closeSession(storeId, userId, sessionId, dto);
+    const userRole = req.user.role;
+    return this.cashService.closeSession(
+      storeId,
+      userId,
+      sessionId,
+      dto,
+      userRole,
+    );
   }
 
   @Get('sessions/:id/summary')

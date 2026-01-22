@@ -1,7 +1,9 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Event } from '../database/entities/event.entity';
+import { Product } from '../database/entities/product.entity';
+import { CashSession } from '../database/entities/cash-session.entity';
 import {
   PushSyncDto,
   PushSyncResponseDto,
@@ -15,6 +17,62 @@ import { VectorClockService } from './vector-clock.service';
 import { CRDTService } from './crdt.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
 import * as crypto from 'crypto';
+import { DiscountRulesService } from '../discounts/discount-rules.service';
+
+interface SyncEventActor {
+  user_id: string;
+  role: 'owner' | 'cashier';
+}
+
+interface SyncEvent {
+  event_id: string;
+  seq: number;
+  type: string;
+  version: number;
+  created_at: number;
+  actor: SyncEventActor;
+  payload: unknown;
+}
+
+interface SaleCreatedItemPayload {
+  product_id: string;
+  qty: number;
+  unit_price_bs: number;
+  unit_price_usd: number;
+  discount_bs: number;
+  discount_usd: number;
+  is_weight_product?: boolean;
+  weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null;
+  weight_value?: number | null;
+  price_per_weight_bs?: number | null;
+  price_per_weight_usd?: number | null;
+}
+
+interface SaleCreatedPayload {
+  sale_id: string;
+  cash_session_id: string;
+  sold_at: number;
+  exchange_rate: number;
+  currency: string;
+  items: SaleCreatedItemPayload[];
+  totals: {
+    subtotal_bs: number;
+    subtotal_usd: number;
+    discount_bs: number;
+    discount_usd: number;
+    total_bs: number;
+    total_usd: number;
+  };
+  payment: {
+    method: string;
+    split?: Record<string, number>;
+  };
+  customer_id?: string;
+  customer?: {
+    customer_id: string | null;
+  };
+  note?: string;
+}
 
 /**
  * SyncService V2 - Con Vector Clocks y Resolución de Conflictos
@@ -51,13 +109,21 @@ export class SyncService {
   constructor(
     @InjectRepository(Event)
     private eventRepository: Repository<Event>,
+    @InjectRepository(Product)
+    private productRepository: Repository<Product>,
+    @InjectRepository(CashSession)
+    private cashSessionRepository: Repository<CashSession>,
     private projectionsService: ProjectionsService,
     private vectorClockService: VectorClockService,
     private crdtService: CRDTService,
     private conflictService: ConflictResolutionService,
+    private discountRulesService: DiscountRulesService,
   ) {}
 
-  async push(dto: PushSyncDto): Promise<PushSyncResponseDto> {
+  async push(
+    dto: PushSyncDto,
+    authenticatedUserId?: string,
+  ): Promise<PushSyncResponseDto> {
     const accepted: AcceptedEventDto[] = [];
     const rejected: RejectedEventDto[] = [];
     const conflicted: ConflictedEventDto[] = [];
@@ -107,6 +173,25 @@ export class SyncService {
             message: `Tipo de evento desconocido: ${event.type}`,
           });
           continue;
+        }
+
+        if (event.type === 'SaleCreated') {
+          const validationResult = await this.validateSaleCreatedEvent(
+            dto.store_id,
+            event as SyncEvent,
+            authenticatedUserId,
+          );
+          if (!validationResult.valid) {
+            rejected.push({
+              event_id: event.event_id,
+              seq: event.seq,
+              code: validationResult.code || 'SECURITY_ERROR',
+              message:
+                validationResult.message ||
+                'Evento de venta rechazado por validaciones de seguridad.',
+            });
+            continue;
+          }
         }
 
         // 2c. Dedupe por event_id (idempotencia)
@@ -229,6 +314,305 @@ export class SyncService {
       server_time: Date.now(),
       last_processed_seq: lastProcessedSeq,
     };
+  }
+
+  private async validateSaleCreatedEvent(
+    storeId: string,
+    event: SyncEvent,
+    authenticatedUserId?: string,
+  ): Promise<{ valid: boolean; code?: string; message?: string }> {
+    const payload = event.payload as SaleCreatedPayload;
+    const actorUserId = event.actor?.user_id;
+    const actorRole = event.actor?.role || 'cashier';
+
+    if (
+      authenticatedUserId &&
+      actorUserId &&
+      actorUserId !== authenticatedUserId
+    ) {
+      return {
+        valid: false,
+        code: 'SECURITY_ERROR',
+        message: 'El usuario del evento no coincide con el usuario autenticado.',
+      };
+    }
+
+    if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'La venta no tiene items válidos.',
+      };
+    }
+
+    if (!payload.cash_session_id) {
+      return {
+        valid: false,
+        code: 'SECURITY_ERROR',
+        message: 'La venta no está asociada a una sesión de caja.',
+      };
+    }
+
+    if (!payload.exchange_rate || Number(payload.exchange_rate) <= 0) {
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'La tasa de cambio del evento no es válida.',
+      };
+    }
+
+    const session = await this.cashSessionRepository.findOne({
+      where: { id: payload.cash_session_id, store_id: storeId },
+    });
+
+    if (!session || session.closed_at) {
+      return {
+        valid: false,
+        code: 'SECURITY_ERROR',
+        message: 'No hay una sesión de caja abierta para registrar la venta.',
+      };
+    }
+
+    if (
+      session.opened_by &&
+      actorUserId &&
+      session.opened_by !== actorUserId &&
+      actorRole !== 'owner'
+    ) {
+      return {
+        valid: false,
+        code: 'SECURITY_ERROR',
+        message:
+          'El usuario del evento no tiene permisos para registrar ventas en esta sesión.',
+      };
+    }
+
+    const productIds = payload.items
+      .map((item) => item.product_id)
+      .filter((productId): productId is string => Boolean(productId));
+
+    const products = await this.productRepository.find({
+      where: { id: In(productIds), store_id: storeId },
+    });
+
+    const productMap = new Map(products.map((product) => [product.id, product]));
+    const allowedDeviation = 0.05;
+    const tolerance = 0.01;
+    const roundTwo = (value: number) => Math.round(value * 100) / 100;
+
+    let computedSubtotalBs = 0;
+    let computedSubtotalUsd = 0;
+    let computedDiscountBs = 0;
+    let computedDiscountUsd = 0;
+
+    for (const item of payload.items) {
+      const product = productMap.get(item.product_id);
+      if (!product) {
+        return {
+          valid: false,
+          code: 'VALIDATION_ERROR',
+          message: `Producto ${item.product_id} no encontrado.`,
+        };
+      }
+
+      const isWeightProduct = Boolean(
+        item.is_weight_product || product.is_weight_product,
+      );
+      const qty = isWeightProduct
+        ? Number(item.weight_value ?? item.qty)
+        : Number(item.qty);
+
+      if (!Number.isFinite(qty) || qty <= 0) {
+        return {
+          valid: false,
+          code: 'VALIDATION_ERROR',
+          message: `Cantidad inválida para el producto ${product.name}.`,
+        };
+      }
+
+      const unitPriceBs = Number(item.unit_price_bs ?? 0);
+      const unitPriceUsd = Number(item.unit_price_usd ?? 0);
+
+      if (isWeightProduct) {
+        const productPriceBs = Number(product.price_per_weight_bs ?? 0);
+        const productPriceUsd = Number(product.price_per_weight_usd ?? 0);
+
+        if (productPriceBs > 0 && unitPriceBs > 0) {
+          const deviationBs =
+            Math.abs(unitPriceBs - productPriceBs) / productPriceBs;
+          if (deviationBs > allowedDeviation && actorRole !== 'owner') {
+            return {
+              valid: false,
+              code: 'SECURITY_ERROR',
+              message: `Precio modificado sin autorización para producto ${product.name}.`,
+            };
+          }
+        }
+
+        if (productPriceUsd > 0 && unitPriceUsd > 0) {
+          const deviationUsd =
+            Math.abs(unitPriceUsd - productPriceUsd) / productPriceUsd;
+          if (deviationUsd > allowedDeviation && actorRole !== 'owner') {
+            return {
+              valid: false,
+              code: 'SECURITY_ERROR',
+              message: `Precio modificado sin autorización para producto ${product.name}.`,
+            };
+          }
+        }
+      } else {
+        const productPriceBs = Number(product.price_bs ?? 0);
+        const productPriceUsd = Number(product.price_usd ?? 0);
+
+        if (
+          productPriceBs > 0 &&
+          Math.abs(unitPriceBs - productPriceBs) > tolerance
+        ) {
+          return {
+            valid: false,
+            code: 'SECURITY_ERROR',
+            message: `Precio de producto ${product.name} no coincide con el servidor.`,
+          };
+        }
+
+        if (
+          productPriceUsd > 0 &&
+          Math.abs(unitPriceUsd - productPriceUsd) > tolerance
+        ) {
+          return {
+            valid: false,
+            code: 'SECURITY_ERROR',
+            message: `Precio de producto ${product.name} no coincide con el servidor.`,
+          };
+        }
+      }
+
+      const lineSubtotalBs = unitPriceBs * qty;
+      const lineSubtotalUsd = unitPriceUsd * qty;
+      const lineDiscountBs = Number(item.discount_bs ?? 0);
+      const lineDiscountUsd = Number(item.discount_usd ?? 0);
+
+      if (lineDiscountBs < 0 || lineDiscountUsd < 0) {
+        return {
+          valid: false,
+          code: 'VALIDATION_ERROR',
+          message: `Descuento inválido para el producto ${product.name}.`,
+        };
+      }
+
+      if (
+        lineDiscountBs - lineSubtotalBs > tolerance ||
+        lineDiscountUsd - lineSubtotalUsd > tolerance
+      ) {
+        return {
+          valid: false,
+          code: 'VALIDATION_ERROR',
+          message: `Descuento excede el subtotal para el producto ${product.name}.`,
+        };
+      }
+
+      computedSubtotalBs += lineSubtotalBs;
+      computedSubtotalUsd += lineSubtotalUsd;
+      computedDiscountBs += lineDiscountBs;
+      computedDiscountUsd += lineDiscountUsd;
+    }
+
+    if (!payload.totals) {
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'La venta no tiene totales válidos.',
+      };
+    }
+
+    const expectedSubtotalBs = roundTwo(computedSubtotalBs);
+    const expectedSubtotalUsd = roundTwo(computedSubtotalUsd);
+    const expectedDiscountBs = roundTwo(computedDiscountBs);
+    const expectedDiscountUsd = roundTwo(computedDiscountUsd);
+    const expectedTotalBs = roundTwo(expectedSubtotalBs - expectedDiscountBs);
+    const expectedTotalUsd = roundTwo(expectedSubtotalUsd - expectedDiscountUsd);
+
+    if (
+      Math.abs(expectedSubtotalBs - Number(payload.totals.subtotal_bs || 0)) >
+        tolerance ||
+      Math.abs(expectedSubtotalUsd - Number(payload.totals.subtotal_usd || 0)) >
+        tolerance
+    ) {
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'Los subtotales de la venta no coinciden con los items.',
+      };
+    }
+
+    if (
+      Math.abs(expectedDiscountBs - Number(payload.totals.discount_bs || 0)) >
+        tolerance ||
+      Math.abs(expectedDiscountUsd - Number(payload.totals.discount_usd || 0)) >
+        tolerance
+    ) {
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'Los descuentos de la venta no coinciden con los items.',
+      };
+    }
+
+    if (
+      Math.abs(expectedTotalBs - Number(payload.totals.total_bs || 0)) >
+        tolerance ||
+      Math.abs(expectedTotalUsd - Number(payload.totals.total_usd || 0)) >
+        tolerance
+    ) {
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'Los totales de la venta no coinciden con los items.',
+      };
+    }
+
+    const discountPercentage =
+      expectedSubtotalBs > 0
+        ? (expectedDiscountBs / expectedSubtotalBs) * 100
+        : expectedSubtotalUsd > 0
+          ? (expectedDiscountUsd / expectedSubtotalUsd) * 100
+          : 0;
+
+    const discountValidation = await this.discountRulesService.requiresAuthorization(
+      storeId,
+      expectedDiscountBs,
+      expectedDiscountUsd,
+      discountPercentage,
+    );
+
+    if (discountValidation.error) {
+      return {
+        valid: false,
+        code: 'SECURITY_ERROR',
+        message: discountValidation.error,
+      };
+    }
+
+    if (
+      discountValidation.requires_authorization &&
+      !discountValidation.auto_approved
+    ) {
+      const config = await this.discountRulesService.getOrCreateConfig(storeId);
+      const canAuthorize = this.discountRulesService.validateAuthorizationRole(
+        actorRole,
+        config,
+      );
+
+      if (!canAuthorize) {
+        return {
+          valid: false,
+          code: 'SECURITY_ERROR',
+          message: 'El descuento requiere autorización de un supervisor.',
+        };
+      }
+    }
+
+    return { valid: true };
   }
 
   /**

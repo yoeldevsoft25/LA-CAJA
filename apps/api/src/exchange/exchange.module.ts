@@ -9,6 +9,7 @@ import {
   SalePayment,
   SaleChange,
 } from '../database/entities';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import {
       SalePayment,
       SaleChange,
     ]),
+    SecurityModule,
   ],
   controllers: [ExchangeController],
   providers: [ExchangeService, SalePaymentsService],

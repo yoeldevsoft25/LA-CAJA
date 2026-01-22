@@ -7,9 +7,16 @@ import { CRDTService } from './crdt.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
 import { Event } from '../database/entities/event.entity';
 import { ProjectionsModule } from '../projections/projections.module';
+import { Product } from '../database/entities/product.entity';
+import { CashSession } from '../database/entities/cash-session.entity';
+import { DiscountsModule } from '../discounts/discounts.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Event]), ProjectionsModule],
+  imports: [
+    TypeOrmModule.forFeature([Event, Product, CashSession]),
+    ProjectionsModule,
+    DiscountsModule,
+  ],
   controllers: [SyncController],
   providers: [
     SyncService,

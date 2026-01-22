@@ -19,6 +19,7 @@ import {
   calculateBsChangeBreakdown,
 } from './exchange.service';
 import { ExchangeRateType } from '../database/entities/exchange-rate.entity';
+import { SecurityAuditService } from '../security/security-audit.service';
 
 // ============================================
 // INTERFACES
@@ -57,6 +58,16 @@ export interface ProcessPaymentsResult {
 @Injectable()
 export class SalePaymentsService {
   private readonly logger = new Logger(SalePaymentsService.name);
+  private readonly validPaymentMethods = new Set<PaymentMethod>([
+    'CASH_USD',
+    'CASH_BS',
+    'PAGO_MOVIL',
+    'TRANSFER',
+    'POINT_OF_SALE',
+    'ZELLE',
+    'OTHER',
+    'FIAO',
+  ]);
 
   constructor(
     @InjectRepository(SalePayment)
@@ -65,6 +76,7 @@ export class SalePaymentsService {
     private saleChangeRepository: Repository<SaleChange>,
     private exchangeService: ExchangeService,
     private dataSource: DataSource,
+    private securityAuditService: SecurityAuditService,
   ) {}
 
   /**
@@ -78,6 +90,20 @@ export class SalePaymentsService {
     payments: SplitPaymentInput[],
     userId?: string,
   ): Promise<ProcessPaymentsResult> {
+    const references = payments
+      .filter(
+        (payment) =>
+          payment.method === 'PAGO_MOVIL' || payment.method === 'TRANSFER',
+      )
+      .map((payment) => payment.reference)
+      .filter((reference): reference is string => Boolean(reference));
+
+    if (references.length !== new Set(references).size) {
+      throw new BadRequestException(
+        'Las referencias de pago deben ser únicas.',
+      );
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -90,6 +116,12 @@ export class SalePaymentsService {
 
       // Procesar cada pago
       for (const paymentInput of payments) {
+        if (!this.validPaymentMethods.has(paymentInput.method)) {
+          throw new BadRequestException(
+            `Método de pago inválido: ${paymentInput.method}`,
+          );
+        }
+
         // Obtener la tasa apropiada para este método de pago
         const rateInfo = await this.exchangeService.getRateForPaymentMethod(
           storeId,
@@ -120,6 +152,12 @@ export class SalePaymentsService {
           );
         }
 
+        if (amountUsd <= 0 && amountBs <= 0) {
+          throw new BadRequestException(
+            'Los montos de pago deben ser mayores a 0',
+          );
+        }
+
         // Crear el pago
         const payment = queryRunner.manager.create(SalePayment, {
           sale_id: saleId,
@@ -145,6 +183,26 @@ export class SalePaymentsService {
 
         totalPaidUsd += amountUsd;
         totalPaidBs += amountBs;
+      }
+
+      const tolerance = 0.01;
+      const difference = Math.abs(totalPaidUsd - totalDueUsd);
+      if (difference > tolerance) {
+        await this.securityAuditService.log({
+          event_type: 'payment_mismatch',
+          store_id: storeId,
+          user_id: userId,
+          status: 'failure',
+          details: {
+            sale_id: saleId,
+            total_due_usd: totalDueUsd,
+            total_paid_usd: totalPaidUsd,
+            difference_usd: difference,
+          },
+        });
+        throw new BadRequestException(
+          `Los pagos no coinciden con el total. Total esperado: $${totalDueUsd.toFixed(2)}, Total pagado: $${totalPaidUsd.toFixed(2)}, Diferencia: $${difference.toFixed(2)}`,
+        );
       }
 
       // Calcular si hay cambio

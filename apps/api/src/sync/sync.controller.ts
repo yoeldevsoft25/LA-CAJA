@@ -37,7 +37,7 @@ export class SyncController {
     if (dto.store_id !== storeId) {
       throw new BadRequestException('store_id no autorizado');
     }
-    return this.syncService.push(dto);
+    return this.syncService.push(dto, req.user.sub);
   }
 
   @Get('status')

@@ -21,11 +21,15 @@ import { ReturnSaleDto } from './dto/return-sale.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { SecurityAuditService } from '../security/security-audit.service';
 
 @Controller('sales')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SalesController {
-  constructor(private readonly salesService: SalesService) {}
+  constructor(
+    private readonly salesService: SalesService,
+    private readonly securityAuditService: SecurityAuditService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -150,6 +154,16 @@ export class SalesController {
     @Request() req: any,
   ) {
     if (req.user.role !== 'owner') {
+      await this.securityAuditService.log({
+        event_type: 'sale_void_attempt',
+        store_id: req.user.store_id,
+        user_id: req.user.sub,
+        status: 'blocked',
+        details: {
+          sale_id: id,
+          reason: dto.reason || null,
+        },
+      });
       throw new ForbiddenException('Solo el owner puede anular ventas');
     }
     const storeId = req.user.store_id;

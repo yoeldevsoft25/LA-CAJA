@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull, Brackets } from 'typeorm';
@@ -16,6 +17,7 @@ import { OpenCashSessionDto } from './dto/open-cash-session.dto';
 import { CloseCashSessionDto } from './dto/close-cash-session.dto';
 import { AccountingService } from '../accounting/accounting.service';
 import { randomUUID } from 'crypto';
+import { SecurityAuditService } from '../security/security-audit.service';
 
 @Injectable()
 export class CashService {
@@ -30,6 +32,7 @@ export class CashService {
     private cashMovementRepository: Repository<CashMovement>,
     private dataSource: DataSource,
     private accountingService: AccountingService,
+    private securityAuditService: SecurityAuditService,
   ) {}
 
   async openSession(
@@ -81,10 +84,13 @@ export class CashService {
     userId: string,
     sessionId: string,
     dto: CloseCashSessionDto,
+    userRole?: string,
   ): Promise<CashSession> {
     // ============================================
     // VALIDACIONES DE SEGURIDAD ANTI-TRAMPAS
     // ============================================
+
+    const effectiveRole = userRole || 'cashier';
 
     // 1. Validar formato de montos (redondeo a 2 decimales)
     const countedBs = Math.round(Number(dto.counted_bs) * 100) / 100;
@@ -100,6 +106,13 @@ export class CashService {
       );
     }
 
+    const maxReasonableAmount = 1000000;
+    if (countedBs > maxReasonableAmount || countedUsd > maxReasonableAmount) {
+      throw new BadRequestException(
+        'Los montos contados exceden el límite razonable. Verifica los valores.',
+      );
+    }
+
     // 2. Obtener sesión y validar que existe y está abierta
     const session = await this.cashSessionRepository.findOne({
       where: {
@@ -111,6 +124,16 @@ export class CashService {
 
     if (!session) {
       throw new NotFoundException('Sesión de caja no encontrada o ya cerrada');
+    }
+
+    if (
+      session.opened_by !== userId &&
+      effectiveRole !== 'owner' &&
+      effectiveRole !== 'admin'
+    ) {
+      throw new ForbiddenException(
+        'Solo el usuario que abrió la sesión o un administrador puede cerrarla.',
+      );
     }
 
     // 3. Validar que la sesión no haya sido cerrada previamente (doble verificación)
@@ -276,8 +299,8 @@ export class CashService {
 
     // 7. Calcular diferencias (con redondeo)
     // Las diferencias se calculan pero se usan implícitamente en el objeto counted
-    Math.round((countedBs - expectedBs) * 100) / 100;
-    Math.round((countedUsd - expectedUsd) * 100) / 100;
+    const differenceBs = Math.round((countedBs - expectedBs) * 100) / 100;
+    const differenceUsd = Math.round((countedUsd - expectedUsd) * 100) / 100;
 
     // 9. Guardar sesión cerrada (TODO ES INMUTABLE DESDE AQUÍ)
     session.closed_at = closedAt;
@@ -319,6 +342,22 @@ export class CashService {
         'Error de integridad: Los valores guardados no coinciden. Por favor, contacte al administrador.',
       );
     }
+
+    await this.securityAuditService.log({
+      event_type: 'cash_session_closed',
+      store_id: storeId,
+      user_id: userId,
+      status: 'success',
+      details: {
+        session_id: sessionId,
+        expected_bs: expectedBs,
+        expected_usd: expectedUsd,
+        counted_bs: countedBs,
+        counted_usd: countedUsd,
+        difference_bs: differenceBs,
+        difference_usd: differenceUsd,
+      },
+    });
 
     // Generar asiento contable automático para diferencias (fuera de la transacción)
     setImmediate(async () => {

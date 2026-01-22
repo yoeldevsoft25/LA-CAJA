@@ -29,7 +29,10 @@ import { randomUUID } from 'crypto';
 import { CashSession } from '../database/entities/cash-session.entity';
 import { IsNull } from 'typeorm';
 import { PaymentRulesService, PaymentSplit } from '../payments/payment-rules.service';
-import { DiscountRulesService } from '../discounts/discount-rules.service';
+import {
+  DiscountRulesService,
+  DiscountValidationResult,
+} from '../discounts/discount-rules.service';
 import { FastCheckoutRulesService } from '../fast-checkout/fast-checkout-rules.service';
 import { ProductVariant } from '../database/entities/product-variant.entity';
 import { ProductVariantsService } from '../product-variants/product-variants.service';
@@ -48,6 +51,7 @@ import { AccountingService } from '../accounting/accounting.service';
 import { ConfigValidationService } from '../config/config-validation.service';
 import { SaleReturn } from '../database/entities/sale-return.entity';
 import { SaleReturnItem } from '../database/entities/sale-return-item.entity';
+import { SecurityAuditService } from '../security/security-audit.service';
 
 @Injectable()
 export class SalesService {
@@ -544,6 +548,7 @@ export class SalesService {
     private fiscalInvoicesService: FiscalInvoicesService,
     private accountingService: AccountingService,
     private configValidationService: ConfigValidationService,
+    private securityAuditService: SecurityAuditService,
   ) {}
 
   async create(
@@ -552,6 +557,7 @@ export class SalesService {
     userId?: string,
     userRole?: string,
   ): Promise<Sale> {
+    const effectiveUserRole = userRole || 'cashier';
     // ⚙️ VALIDAR CONFIGURACIÓN DEL SISTEMA ANTES DE GENERAR VENTA
     const canGenerate = await this.configValidationService.canGenerateSale(
       storeId,
@@ -800,6 +806,8 @@ export class SalesService {
       let netSubtotalUsd = 0;
       let discountBs = 0;
       let discountUsd = 0;
+      let discountPercentage = 0;
+      let discountValidation: DiscountValidationResult | null = null;
 
       // Procesar cada item del carrito
       for (const cartItem of dto.items) {
@@ -993,6 +1001,86 @@ export class SalesService {
           const pricePerWeightUsd =
             cartItem.price_per_weight_usd ?? product.price_per_weight_usd ?? 0;
 
+          const allowedPriceDeviation = 0.05;
+          const canOverridePrice =
+            effectiveUserRole === 'owner' || effectiveUserRole === 'admin';
+
+          if (product.price_per_weight_bs && pricePerWeightBs) {
+            const deviationBs =
+              Math.abs(pricePerWeightBs - product.price_per_weight_bs) /
+              Number(product.price_per_weight_bs);
+            if (deviationBs > 0) {
+              if (deviationBs > allowedPriceDeviation && !canOverridePrice) {
+                await this.securityAuditService.log({
+                  event_type: 'price_modification',
+                  store_id: storeId,
+                  user_id: userId,
+                  status: 'blocked',
+                  details: {
+                    product_id: product.id,
+                    original_price_bs: Number(product.price_per_weight_bs),
+                    modified_price_bs: Number(pricePerWeightBs),
+                    deviation_percent: deviationBs * 100,
+                  },
+                });
+                throw new BadRequestException(
+                  `El precio modificado requiere autorización. Precio original: $${Number(product.price_per_weight_bs).toFixed(2)}, Precio recibido: $${Number(pricePerWeightBs).toFixed(2)}`,
+                );
+              }
+
+              await this.securityAuditService.log({
+                event_type: 'price_modification',
+                store_id: storeId,
+                user_id: userId,
+                status: 'success',
+                details: {
+                  product_id: product.id,
+                  original_price_bs: Number(product.price_per_weight_bs),
+                  modified_price_bs: Number(pricePerWeightBs),
+                  deviation_percent: deviationBs * 100,
+                },
+              });
+            }
+          }
+
+          if (product.price_per_weight_usd && pricePerWeightUsd) {
+            const deviationUsd =
+              Math.abs(pricePerWeightUsd - product.price_per_weight_usd) /
+              Number(product.price_per_weight_usd);
+            if (deviationUsd > 0) {
+              if (deviationUsd > allowedPriceDeviation && !canOverridePrice) {
+                await this.securityAuditService.log({
+                  event_type: 'price_modification',
+                  store_id: storeId,
+                  user_id: userId,
+                  status: 'blocked',
+                  details: {
+                    product_id: product.id,
+                    original_price_usd: Number(product.price_per_weight_usd),
+                    modified_price_usd: Number(pricePerWeightUsd),
+                    deviation_percent: deviationUsd * 100,
+                  },
+                });
+                throw new BadRequestException(
+                  `El precio modificado requiere autorización. Precio original: $${Number(product.price_per_weight_usd).toFixed(2)}, Precio recibido: $${Number(pricePerWeightUsd).toFixed(2)}`,
+                );
+              }
+
+              await this.securityAuditService.log({
+                event_type: 'price_modification',
+                store_id: storeId,
+                user_id: userId,
+                status: 'success',
+                details: {
+                  product_id: product.id,
+                  original_price_usd: Number(product.price_per_weight_usd),
+                  modified_price_usd: Number(pricePerWeightUsd),
+                  deviation_percent: deviationUsd * 100,
+                },
+              });
+            }
+          }
+
           if (pricePerWeightBs <= 0 && pricePerWeightUsd <= 0) {
             throw new BadRequestException(
               `Precio por peso inválido para el producto ${product.name}`,
@@ -1005,6 +1093,14 @@ export class SalesService {
           itemSubtotalBs = priceBs * effectiveQty;
           itemSubtotalUsd = priceUsd * effectiveQty;
         } else {
+          if (
+            cartItem.price_per_weight_bs !== undefined ||
+            cartItem.price_per_weight_usd !== undefined
+          ) {
+            throw new BadRequestException(
+              `No se permite enviar precio por peso para el producto ${product.name}`,
+            );
+          }
           itemSubtotalBs = priceBs * effectiveQty;
           itemSubtotalUsd = priceUsd * effectiveQty;
         }
@@ -1104,30 +1200,42 @@ export class SalesService {
       // Validar descuentos si hay alguno
       if (discountBs > 0 || discountUsd > 0) {
         // Calcular porcentaje de descuento basado en el subtotal original
-        const discountPercentage =
+        discountPercentage =
           subtotalBs > 0
             ? (discountBs / subtotalBs) * 100
             : subtotalUsd > 0
               ? (discountUsd / subtotalUsd) * 100
               : 0;
 
-        const discountValidation =
-          await this.discountRulesService.requiresAuthorization(
-            storeId,
-            discountBs,
-            discountUsd,
-            discountPercentage,
-          );
+        discountValidation = await this.discountRulesService.requiresAuthorization(
+          storeId,
+          discountBs,
+          discountUsd,
+          discountPercentage,
+        );
 
-        // Si requiere autorización y no está auto-aprobado, lanzar error
+        if (discountValidation.error) {
+          throw new BadRequestException(discountValidation.error);
+        }
+
         if (
           discountValidation.requires_authorization &&
           !discountValidation.auto_approved
         ) {
-          throw new BadRequestException(
-            discountValidation.error ||
-              'Este descuento requiere autorización de un supervisor',
+          const config = await this.discountRulesService.getOrCreateConfig(
+            storeId,
           );
+          const canAuthorize =
+            this.discountRulesService.validateAuthorizationRole(
+              effectiveUserRole,
+              config,
+            );
+
+          if (!canAuthorize) {
+            throw new BadRequestException(
+              'Este descuento requiere autorización de un supervisor.',
+            );
+          }
         }
       }
 
@@ -1237,6 +1345,24 @@ export class SalesService {
 
       // Guardar items
       await manager.save(SaleItem, items);
+
+      if (discountBs > 0 || discountUsd > 0) {
+        await this.securityAuditService.log({
+          event_type: 'discount_applied',
+          store_id: storeId,
+          user_id: userId,
+          status: 'success',
+          details: {
+            sale_id: savedSale.id,
+            discount_bs: roundedDiscountBs,
+            discount_usd: roundedDiscountUsd,
+            discount_percentage: roundTwo(discountPercentage),
+            requires_authorization:
+              discountValidation?.requires_authorization || false,
+            promotion_id: dto.promotion_id || null,
+          },
+        });
+      }
 
       // Registrar uso de promoción si se aplicó
       if (
@@ -1856,7 +1982,20 @@ export class SalesService {
       sale.voided_by_user_id = userId;
       sale.void_reason = reason || null;
 
-      return manager.save(Sale, sale);
+      const savedSale = await manager.save(Sale, sale);
+
+      await this.securityAuditService.log({
+        event_type: 'sale_void_attempt',
+        store_id: storeId,
+        user_id: userId,
+        status: 'success',
+        details: {
+          sale_id: saleId,
+          reason: reason || null,
+        },
+      });
+
+      return savedSale;
     });
   }
 

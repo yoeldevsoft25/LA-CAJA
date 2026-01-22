@@ -27,6 +27,7 @@ import { FiscalInvoicesModule } from '../fiscal-invoices/fiscal-invoices.module'
 import { AccountingModule } from '../accounting/accounting.module';
 import { ConfigModule as SystemConfigModule } from '../config/config.module';
 import { forwardRef } from '@nestjs/common';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { forwardRef } from '@nestjs/common';
     FiscalInvoicesModule,
     forwardRef(() => AccountingModule),
     SystemConfigModule,
+    SecurityModule,
   ],
   controllers: [SalesController],
   providers: [SalesService],
