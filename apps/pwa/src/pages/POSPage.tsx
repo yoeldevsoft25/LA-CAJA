@@ -1131,18 +1131,26 @@ export default function POSPage() {
       toast.error('No se pudo validar el carrito. Intenta de nuevo.')
       return
     }
-    const saleItems = items.map((item) => ({
-      product_id: item.product_id,
-      qty: item.qty,
-      discount_bs: item.discount_bs || 0,
-      discount_usd: item.discount_usd || 0,
-      variant_id: item.variant_id || null,
-      is_weight_product: item.is_weight_product || false,
-      weight_unit: item.weight_unit || null,
-      weight_value: item.weight_value || null,
-      price_per_weight_bs: item.price_per_weight_bs || null,
-      price_per_weight_usd: item.price_per_weight_usd || null,
-    }))
+    const saleItems = items.map((item) => {
+      const isWeightProduct = Boolean(item.is_weight_product)
+
+      return {
+        product_id: item.product_id,
+        qty: item.qty,
+        discount_bs: item.discount_bs || 0,
+        discount_usd: item.discount_usd || 0,
+        variant_id: item.variant_id || null,
+        is_weight_product: isWeightProduct,
+        ...(isWeightProduct
+          ? {
+              weight_unit: item.weight_unit || null,
+              weight_value: item.weight_value || null,
+              price_per_weight_bs: item.price_per_weight_bs || null,
+              price_per_weight_usd: item.price_per_weight_usd || null,
+            }
+          : {}),
+      }
+    })
 
     // Bloquear checkout si no hay caja abierta
     if (!hasOpenCash) {

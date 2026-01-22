@@ -1093,14 +1093,6 @@ export class SalesService {
           itemSubtotalBs = priceBs * effectiveQty;
           itemSubtotalUsd = priceUsd * effectiveQty;
         } else {
-          if (
-            cartItem.price_per_weight_bs !== undefined ||
-            cartItem.price_per_weight_usd !== undefined
-          ) {
-            throw new BadRequestException(
-              `No se permite enviar precio por peso para el producto ${product.name}`,
-            );
-          }
           itemSubtotalBs = priceBs * effectiveQty;
           itemSubtotalUsd = priceUsd * effectiveQty;
         }

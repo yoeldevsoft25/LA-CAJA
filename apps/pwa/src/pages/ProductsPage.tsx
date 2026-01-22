@@ -419,7 +419,18 @@ export default function ProductsPage() {
       // Exportar con los campos exactos que requiere la importación CSV
       // Orden: nombre, categoria, sku, codigo_barras, precio_bs, precio_usd, costo_bs, costo_usd, stock_minimo
       // IMPORTANTE: Los headers deben coincidir exactamente con los que espera la importación
+      // Los headers requeridos son: nombre, precio_bs, precio_usd
       const csvHeaders = 'nombre,categoria,sku,codigo_barras,precio_bs,precio_usd,costo_bs,costo_usd,stock_minimo'
+      
+      // Verificar que los headers incluyan los campos requeridos
+      const requiredHeaders = ['nombre', 'precio_bs', 'precio_usd']
+      const headerArray = csvHeaders.split(',')
+      const missingInHeaders = requiredHeaders.filter(h => !headerArray.includes(h))
+      if (missingInHeaders.length > 0) {
+        console.error('ERROR: Headers faltantes en CSV:', missingInHeaders)
+        toast.error(`Error al generar CSV: faltan headers ${missingInHeaders.join(', ')}`, { id: 'export-products' })
+        return
+      }
       
       const csvRows = allProducts.map((p) => {
         // Función para escapar valores CSV
