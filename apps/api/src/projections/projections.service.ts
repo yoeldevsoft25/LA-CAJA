@@ -295,14 +295,14 @@ export class ProjectionsService {
       await this.saleItemRepository.save(items);
     }
 
-    // Crear movimiento de inventario (descontar stock) si payment.method !== 'FIAO'
+    // ⚡ OPTIMIZACIÓN: Crear movimientos de inventario en batch (descontar stock)
     // Nota: Para FIAO, el stock se descuenta igual
     if (payload.items && Array.isArray(payload.items)) {
-      for (const item of payload.items) {
+      const movements = payload.items.map((item) => {
         const movementQty = item.is_weight_product && item.weight_value != null
           ? Number(item.weight_value)
           : Number(item.qty) || 0;
-        const movement = this.movementRepository.create({
+        return this.movementRepository.create({
           id: randomUUID(),
           store_id: event.store_id,
           product_id: item.product_id,
@@ -316,9 +316,10 @@ export class ProjectionsService {
             ? new Date(payload.sold_at)
             : event.created_at,
         });
+      });
 
-        await this.movementRepository.save(movement);
-      }
+      // Batch insert para mejor performance
+      await this.movementRepository.save(movements);
     }
 
     // ⚠️ CRÍTICO: Si es venta FIAO, SIEMPRE crear la deuda automáticamente

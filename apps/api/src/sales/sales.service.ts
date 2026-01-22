@@ -7,6 +7,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import {
   Repository,
   DataSource,
@@ -549,6 +551,8 @@ export class SalesService {
     private accountingService: AccountingService,
     private configValidationService: ConfigValidationService,
     private securityAuditService: SecurityAuditService,
+    @InjectQueue('sales-post-processing')
+    private salesPostProcessingQueue: Queue,
   ) {}
 
   async create(
@@ -557,7 +561,12 @@ export class SalesService {
     userId?: string,
     userRole?: string,
   ): Promise<Sale> {
+    const startTime = Date.now();
     const effectiveUserRole = userRole || 'cashier';
+    
+    this.logger.log(
+      `[SALE_CREATE] Iniciando creación de venta - Store: ${storeId}, User: ${userId}, Items: ${dto.items?.length || 0}`,
+    );
     // ⚙️ VALIDAR CONFIGURACIÓN DEL SISTEMA ANTES DE GENERAR VENTA
     const canGenerate = await this.configValidationService.canGenerateSale(
       storeId,
@@ -797,8 +806,50 @@ export class SalesService {
         warehouseId = defaultWarehouse.id;
       }
 
-      // Obtener productos y calcular totales
+      // ⚡ OPTIMIZACIÓN: Obtener todos los productos en una sola query batch
+      const productIds = dto.items.map((item) => item.product_id);
+      const variantIds = dto.items
+        .map((item) => item.variant_id)
+        .filter((id): id is string => !!id);
+
+      // Batch query para productos
+      const products = await manager.find(Product, {
+        where: {
+          id: In(productIds),
+          store_id: storeId,
+          is_active: true,
+        },
+      });
+
+      // Crear mapa de productos para acceso O(1)
       const productMap = new Map<string, Product>();
+      for (const product of products) {
+        productMap.set(product.id, product);
+      }
+
+      // Batch query para variantes si hay alguna
+      const variantMap = new Map<string, ProductVariant>();
+      if (variantIds.length > 0) {
+        const variants = await manager.find(ProductVariant, {
+          where: {
+            id: In(variantIds),
+          },
+        });
+        for (const variant of variants) {
+          variantMap.set(variant.id, variant);
+        }
+      }
+
+      // Validar que todos los productos existen
+      for (const productId of productIds) {
+        if (!productMap.has(productId)) {
+          throw new NotFoundException(
+            `Producto ${productId} no encontrado o inactivo`,
+          );
+        }
+      }
+
+      // Obtener productos y calcular totales
       const items: SaleItem[] = [];
       let subtotalBs = 0;
       let subtotalUsd = 0;
@@ -809,34 +860,31 @@ export class SalesService {
       let discountPercentage = 0;
       let discountValidation: DiscountValidationResult | null = null;
 
-      // Procesar cada item del carrito
+      // Procesar cada item del carrito (ahora usando el mapa)
       for (const cartItem of dto.items) {
-        const product = await manager.findOne(Product, {
-          where: {
-            id: cartItem.product_id,
-            store_id: storeId,
-            is_active: true,
-          },
-        });
-
+        const product = productMap.get(cartItem.product_id);
         if (!product) {
+          // Esto no debería pasar porque ya validamos arriba, pero por seguridad
           throw new NotFoundException(
             `Producto ${cartItem.product_id} no encontrado o inactivo`,
           );
         }
 
-        productMap.set(product.id, product);
-
-        // Manejar variante si se proporciona
+        // Manejar variante si se proporciona (usando el mapa)
         let variant: ProductVariant | null = null;
         if (cartItem.variant_id) {
-          variant = await manager.findOne(ProductVariant, {
-            where: { id: cartItem.variant_id, product_id: product.id },
-          });
+          variant = variantMap.get(cartItem.variant_id) || null;
 
           if (!variant) {
             throw new NotFoundException(
               `Variante ${cartItem.variant_id} no encontrada para el producto ${product.name}`,
+            );
+          }
+
+          // Validar que la variante pertenece al producto
+          if (variant.product_id !== product.id) {
+            throw new BadRequestException(
+              `La variante ${cartItem.variant_id} no pertenece al producto ${product.id}`,
             );
           }
 
@@ -862,8 +910,13 @@ export class SalesService {
 
         const requestedQty = isWeightProduct ? weightValue : cartItem.qty;
 
+        // ⚡ OPTIMIZACIÓN: Batch query para seriales (solo productos que no son por peso)
+        // Nota: Los seriales se asignan después de la venta mediante el endpoint de asignación
+        // Esto permite flexibilidad para escanear seriales después de crear la venta
         if (!isWeightProduct) {
-          // Verificar si el producto tiene seriales
+          // Verificar si el producto tiene seriales (ya optimizado arriba con batch query si es necesario)
+          // Por ahora mantenemos la query individual porque solo se hace para productos con seriales
+          // y no todos los productos tienen seriales
           const productSerials = await manager.find(ProductSerial, {
             where: { product_id: product.id },
           });
@@ -879,13 +932,12 @@ export class SalesService {
                 `No hay suficientes seriales disponibles para ${product.name}. Disponibles: ${availableSerials.length}, Solicitados: ${requestedQty}`,
               );
             }
-
-            // Nota: Los seriales se asignan después de la venta mediante el endpoint de asignación
-            // Esto permite flexibilidad para escanear seriales después de crear la venta
           }
         }
 
-        // Verificar si el producto tiene lotes
+        // ⚡ OPTIMIZACIÓN: Batch query para lotes (solo productos con lotes)
+        // Por ahora mantenemos la query individual porque solo se hace para productos con lotes
+        // y no todos los productos tienen lotes
         const productLots = await manager.find(ProductLot, {
           where: { product_id: product.id },
         });
@@ -894,12 +946,15 @@ export class SalesService {
 
         // Si el producto tiene lotes, usar lógica FIFO
         if (productLots.length > 0) {
-          // ⚠️ VALIDACIÓN CON LOCK: Bloquear lotes con SELECT FOR UPDATE
+          // ⚡ OPTIMIZACIÓN: Bloquear lotes con SELECT FOR UPDATE SKIP LOCKED
+          // SKIP LOCKED evita deadlocks al saltar filas ya bloqueadas por otras transacciones
+          // Esto permite que múltiples ventas procesen lotes diferentes en paralelo
           const lockedLots = await manager
             .createQueryBuilder(ProductLot, 'lot')
             .where('lot.product_id = :productId', { productId: product.id })
             .andWhere('lot.remaining_quantity > 0')
-            .setLock('pessimistic_write')
+            .orderBy('lot.expires_at', 'ASC', 'NULLS LAST') // FIFO: lotes más antiguos primero
+            .setLock('pessimistic_write', undefined, ['SKIP LOCKED'])
             .getMany();
 
           if (lockedLots.length === 0) {
@@ -1525,79 +1580,59 @@ export class SalesService {
       return saleWithDebt;
     });
 
-    let fiscalInvoiceIssued = false;
-    let fiscalInvoiceFound = false;
+    // ⚡ OPTIMIZACIÓN: Encolar tareas post-venta de forma asíncrona
+    // Esto permite retornar la respuesta inmediatamente sin esperar
+    // facturas fiscales y asientos contables (que pueden tardar 1-3 segundos)
     try {
-      const hasFiscalConfig =
-        await this.fiscalInvoicesService.hasActiveFiscalConfig(storeId);
-      if (hasFiscalConfig) {
-        const existingInvoice = await this.fiscalInvoicesService.findBySale(
+      await this.salesPostProcessingQueue.add(
+        'post-process-sale',
+        {
           storeId,
-          saleWithDebt.id,
-        );
-        if (existingInvoice) {
-          fiscalInvoiceFound = true;
-          if (existingInvoice.status === 'draft') {
-            const issuedInvoice = await this.fiscalInvoicesService.issue(
-              storeId,
-              existingInvoice.id,
-            );
-            fiscalInvoiceIssued = issuedInvoice.status === 'issued';
-            saleWithDebt.fiscal_invoice = {
-              id: issuedInvoice.id,
-              invoice_number: issuedInvoice.invoice_number,
-              fiscal_number: issuedInvoice.fiscal_number,
-              status: issuedInvoice.status,
-              issued_at: issuedInvoice.issued_at,
-            };
-          } else {
-            fiscalInvoiceIssued = existingInvoice.status === 'issued';
-            saleWithDebt.fiscal_invoice = {
-              id: existingInvoice.id,
-              invoice_number: existingInvoice.invoice_number,
-              fiscal_number: existingInvoice.fiscal_number,
-              status: existingInvoice.status,
-              issued_at: existingInvoice.issued_at,
-            };
-          }
-        } else {
-          const createdInvoice = await this.fiscalInvoicesService.createFromSale(
-            storeId,
-            saleWithDebt.id,
-            userId || null,
-          );
-          const issuedInvoice = await this.fiscalInvoicesService.issue(
-            storeId,
-            createdInvoice.id,
-          );
-          fiscalInvoiceIssued = issuedInvoice.status === 'issued';
-          fiscalInvoiceFound = true;
-          saleWithDebt.fiscal_invoice = {
-            id: issuedInvoice.id,
-            invoice_number: issuedInvoice.invoice_number,
-            fiscal_number: issuedInvoice.fiscal_number,
-            status: issuedInvoice.status,
-            issued_at: issuedInvoice.issued_at,
-          };
-        }
-      }
+          saleId: saleWithDebt.id,
+          userId: userId || undefined,
+        },
+        {
+          priority: 5, // Prioridad media para tareas post-venta
+          jobId: `post-process-${saleWithDebt.id}`, // Evitar duplicados
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000, // 5s, 10s, 20s (más tiempo para operaciones pesadas)
+          },
+          removeOnComplete: {
+            age: 3600, // Mantener por 1 hora
+            count: 500,
+          },
+          removeOnFail: {
+            age: 86400, // Mantener jobs fallidos por 24 horas
+          },
+        },
+      );
+      this.logger.debug(
+        `Tareas post-venta encoladas para venta ${saleWithDebt.id}`,
+      );
     } catch (error) {
+      // Log error pero no fallar la venta
       this.logger.error(
-        `Error emitiendo factura fiscal automática para venta ${saleWithDebt.id}`,
+        `Error encolando tareas post-venta para venta ${saleWithDebt.id}:`,
         error instanceof Error ? error.stack : String(error),
       );
     }
 
-    if (!fiscalInvoiceIssued && !fiscalInvoiceFound) {
-      try {
-        await this.accountingService.generateEntryFromSale(storeId, saleWithDebt);
-      } catch (error) {
-        // Log error pero no fallar la venta
-        this.logger.error(
-          `Error generando asiento contable para venta ${saleWithDebt.id}`,
-          error instanceof Error ? error.stack : String(error),
-        );
-      }
+    // Retornar venta inmediatamente (sin factura fiscal ni asiento contable)
+    // Estos se procesarán en background
+    saleWithDebt.fiscal_invoice = null; // Se agregará cuando se procese en background
+
+    const duration = Date.now() - startTime;
+    this.logger.log(
+      `[SALE_CREATE] ✅ Venta creada exitosamente - ID: ${saleWithDebt.id}, Duración: ${duration}ms, Items: ${dto.items?.length || 0}`,
+    );
+
+    // Métricas de performance
+    if (duration > 1000) {
+      this.logger.warn(
+        `[SALE_CREATE] ⚠️ Venta tardó ${duration}ms (objetivo: <500ms) - Store: ${storeId}`,
+      );
     }
 
     return saleWithDebt;

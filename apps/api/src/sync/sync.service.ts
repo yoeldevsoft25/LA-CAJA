@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Repository, In } from 'typeorm';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
@@ -118,6 +120,8 @@ export class SyncService {
     private crdtService: CRDTService,
     private conflictService: ConflictResolutionService,
     private discountRulesService: DiscountRulesService,
+    @InjectQueue('sales-projections')
+    private salesProjectionQueue: Queue,
   ) {}
 
   async push(
@@ -288,14 +292,44 @@ export class SyncService {
     if (eventsToSave.length > 0) {
       await this.eventRepository.save(eventsToSave);
 
-      // 8. Proyectar eventos a read models
+      // 8. Encolar proyecciones de forma asíncrona (no bloquear respuesta)
+      // Solo encolar eventos de ventas en la cola de alta prioridad
+      // Otros eventos se procesan síncronamente para mantener compatibilidad
       for (const event of eventsToSave) {
         try {
-          await this.projectionsService.projectEvent(event);
+          if (event.type === 'SaleCreated') {
+            // Encolar proyección de venta de forma asíncrona
+            await this.salesProjectionQueue.add(
+              'project-sale-event',
+              { event },
+              {
+                priority: 10, // Alta prioridad para ventas
+                jobId: `projection-${event.event_id}`, // Evitar duplicados
+                attempts: 3, // Reintentar hasta 3 veces
+                backoff: {
+                  type: 'exponential',
+                  delay: 2000, // 2s, 4s, 8s
+                },
+                removeOnComplete: {
+                  age: 3600, // Mantener jobs completados por 1 hora
+                  count: 1000, // Mantener últimos 1000 jobs
+                },
+                removeOnFail: {
+                  age: 86400, // Mantener jobs fallidos por 24 horas para debugging
+                },
+              },
+            );
+            this.logger.debug(
+              `Proyección de venta ${event.event_id} encolada para procesamiento asíncrono`,
+            );
+          } else {
+            // Procesar otros eventos síncronamente (son más rápidos)
+            await this.projectionsService.projectEvent(event);
+          }
         } catch (error) {
           // Log error pero no fallar el sync
           this.logger.error(
-            `Error proyectando evento ${event.event_id}`,
+            `Error encolando/procesando evento ${event.event_id}:`,
             error instanceof Error ? error.stack : String(error),
           );
         }

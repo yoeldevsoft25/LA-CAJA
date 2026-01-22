@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import helmet from '@fastify/helmet';
 import { SecretValidator } from './common/utils/secret-validator';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -19,6 +20,9 @@ async function bootstrap() {
   );
 
   const configService = app.get(ConfigService);
+
+  // WebSocket adapter explícito para Fastify + Socket.IO
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Validar secrets al iniciar
   SecretValidator.validateAllSecrets(configService);
@@ -71,13 +75,20 @@ async function bootstrap() {
   const allowAllOriginsLocal = configService.get<string>('ALLOW_ALL_ORIGINS_LOCAL') === 'true';
   
   const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
-  const origins = allowedOrigins
+  const extraOrigins = [
+    configService.get<string>('PUBLIC_APP_URL'),
+    configService.get<string>('APP_URL'),
+    configService.get<string>('RENDER_EXTERNAL_URL'),
+  ].filter((origin): origin is string => Boolean(origin));
+
+  const originList = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => origin.trim())
     : [
         'http://localhost:5173',
         'http://localhost:4173',
         'http://localhost:3000',
       ]; // Defaults para desarrollo (5173) y preview (4173)
+  const origins = Array.from(new Set([...originList, ...extraOrigins]));
 
   // Obtener puerto antes de usarlo
   const port = configService.get<number>('PORT') || 3000;

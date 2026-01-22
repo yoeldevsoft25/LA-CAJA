@@ -594,7 +594,9 @@ class SyncServiceClass {
 
       // ✅ OFFLINE-FIRST: Ejecutar request con Circuit Breaker
       const response = await this.circuitBreaker.execute(async () => {
-        return await api.post<PushSyncResponseDto>('/sync/push', dto);
+        return await api.post<PushSyncResponseDto>('/sync/push', dto, {
+          timeout: 60000,
+        });
       });
 
       // ✅ OFFLINE-FIRST: Mergear vector clock del servidor

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
 import { Sale } from '../database/entities/sale.entity';
@@ -28,6 +30,9 @@ import { AccountingModule } from '../accounting/accounting.module';
 import { ConfigModule as SystemConfigModule } from '../config/config.module';
 import { forwardRef } from '@nestjs/common';
 import { SecurityModule } from '../security/security.module';
+import { ProjectionsModule } from '../projections/projections.module';
+import { SalesProjectionQueueProcessor } from './queues/sales-projection.queue';
+import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processing.queue';
 
 @Module({
   imports: [
@@ -58,9 +63,48 @@ import { SecurityModule } from '../security/security.module';
     forwardRef(() => AccountingModule),
     SystemConfigModule,
     SecurityModule,
+    ProjectionsModule,
+    // BullMQ para procesamiento asíncrono
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+
+        // Si existe REDIS_URL (ej: de Render), úsala directamente
+        if (redisUrl) {
+          return {
+            connection: {
+              url: redisUrl,
+              maxRetriesPerRequest: null, // Requerido para BullMQ
+            },
+          };
+        }
+
+        // Fallback a configuración por componentes (desarrollo local)
+        return {
+          connection: {
+            host: configService.get<string>('REDIS_HOST') || 'localhost',
+            port: configService.get<number>('REDIS_PORT') || 6379,
+            password: configService.get<string>('REDIS_PASSWORD'),
+            maxRetriesPerRequest: null,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue({
+      name: 'sales-projections',
+    }),
+    BullModule.registerQueue({
+      name: 'sales-post-processing',
+    }),
   ],
   controllers: [SalesController],
-  providers: [SalesService],
+  providers: [
+    SalesService,
+    SalesProjectionQueueProcessor,
+    SalesPostProcessingQueueProcessor,
+  ],
   exports: [SalesService],
 })
 export class SalesModule {}
