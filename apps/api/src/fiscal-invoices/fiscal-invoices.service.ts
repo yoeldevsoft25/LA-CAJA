@@ -91,6 +91,20 @@ export class FiscalInvoicesService {
   }
 
   /**
+   * Genera un número único para nota de crédito (NC-YYYY-NNNNNN)
+   */
+  private async generateCreditNoteNumber(storeId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const count = await this.fiscalInvoiceRepository.count({
+      where: {
+        store_id: storeId,
+        invoice_type: 'credit_note',
+      },
+    });
+    return `NC-${year}-${String(count + 1).padStart(6, '0')}`;
+  }
+
+  /**
    * Crea una factura fiscal desde una venta
    */
   async createFromSale(
@@ -518,6 +532,127 @@ export class FiscalInvoicesService {
     invoice.cancelled_at = new Date();
 
     return this.fiscalInvoiceRepository.save(invoice);
+  }
+
+  /**
+   * Crea una nota de crédito que anula una factura fiscal emitida.
+   *
+   * Según normativa SENIAT, las facturas emitidas no pueden cancelarse directamente.
+   * Debe crearse una nota de crédito con los mismos datos (cliente, ítems, totales)
+   * que la factura original.
+   *
+   * @param storeId ID de la tienda
+   * @param invoiceId ID de la factura a anular
+   * @param userId ID del usuario que crea la nota
+   * @param reason Motivo opcional (ej. "Venta duplicada por error")
+   */
+  async createCreditNote(
+    storeId: string,
+    invoiceId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<FiscalInvoice> {
+    const invoice = await this.fiscalInvoiceRepository.findOne({
+      where: { id: invoiceId, store_id: storeId },
+      relations: ['items', 'invoice_series'],
+    });
+
+    if (!invoice) {
+      throw new NotFoundException('Factura fiscal no encontrada');
+    }
+
+    if (invoice.status !== 'issued') {
+      throw new BadRequestException(
+        'Solo puede crear nota de crédito para facturas emitidas. ' +
+          'La factura actual está en estado "' + invoice.status + '".',
+      );
+    }
+
+    if (invoice.invoice_type === 'credit_note') {
+      throw new BadRequestException(
+        'No puede crear una nota de crédito a partir de otra nota de crédito.',
+      );
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const ncNumber = await this.generateCreditNoteNumber(storeId);
+      const note = reason
+        ? `Nota de crédito que anula factura ${invoice.invoice_number}. Motivo: ${reason}`
+        : `Nota de crédito que anula factura ${invoice.invoice_number}.`;
+
+      const creditNote = manager.create(FiscalInvoice, {
+        id: randomUUID(),
+        store_id: storeId,
+        sale_id: invoice.sale_id,
+        invoice_number: ncNumber,
+        invoice_series_id: invoice.invoice_series_id,
+        invoice_type: 'credit_note',
+        status: 'draft',
+        issuer_name: invoice.issuer_name,
+        issuer_tax_id: invoice.issuer_tax_id,
+        issuer_address: invoice.issuer_address,
+        issuer_phone: invoice.issuer_phone,
+        issuer_email: invoice.issuer_email,
+        customer_id: invoice.customer_id,
+        customer_name: invoice.customer_name,
+        customer_tax_id: invoice.customer_tax_id,
+        customer_address: invoice.customer_address,
+        customer_phone: invoice.customer_phone,
+        customer_email: invoice.customer_email,
+        subtotal_bs: invoice.subtotal_bs,
+        subtotal_usd: invoice.subtotal_usd,
+        tax_amount_bs: invoice.tax_amount_bs,
+        tax_amount_usd: invoice.tax_amount_usd,
+        tax_rate: invoice.tax_rate,
+        discount_bs: invoice.discount_bs,
+        discount_usd: invoice.discount_usd,
+        total_bs: invoice.total_bs,
+        total_usd: invoice.total_usd,
+        exchange_rate: invoice.exchange_rate,
+        currency: invoice.currency,
+        payment_method: invoice.payment_method,
+        note,
+        created_by: userId,
+      });
+
+      const saved = await manager.save(FiscalInvoice, creditNote);
+
+      for (const it of invoice.items) {
+        const line = manager.create(FiscalInvoiceItem, {
+          id: randomUUID(),
+          fiscal_invoice_id: saved.id,
+          product_id: it.product_id,
+          variant_id: it.variant_id,
+          product_name: it.product_name,
+          product_code: it.product_code,
+          quantity: it.quantity,
+          unit_price_bs: it.unit_price_bs,
+          unit_price_usd: it.unit_price_usd,
+          discount_bs: it.discount_bs,
+          discount_usd: it.discount_usd,
+          subtotal_bs: it.subtotal_bs,
+          subtotal_usd: it.subtotal_usd,
+          tax_amount_bs: it.tax_amount_bs,
+          tax_amount_usd: it.tax_amount_usd,
+          total_bs: it.total_bs,
+          total_usd: it.total_usd,
+          tax_rate: it.tax_rate,
+          note: it.note,
+        });
+        await manager.save(FiscalInvoiceItem, line);
+      }
+
+      const withItems = await manager.findOne(FiscalInvoice, {
+        where: { id: saved.id },
+        relations: ['items', 'sale', 'customer', 'invoice_series'],
+      });
+
+      this.logger.log(
+        `Nota de crédito ${ncNumber} creada para anular factura ${invoice.invoice_number} (store ${storeId})`,
+      );
+
+      return withItems!;
+    });
   }
 
   /**

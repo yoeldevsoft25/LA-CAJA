@@ -204,11 +204,26 @@ export const fiscalInvoicesService = {
   },
 
   /**
-   * Cancela una factura fiscal
+   * Cancela una factura fiscal (solo borradores)
    */
   async cancel(id: string): Promise<FiscalInvoice> {
     const response = await api.put<FiscalInvoice>(
       `/fiscal-invoices/${id}/cancel`,
+    )
+    return response.data
+  },
+
+  /**
+   * Crea una nota de crédito que anula una factura emitida.
+   * Según SENIAT, las facturas emitidas no pueden cancelarse directamente.
+   */
+  async createCreditNote(
+    invoiceId: string,
+    body?: { reason?: string },
+  ): Promise<FiscalInvoice> {
+    const response = await api.post<FiscalInvoice>(
+      `/fiscal-invoices/${invoiceId}/credit-note`,
+      body ?? {},
     )
     return response.data
   },

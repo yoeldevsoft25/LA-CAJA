@@ -65,6 +65,18 @@ CREATE INDEX IF NOT EXISTS idx_product_lots_product_fifo
 -- ÍNDICES PARA STOCK DE BODEGAS (WAREHOUSE_STOCK)
 -- ============================================
 
+-- ⚡ CRÍTICO: Índice compuesto optimizado para UPDATEs rápidos de warehouse_stock
+-- Este índice cubre exactamente la condición WHERE del UPDATE
+-- Nota: No podemos usar COALESCE en índice único directamente, pero el índice compuesto
+-- ayuda a PostgreSQL a encontrar la fila rápidamente
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_warehouse_product_variant_fast 
+  ON warehouse_stock(warehouse_id, product_id, variant_id);
+
+-- Índice parcial para queries con variant_id NULL (productos sin variantes)
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_warehouse_product_null_variant 
+  ON warehouse_stock(warehouse_id, product_id) 
+  WHERE variant_id IS NULL;
+
 -- Índice compuesto para validación rápida de stock durante ventas
 CREATE INDEX IF NOT EXISTS idx_warehouse_stock_warehouse_product_variant 
   ON warehouse_stock(warehouse_id, product_id, variant_id) 

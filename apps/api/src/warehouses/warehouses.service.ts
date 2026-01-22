@@ -460,16 +460,39 @@ export class WarehousesService {
       null;
 
     if (stock) {
-      const newStockValue = Math.max(0, stock.stock + qtyDelta);
-      await this.dataSource.query(
+      // ⚡ OPTIMIZACIÓN CRÍTICA: Usar UPDATE con cálculo atómico y RETURNING
+      // Esto evita race conditions y es más eficiente que calcular fuera y luego actualizar
+      const result = await this.dataSource.query(
         `UPDATE warehouse_stock 
-         SET stock = $1, updated_at = NOW() 
+         SET stock = GREATEST(0, stock + $1), updated_at = NOW() 
          WHERE warehouse_id = $2 
            AND product_id = $3 
-           AND (($4::uuid IS NULL AND variant_id IS NULL) OR variant_id = $4::uuid)`,
-        [newStockValue, warehouseId, productId, variantId],
+           AND (($4::uuid IS NULL AND variant_id IS NULL) OR variant_id = $4::uuid)
+         RETURNING stock`,
+        [qtyDelta, warehouseId, productId, variantId],
       );
-      stock.stock = newStockValue;
+
+      let newStockValue: number;
+      if (!result || result.length === 0) {
+        // Stock fue eliminado entre findStockRecord y UPDATE, recrear
+        newStockValue = Math.max(0, qtyDelta);
+        const insertResult = await this.dataSource.query(
+          `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, 0, NOW())
+           ON CONFLICT (warehouse_id, product_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'::uuid))
+           DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
+           RETURNING stock`,
+          [warehouseId, productId, variantId, newStockValue, qtyDelta],
+        );
+        newStockValue = insertResult && insertResult.length > 0 
+          ? Number(insertResult[0].stock) 
+          : newStockValue;
+        stock.stock = newStockValue;
+      } else {
+        newStockValue = Number(result[0].stock);
+        stock.stock = newStockValue;
+      }
+      
       await this.maybeNotifyLowStock(
         resolvedStoreId,
         productId,

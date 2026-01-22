@@ -38,6 +38,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import FiscalInvoicePrintView from '@/components/fiscal/FiscalInvoicePrintView'
 
 const statusLabels: Record<string, string> = {
@@ -85,13 +87,33 @@ export default function FiscalInvoiceDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiscal-invoices', id] })
       queryClient.invalidateQueries({ queryKey: ['fiscal-invoices'] })
-      toast.success('Factura cancelada correctamente. Se ha generado una nota de crédito automáticamente.')
+      toast.success('Factura cancelada correctamente.')
       setShowCancelDialog(false)
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Error al cancelar la factura')
     },
   })
+
+  const createCreditNoteMutation = useMutation({
+    mutationFn: (reason?: string) =>
+      fiscalInvoicesService.createCreditNote(id!, reason ? { reason } : undefined),
+    onSuccess: (creditNote) => {
+      queryClient.invalidateQueries({ queryKey: ['fiscal-invoices', id] })
+      queryClient.invalidateQueries({ queryKey: ['fiscal-invoices'] })
+      toast.success('Nota de crédito creada correctamente. Revise el borrador y emítala.')
+      setShowCancelDialog(false)
+      setCreditNoteReason('')
+      navigate(`/app/fiscal-invoices/${creditNote.id}`)
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message || 'Error al crear la nota de crédito',
+      )
+    },
+  })
+
+  const [creditNoteReason, setCreditNoteReason] = useState('')
 
   const handleIssue = () => {
     if (!confirm('¿Está seguro de emitir esta factura fiscal?')) return
@@ -103,8 +125,15 @@ export default function FiscalInvoiceDetailPage() {
   }
 
   const handleConfirmCancel = () => {
-    cancelMutation.mutate()
+    if (invoice?.status === 'issued') {
+      createCreditNoteMutation.mutate(creditNoteReason || undefined)
+    } else {
+      cancelMutation.mutate()
+    }
   }
+
+  const isCancelPending =
+    cancelMutation.isPending || createCreditNoteMutation.isPending
 
   const handlePrint = () => {
     setShowPrintPreview(true)
@@ -172,7 +201,7 @@ export default function FiscalInvoiceDetailPage() {
               <Button
                 variant="destructive"
                 onClick={handleCancel}
-                disabled={cancelMutation.isPending}
+                disabled={isCancelPending}
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Cancelar
@@ -188,10 +217,10 @@ export default function FiscalInvoiceDetailPage() {
               <Button
                 variant="destructive"
                 onClick={handleCancel}
-                disabled={cancelMutation.isPending}
+                disabled={isCancelPending}
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                Cancelar
+                Crear nota de crédito
               </Button>
             </>
           )}
@@ -412,58 +441,69 @@ export default function FiscalInvoiceDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de confirmación de cancelación */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+      {/* Diálogo: cancelar borrador o crear nota de crédito (factura emitida) */}
+      <AlertDialog open={showCancelDialog} onOpenChange={(open) => {
+        setShowCancelDialog(open)
+        if (!open) setCreditNoteReason('')
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <XCircle className="w-5 h-5 text-destructive" />
-              Cancelar Factura Fiscal
+              {invoice?.status === 'issued'
+                ? 'Crear nota de crédito'
+                : 'Cancelar Factura Fiscal'}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3 pt-2">
-              <p>
-                ¿Está seguro de cancelar esta factura fiscal? Esta acción no se puede deshacer.
-              </p>
-              <Alert className="bg-info/10 border-info/50">
-                <AlertDescription className="text-sm">
-                  <p className="font-semibold mb-1">Importante:</p>
+              {invoice?.status === 'issued' ? (
+                <>
                   <p>
-                    Al cancelar esta factura fiscal, se generará automáticamente una{' '}
-                    <strong>Nota de Crédito</strong> que anulará la factura original.
-                    La nota de crédito quedará registrada en el sistema y podrá ser consultada
-                    junto con las demás facturas fiscales.
+                    Se creará una <strong>nota de crédito</strong> con los mismos datos
+                    (cliente, ítems, totales) que esta factura. Según normativa SENIAT,
+                    las facturas emitidas no pueden cancelarse directamente.
                   </p>
-                </AlertDescription>
-              </Alert>
-              {invoice.status === 'issued' && (
-                <Alert className="bg-warning/10 border-warning/50">
-                  <AlertDescription className="text-sm">
-                    <p className="font-semibold mb-1">Nota adicional:</p>
-                    <p>
-                      Esta factura ya está emitida. La cancelación generará una nota de crédito
-                      que debe ser procesada según los procedimientos fiscales establecidos.
-                    </p>
-                  </AlertDescription>
-                </Alert>
+                  <p className="text-sm text-muted-foreground">
+                    La nota se creará en borrador. Deberá revisarla y emitirla desde el
+                    detalle de la nueva factura.
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="credit-note-reason">
+                      Motivo (opcional)
+                    </Label>
+                    <Input
+                      id="credit-note-reason"
+                      value={creditNoteReason}
+                      onChange={(e) => setCreditNoteReason(e.target.value)}
+                      placeholder="Ej. Venta duplicada por error"
+                    />
+                  </div>
+                </>
+              ) : (
+                <p>
+                  ¿Está seguro de cancelar esta factura en borrador? Esta acción no se
+                  puede deshacer.
+                </p>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelMutation.isPending}>
+            <AlertDialogCancel disabled={isCancelPending}>
               No, mantener factura
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmCancel}
-              disabled={cancelMutation.isPending}
+              disabled={isCancelPending}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
-              {cancelMutation.isPending ? (
+              {isCancelPending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Cancelando...
+                  {invoice?.status === 'issued' ? 'Creando...' : 'Cancelando...'}
                 </>
+              ) : invoice?.status === 'issued' ? (
+                'Sí, crear nota de crédito'
               ) : (
-                'Sí, cancelar y generar nota de crédito'
+                'Sí, cancelar'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

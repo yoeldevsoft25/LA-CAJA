@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { FiscalInvoicesService } from './fiscal-invoices.service';
 import { CreateFiscalInvoiceDto } from './dto/create-fiscal-invoice.dto';
+import { CreateCreditNoteDto } from './dto/create-credit-note.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SeniatAuditGuard } from './guards/seniat-audit.guard';
 
@@ -61,6 +62,28 @@ export class FiscalInvoicesController {
   async cancel(@Param('id') id: string, @Request() req: any) {
     const storeId = req.user.store_id;
     return this.fiscalInvoicesService.cancel(storeId, id);
+  }
+
+  /**
+   * Crea una nota de crédito que anula la factura indicada.
+   * Solo aplica a facturas emitidas. Según SENIAT, no se pueden cancelar
+   * directamente; debe usarse una nota de crédito.
+   */
+  @Post(':id/credit-note')
+  @UseGuards(JwtAuthGuard)
+  async createCreditNote(
+    @Param('id') id: string,
+    @Body() dto: CreateCreditNoteDto,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const userId = req.user.user_id ?? req.user.sub;
+    return this.fiscalInvoicesService.createCreditNote(
+      storeId,
+      id,
+      userId,
+      dto?.reason,
+    );
   }
 
   @Get('by-sale/:saleId')
