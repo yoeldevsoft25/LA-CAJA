@@ -1,4 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import makeWASocket, {
   ConnectionState,
   DisconnectReason,
@@ -12,6 +14,8 @@ import * as QRCode from 'qrcode';
 import { join } from 'path';
 import { existsSync, mkdirSync, rmSync, readdirSync } from 'fs';
 import pino from 'pino';
+import { randomUUID } from 'crypto';
+import { WhatsAppConfig } from '../database/entities/whatsapp-config.entity';
 
 interface BotInstance {
   socket: WASocket | null;
@@ -31,7 +35,10 @@ export class WhatsAppBotService implements OnModuleDestroy {
   private readonly bots = new Map<string, BotInstance>();
   private readonly sessionsDir = join(process.cwd(), 'whatsapp-sessions');
 
-  constructor() {
+  constructor(
+    @InjectRepository(WhatsAppConfig)
+    private whatsappConfigRepository: Repository<WhatsAppConfig>,
+  ) {
     // Crear directorio de sesiones si no existe
     if (!existsSync(this.sessionsDir)) {
       mkdirSync(this.sessionsDir, { recursive: true });
@@ -174,6 +181,11 @@ export class WhatsAppBotService implements OnModuleDestroy {
             const number = jid.split('@')[0];
             botInstance.whatsappNumber = number;
             this.logger.log(`Bot conectado para tienda ${storeId}. Número: ${number}`);
+            
+            // Actualizar número de WhatsApp en la base de datos
+            this.updateWhatsAppNumberInDB(storeId, number).catch((error) => {
+              this.logger.error(`Error actualizando número de WhatsApp en BD para tienda ${storeId}:`, error);
+            });
           }
         } else if (connection === 'connecting') {
           // Cuando está conectando, el QR puede estar disponible
@@ -352,6 +364,39 @@ export class WhatsAppBotService implements OnModuleDestroy {
 
     // Agregar código de país de Venezuela (58)
     return `58${cleanPhone}`;
+  }
+
+  /**
+   * Actualiza el número de WhatsApp en la base de datos cuando se conecta
+   */
+  private async updateWhatsAppNumberInDB(storeId: string, whatsappNumber: string): Promise<void> {
+    try {
+      let config = await this.whatsappConfigRepository.findOne({
+        where: { store_id: storeId },
+      });
+
+      if (config) {
+        // Actualizar número existente
+        config.whatsapp_number = whatsappNumber;
+        await this.whatsappConfigRepository.save(config);
+        this.logger.log(`Número de WhatsApp actualizado en BD para tienda ${storeId}: ${whatsappNumber}`);
+      } else {
+        // Crear configuración si no existe
+        config = this.whatsappConfigRepository.create({
+          id: randomUUID(),
+          store_id: storeId,
+          whatsapp_number: whatsappNumber,
+          enabled: false,
+          debt_notifications_enabled: false,
+          debt_reminders_enabled: false,
+        });
+        await this.whatsappConfigRepository.save(config);
+        this.logger.log(`Configuración de WhatsApp creada en BD para tienda ${storeId} con número ${whatsappNumber}`);
+      }
+    } catch (error) {
+      this.logger.error(`Error actualizando número de WhatsApp en BD para tienda ${storeId}:`, error);
+      throw error;
+    }
   }
 
   /**

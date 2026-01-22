@@ -84,11 +84,13 @@ export default function WhatsAppConfigPage() {
     }
   }, [config, reset])
 
-  // Polling para obtener QR code cuando el modal está abierto
+  // Polling para obtener QR code y estado cuando el modal está abierto
   useEffect(() => {
     if (!isAuthModalOpen || !user?.store_id) return
 
-    let interval: NodeJS.Timeout
+    let qrInterval: NodeJS.Timeout
+    let statusInterval: NodeJS.Timeout
+    
     const fetchQR = async () => {
       try {
         const response = await whatsappConfigService.getQRCode()
@@ -98,7 +100,9 @@ export default function WhatsAppConfigPage() {
         if (response.isConnected) {
           setIsAuthModalOpen(false)
           setQrCode(null)
-          refetchStatus()
+          // Invalidar queries para refrescar datos
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] })
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-config'] })
           toast.success('WhatsApp conectado exitosamente')
         }
       } catch (error) {
@@ -106,16 +110,38 @@ export default function WhatsAppConfigPage() {
       }
     }
 
+    const checkStatus = async () => {
+      try {
+        const currentStatus = await whatsappConfigService.getStatus()
+        
+        // Si está conectado, cerrar el modal y actualizar
+        if (currentStatus.isConnected) {
+          setIsAuthModalOpen(false)
+          setQrCode(null)
+          // Invalidar queries para refrescar datos
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-status'] })
+          queryClient.invalidateQueries({ queryKey: ['whatsapp-config'] })
+          toast.success('WhatsApp conectado exitosamente')
+        }
+      } catch (error) {
+        console.error('[WhatsApp] Error verificando estado:', error)
+      }
+    }
+
     // Obtener QR inmediatamente
     fetchQR()
     
-    // Polling cada 2 segundos
-    interval = setInterval(fetchQR, 2000)
+    // Polling de QR cada 2 segundos
+    qrInterval = setInterval(fetchQR, 2000)
+    
+    // Polling de estado cada 1 segundo (más frecuente para detectar conexión rápida)
+    statusInterval = setInterval(checkStatus, 1000)
 
     return () => {
-      if (interval) clearInterval(interval)
+      if (qrInterval) clearInterval(qrInterval)
+      if (statusInterval) clearInterval(statusInterval)
     }
-  }, [isAuthModalOpen, user?.store_id, refetchStatus])
+  }, [isAuthModalOpen, user?.store_id, queryClient])
 
   const saveMutation = useMutation({
     mutationFn: (data: WhatsAppConfigFormData) => {

@@ -344,35 +344,62 @@ export default function ProductsPage() {
     setSerialsProduct(product)
   }
 
-  // Exportar productos a Excel
-  const handleExportProducts = () => {
-    if (products.length === 0) {
-      toast.error('No hay productos para exportar')
-      return
+  // Exportar productos a Excel - Obtiene TODOS los productos sin límite
+  const handleExportProducts = async () => {
+    try {
+      toast.loading('Exportando productos...', { id: 'export-products' })
+      
+      // Obtener TODOS los productos sin límite, aplicando los mismos filtros
+      const allProductsData = await productsService.search({
+        q: searchQuery || undefined,
+        category: categoryFilter || undefined,
+        is_active: isActiveFilter,
+        limit: 10000, // Límite muy alto para obtener todos
+        offset: 0,
+      }, user?.store_id)
+
+      const allProducts = allProductsData.products || []
+
+      if (allProducts.length === 0) {
+        toast.error('No hay productos para exportar', { id: 'export-products' })
+        return
+      }
+
+      // Obtener stock para todos los productos exportados
+      const stockStatusForExport = await inventoryService.getStockStatus({
+        warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
+      })
+      const stockByProductExport = (stockStatusForExport || []).reduce<Record<string, StockStatus>>((acc, item) => {
+        acc[item.product_id] = item
+        return acc
+      }, {})
+
+      const timestamp = new Date().toISOString().split('T')[0]
+
+      exportToCSV(
+        allProducts,
+        [
+          { header: 'ID', accessor: 'id' },
+          { header: 'Nombre', accessor: 'name' },
+          { header: 'SKU', accessor: (p) => p.sku || '' },
+          { header: 'Código de Barras', accessor: (p) => p.barcode || '' },
+          { header: 'Categoría', accessor: (p) => p.category || '' },
+          { header: 'Precio USD', accessor: (p) => Number(p.price_usd), format: 'currency' },
+          { header: 'Precio Bs', accessor: (p) => Number(p.price_bs), format: 'currency' },
+          { header: 'Costo USD', accessor: (p) => p.cost_usd ? Number(p.cost_usd) : 0, format: 'currency' },
+          { header: 'Stock', accessor: (p) => stockByProductExport[p.id]?.current_stock ?? 0, format: 'number' },
+          { header: 'Stock Mínimo', accessor: (p) => stockByProductExport[p.id]?.low_stock_threshold ?? 0, format: 'number' },
+          { header: 'Estado', accessor: (p) => p.is_active ? 'Activo' : 'Inactivo' },
+          { header: 'Tipo', accessor: (p) => p.is_weight_product ? 'Por peso' : 'Por unidad' },
+        ],
+        { filename: `Productos_${timestamp}` }
+      )
+
+      toast.success(`${allProducts.length} productos exportados a Excel`, { id: 'export-products' })
+    } catch (error: any) {
+      console.error('[ProductsPage] Error exportando productos:', error)
+      toast.error(error.response?.data?.message || 'Error al exportar productos', { id: 'export-products' })
     }
-
-    const timestamp = new Date().toISOString().split('T')[0]
-
-    exportToCSV(
-      products,
-      [
-        { header: 'ID', accessor: 'id' },
-        { header: 'Nombre', accessor: 'name' },
-        { header: 'SKU', accessor: (p) => p.sku || '' },
-        { header: 'Código de Barras', accessor: (p) => p.barcode || '' },
-        { header: 'Categoría', accessor: (p) => p.category || '' },
-        { header: 'Precio USD', accessor: (p) => Number(p.price_usd), format: 'currency' },
-        { header: 'Precio Bs', accessor: (p) => Number(p.price_bs), format: 'currency' },
-        { header: 'Costo USD', accessor: (p) => p.cost_usd ? Number(p.cost_usd) : 0, format: 'currency' },
-        { header: 'Stock', accessor: (p) => stockByProduct[p.id]?.current_stock ?? 0, format: 'number' },
-        { header: 'Stock Mínimo', accessor: (p) => stockByProduct[p.id]?.low_stock_threshold ?? 0, format: 'number' },
-        { header: 'Estado', accessor: (p) => p.is_active ? 'Activo' : 'Inactivo' },
-        { header: 'Tipo', accessor: (p) => p.is_weight_product ? 'Por peso' : 'Por unidad' },
-      ],
-      { filename: `Productos_${timestamp}` }
-    )
-
-    toast.success(`${products.length} productos exportados a Excel`)
   }
 
   return (
