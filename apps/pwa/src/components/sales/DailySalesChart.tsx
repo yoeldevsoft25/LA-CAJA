@@ -225,11 +225,6 @@ export default function DailySalesChart({
     return null
   }
 
-  const maxValue = Math.max(
-    ...hourlyData.map((d) => Math.max(d.total_bs, d.total_usd)),
-    1
-  )
-
   return (
     <Card className="mb-4 sm:mb-6 border border-border">
       <CardHeader className="pb-3 sm:pb-4">
