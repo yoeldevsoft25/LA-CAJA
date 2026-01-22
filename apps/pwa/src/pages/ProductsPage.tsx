@@ -350,18 +350,59 @@ export default function ProductsPage() {
       toast.loading('Exportando productos...', { id: 'export-products' })
       
       // Obtener TODOS los productos sin límite, aplicando los mismos filtros
-      const allProductsData = await productsService.search({
+      // Primero obtenemos el total para saber cuántos productos hay
+      const firstPage = await productsService.search({
         q: searchQuery || undefined,
         category: categoryFilter || undefined,
         is_active: isActiveFilter,
-        limit: 10000, // Límite muy alto para obtener todos
+        limit: 1,
         offset: 0,
       }, user?.store_id)
 
-      const allProducts = allProductsData.products || []
+      const totalProducts = firstPage.total || 0
+
+      if (totalProducts === 0) {
+        toast.error('No hay productos para exportar', { id: 'export-products' })
+        return
+      }
+
+      // Obtener todos los productos en una sola petición
+      // Si hay más de 5000 productos, obtenerlos en lotes para evitar problemas de memoria
+      let allProducts: Product[] = []
+      
+      if (totalProducts <= 5000) {
+        // Obtener todos de una vez si son menos de 5000
+        const allProductsData = await productsService.search({
+          q: searchQuery || undefined,
+          category: categoryFilter || undefined,
+          is_active: isActiveFilter,
+          limit: totalProducts + 100, // Buffer por si acaso
+          offset: 0,
+        }, user?.store_id)
+        allProducts = allProductsData.products || []
+      } else {
+        // Obtener en lotes de 1000 si hay muchos productos
+        const batchSize = 1000
+        const batches = Math.ceil(totalProducts / batchSize)
+        
+        for (let i = 0; i < batches; i++) {
+          const batchData = await productsService.search({
+            q: searchQuery || undefined,
+            category: categoryFilter || undefined,
+            is_active: isActiveFilter,
+            limit: batchSize,
+            offset: i * batchSize,
+          }, user?.store_id)
+          
+          allProducts = [...allProducts, ...(batchData.products || [])]
+          
+          // Actualizar toast con progreso
+          toast.loading(`Exportando productos... ${Math.min((i + 1) * batchSize, totalProducts)}/${totalProducts}`, { id: 'export-products' })
+        }
+      }
 
       if (allProducts.length === 0) {
-        toast.error('No hay productos para exportar', { id: 'export-products' })
+        toast.error('No se pudieron obtener los productos para exportar', { id: 'export-products' })
         return
       }
 
@@ -376,21 +417,20 @@ export default function ProductsPage() {
 
       const timestamp = new Date().toISOString().split('T')[0]
 
+      // Exportar con los campos exactos que requiere la importación CSV
+      // Orden: nombre, categoria, sku, codigo_barras, precio_bs, precio_usd, costo_bs, costo_usd, stock_minimo
       exportToCSV(
         allProducts,
         [
-          { header: 'ID', accessor: 'id' },
-          { header: 'Nombre', accessor: 'name' },
-          { header: 'SKU', accessor: (p) => p.sku || '' },
-          { header: 'Código de Barras', accessor: (p) => p.barcode || '' },
-          { header: 'Categoría', accessor: (p) => p.category || '' },
-          { header: 'Precio USD', accessor: (p) => Number(p.price_usd), format: 'currency' },
-          { header: 'Precio Bs', accessor: (p) => Number(p.price_bs), format: 'currency' },
-          { header: 'Costo USD', accessor: (p) => p.cost_usd ? Number(p.cost_usd) : 0, format: 'currency' },
-          { header: 'Stock', accessor: (p) => stockByProductExport[p.id]?.current_stock ?? 0, format: 'number' },
-          { header: 'Stock Mínimo', accessor: (p) => stockByProductExport[p.id]?.low_stock_threshold ?? 0, format: 'number' },
-          { header: 'Estado', accessor: (p) => p.is_active ? 'Activo' : 'Inactivo' },
-          { header: 'Tipo', accessor: (p) => p.is_weight_product ? 'Por peso' : 'Por unidad' },
+          { header: 'nombre', accessor: 'name' },
+          { header: 'categoria', accessor: (p) => p.category || '' },
+          { header: 'sku', accessor: (p) => p.sku || '' },
+          { header: 'codigo_barras', accessor: (p) => p.barcode || '' },
+          { header: 'precio_bs', accessor: (p) => Number(p.price_bs).toFixed(2) },
+          { header: 'precio_usd', accessor: (p) => Number(p.price_usd).toFixed(2) },
+          { header: 'costo_bs', accessor: (p) => p.cost_bs ? Number(p.cost_bs).toFixed(2) : '0.00' },
+          { header: 'costo_usd', accessor: (p) => p.cost_usd ? Number(p.cost_usd).toFixed(2) : '0.00' },
+          { header: 'stock_minimo', accessor: (p) => stockByProductExport[p.id]?.low_stock_threshold ?? 10 },
         ],
         { filename: `Productos_${timestamp}` }
       )
