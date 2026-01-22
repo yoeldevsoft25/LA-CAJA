@@ -266,6 +266,16 @@ export const salesService = {
       if (!data.store_id || !data.user_id) {
         throw new Error('Se requiere store_id y user_id para guardar ventas offline')
       }
+
+      // ⚠️ VALIDACIÓN CRÍTICA: Ventas FIAO requieren cliente
+      if (data.payment_method === 'FIAO') {
+        const hasCustomerId = !!data.customer_id
+        const hasCustomerData = !!(data.customer_name && data.customer_document_id)
+        
+        if (!hasCustomerId && !hasCustomerData) {
+          throw new Error('Las ventas FIAO requieren un cliente. Debes seleccionar un cliente existente o ingresar nombre y cédula para crear uno nuevo.')
+        }
+      }
       
       console.log('[Sales] ⚠️ Modo OFFLINE detectado - guardando localmente inmediatamente')
       const saleId = randomUUID()
@@ -540,6 +550,7 @@ export const salesService = {
             other_bs: data.split.other_bs ?? 0,
           } : undefined,
         },
+        customer_id: data.customer_id || undefined, // ⚠️ CRÍTICO: Incluir customer_id directamente
         customer: data.customer_id
           ? {
               customer_id: data.customer_id,

@@ -516,10 +516,15 @@ export default function CheckoutModal({
       return
     }
 
-    // Validación FIAO: requiere información del cliente
-    if (selectedMethod === 'FIAO' && paymentMode === 'SINGLE' && !customerName.trim() && !customerDocumentId.trim()) {
-      setError('Para ventas FIAO debes ingresar al menos el nombre y la cédula del cliente')
-      return
+    // ⚠️ VALIDACIÓN CRÍTICA FIAO: requiere cliente válido (customer_id O nombre + cédula)
+    if (selectedMethod === 'FIAO' && paymentMode === 'SINGLE') {
+      const hasCustomerId = !!selectedCustomerId
+      const hasCustomerNameAndDoc = !!(customerName.trim() && customerDocumentId.trim())
+      
+      if (!hasCustomerId && !hasCustomerNameAndDoc) {
+        setError('Las ventas FIAO requieren un cliente. Debes seleccionar un cliente existente o ingresar nombre y cédula para crear uno nuevo.')
+        return
+      }
     }
 
     // Validación para modo SPLIT

@@ -589,6 +589,25 @@ export class SalesService {
       );
     }
 
+    // ⚠️ VALIDACIÓN CRÍTICA: Todas las ventas requieren un responsable (userId)
+    if (!userId) {
+      throw new BadRequestException(
+        'Todas las ventas requieren un responsable (cajero). No se puede procesar la venta sin identificar quién la realizó.',
+      );
+    }
+
+    // ⚠️ VALIDACIÓN CRÍTICA: Ventas FIAO requieren cliente obligatoriamente
+    if (dto.payment_method === 'FIAO') {
+      const hasCustomerId = !!dto.customer_id;
+      const hasCustomerData = !!(dto.customer_name && dto.customer_document_id);
+      
+      if (!hasCustomerId && !hasCustomerData) {
+        throw new BadRequestException(
+          'Las ventas FIAO requieren un cliente. Debes proporcionar un customer_id existente o los datos del cliente (nombre y cédula).',
+        );
+      }
+    }
+
     // Validar modo caja rápida si aplica
     const hasDiscounts = dto.items.some(
       (item) => (item.discount_bs || 0) > 0 || (item.discount_usd || 0) > 0,
@@ -1207,7 +1226,7 @@ export class SalesService {
           cash_payment_bs: dto.cash_payment_bs || undefined,
         },
         customer_id: finalCustomerId,
-        sold_by_user_id: userId || null,
+        sold_by_user_id: userId, // Ya validado arriba que userId no puede ser null/undefined
         note: dto.note || null,
         invoice_series_id: invoiceSeriesId,
         invoice_number: invoiceNumber,
@@ -1268,6 +1287,13 @@ export class SalesService {
             );
           }
         }
+      }
+
+      // ⚠️ VALIDACIÓN CRÍTICA: Si es venta FIAO, DEBE haber un cliente válido
+      if (dto.payment_method === 'FIAO' && !finalCustomerId) {
+        throw new BadRequestException(
+          'Las ventas FIAO requieren un cliente válido. No se puede procesar la venta sin identificar al cliente.',
+        );
       }
 
       // Si es venta FIAO, crear la deuda automáticamente

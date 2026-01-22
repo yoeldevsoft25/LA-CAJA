@@ -216,6 +216,26 @@ export class ProjectionsService {
       return; // Ya existe, idempotente
     }
 
+    // ⚠️ VALIDACIÓN CRÍTICA: Verificar que el evento tiene actor_user_id
+    if (!event.actor_user_id) {
+      this.logger.error(
+        `Evento SaleCreated ${event.event_id} no tiene actor_user_id. No se puede crear la venta sin identificar al responsable.`,
+      );
+      throw new Error(
+        `No se puede crear la venta ${payload.sale_id}: el evento no contiene información del responsable (actor_user_id).`,
+      );
+    }
+
+    // ⚠️ VALIDACIÓN CRÍTICA: Para ventas FIAO, verificar que hay customer_id
+    if (payload.payment?.method === 'FIAO' && !payload.customer?.customer_id && !payload.customer_id) {
+      this.logger.error(
+        `Evento SaleCreated ${event.event_id} es una venta FIAO sin cliente. No se puede crear la venta.`,
+      );
+      throw new Error(
+        `No se puede crear la venta FIAO ${payload.sale_id}: falta información del cliente.`,
+      );
+    }
+
     // Crear venta
     const sale = this.saleRepository.create({
       id: payload.sale_id,
@@ -226,7 +246,8 @@ export class ProjectionsService {
       currency: payload.currency || 'BS',
       totals: payload.totals || {},
       payment: payload.payment || {},
-      customer_id: payload.customer_id || null,
+      customer_id: payload.customer?.customer_id || payload.customer_id || null,
+      sold_by_user_id: event.actor_user_id, // ⚠️ CRÍTICO: Asignar responsable desde el evento
       note: payload.note || null,
     });
 

@@ -1150,6 +1150,12 @@ export default function POSPage() {
       return
     }
 
+    // ⚠️ VALIDACIÓN CRÍTICA: Verificar que user_id esté disponible
+    if (!user?.user_id) {
+      toast.error('Error: No se pudo identificar al usuario. Por favor, recarga la página e inicia sesión nuevamente.')
+      return
+    }
+
     // Guardar snapshot para impresión
     lastCartSnapshot.current = [...items]
 

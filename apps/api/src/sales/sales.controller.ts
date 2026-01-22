@@ -30,9 +30,29 @@ export class SalesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateSaleDto, @Request() req: any) {
+    // ⚠️ VALIDACIÓN CRÍTICA: Verificar que req.user existe y tiene los datos necesarios
+    if (!req.user) {
+      throw new UnauthorizedException('Usuario no autenticado');
+    }
+
     const storeId = req.user.store_id;
     const userId = req.user.sub; // ID del usuario que hace la venta
     const userRole = req.user.role;
+
+    // ⚠️ VALIDACIÓN CRÍTICA: userId es obligatorio para TODAS las ventas
+    if (!userId) {
+      throw new UnauthorizedException(
+        'No se pudo identificar al usuario. El token de autenticación no contiene el ID del usuario.',
+      );
+    }
+
+    // ⚠️ VALIDACIÓN CRÍTICA: storeId es obligatorio
+    if (!storeId) {
+      throw new UnauthorizedException(
+        'No se pudo identificar la tienda. El token de autenticación no contiene el ID de la tienda.',
+      );
+    }
+
     return this.salesService.create(storeId, dto, userId, userRole);
   }
 

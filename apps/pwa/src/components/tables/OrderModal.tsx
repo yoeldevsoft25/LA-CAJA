@@ -337,7 +337,11 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={onClose}
+        modal={!isCloseModalOpen}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -759,4 +763,3 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     </>
   )
 }
-
