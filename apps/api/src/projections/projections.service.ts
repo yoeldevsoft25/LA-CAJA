@@ -382,45 +382,78 @@ export class ProjectionsService {
     // ⚠️ CRÍTICO: Generar factura fiscal automáticamente (igual que en sales.service.ts)
     // Esto es esencial para mantener la funcionalidad original del sistema
     try {
+      this.logger.log(
+        `Verificando configuración fiscal para venta ${payload.sale_id} (store: ${event.store_id})`,
+      );
+      
       const hasFiscalConfig =
         await this.fiscalInvoicesService.hasActiveFiscalConfig(event.store_id);
+      
+      this.logger.log(
+        `Configuración fiscal para store ${event.store_id}: ${hasFiscalConfig ? 'ACTIVA' : 'INACTIVA'}`,
+      );
+      
       if (hasFiscalConfig) {
+        // Verificar si ya existe una factura para esta venta
         const existingInvoice = await this.fiscalInvoicesService.findBySale(
           event.store_id,
           savedSale.id,
         );
+        
         if (existingInvoice) {
+          this.logger.log(
+            `Factura fiscal existente encontrada para venta ${payload.sale_id}: ${existingInvoice.id} (status: ${existingInvoice.status})`,
+          );
+          
           if (existingInvoice.status === 'draft') {
             // Emitir factura si está en draft
-            await this.fiscalInvoicesService.issue(
+            const issuedInvoice = await this.fiscalInvoicesService.issue(
               event.store_id,
               existingInvoice.id,
             );
             this.logger.log(
-              `✅ Factura fiscal emitida automáticamente para venta ${payload.sale_id}: ${existingInvoice.invoice_number}`,
+              `✅ Factura fiscal emitida automáticamente para venta ${payload.sale_id}: ${issuedInvoice.invoice_number} (fiscal: ${issuedInvoice.fiscal_number || 'N/A'})`,
+            );
+          } else if (existingInvoice.status === 'issued') {
+            this.logger.log(
+              `✅ Factura fiscal ya estaba emitida para venta ${payload.sale_id}: ${existingInvoice.invoice_number}`,
             );
           }
         } else {
           // Crear y emitir factura fiscal automáticamente
+          this.logger.log(
+            `Creando factura fiscal automática para venta ${payload.sale_id}...`,
+          );
+          
           const createdInvoice = await this.fiscalInvoicesService.createFromSale(
             event.store_id,
             savedSale.id,
             event.actor_user_id || null,
           );
+          
+          this.logger.log(
+            `Factura fiscal creada (draft) para venta ${payload.sale_id}: ${createdInvoice.id}`,
+          );
+          
           const issuedInvoice = await this.fiscalInvoicesService.issue(
             event.store_id,
             createdInvoice.id,
           );
+          
           this.logger.log(
-            `✅ Factura fiscal creada y emitida automáticamente para venta ${payload.sale_id}: ${issuedInvoice.invoice_number}`,
+            `✅ Factura fiscal creada y emitida automáticamente para venta ${payload.sale_id}: ${issuedInvoice.invoice_number} (fiscal: ${issuedInvoice.fiscal_number || 'N/A'})`,
           );
         }
+      } else {
+        this.logger.warn(
+          `⚠️ No hay configuración fiscal activa para store ${event.store_id}. No se generará factura fiscal para venta ${payload.sale_id}.`,
+        );
       }
     } catch (error) {
-      // No fallar la proyección si hay error en factura fiscal
-      this.logger.warn(
-        `Error generando factura fiscal automática para venta ${payload.sale_id}:`,
-        error instanceof Error ? error.message : String(error),
+      // No fallar la proyección si hay error en factura fiscal, pero loguear el error completo
+      this.logger.error(
+        `❌ Error generando factura fiscal automática para venta ${payload.sale_id}:`,
+        error instanceof Error ? error.stack : String(error),
       );
     }
 
