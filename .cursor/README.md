@@ -1,175 +1,148 @@
-# Cursor Configuration & Prompts
-## Sistema Optimizado de Prompts para Agentes de IA
+# Cursor Configuration - LA-CAJA
 
-Este directorio contiene la configuración optimizada para usar agentes de IA en Cursor de manera eficiente.
+Configuración profesional de Cursor basada en [everything-claude-code](https://github.com/affaan-m/everything-claude-code).
 
-## 📁 Estructura
+## Estructura Completa
 
 ```
 .cursor/
-├── README.md (este archivo)
-├── prompts/
-│   ├── backend.md      # Prompt para desarrollador backend
-│   ├── frontend.md     # Prompt para desarrollador frontend
-│   ├── ml.md           # Prompt para ingeniero ML
-│   ├── devops.md        # Prompt para ingeniero DevOps
-│   ├── qa.md           # Prompt para ingeniero QA
-│   ├── data.md         # Prompt para ingeniero de datos
-│   ├── security.md     # Prompt para ingeniero de seguridad
-│   └── architect.md    # Prompt para arquitecto de software
-└── .cursorrules        # (en raíz) Reglas generales del proyecto
+├── rules/          # Reglas siempre activas
+│   ├── security.md
+│   ├── coding-style.md
+│   ├── testing.md
+│   ├── git-workflow.md
+│   ├── performance.md
+│   └── agents.md
+├── skills/         # Patrones y workflows
+│   ├── backend-patterns.md
+│   ├── frontend-patterns.md
+│   ├── tdd-workflow.md
+│   ├── security-review/
+│   └── coding-standards/
+├── commands/       # Comandos rápidos
+│   ├── tdd.md
+│   ├── code-review.md
+│   ├── plan.md
+│   ├── e2e.md
+│   ├── build-fix.md
+│   ├── refactor-clean.md
+│   └── test-coverage.md
+├── agents/         # Agentes especializados
+│   ├── planner.md
+│   ├── architect.md
+│   ├── tdd-guide.md
+│   ├── code-reviewer.md
+│   ├── security-reviewer.md
+│   ├── build-error-resolver.md
+│   ├── e2e-runner.md
+│   ├── refactor-cleaner.md
+│   └── doc-updater.md
+├── contexts/       # Contextos dinámicos
+│   ├── dev.md
+│   ├── review.md
+│   └── research.md
+├── prompts/        # Prompts de roles (existente)
+└── README.md       # Este archivo
 ```
 
-## 🚀 Uso Rápido
+## Rules (Reglas)
 
-### Método 1: Mencionar el Rol en el Chat
+Reglas que siempre se aplican. Ubicadas en `.cursor/rules/`:
 
-En el chat de Cursor, simplemente menciona el rol al inicio:
+- **security.md** - Checklist de seguridad, manejo de secretos
+- **coding-style.md** - Inmutabilidad, organización de archivos, calidad
+- **testing.md** - TDD, cobertura mínima 80%
+- **git-workflow.md** - Formato de commits, flujo de PRs
+- **performance.md** - Optimización, gestión de contexto
+- **agents.md** - Cuándo usar cada rol/agente
 
-```
-@backend Implementa un endpoint para gestionar turnos de cajeros
-```
+## Skills (Habilidades)
 
-```
-@frontend Crea un componente de dashboard de ventas en tiempo real
-```
+Patrones y workflows específicos. Ubicados en `.cursor/skills/`:
 
-```
-@ml Desarrolla un modelo para predecir demanda de productos
-```
+- **backend-patterns.md** - Patrones NestJS, Event Sourcing, Multi-tenant
+- **frontend-patterns.md** - Patrones React, Offline-first, PWA
+- **tdd-workflow.md** - Workflow completo de TDD
+- **security-review/** - Checklist de seguridad
+- **coding-standards/** - Estándares de código
 
-### Método 2: Usar el Prompt Completo
+## Commands (Comandos)
 
-1. Abre el archivo del prompt correspondiente (`.cursor/prompts/[rol].md`)
-2. Copia el contenido
-3. Pégalo al inicio de tu conversación en Cursor
-4. Luego escribe tu solicitud
+Comandos rápidos para tareas comunes. Ubicados en `.cursor/commands/`:
 
-### Método 3: Referenciar desde .cursorrules
+- **tdd.md** - Desarrollo guiado por tests
+- **code-review.md** - Revisión de código y seguridad
+- **plan.md** - Planificación de implementación
+- **e2e.md** - Tests end-to-end con Playwright
+- **build-fix.md** - Resolver errores de build
+- **refactor-clean.md** - Limpieza de código muerto
+- **test-coverage.md** - Análisis de cobertura de tests
 
-El archivo `.cursorrules` en la raíz ya incluye las reglas generales. Cursor lo lee automáticamente.
+## Agents (Agentes)
 
-## 📋 Roles Disponibles
+Agentes especializados para tareas específicas. Ubicados en `.cursor/agents/`:
 
-| Rol | Comando | Descripción |
-|-----|---------|-------------|
-| **Backend** | `@backend` | NestJS, Event Sourcing, APIs |
-| **Frontend** | `@frontend` | React, PWA, Offline-First |
-| **ML Engineer** | `@ml` | Python, TensorFlow, Forecasting |
-| **DevOps** | `@devops` | Docker, CI/CD, Infrastructure |
-| **QA** | `@qa` | Testing, Automation, Quality |
-| **Data Engineer** | `@data` | Analytics, TimescaleDB, ETL |
-| **Security** | `@security` | OWASP, JWT, Encryption |
-| **Architect** | `@architect` | System Design, DDD, Scalability |
+- **planner.md** - Planificación de features complejas
+- **architect.md** - Decisiones arquitectónicas
+- **tdd-guide.md** - Guía de TDD
+- **code-reviewer.md** - Revisión de calidad
+- **security-reviewer.md** - Análisis de vulnerabilidades
+- **build-error-resolver.md** - Resolver errores de build
+- **e2e-runner.md** - Tests E2E con Playwright
+- **refactor-cleaner.md** - Limpieza de código muerto
+- **doc-updater.md** - Actualización de documentación
 
-## 💡 Mejores Prácticas
+## Contexts (Contextos)
 
-### 1. Contexto Específico
-Siempre proporciona contexto específico de la tarea:
-```
-@backend Implementa un endpoint POST /shifts/open que:
-- Valide que no haya un turno abierto
-- Cree un evento ShiftOpenedEvent
-- Retorne el turno creado
-```
+Contextos dinámicos para diferentes modos de trabajo. Ubicados en `.cursor/contexts/`:
 
-### 2. Referencias al Código
-Menciona archivos o patrones existentes:
-```
-@frontend Crea un componente similar a ProductsPage pero para gestionar turnos
-```
+- **dev.md** - Modo desarrollo activo
+- **review.md** - Modo revisión de código
+- **research.md** - Modo investigación
 
-### 3. Restricciones Específicas
-Menciona restricciones importantes:
-```
-@backend El endpoint debe funcionar offline, generar eventos y validar store_id
-```
+## Uso
 
-### 4. Ejemplos del Codebase
-Si es posible, referencia ejemplos existentes:
-```
-@backend Sigue el mismo patrón que CashModule para implementar ShiftModule
-```
+### Roles
+Menciona un rol para activar su contexto:
+- `@backend` - Desarrollo backend
+- `@frontend` - Desarrollo frontend
+- `@security` - Revisión de seguridad
+- `@qa` - Testing y TDD
+- `@architect` - Diseño arquitectónico
 
-## 🔧 Configuración Avanzada
+### Agents
+Los agents se pueden invocar directamente o referenciar en conversaciones:
+- "Usa el planner agent para..."
+- "Revisa con code-reviewer agent..."
+- "Ejecuta security-reviewer agent..."
 
-### Personalizar Prompts
+### Commands
+Los commands se pueden invocar directamente o referenciar en conversaciones.
 
-Puedes editar los archivos en `.cursor/prompts/` para ajustarlos a tus necesidades específicas.
+### Rules
+Las rules se aplican automáticamente. Cursor las lee de `.cursor/rules/`.
 
-### Agregar Nuevos Roles
+### Contexts
+Los contexts se pueden activar mencionando el modo:
+- "Modo desarrollo" → activa dev.md
+- "Modo revisión" → activa review.md
+- "Modo investigación" → activa research.md
 
-1. Crea un nuevo archivo `.cursor/prompts/[nuevo-rol].md`
-2. Sigue la estructura de los prompts existentes
-3. Actualiza esta documentación
+## Adaptado para LA-CAJA
 
-### Integrar con .cursorrules
+Todas las configuraciones están adaptadas específicamente para:
+- Event Sourcing + CQRS
+- Multi-tenant (store_id isolation)
+- Offline-first architecture
+- NestJS + React stack
+- TypeScript strict mode
 
-El archivo `.cursorrules` en la raíz es leído automáticamente por Cursor. Incluye:
-- Reglas generales del proyecto
-- Convenciones de código
-- Patrones específicos
-- Referencias a roles
+## Fuente
 
-## 📚 Documentación Completa
+Basado en: https://github.com/affaan-m/everything-claude-code
 
-Para prompts más detallados con ejemplos y técnicas avanzadas, ver:
-- `docs/PROMPTS_AGENTES_DESARROLLO.md` - Documentación completa con todas las técnicas
+## Guía Completa
 
-## 🎯 Ejemplos de Uso
-
-### Ejemplo 1: Implementar Feature Backend
-```
-@backend 
-
-Necesito implementar el módulo de turnos (shifts) con:
-- Apertura de turno con arqueo inicial
-- Cierre de turno con corte X y Z
-- Historial de turnos por cajero
-
-Sigue el patrón de CashModule y genera eventos para todas las acciones.
-```
-
-### Ejemplo 2: Crear Componente Frontend
-```
-@frontend
-
-Crea un componente ShiftManagement que:
-- Muestre el turno actual si existe
-- Permita abrir un nuevo turno
-- Muestre historial de turnos
-- Funcione completamente offline
-
-Usa React Query para data fetching y Zustand para estado local.
-```
-
-### Ejemplo 3: Modelo ML
-```
-@ml
-
-Desarrolla un modelo de predicción de demanda que:
-- Use datos históricos de ventas
-- Prediga demanda por producto para los próximos 7 días
-- Tenga latencia < 100ms para real-time
-- Sea interpretable
-
-Integra con el backend NestJS mediante FastAPI.
-```
-
-## 🔄 Actualización
-
-Los prompts se actualizan periódicamente. Para la versión más reciente:
-1. Revisa `docs/PROMPTS_AGENTES_DESARROLLO.md`
-2. Sincroniza los archivos en `.cursor/prompts/`
-
-## 📝 Notas
-
-- Cursor lee automáticamente `.cursorrules` de la raíz
-- Los prompts modulares permiten activar roles específicos
-- Puedes combinar roles: `@backend @security` para seguridad en backend
-- Los prompts usan técnicas avanzadas: Chain-of-Thought, Few-Shot, Self-Criticism
-
----
-
-**Última actualización:** Enero 2025
-
+Para entender mejor cómo usar estos componentes, lee la guía completa:
+- [The Shorthand Guide to Everything Claude Code](https://x.com/affaanmustafa/status/...)
+- [The Longform Guide to Everything Claude Code](https://x.com/affaanmustafa/status/...)

@@ -359,6 +359,11 @@ export class DebtsService {
       query.andWhere('debt.status = :status', { status: DebtStatus.OPEN });
     }
 
+    // Excluir deudas asociadas a ventas anuladas
+    query
+      .leftJoin('debt.sale', 'sale')
+      .andWhere('(sale.id IS NULL OR sale.voided_at IS NULL)');
+
     query
       .orderBy('debt.created_at', 'DESC')
       .leftJoinAndSelect('debt.payments', 'payments')
@@ -368,10 +373,15 @@ export class DebtsService {
   }
 
   async getDebtSummary(storeId: string, customerId: string): Promise<any> {
-    const debts = await this.debtRepository.find({
-      where: { store_id: storeId, customer_id: customerId },
-      relations: ['payments', 'sale'],
-    });
+    // Excluir deudas asociadas a ventas anuladas
+    const debts = await this.debtRepository
+      .createQueryBuilder('debt')
+      .leftJoinAndSelect('debt.payments', 'payments')
+      .leftJoinAndSelect('debt.sale', 'sale')
+      .where('debt.store_id = :storeId', { storeId })
+      .andWhere('debt.customer_id = :customerId', { customerId })
+      .andWhere('(sale.id IS NULL OR sale.voided_at IS NULL)')
+      .getMany();
 
     let totalDebtBs = 0;
     let totalDebtUsd = 0;
@@ -428,10 +438,16 @@ export class DebtsService {
       query.andWhere('debt.status = :status', { status });
     }
 
+    // Excluir deudas asociadas a ventas anuladas
+    query
+      .leftJoin('debt.sale', 'sale')
+      .andWhere('(sale.id IS NULL OR sale.voided_at IS NULL)');
+
     query
       .orderBy('debt.created_at', 'DESC')
       .leftJoinAndSelect('debt.customer', 'customer')
-      .leftJoinAndSelect('debt.payments', 'payments');
+      .leftJoinAndSelect('debt.payments', 'payments')
+      .leftJoinAndSelect('debt.sale', 'sale');
 
     return query.getMany();
   }
@@ -442,7 +458,7 @@ export class DebtsService {
    */
   private async createMissingDebtsForFIAOSales(storeId: string): Promise<void> {
     try {
-      // Buscar ventas FIAO sin deuda asociada
+      // Buscar ventas FIAO sin deuda asociada (excluyendo ventas anuladas)
       const fiaoSalesWithoutDebt = await this.dataSource.query(
         `
         SELECT s.id, s.store_id, s.customer_id, s.sold_at, s.totals, s.payment
@@ -451,6 +467,7 @@ export class DebtsService {
         WHERE s.store_id = $1
           AND s.payment->>'method' = 'FIAO'
           AND s.customer_id IS NOT NULL
+          AND s.voided_at IS NULL
           AND d.id IS NULL
         ORDER BY s.sold_at DESC
         LIMIT 100

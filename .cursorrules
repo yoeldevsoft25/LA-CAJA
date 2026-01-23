@@ -31,6 +31,27 @@ Para usar un rol específico, menciona: "@backend", "@frontend", "@ml", "@devops
 
 Ver documentación completa en: docs/PROMPTS_AGENTES_DESARROLLO.md
 
+## REGLAS DETALLADAS
+Las reglas detalladas están organizadas en `.cursor/rules/`:
+- `security.md` - Seguridad y secretos
+- `coding-style.md` - Estilo de código e inmutabilidad
+- `testing.md` - Testing y TDD
+- `git-workflow.md` - Flujo de trabajo con Git
+- `performance.md` - Optimización de rendimiento
+- `agents.md` - Orquestación de agentes
+
+## SKILLS DISPONIBLES
+Skills con patrones específicos en `.cursor/skills/`:
+- `backend-patterns.md` - Patrones NestJS, Event Sourcing, Multi-tenant
+- `frontend-patterns.md` - Patrones React, Offline-first, PWA
+- `tdd-workflow.md` - Workflow de Test-Driven Development
+
+## COMMANDS DISPONIBLES
+Commands rápidos en `.cursor/commands/`:
+- `tdd.md` - Desarrollo guiado por tests
+- `code-review.md` - Revisión de código y seguridad
+- `plan.md` - Planificación de implementación
+
 ## ESTRUCTURA DE ARCHIVOS
 - Backend: apps/api/src/
 - Frontend: apps/pwa/src/
