@@ -14,6 +14,7 @@ import {
 } from '@la-caja/sync';
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
+import { createLogger } from '@/lib/logger';
 
 export interface PushSyncDto {
   store_id: string;
@@ -60,6 +61,7 @@ class SyncServiceClass {
   private onlineListener: (() => void) | null = null;
   private offlineListener: (() => void) | null = null;
   private pendingSyncOnInit = false; // Bandera para sincronizar después de inicializar si hubo evento online
+  private readonly logger = createLogger('SyncService');
 
   // ===== OFFLINE-FIRST COMPONENTS =====
   private vectorClockManager: VectorClockManager | null = null;
@@ -83,18 +85,18 @@ class SyncServiceClass {
   private setupConnectivityListeners(): void {
     this.onlineListener = () => {
       // Cuando vuelve la conexión, sincronizar inmediatamente
-      console.log('[SyncService] 🌐 Conexión recuperada, sincronizando eventos pendientes...');
+      this.logger.info('Conexión recuperada, sincronizando eventos pendientes');
       if (this.isInitialized && this.syncQueue) {
         // Si está inicializado, sincronizar inmediatamente
         this.syncQueue.flush().then(() => {
-          console.log('[SyncService] ✅ Sincronización completada después de recuperar conexión');
-        }).catch((err: any) => {
-          console.error('[SyncService] ❌ Error sincronizando después de recuperar conexión:', err?.message || err);
+          this.logger.info('Sincronización completada después de recuperar conexión');
+        }).catch((err: unknown) => {
+          this.logger.error('Error sincronizando después de recuperar conexión', err);
           // Silenciar errores, el sync periódico lo intentará de nuevo
         });
       } else {
         // Si no está inicializado, marcar para sincronizar cuando se inicialice
-        console.log('[SyncService] ⏳ Servicio no inicializado aún, se sincronizará cuando esté listo');
+        this.logger.debug('Servicio no inicializado aún, se sincronizará cuando esté listo');
         this.pendingSyncOnInit = true;
       }
       
@@ -104,7 +106,7 @@ class SyncServiceClass {
 
     this.offlineListener = () => {
       // Cuando se pierde la conexión, registrar background sync para cuando vuelva
-      console.log('[SyncService] 📵 Conexión perdida, eventos se guardarán localmente');
+      this.logger.warn('Conexión perdida, eventos se guardarán localmente');
       this.registerBackgroundSync();
     };
 
@@ -117,7 +119,7 @@ class SyncServiceClass {
    */
   private async registerBackgroundSync(): Promise<void> {
     if (!('serviceWorker' in navigator)) {
-      console.log('[SyncService] Service Worker no está disponible');
+      this.logger.debug('Service Worker no está disponible');
       return;
     }
 
@@ -132,14 +134,14 @@ class SyncServiceClass {
     try {
       const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistrationWithSync;
       if (!registration.sync) {
-        console.warn('[SyncService] Service Worker no soporta Background Sync');
+        this.logger.warn('Service Worker no soporta Background Sync');
         return;
       }
 
       await registration.sync.register('sync-events');
-      console.log('[SyncService] ✅ Background sync registrado: sync-events');
+      this.logger.info('Background sync registrado: sync-events');
     } catch (error) {
-      console.error('[SyncService] Error registrando background sync:', error);
+      this.logger.error('Error registrando background sync', error);
     }
   }
 
@@ -170,11 +172,11 @@ class SyncServiceClass {
    */
   async initialize(storeId: string, deviceId: string, config?: SyncQueueConfig): Promise<void> {
     if (this.isInitialized && this.storeId === storeId && this.syncQueue) {
-      console.log('[SyncService] ℹ️ Ya está inicializado para este store/device');
+      this.logger.debug('Ya está inicializado para este store/device', { storeId, deviceId });
       return;
     }
 
-    console.log('[SyncService] 🚀 Inicializando servicio de sincronización...', {
+    this.logger.info('Inicializando servicio de sincronización', {
       storeId,
       deviceId,
       isOnline: navigator.onLine,
@@ -190,10 +192,10 @@ class SyncServiceClass {
     try {
       const resetCount = await db.resetFailedEventsToPending();
       if (resetCount > 0) {
-        console.log('[SyncService] 🔄 Eventos fallidos reseteados a pendiente:', resetCount);
+        this.logger.info('Eventos fallidos reseteados a pendiente', { resetCount });
       }
     } catch (error) {
-      console.warn('[SyncService] ⚠️ No se pudieron resetear eventos fallidos:', error);
+      this.logger.warn('No se pudieron resetear eventos fallidos', { error });
     }
 
     // Crear la cola de sincronización con callback personalizado
@@ -214,16 +216,16 @@ class SyncServiceClass {
     this.startPeriodicSync();
 
     this.isInitialized = true;
-    console.log('[SyncService] ✅ Servicio de sincronización inicializado correctamente');
+    this.logger.info('Servicio de sincronización inicializado correctamente');
 
     // Si había un evento online pendiente antes de inicializar, sincronizar ahora
     if (this.pendingSyncOnInit && navigator.onLine && this.syncQueue) {
-      console.log('[SyncService] 🔄 Ejecutando sincronización pendiente después de inicializar...');
+      this.logger.info('Ejecutando sincronización pendiente después de inicializar');
       this.pendingSyncOnInit = false;
       this.syncQueue.flush().then(() => {
-        console.log('[SyncService] ✅ Sincronización pendiente completada');
-      }).catch((err: any) => {
-        console.warn('[SyncService] ⚠️ Error en sincronización pendiente (se reintentará):', err?.message || err);
+        this.logger.info('Sincronización pendiente completada');
+      }).catch((err: unknown) => {
+        this.logger.warn('Error en sincronización pendiente (se reintentará)', { error: err });
       });
     }
   }
@@ -242,19 +244,18 @@ class SyncServiceClass {
 
     // Siempre guardar en base de datos local primero (incluso si no está inicializado)
     await this.saveEventToDB(event);
-    console.log('[SyncService] Evento guardado/encolado', {
+    this.logger.debug('Evento guardado/encolado', {
       event_id: event.event_id,
       type: event.type,
       store_id: event.store_id,
       device_id: event.device_id,
       seq: event.seq,
-      vector_clock: event.vector_clock,
     });
 
     // Si está inicializado, agregar a la cola de sincronización
     if (this.isInitialized && this.syncQueue) {
       this.syncQueue.enqueue(event);
-      console.log('[SyncService] enqueue -> flush attempt');
+      this.logger.debug('Evento encolado, intentando flush');
       
       // Si estamos offline, registrar background sync
       if (!navigator.onLine) {
@@ -288,7 +289,7 @@ class SyncServiceClass {
         } catch (error) {
           // Si falla la inicialización, el evento ya está guardado en la BD
           // Se sincronizará cuando el servicio se inicialice correctamente
-          console.warn('[SyncService] No se pudo inicializar automáticamente, pero el evento está guardado:', error);
+          this.logger.warn('No se pudo inicializar automáticamente, pero el evento está guardado', { error });
         }
       }
     }
@@ -329,14 +330,14 @@ class SyncServiceClass {
    */
   async syncNow(): Promise<void> {
     if (!this.isInitialized || !this.syncQueue) {
-      console.warn('[SyncService] syncNow() llamado pero el servicio no está inicializado');
+      this.logger.warn('syncNow() llamado pero el servicio no está inicializado');
       // No lanzar error, simplemente retornar silenciosamente
       // El sync periódico lo intentará cuando el servicio esté listo
       return;
     }
 
     if (!navigator.onLine) {
-      console.log('[SyncService] syncNow() omitido: sin conexión');
+      this.logger.debug('syncNow() omitido: sin conexión');
       return;
     }
 
@@ -408,14 +409,14 @@ class SyncServiceClass {
     // Invalidar cache de entidades críticas después de sincronizar
     // Esto asegura que los datos se refresquen cuando se sincronizan eventos
     this.invalidateCriticalCaches().catch((error) => {
-      console.error('[SyncService] Error invalidating caches:', error);
+      this.logger.error('Error invalidating caches', error);
     });
 
     this.onSyncCompleteCallbacks.forEach((callback) => {
       try {
         callback(syncedCount);
       } catch (error) {
-        console.error('[SyncService] Error en callback onSyncComplete:', error);
+        this.logger.error('Error en callback onSyncComplete', error);
       }
     });
   }
@@ -430,7 +431,7 @@ class SyncServiceClass {
     await this.cacheManager.invalidatePattern(/^customers:/);
     // Invalidar cache de configuración de tienda
     await this.cacheManager.invalidatePattern(/^store:/);
-    console.log('[SyncService] ✅ Cache invalidado después de sincronización');
+    this.logger.debug('Cache invalidado después de sincronización');
   }
 
   /**
@@ -441,7 +442,7 @@ class SyncServiceClass {
       try {
         callback(error);
       } catch (err) {
-        console.error('[SyncService] Error en callback onSyncError:', err);
+        this.logger.error('Error en callback onSyncError', err);
       }
     });
   }
@@ -492,9 +493,8 @@ class SyncServiceClass {
    * Callback para sincronizar un batch de eventos con el servidor
    */
   private async syncBatchToServer(events: BaseEvent[]): Promise<{ success: boolean; error?: Error }> {
-    console.log('[SyncService] syncBatchToServer start', {
+    this.logger.debug('syncBatchToServer start', {
       events_count: events.length,
-      first_event: events[0],
       online: navigator.onLine,
       store_id: this.storeId,
       device_id: this.deviceId,
@@ -509,7 +509,7 @@ class SyncServiceClass {
 
     // Verificar conectividad antes de intentar sincronizar
     if (!navigator.onLine) {
-      console.warn('[SyncService] Aborting sync, navigator.offline');
+      this.logger.warn('Aborting sync, navigator.offline');
       const offlineError = new Error('Sin conexión a internet');
       offlineError.name = 'OfflineError';
       return {
@@ -520,12 +520,12 @@ class SyncServiceClass {
 
     // Validar storeId y deviceId antes de enviar
     if (!this.storeId || !this.isUUID(this.storeId)) {
-      console.error('[SyncService] storeId inválido antes de sync', this.storeId);
+      this.logger.error('storeId inválido antes de sync', undefined, { storeId: this.storeId });
       const err = new Error(`storeId inválido para sync: ${this.storeId}`);
       return { success: false, error: err };
     }
     if (!this.deviceId || !this.isUUID(this.deviceId)) {
-      console.error('[SyncService] deviceId inválido antes de sync', this.deviceId);
+      this.logger.error('deviceId inválido antes de sync', undefined, { deviceId: this.deviceId });
       const err = new Error(`deviceId inválido para sync: ${this.deviceId}`);
       return { success: false, error: err };
     }
@@ -545,8 +545,7 @@ class SyncServiceClass {
         void store_id;
         void device_id;
         // Crear evento sin store_id y device_id para enviar al backend
-        // Usar 'as any' porque el tipo BaseEvent requiere estos campos,
-        // pero el backend los espera solo en el DTO principal
+        // El backend los espera solo en el DTO principal, no en cada evento
         return {
           ...rest,
           payload: {
@@ -554,15 +553,14 @@ class SyncServiceClass {
             store_id: undefined,
             device_id: undefined,
           },
-        } as any;
+        } as Omit<BaseEvent, 'store_id' | 'device_id'> & { store_id?: undefined; device_id?: undefined };
       })
-      .filter((evt): evt is any => evt !== null);
+      .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> & { store_id?: undefined; device_id?: undefined } => evt !== null);
 
-    console.log('[SyncService] Sanitized events', {
+    this.logger.debug('Sanitized events', {
       original_count: events.length,
       sanitized_count: sanitizedEvents.length,
       invalid_actor_count: invalidActorEventIds.length,
-      first_sanitized_event: sanitizedEvents[0],
     });
 
     if (invalidActorEventIds.length > 0) {
@@ -578,11 +576,10 @@ class SyncServiceClass {
     }
 
     try {
-      console.log('[SyncService] Enviando /sync/push', {
+      this.logger.debug('Enviando /sync/push', {
         store_id: this.storeId,
         device_id: this.deviceId,
         events_count: sanitizedEvents.length,
-        first_event: sanitizedEvents[0],
       });
 
       const dto: PushSyncDto = {
@@ -611,7 +608,7 @@ class SyncServiceClass {
         this.syncQueue?.markAsSynced(acceptedIds);
 
         // 🔔 Notificar que se completó la sincronización para invalidar cache
-        console.log('[SyncService] 🔔 Notificando sincronización completada:', acceptedIds.length, 'eventos');
+        this.logger.info('Sincronización completada', { acceptedCount: acceptedIds.length });
         this.notifySyncComplete(acceptedIds.length);
       }
 
@@ -635,19 +632,18 @@ class SyncServiceClass {
       return { success: true };
     } catch (error) {
       // Log detallado para depurar 400/validaciones
-      const anyErr: any = error;
-      const status = anyErr?.response?.status;
-      const data = anyErr?.response?.data;
-      console.error('[SyncService] ❌ Error sincronizando /sync/push', {
+      const axiosError = error as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      const status = axiosError?.response?.status;
+      const data = axiosError?.response?.data;
+      this.logger.error('Error sincronizando /sync/push', error, {
         status,
-        data,
         eventsCount: events.length,
       });
 
       const message =
         status && data?.message
           ? `HTTP ${status}: ${data.message}`
-          : anyErr?.message || 'Error desconocido al sincronizar';
+          : axiosError?.message || 'Error desconocido al sincronizar';
       const err = new Error(message);
       if (status && status >= 400 && status < 500) {
         err.name = 'ValidationError';
@@ -671,7 +667,7 @@ class SyncServiceClass {
     requires_manual_review: boolean;
     conflicting_with?: string[];
   }): Promise<void> {
-    console.warn('[SyncService] Conflicto detectado', conflict);
+    this.logger.warn('Conflicto detectado', { conflict_id: conflict.conflict_id, event_id: conflict.event_id, reason: conflict.reason });
 
     // Marcar evento como en conflicto en la cola
     this.syncQueue?.markAsConflict([conflict.event_id]);
@@ -688,12 +684,12 @@ class SyncServiceClass {
         requires_manual_review: conflict.requires_manual_review,
       });
     } catch (error) {
-      console.error('[SyncService] Error guardando conflicto en DB', error);
+      this.logger.error('Error guardando conflicto en DB', error);
     }
 
     // TODO: Mostrar notificación al usuario si requires_manual_review === true
     if (conflict.requires_manual_review) {
-      console.warn('[SyncService] ⚠️ Conflicto requiere resolución manual:', conflict.conflict_id);
+      this.logger.warn('Conflicto requiere resolución manual', { conflict_id: conflict.conflict_id });
       // Ejemplo: toast.warning('Conflicto detectado', { action: { label: 'Resolver', onClick: () => navigate('/conflicts') } })
     }
   }
@@ -710,10 +706,8 @@ class SyncServiceClass {
       const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
 
       if (baseEvents.length > 0) {
-        console.log('[SyncService] ✅ Cargando eventos pendientes desde IndexedDB', {
+        this.logger.info('Cargando eventos pendientes desde IndexedDB', {
           count: baseEvents.length,
-          first_event_id: baseEvents[0].event_id,
-          first_event_type: baseEvents[0].type,
           store_id: this.storeId,
           device_id: this.deviceId,
         });
@@ -721,20 +715,20 @@ class SyncServiceClass {
 
         // Intentar sincronizar inmediatamente si hay conexión
         if (navigator.onLine) {
-          console.log('[SyncService] 📤 Conexión disponible, iniciando sincronización inmediata...');
+          this.logger.info('Conexión disponible, iniciando sincronización inmediata');
           this.syncQueue.flush().then(() => {
-            console.log('[SyncService] ✅ Sincronización inicial completada');
+            this.logger.info('Sincronización inicial completada');
           }).catch((err) => {
-            console.warn('[SyncService] ⚠️ Error en sincronización inicial (se reintentará):', err?.message || err);
+            this.logger.warn('Error en sincronización inicial (se reintentará)', { error: err });
           });
         } else {
-          console.log('[SyncService] ⏸️ Sin conexión, esperando para sincronizar');
+          this.logger.debug('Sin conexión, esperando para sincronizar');
         }
       } else {
-        console.log('[SyncService] ℹ️ No hay eventos pendientes de sincronización');
+        this.logger.debug('No hay eventos pendientes de sincronización');
       }
     } catch (error) {
-      console.error('[SyncService] ❌ Error cargando eventos pendientes:', error);
+      this.logger.error('Error cargando eventos pendientes', error);
     }
   }
 
@@ -793,27 +787,27 @@ class SyncServiceClass {
       clearInterval(this.syncIntervalId);
     }
 
-    console.log('[SyncService] ⏰ Sincronización periódica iniciada (cada 30 segundos)');
+    this.logger.info('Sincronización periódica iniciada', { intervalMs: this.SYNC_INTERVAL_MS });
 
     this.syncIntervalId = setInterval(() => {
       // Solo sincronizar si hay conexión
       if (navigator.onLine && this.syncQueue) {
         const stats = this.syncQueue.getStats();
         if (stats.pending > 0) {
-          console.log('[SyncService] 🔄 Sincronización periódica: ' + stats.pending + ' eventos pendientes');
+          this.logger.debug('Sincronización periódica', { pending: stats.pending });
           this.syncQueue.flush().then(() => {
             const newStats = this.syncQueue?.getStats();
-            console.log('[SyncService] ✅ Sincronización periódica completada', {
+            this.logger.debug('Sincronización periódica completada', {
               pending: newStats?.pending || 0,
               synced: newStats?.synced || 0,
             });
-          }).catch((err: any) => {
-            console.error('[SyncService] ❌ Error en sincronización periódica:', err?.message || err);
+          }).catch((err: unknown) => {
+            this.logger.error('Error en sincronización periódica', err);
             // Silenciar errores, se reintentará en el siguiente intervalo
           });
         }
       } else if (!navigator.onLine) {
-        console.log('[SyncService] ⏸️ Sincronización periódica omitida (sin conexión)');
+        this.logger.debug('Sincronización periódica omitida (sin conexión)');
       }
     }, this.SYNC_INTERVAL_MS);
   }

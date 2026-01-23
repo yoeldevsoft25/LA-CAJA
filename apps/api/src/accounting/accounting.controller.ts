@@ -9,12 +9,13 @@ import {
   Query,
   UseGuards,
   Request,
+  Res,
   HttpCode,
   HttpStatus,
-  Res,
   NotFoundException,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
+import * as fs from 'fs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ChartOfAccountsService } from './chart-of-accounts.service';
@@ -251,16 +252,19 @@ export class AccountingController {
   async downloadExport(
     @Request() req: any,
     @Param('id') exportId: string,
-    @Res() res: Response,
+    @Res() res: FastifyReply,
   ) {
     const storeId = req.user.store_id;
     const { filePath, fileName } = await this.exportService.getExportFile(storeId, exportId);
 
-    res.download(filePath, fileName, (err) => {
-      if (err) {
-        res.status(500).json({ message: 'Error descargando archivo' });
-      }
-    });
+    try {
+      const fileStream = fs.createReadStream(filePath);
+      res.header('Content-Type', 'application/octet-stream');
+      res.header('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.send(fileStream);
+    } catch (error) {
+      res.status(500).send({ message: 'Error descargando archivo' });
+    }
   }
 
   /**

@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/stores/auth.store'
 import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History, Trash2, AlertOctagon, Download, ShoppingCart } from 'lucide-react'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
-import StockReceivedModal from '@/components/inventory/StockReceivedModal'
-import StockAdjustModal from '@/components/inventory/StockAdjustModal'
-import BulkStockAdjustModal from '@/components/inventory/BulkStockAdjustModal'
-import MovementsModal from '@/components/inventory/MovementsModal'
-import PurchaseOrderFormModal from '@/components/purchase-orders/PurchaseOrderFormModal'
+// ⚡ OPTIMIZACIÓN: Lazy load de modales grandes - solo cargar cuando se abren
+const StockReceivedModal = lazy(() => import('@/components/inventory/StockReceivedModal'))
+const StockAdjustModal = lazy(() => import('@/components/inventory/StockAdjustModal'))
+const BulkStockAdjustModal = lazy(() => import('@/components/inventory/BulkStockAdjustModal'))
+const MovementsModal = lazy(() => import('@/components/inventory/MovementsModal'))
+const PurchaseOrderFormModal = lazy(() => import('@/components/purchase-orders/PurchaseOrderFormModal'))
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -668,27 +669,38 @@ export default function InventoryPage() {
         }}
       />
 
-      <PurchaseOrderFormModal
-        isOpen={isPurchaseOrderModalOpen}
-        onClose={() => setIsPurchaseOrderModalOpen(false)}
-        initialProducts={
-          showLowStockOnly
-            ? stockItems.map((item) => ({
-                product_id: item.product_id,
-                quantity: Math.max(1, Math.ceil((item.low_stock_threshold || 10) * 1.5)), // Sugerir cantidad basada en umbral
-              }))
-            : stockItems
-                .filter((item) => item.is_low_stock)
-                .map((item) => ({
-                  product_id: item.product_id,
-                  quantity: Math.max(1, Math.ceil((item.low_stock_threshold || 10) * 1.5)),
-                }))
-        }
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
-          setIsPurchaseOrderModalOpen(false)
-        }}
-      />
+      {isPurchaseOrderModalOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <PurchaseOrderFormModal
+            isOpen={isPurchaseOrderModalOpen}
+            onClose={() => setIsPurchaseOrderModalOpen(false)}
+            initialProducts={
+              showLowStockOnly
+                ? stockItems.map((item) => ({
+                    product_id: item.product_id,
+                    quantity: Math.max(1, Math.ceil((item.low_stock_threshold || 10) * 1.5)), // Sugerir cantidad basada en umbral
+                  }))
+                : stockItems
+                    .filter((item) => item.is_low_stock)
+                    .map((item) => ({
+                      product_id: item.product_id,
+                      quantity: Math.max(1, Math.ceil((item.low_stock_threshold || 10) * 1.5)),
+                    }))
+            }
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
+              setIsPurchaseOrderModalOpen(false)
+            }}
+          />
+        </Suspense>
+      )}
 
       <MovementsModal
         isOpen={isMovementsModalOpen}

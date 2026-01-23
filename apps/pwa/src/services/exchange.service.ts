@@ -1,5 +1,8 @@
 import { api } from '@/lib/api'
 import { db } from '@/db/database'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('ExchangeService')
 
 // ============================================
 // TIPOS
@@ -45,6 +48,16 @@ export interface SetRateInput {
   rate_type?: ExchangeRateType
   is_preferred?: boolean
   note?: string
+}
+
+export interface ExchangeRate {
+  id: string
+  rate: number
+  rate_type: ExchangeRateType
+  is_preferred: boolean
+  note?: string | null
+  created_at: string
+  updated_at: string
 }
 
 // ============================================
@@ -156,7 +169,14 @@ export const exchangeService = {
   // ============================================
 
   /**
-   * Obtiene todas las tasas activas
+   * Obtiene todas las tasas de cambio (BCV, Paralelo, Cash, Zelle)
+   * 
+   * @returns Promise que resuelve con todas las tasas y su disponibilidad
+   * 
+   * @remarks
+   * - Intenta obtener desde API primero
+   * - Si falla, usa cache local como fallback
+   * - Guarda las tasas en cache para uso offline
    */
   async getAllRates(): Promise<{ rates: MultiRateResponse; available: boolean }> {
     const isOnline = navigator.onLine
@@ -168,7 +188,7 @@ export const exchangeService = {
           return { rates: cached.value, available: true }
         }
       } catch (error) {
-        console.error('Error obteniendo tasas del cache:', error)
+        logger.error('Error obteniendo tasas del cache', error)
       }
       return {
         rates: { bcv: null, parallel: null, cash: null, zelle: null, updated_at: null },
@@ -185,9 +205,9 @@ export const exchangeService = {
       if (response.data.available && response.data.rates) {
         try {
           await db.kv.put({ key: ALL_RATES_KEY, value: response.data.rates })
-          console.log('[Exchange] ✅ Tasas guardadas en cache:', response.data.rates)
+          logger.debug('Tasas guardadas en cache', { rates: response.data.rates })
         } catch (error) {
-          console.error('[Exchange] Error guardando tasas:', error)
+          logger.error('Error guardando tasas', error)
         }
       }
 
@@ -200,7 +220,7 @@ export const exchangeService = {
           return { rates: cached.value, available: true }
         }
       } catch (cacheError) {
-        console.error('Error accediendo cache de tasas:', cacheError)
+        logger.error('Error accediendo cache de tasas', cacheError)
       }
 
       return {
@@ -259,8 +279,8 @@ export const exchangeService = {
    */
   async setMultipleRates(
     rates: SetRateInput[]
-  ): Promise<{ rates: any[]; success: boolean }> {
-    const response = await api.post<{ rates: any[] }>('/exchange/rates/bulk', { rates })
+  ): Promise<{ rates: ExchangeRate[]; success: boolean }> {
+    const response = await api.post<{ rates: ExchangeRate[] }>('/exchange/rates/bulk', { rates })
 
     // Invalidar cache
     await this.invalidateCache()
@@ -294,7 +314,7 @@ export const exchangeService = {
           return cached.value
         }
       } catch (error) {
-        console.error('Error obteniendo config del cache:', error)
+        logger.error('Error obteniendo config del cache', error)
       }
       return null
     }
@@ -306,7 +326,7 @@ export const exchangeService = {
       try {
         await db.kv.put({ key: RATE_CONFIG_KEY, value: response.data.config })
       } catch (error) {
-        console.error('Error guardando config:', error)
+        logger.error('Error guardando config', error)
       }
 
       return response.data.config
@@ -318,7 +338,7 @@ export const exchangeService = {
           return cached.value
         }
       } catch (cacheError) {
-        console.error('Error accediendo cache de config:', cacheError)
+        logger.error('Error accediendo cache de config', cacheError)
       }
       return null
     }
@@ -335,12 +355,12 @@ export const exchangeService = {
       try {
         await db.kv.put({ key: RATE_CONFIG_KEY, value: response.data.config })
       } catch (error) {
-        console.error('Error actualizando cache de config:', error)
+        logger.error('Error actualizando cache de config', error)
       }
 
       return response.data.config
     } catch (error) {
-      console.error('Error actualizando config:', error)
+      logger.error('Error actualizando config', error)
       return null
     }
   },
@@ -349,6 +369,18 @@ export const exchangeService = {
   // MÉTODOS ORIGINALES (COMPATIBILIDAD)
   // ============================================
 
+  /**
+   * Obtiene la tasa BCV (Banco Central de Venezuela)
+   * 
+   * @param force - Si es true, fuerza la actualización desde API ignorando cache
+   * @returns Promise que resuelve con la tasa BCV y su disponibilidad
+   * 
+   * @remarks
+   * - Soporta cache local para uso offline
+   * - Si force=true, siempre intenta actualizar desde API
+   * - Si falla la API, usa cache como fallback
+   * - Guarda la tasa en IndexedDB para persistencia
+   */
   async getBCVRate(force = false): Promise<BCVRateResponse> {
     const isOnline = navigator.onLine
 
@@ -376,7 +408,7 @@ export const exchangeService = {
           message: 'No hay tasa de cambio guardada. Necesitas conexión para obtenerla.',
         }
       } catch (error) {
-        console.error('Error obteniendo tasa del cache:', error)
+        logger.error('Error obteniendo tasa del cache', error)
         return {
           rate: null,
           source: null,
@@ -403,14 +435,14 @@ export const exchangeService = {
               value: response.data.timestamp || new Date().toISOString(),
             }),
           ])
-          console.log('[Exchange] ✅ Tasa BCV guardada en IndexedDB:', response.data.rate)
+          logger.debug('Tasa BCV guardada en IndexedDB', { rate: response.data.rate })
         } catch (error) {
-          console.error('[Exchange] ❌ Error guardando tasa en IndexedDB:', error)
+          logger.error('Error guardando tasa en IndexedDB', error)
         }
       }
 
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Si falla pero tenemos cache, usar el cache
       if (!force) {
         try {
@@ -427,7 +459,7 @@ export const exchangeService = {
             }
           }
         } catch (cacheError) {
-          console.error('Error obteniendo tasa del cache después de fallo:', cacheError)
+          logger.error('Error obteniendo tasa del cache después de fallo', cacheError)
         }
       }
 
@@ -442,7 +474,14 @@ export const exchangeService = {
   },
 
   /**
-   * Obtiene la tasa de cambio del cache local
+   * Obtiene la tasa de cambio guardada en cache (para uso offline)
+   * 
+   * @returns Promise que resuelve con la tasa cacheada y su disponibilidad
+   * 
+   * @remarks
+   * - Útil para operaciones offline
+   * - Retorna la última tasa guardada en IndexedDB
+   * - Si no hay cache, retorna available=false
    */
   async getCachedRate(): Promise<BCVRateResponse> {
     try {
@@ -467,7 +506,7 @@ export const exchangeService = {
         message: 'No hay tasa de cambio guardada en cache',
       }
     } catch (error) {
-      console.error('Error obteniendo tasa del cache:', error)
+      logger.error('Error obteniendo tasa del cache', error)
       return {
         rate: null,
         source: null,
@@ -485,7 +524,7 @@ export const exchangeService = {
     limit = 50,
     offset = 0,
     rateType?: ExchangeRateType
-  ): Promise<{ rates: any[]; total: number }> {
+  ): Promise<{ rates: ExchangeRate[]; total: number }> {
     try {
       const params: Record<string, string> = {
         limit: limit.toString(),
@@ -495,13 +534,13 @@ export const exchangeService = {
         params.rate_type = rateType
       }
 
-      const response = await api.get<{ rates: any[]; total: number }>(
+      const response = await api.get<{ rates: ExchangeRate[]; total: number }>(
         '/exchange/bcv/history',
         { params }
       )
       return response.data
     } catch (error) {
-      console.error('Error obteniendo historial:', error)
+      logger.error('Error obteniendo historial', error)
       return { rates: [], total: 0 }
     }
   },
@@ -517,9 +556,9 @@ export const exchangeService = {
         db.kv.delete(ALL_RATES_KEY),
         db.kv.delete(RATE_CONFIG_KEY),
       ])
-      console.log('[Exchange] Cache invalidado')
+      logger.debug('Cache invalidado')
     } catch (error) {
-      console.error('Error invalidando cache:', error)
+      logger.error('Error invalidando cache', error)
     }
   },
 }

@@ -1,6 +1,9 @@
 import { Sale } from './sales.service'
 import { CashSessionSummary } from './cash.service'
 import { ShiftSummary } from './shifts.service'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('PrintService')
 
 type CartSnapshotItem = {
   product_id: string
@@ -387,7 +390,7 @@ function buildShiftSummaryHtml(summary: ShiftSummary, opts?: { storeName?: strin
 function openPrintWindow(html: string) {
   const printWindow = window.open('', '_blank', 'width=320,height=600')
   if (!printWindow) {
-    console.warn('[PrintService] No se pudo abrir la ventana de impresión (popup bloqueado)')
+    logger.warn('No se pudo abrir la ventana de impresión (popup bloqueado)')
     return
   }
   printWindow.document.write(html)

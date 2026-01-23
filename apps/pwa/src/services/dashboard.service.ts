@@ -1,4 +1,7 @@
 import { api } from '@/lib/api'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('DashboardService')
 
 export interface KPIs {
   sales: {
@@ -76,15 +79,15 @@ export const dashboardService = {
    */
   async getKPIs(startDate?: string, endDate?: string): Promise<KPIs> {
     const startTime = performance.now()
-    const params: any = {}
+    const params: Record<string, string> = {}
     if (startDate) params.start_date = startDate
     if (endDate) params.end_date = endDate
     const response = await api.get<KPIs>('/dashboard/kpis', { params })
     const endTime = performance.now()
-    console.log(
-      `[Dashboard] KPIs loaded in ${(endTime - startTime).toFixed(2)}ms`,
-      startDate || endDate ? `(filtered: ${startDate || 'any'} to ${endDate || 'any'})` : '(no filter)'
-    )
+    logger.debug('KPIs loaded', {
+      duration: `${(endTime - startTime).toFixed(2)}ms`,
+      filtered: startDate || endDate ? `${startDate || 'any'} to ${endDate || 'any'}` : false,
+    })
     return response.data
   },
 
@@ -95,7 +98,7 @@ export const dashboardService = {
     const startTime = performance.now()
     const response = await api.get<Trends>('/dashboard/trends')
     const endTime = performance.now()
-    console.log(`[Dashboard] Trends loaded in ${(endTime - startTime).toFixed(2)}ms`)
+    logger.debug('Trends loaded', { duration: `${(endTime - startTime).toFixed(2)}ms` })
     return response.data
   },
 }

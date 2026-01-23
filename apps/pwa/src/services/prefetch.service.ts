@@ -14,6 +14,9 @@ import { debtsService } from './debts.service'
 import { inventoryService } from './inventory.service'
 import { reportsService } from './reports.service'
 import { productsCacheService } from './products-cache.service'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('Prefetch')
 
 interface PrefetchOptions {
   storeId: string
@@ -182,13 +185,13 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
         }
       } catch (error) {
         // Silenciar errores de reportes - no son críticos
-        console.warn('[Prefetch] Error cacheando reportes:', error)
+        logger.warn('Error cacheando reportes', { error })
       }
     }
 
     updateProgress('¡Cacheo completo!')
   } catch (error) {
-    console.warn('[Prefetch] Error durante prefetch:', error)
+    logger.warn('Error durante prefetch', { error })
     // No lanzar error - el prefetch es opcional
   }
 }
@@ -314,7 +317,7 @@ export async function prefetchPageData(
         break
     }
   } catch (error) {
-    console.warn(`[Prefetch] Error prefetching ${page}:`, error)
+    logger.warn('Error prefetching page', { error, page })
   }
 }
 

@@ -126,9 +126,15 @@ import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
             : sslRejectUnauthorizedEnv === 'false'
               ? false
               : undefined;
+        // Para servicios cloud en desarrollo, por defecto aceptar certificados autofirmados
+        // a menos que se especifique explícitamente DB_SSL_REJECT_UNAUTHORIZED=true
         const sslRejectUnauthorized = isProduction
           ? !(requestedRejectUnauthorized === false && allowInsecureDbSsl)
-          : requestedRejectUnauthorized !== false;
+          : requestedRejectUnauthorized === true
+            ? true
+            : isCloudDatabase
+              ? false // Aceptar certificados autofirmados en cloud databases en desarrollo
+              : requestedRejectUnauthorized !== false;
 
         const sslCaEnv = configService.get<string>('DB_SSL_CA');
         const sslCaFile = configService.get<string>('DB_SSL_CA_FILE');

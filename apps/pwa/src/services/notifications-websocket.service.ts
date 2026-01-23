@@ -1,4 +1,7 @@
 import { io, Socket } from 'socket.io-client'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('NotificationsWebSocket')
 
 /**
  * Servicio WebSocket para notificaciones en tiempo real
@@ -21,7 +24,7 @@ class NotificationsWebSocketService {
 
     const token = localStorage.getItem('auth_token')
     if (!token) {
-      console.warn('[NotificationsWS] No hay token de autenticación')
+      logger.warn('No hay token de autenticación')
       return
     }
 
@@ -131,29 +134,29 @@ class NotificationsWebSocketService {
     if (!this.socket) return
 
     this.socket.on('connect', () => {
-      console.log('[NotificationsWS] Conectado')
+      logger.info('Conectado')
     })
 
     this.socket.on('disconnect', () => {
-      console.log('[NotificationsWS] Desconectado')
+      logger.info('Desconectado')
     })
 
-    this.socket.on('error', (error: any) => {
+    this.socket.on('error', (error: { message?: string; data?: unknown; toString?: () => string }) => {
       // No mostrar errores de autenticación como errores críticos (son esperados cuando no hay token o el servidor no está disponible)
-      const errorMessage = error?.message || error?.toString() || 'Error desconocido'
+      const errorMessage = error?.message || error?.toString?.() || 'Error desconocido'
       if (errorMessage.includes('autenticado') || errorMessage.includes('auth')) {
         // Solo mostrar como warning, no como error crítico
-        console.debug('[NotificationsWS] Autenticación requerida o servidor no disponible')
+        logger.debug('Autenticación requerida o servidor no disponible')
         return
       }
-      console.error('[NotificationsWS] Error:', errorMessage, error?.data)
+      logger.error('Error en WebSocket', new Error(errorMessage), { data: error?.data })
     })
 
     // Manejar errores de conexión
-    this.socket.on('connect_error', (error: any) => {
+    this.socket.on('connect_error', (error: Error) => {
       // Solo mostrar como debug en desarrollo, no inundar la consola
       if (import.meta.env.DEV) {
-        console.debug('[NotificationsWS] Error de conexión (esperado si el backend no está corriendo):', error.message)
+        logger.debug('Error de conexión (esperado si el backend no está corriendo)', { error: error.message })
       }
     })
 
@@ -167,7 +170,7 @@ class NotificationsWebSocketService {
       }
       timestamp: number
     }) => {
-      console.log('[NotificationsWS] Cambio de estado de licencia:', data)
+      logger.debug('Cambio de estado de licencia', { status: data.license.license_status })
       // Emitir evento personalizado para que los hooks puedan escucharlo
       window.dispatchEvent(new CustomEvent('license:status_change', {
         detail: data.license,

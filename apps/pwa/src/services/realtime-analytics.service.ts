@@ -10,6 +10,9 @@ import {
   ComparativeMetricsResponse,
   GetComparativeMetricsRequest,
 } from '@/types/realtime-analytics.types'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('RealtimeAnalytics')
 
 export const realtimeAnalyticsService = {
   /**
@@ -17,7 +20,7 @@ export const realtimeAnalyticsService = {
    */
   async getMetrics(metricTypes?: string[]): Promise<RealTimeMetricsResponse> {
     const startTime = performance.now()
-    const params: any = {}
+    const params: Record<string, string> = {}
     if (metricTypes && metricTypes.length > 0) {
       params.metric_types = metricTypes.join(',')
     }
@@ -26,10 +29,10 @@ export const realtimeAnalyticsService = {
       { params },
     )
     const endTime = performance.now()
-    console.log(
-      `[Realtime Analytics] Metrics loaded in ${(endTime - startTime).toFixed(2)}ms`,
-      metricTypes && metricTypes.length > 0 ? `(types: ${metricTypes.join(', ')})` : '(all types)'
-    )
+    logger.debug('Metrics loaded', {
+      duration: `${(endTime - startTime).toFixed(2)}ms`,
+      types: metricTypes && metricTypes.length > 0 ? metricTypes.join(', ') : 'all',
+    })
     return response.data
   },
 
@@ -135,10 +138,10 @@ export const realtimeAnalyticsService = {
       },
     )
     const endTime = performance.now()
-    console.log(
-      `[Realtime Analytics] Heatmap loaded in ${(endTime - startTime).toFixed(2)}ms`,
-      `(${startDate} to ${endDate})`
-    )
+    logger.debug('Heatmap loaded', {
+      duration: `${(endTime - startTime).toFixed(2)}ms`,
+      dateRange: `${startDate} to ${endDate}`,
+    })
     return response.data
   },
 
@@ -154,10 +157,11 @@ export const realtimeAnalyticsService = {
       { params },
     )
     const endTime = performance.now()
-    console.log(
-      `[Realtime Analytics] Comparative metrics loaded in ${(endTime - startTime).toFixed(2)}ms`,
-      `(type: ${params.metric_type}, period: ${params.period})`
-    )
+    logger.debug('Comparative metrics loaded', {
+      duration: `${(endTime - startTime).toFixed(2)}ms`,
+      type: params.metric_type,
+      period: params.period,
+    })
     return response.data
   },
 }

@@ -179,23 +179,30 @@ export class SyncService {
           continue;
         }
 
+        // ⚡ OPTIMIZACIÓN: Validaciones simplificadas para SaleCreated
+        // Las validaciones pesadas se hacen en la proyección asíncrona
         if (event.type === 'SaleCreated') {
-          const validationResult = await this.validateSaleCreatedEvent(
-            dto.store_id,
-            event as SyncEvent,
-            authenticatedUserId,
-          );
-          if (!validationResult.valid) {
+          const payload = event.payload as any;
+          // Validación básica rápida (sin queries pesadas)
+          if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
             rejected.push({
               event_id: event.event_id,
               seq: event.seq,
-              code: validationResult.code || 'SECURITY_ERROR',
-              message:
-                validationResult.message ||
-                'Evento de venta rechazado por validaciones de seguridad.',
+              code: 'VALIDATION_ERROR',
+              message: 'La venta no tiene items válidos.',
             });
             continue;
           }
+          if (!payload.cash_session_id) {
+            rejected.push({
+              event_id: event.event_id,
+              seq: event.seq,
+              code: 'SECURITY_ERROR',
+              message: 'La venta no está asociada a una sesión de caja.',
+            });
+            continue;
+          }
+          // Validaciones pesadas se harán en la proyección asíncrona
         }
 
         // 2c. Dedupe por event_id (idempotencia)
@@ -215,13 +222,18 @@ export class SyncService {
           event.vector_clock ||
           this.vectorClockService.fromEvent(dto.device_id, event.seq);
 
-        // 4. Detectar y resolver conflictos
-        const conflictResult = await this.detectAndResolveConflicts(
-          dto.store_id,
-          event,
-          eventVectorClock,
-          dto.device_id,
-        );
+        // ⚡ OPTIMIZACIÓN: Detección de conflictos simplificada para eventos de venta
+        // Para SaleCreated, los conflictos son raros y se pueden manejar en la proyección
+        let conflictResult = { hasConflict: false, resolved: true };
+        if (event.type !== 'SaleCreated') {
+          // Solo detectar conflictos para eventos que no sean ventas (más rápidos)
+          conflictResult = await this.detectAndResolveConflicts(
+            dto.store_id,
+            event,
+            eventVectorClock,
+            dto.device_id,
+          );
+        }
 
         if (conflictResult.hasConflict && !conflictResult.resolved) {
           // Conflicto no resuelto, requiere intervención manual
@@ -781,24 +793,26 @@ export class SyncService {
 
   /**
    * Busca eventos existentes para una entidad específica
+   * ⚡ OPTIMIZACIÓN: Usa índice GIN para búsquedas rápidas en JSONB
    */
   private async findEventsForEntity(
     storeId: string,
     entityType: string,
     entityId: string,
   ): Promise<Event[]> {
-    // Query parametrizada para evitar SQL injection
+    // ⚡ OPTIMIZACIÓN: Query optimizada usando índice GIN
+    // Usar @> para búsquedas más rápidas con índice GIN en lugar de ->>
     const query = `
       SELECT *
       FROM events
       WHERE store_id = $1
         AND type LIKE $2
         AND (
-          payload->>'product_id' = $3
-          OR payload->>'sale_id' = $3
-          OR payload->>'customer_id' = $3
-          OR payload->>'debt_id' = $3
-          OR payload->>'session_id' = $3
+          payload @> jsonb_build_object('product_id', $3::text)
+          OR payload @> jsonb_build_object('sale_id', $3::text)
+          OR payload @> jsonb_build_object('customer_id', $3::text)
+          OR payload @> jsonb_build_object('debt_id', $3::text)
+          OR payload @> jsonb_build_object('session_id', $3::text)
         )
       ORDER BY created_at DESC
       LIMIT 10

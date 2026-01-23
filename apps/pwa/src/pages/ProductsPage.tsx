@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList, Download, Copy } from 'lucide-react'
 import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
@@ -7,14 +7,16 @@ import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
 import { useOnline } from '@/hooks/use-online'
 import toast from '@/lib/toast'
-import ProductFormModal from '@/components/products/ProductFormModal'
+// ⚡ OPTIMIZACIÓN: Lazy load del modal grande (1249 líneas) - solo cargar cuando se abre
+const ProductFormModal = lazy(() => import('@/components/products/ProductFormModal'))
 import ChangePriceModal from '@/components/products/ChangePriceModal'
-import BulkPriceChangeModal from '@/components/products/BulkPriceChangeModal'
-import ProductVariantsModal from '@/components/variants/ProductVariantsModal'
-import ProductLotsModal from '@/components/lots/ProductLotsModal'
-import ProductSerialsModal from '@/components/serials/ProductSerialsModal'
-import ImportCSVModal from '@/components/products/ImportCSVModal'
-import CleanDuplicatesModal from '@/components/products/CleanDuplicatesModal'
+// ⚡ OPTIMIZACIÓN: Lazy load de modales grandes - solo cargar cuando se abren
+const BulkPriceChangeModal = lazy(() => import('@/components/products/BulkPriceChangeModal'))
+const ProductVariantsModal = lazy(() => import('@/components/variants/ProductVariantsModal'))
+const ProductLotsModal = lazy(() => import('@/components/lots/ProductLotsModal'))
+const ProductSerialsModal = lazy(() => import('@/components/serials/ProductSerialsModal'))
+const ImportCSVModal = lazy(() => import('@/components/products/ImportCSVModal'))
+const CleanDuplicatesModal = lazy(() => import('@/components/products/CleanDuplicatesModal'))
 import ProductCard from '@/components/products/ProductCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -975,19 +977,30 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Modal de formulario */}
-      <ProductFormModal
-        isOpen={isFormOpen}
-        onClose={handleCloseForm}
-        product={editingProduct}
-        templateProduct={duplicatingProduct}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['products'] })
-          queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
-          queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
-          handleCloseForm()
-        }}
-      />
+      {/* Modal de formulario - Lazy loaded para reducir bundle inicial */}
+      {isFormOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando formulario...</p>
+            </div>
+          </div>
+        }>
+          <ProductFormModal
+            isOpen={isFormOpen}
+            onClose={handleCloseForm}
+            product={editingProduct}
+            templateProduct={duplicatingProduct}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['products'] })
+              queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+              queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
+              handleCloseForm()
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Modal de cambio de precio */}
       <ChangePriceModal
@@ -1005,55 +1018,121 @@ export default function ProductsPage() {
         }}
       />
 
-      {/* Modal de cambio masivo de precios */}
-      <BulkPriceChangeModal
-        isOpen={isBulkPriceModalOpen}
-        onClose={() => setIsBulkPriceModalOpen(false)}
-        products={products}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['products'] })
-          queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
-        }}
-      />
+      {/* Modal de cambio masivo de precios - Lazy loaded */}
+      {isBulkPriceModalOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <BulkPriceChangeModal
+            isOpen={isBulkPriceModalOpen}
+            onClose={() => setIsBulkPriceModalOpen(false)}
+            products={products}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['products'] })
+              queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+            }}
+          />
+        </Suspense>
+      )}
 
-      {/* Modal de gestión de variantes */}
-      <ProductVariantsModal
-        isOpen={!!variantsProduct}
-        onClose={() => setVariantsProduct(null)}
-        product={variantsProduct}
-      />
+      {/* Modal de gestión de variantes - Lazy loaded */}
+      {variantsProduct && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <ProductVariantsModal
+            isOpen={!!variantsProduct}
+            onClose={() => setVariantsProduct(null)}
+            product={variantsProduct}
+          />
+        </Suspense>
+      )}
 
-      {/* Modal de gestión de lotes */}
-      <ProductLotsModal
-        isOpen={!!lotsProduct}
-        onClose={() => setLotsProduct(null)}
-        product={lotsProduct}
-      />
+      {/* Modal de gestión de lotes - Lazy loaded */}
+      {lotsProduct && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <ProductLotsModal
+            isOpen={!!lotsProduct}
+            onClose={() => setLotsProduct(null)}
+            product={lotsProduct}
+          />
+        </Suspense>
+      )}
 
-      {/* Modal de gestión de seriales */}
-      <ProductSerialsModal
-        isOpen={!!serialsProduct}
-        onClose={() => setSerialsProduct(null)}
-        product={serialsProduct}
-      />
+      {/* Modal de gestión de seriales - Lazy loaded */}
+      {serialsProduct && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <ProductSerialsModal
+            isOpen={!!serialsProduct}
+            onClose={() => setSerialsProduct(null)}
+            product={serialsProduct}
+          />
+        </Suspense>
+      )}
 
-      {/* Modal de importación CSV */}
-      <ImportCSVModal
-        isOpen={isImportCSVOpen}
-        onClose={() => setIsImportCSVOpen(false)}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['products'] })
-        }}
-      />
+      {/* Modal de importación CSV - Lazy loaded */}
+      {isImportCSVOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <ImportCSVModal
+            isOpen={isImportCSVOpen}
+            onClose={() => setIsImportCSVOpen(false)}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['products'] })
+            }}
+          />
+        </Suspense>
+      )}
 
-      {/* Modal de limpieza de duplicados */}
-      <CleanDuplicatesModal
-        isOpen={isCleanDuplicatesOpen}
-        onClose={() => setIsCleanDuplicatesOpen(false)}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['products'] })
-        }}
-      />
+      {/* Modal de limpieza de duplicados - Lazy loaded */}
+      {isCleanDuplicatesOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <CleanDuplicatesModal
+            isOpen={isCleanDuplicatesOpen}
+            onClose={() => setIsCleanDuplicatesOpen(false)}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['products'] })
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

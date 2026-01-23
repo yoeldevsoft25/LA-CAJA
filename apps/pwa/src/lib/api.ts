@@ -1,5 +1,8 @@
 import axios from 'axios';
-import { useAuth, type AuthUser } from '@/stores/auth.store'
+import { useAuth, type AuthUser } from '@/stores/auth.store';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('API');
 
 /**
  * Decodifica un token JWT sin verificar la firma (solo para extraer datos)
@@ -20,7 +23,7 @@ function decodeJWT(token: string): any | null {
     const decoded = atob(padded);
     return JSON.parse(decoded);
   } catch (error) {
-    console.error('[API] Error decodificando JWT:', error);
+    logger.error('Error decodificando JWT', error);
     return null;
   }
 }
@@ -94,39 +97,31 @@ api.interceptors.request.use(
       const authState = useAuth.getState();
       
       if (decoded) {
-        console.log('[API Request] Token info:', {
+        logger.debug('Token info', {
           url: config.url,
           roleInToken: decoded.role,
           roleInStore: authState.user?.role,
           userIdInToken: decoded.sub,
           userIdInStore: authState.user?.user_id,
-          storeIdInToken: decoded.store_id,
-          storeIdInStore: authState.user?.store_id,
-          rolesMatch: decoded.role === authState.user?.role,
-          userIdsMatch: decoded.sub === authState.user?.user_id,
         });
         
         // Si hay discrepancia, advertir
         if (decoded.role !== authState.user?.role) {
-          console.error('[API Request] ⚠️ DISCREPANCIA DE ROL:', {
+          logger.warn('DISCREPANCIA DE ROL', {
             tokenRole: decoded.role,
             storeRole: authState.user?.role,
             tokenUserId: decoded.sub,
             storeUserId: authState.user?.user_id,
-            fullToken: decoded,
-            fullStore: authState.user,
           });
         }
         
         // Si hay discrepancia en user_id, advertir también
         if (decoded.sub !== authState.user?.user_id) {
-          console.error('[API Request] ⚠️ DISCREPANCIA DE USER_ID:', {
+          logger.warn('DISCREPANCIA DE USER_ID', {
             tokenUserId: decoded.sub,
             storeUserId: authState.user?.user_id,
             tokenRole: decoded.role,
             storeRole: authState.user?.role,
-            fullToken: decoded,
-            fullStore: authState.user,
           });
         }
       }
@@ -180,7 +175,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
-        console.warn('[API] 401 pero no hay refresh_token - redirigiendo a login...');
+        logger.warn('401 pero no hay refresh_token - redirigiendo a login');
         if (!isRedirecting && !window.location.pathname.includes('/login')) {
           isRedirecting = true;
           localStorage.removeItem('auth_token');
@@ -194,7 +189,7 @@ api.interceptors.response.use(
 
       // Si ya hay un refresh en progreso, esperar a que termine
       if (isRefreshing) {
-        console.log('[API] 🔄 Esperando refresh en progreso...');
+        logger.debug('Esperando refresh en progreso');
         return new Promise((resolve) => {
           subscribeTokenRefresh((token: string) => {
             originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -204,7 +199,7 @@ api.interceptors.response.use(
       }
 
       isRefreshing = true;
-      console.log('[API] 🔄 Intentando renovar token con refresh_token...');
+      logger.info('Intentando renovar token con refresh_token');
 
       try {
         // Hacer el refresh sin pasar por el interceptor (para evitar bucle)
@@ -218,12 +213,12 @@ api.interceptors.response.use(
         // ✅ ROTACIÓN: Actualizar el refresh token en localStorage con el nuevo token
         // El backend ahora rota los refresh tokens por seguridad
 
-        console.log('[API] ✅ Token renovado exitosamente');
+        logger.info('Token renovado exitosamente');
 
         // Decodificar el nuevo token para extraer información del usuario
         const decoded = decodeJWT(access_token);
         if (decoded) {
-          console.log('[API] Token decodificado:', decoded);
+          logger.debug('Token decodificado', { userId: decoded.sub, role: decoded.role, storeId: decoded.store_id });
           
           // Actualizar el estado del usuario con la información del token
           const auth = useAuth.getState();
@@ -243,14 +238,11 @@ api.interceptors.response.use(
             
             // Si el rol cambió, loguear el cambio y mostrar advertencia
             if (updatedUser.role !== currentUser.role) {
-              console.warn(
-                `[API] ⚠️ Rol del usuario cambió en el token: ${currentUser.role} -> ${updatedUser.role}`,
-                { 
-                  tokenPayload: decoded,
-                  oldUser: currentUser, 
-                  newUser: updatedUser 
-                }
-              );
+              logger.warn('Rol del usuario cambió en el token', {
+                oldRole: currentUser.role,
+                newRole: updatedUser.role,
+                userId: currentUser.user_id,
+              });
               // Mostrar toast de advertencia al usuario
               import('@/lib/toast').then(({ default: toast }) => {
                 toast.error(
@@ -264,10 +256,10 @@ api.interceptors.response.use(
             auth.setUser(updatedUser);
           } else {
             // Si no hay usuario actual pero tenemos token, intentar crear uno básico
-            console.warn('[API] ⚠️ No hay usuario en el store pero se renovó el token');
+            logger.warn('No hay usuario en el store pero se renovó el token');
           }
         } else {
-          console.warn('[API] ⚠️ No se pudo decodificar el token, manteniendo estado actual');
+          logger.warn('No se pudo decodificar el token, manteniendo estado actual');
         }
 
         // Actualizar tokens en localStorage y store
@@ -284,7 +276,7 @@ api.interceptors.response.use(
         isRefreshing = false;
         return api(originalRequest);
       } catch (refreshError) {
-        console.error('[API] ❌ Error al renovar token:', refreshError);
+        logger.error('Error al renovar token', refreshError);
         isRefreshing = false;
 
         // Si falla el refresh, cerrar sesión

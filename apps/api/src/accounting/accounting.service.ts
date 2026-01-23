@@ -33,6 +33,11 @@ import {
 @Injectable()
 export class AccountingService {
   private readonly logger = new Logger(AccountingService.name);
+  
+  // ⚡ OPTIMIZACIÓN: Cache de mapeos de cuentas para evitar queries repetitivas
+  private accountMappingCache = new Map<string, AccountingAccountMapping | null>();
+  private cacheExpiry = new Map<string, number>();
+  private readonly CACHE_TTL = 60000; // 60 segundos
 
   constructor(
     @InjectRepository(JournalEntry)
@@ -273,11 +278,19 @@ export class AccountingService {
         return null;
       }
 
-      // Obtener mapeos de cuentas
-      const revenueMapping = await this.getAccountMapping(storeId, 'sale_revenue', sale.payment);
-      const costMapping = await this.getAccountMapping(storeId, 'sale_cost', sale.payment);
-      const cashMapping = await this.getAccountMapping(storeId, 'cash_asset', sale.payment);
-      const receivableMapping = await this.getAccountMapping(storeId, 'accounts_receivable', sale.payment);
+      // ⚡ OPTIMIZACIÓN: Obtener todos los mapeos de cuentas en batch
+      const mappings = await this.getAccountMappingsBatch(storeId, [
+        'sale_revenue',
+        'sale_cost',
+        'cash_asset',
+        'accounts_receivable',
+        'inventory_asset',
+      ], sale.payment);
+      const revenueMapping = mappings.get('sale_revenue');
+      const costMapping = mappings.get('sale_cost');
+      const cashMapping = mappings.get('cash_asset');
+      const receivableMapping = mappings.get('accounts_receivable');
+      const inventoryMapping = mappings.get('inventory_asset');
 
       if (!revenueMapping || !costMapping) {
         this.logger.warn(`No se encontraron mapeos de cuentas para venta ${sale.id}`);
@@ -371,8 +384,7 @@ export class AccountingService {
           description: `Costo de venta - ${sale.invoice_full_number || sale.id}`,
         });
 
-        // Descontar inventario
-        const inventoryMapping = await this.getAccountMapping(storeId, 'inventory_asset', sale.payment);
+        // Descontar inventario (ya obtenido en batch arriba)
         if (inventoryMapping) {
           lines.push({
             account_id: inventoryMapping.account_id,
@@ -447,14 +459,34 @@ export class AccountingService {
   /**
    * Obtener mapeo de cuenta por tipo de transacción
    */
+  /**
+   * Obtener mapeo de cuenta (optimizado con caché)
+   */
   private async getAccountMapping(
     storeId: string,
     transactionType: TransactionType,
     conditions?: any,
   ): Promise<AccountingAccountMapping | null> {
+    // Generar clave de caché
+    const cacheKey = `${storeId}:${transactionType}:${JSON.stringify(conditions || {})}`;
+    const now = Date.now();
+    
+    // Verificar caché
+    if (this.accountMappingCache.has(cacheKey)) {
+      const expiry = this.cacheExpiry.get(cacheKey) || 0;
+      if (now < expiry) {
+        return this.accountMappingCache.get(cacheKey) || null;
+      }
+      // Cache expirado, limpiar
+      this.accountMappingCache.delete(cacheKey);
+      this.cacheExpiry.delete(cacheKey);
+    }
+
     // Buscar mapeo con condiciones específicas primero
+    let mapping: AccountingAccountMapping | null = null;
+    
     if (conditions) {
-      const specificMapping = await this.mappingRepository.findOne({
+      mapping = await this.mappingRepository.findOne({
         where: {
           store_id: storeId,
           transaction_type: transactionType,
@@ -464,13 +496,16 @@ export class AccountingService {
         relations: ['account'],
       });
 
-      if (specificMapping) {
-        return specificMapping;
+      if (mapping) {
+        // Guardar en caché
+        this.accountMappingCache.set(cacheKey, mapping);
+        this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
+        return mapping;
       }
     }
 
     // Buscar mapeo por defecto
-    return this.mappingRepository.findOne({
+    mapping = await this.mappingRepository.findOne({
       where: {
         store_id: storeId,
         transaction_type: transactionType,
@@ -479,10 +514,138 @@ export class AccountingService {
       },
       relations: ['account'],
     });
+
+    // Guardar en caché (incluso si es null)
+    this.accountMappingCache.set(cacheKey, mapping);
+    this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
+    
+    return mapping;
+  }
+
+  /**
+   * Obtener múltiples mapeos de cuentas en batch (optimización para evitar N+1)
+   */
+  private async getAccountMappingsBatch(
+    storeId: string,
+    transactionTypes: TransactionType[],
+    conditions?: any,
+  ): Promise<Map<TransactionType, AccountingAccountMapping | null>> {
+    const result = new Map<TransactionType, AccountingAccountMapping | null>();
+    const uncachedTypes: TransactionType[] = [];
+    const now = Date.now();
+
+    // Verificar caché para cada tipo
+    for (const type of transactionTypes) {
+      const cacheKey = `${storeId}:${type}:${JSON.stringify(conditions || {})}`;
+      if (this.accountMappingCache.has(cacheKey)) {
+        const expiry = this.cacheExpiry.get(cacheKey) || 0;
+        if (now < expiry) {
+          result.set(type, this.accountMappingCache.get(cacheKey) || null);
+          continue;
+        }
+        // Cache expirado
+        this.accountMappingCache.delete(cacheKey);
+        this.cacheExpiry.delete(cacheKey);
+      }
+      uncachedTypes.push(type);
+    }
+
+    // Si todos están en caché, retornar
+    if (uncachedTypes.length === 0) {
+      return result;
+    }
+
+    // ⚡ OPTIMIZACIÓN: Batch query para tipos no cacheados
+    if (conditions) {
+      // Buscar mapeos con condiciones específicas
+      const specificMappings = await this.mappingRepository.find({
+        where: {
+          store_id: storeId,
+          transaction_type: In(uncachedTypes),
+          is_active: true,
+          conditions: conditions,
+        },
+        relations: ['account'],
+      });
+
+      for (const mapping of specificMappings) {
+        result.set(mapping.transaction_type, mapping);
+        const cacheKey = `${storeId}:${mapping.transaction_type}:${JSON.stringify(conditions)}`;
+        this.accountMappingCache.set(cacheKey, mapping);
+        this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
+      }
+
+      // Filtrar tipos que ya se encontraron
+      const foundTypes = new Set(specificMappings.map((m) => m.transaction_type));
+      const remainingTypes = uncachedTypes.filter((t) => !foundTypes.has(t));
+
+      if (remainingTypes.length > 0) {
+        // Buscar mapeos por defecto para los restantes
+        const defaultMappings = await this.mappingRepository.find({
+          where: {
+            store_id: storeId,
+            transaction_type: In(remainingTypes),
+            is_default: true,
+            is_active: true,
+          },
+          relations: ['account'],
+        });
+
+        for (const mapping of defaultMappings) {
+          result.set(mapping.transaction_type, mapping);
+          const cacheKey = `${storeId}:${mapping.transaction_type}:${JSON.stringify(conditions)}`;
+          this.accountMappingCache.set(cacheKey, mapping);
+          this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
+        }
+
+        // Guardar nulls en caché para tipos no encontrados
+        for (const type of remainingTypes) {
+          if (!result.has(type)) {
+            result.set(type, null);
+            const cacheKey = `${storeId}:${type}:${JSON.stringify(conditions)}`;
+            this.accountMappingCache.set(cacheKey, null);
+            this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
+          }
+        }
+      }
+    } else {
+      // Buscar solo mapeos por defecto
+      const defaultMappings = await this.mappingRepository.find({
+        where: {
+          store_id: storeId,
+          transaction_type: In(uncachedTypes),
+          is_default: true,
+          is_active: true,
+        },
+        relations: ['account'],
+      });
+
+      for (const mapping of defaultMappings) {
+        result.set(mapping.transaction_type, mapping);
+        const cacheKey = `${storeId}:${mapping.transaction_type}:${JSON.stringify(null)}`;
+        this.accountMappingCache.set(cacheKey, mapping);
+        this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
+      }
+
+      // Guardar nulls en caché para tipos no encontrados
+      for (const type of uncachedTypes) {
+        if (!result.has(type)) {
+          result.set(type, null);
+          const cacheKey = `${storeId}:${type}:${JSON.stringify(null)}`;
+          this.accountMappingCache.set(cacheKey, null);
+          this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
    * Actualizar saldos de cuentas
+   */
+  /**
+   * Actualizar saldos de cuentas (optimizado con batch queries)
    */
   private async updateAccountBalances(
     storeId: string,
@@ -495,50 +658,133 @@ export class AccountingService {
       credit_amount_usd: number;
     }>,
   ): Promise<void> {
+    if (lines.length === 0) return;
+
     const year = entryDate.getFullYear();
     const month = entryDate.getMonth();
     const periodStart = new Date(year, month, 1);
     const periodEnd = new Date(year, month + 1, 0);
 
+    // ⚡ OPTIMIZACIÓN: Obtener todos los account_ids únicos
+    const accountIds = [...new Set(lines.map((l) => l.account_id))];
+
+    // ⚡ OPTIMIZACIÓN: Batch query para balances existentes
+    const existingBalances = await this.balanceRepository.find({
+      where: {
+        store_id: storeId,
+        account_id: In(accountIds),
+        period_start: periodStart,
+        period_end: periodEnd,
+      },
+    });
+
+    // ⚡ OPTIMIZACIÓN: Batch query para cuentas faltantes
+    const missingAccountIds = accountIds.filter(
+      (id) => !existingBalances.some((b) => b.account_id === id),
+    );
+    const accounts = missingAccountIds.length > 0
+      ? await this.accountRepository.find({
+          where: { id: In(missingAccountIds) },
+        })
+      : [];
+
+    // Crear mapa de balances existentes
+    const balanceMap = new Map<string, AccountBalance>();
+    for (const balance of existingBalances) {
+      balanceMap.set(balance.account_id, balance);
+    }
+
+    // Crear mapa de cuentas
+    const accountMap = new Map<string, ChartOfAccount>();
+    for (const account of accounts) {
+      accountMap.set(account.id, account);
+    }
+
+    // Agrupar líneas por account_id para sumar valores
+    const lineMap = new Map<string, {
+      debit_bs: number;
+      credit_bs: number;
+      debit_usd: number;
+      credit_usd: number;
+    }>();
+
     for (const line of lines) {
-      let balance = await this.balanceRepository.findOne({
-        where: {
-          store_id: storeId,
-          account_id: line.account_id,
-          period_start: periodStart,
-          period_end: periodEnd,
-        },
-      });
+      const existing = lineMap.get(line.account_id) || {
+        debit_bs: 0,
+        credit_bs: 0,
+        debit_usd: 0,
+        credit_usd: 0,
+      };
+      existing.debit_bs += Number(line.debit_amount_bs) || 0;
+      existing.credit_bs += Number(line.credit_amount_bs) || 0;
+      existing.debit_usd += Number(line.debit_amount_usd) || 0;
+      existing.credit_usd += Number(line.credit_amount_usd) || 0;
+      lineMap.set(line.account_id, existing);
+    }
+
+    // Preparar balances para actualizar/crear
+    const balancesToSave: AccountBalance[] = [];
+
+    for (const [accountId, totals] of lineMap.entries()) {
+      let balance = balanceMap.get(accountId);
 
       if (!balance) {
-        const account = await this.accountRepository.findOne({
-          where: { id: line.account_id },
-        });
-
-        if (!account) continue;
+        const account = accountMap.get(accountId);
+        if (!account) {
+          this.logger.warn(
+            `Cuenta ${accountId} no encontrada, omitiendo actualización de saldo`,
+          );
+          continue;
+        }
 
         balance = this.balanceRepository.create({
           id: randomUUID(),
           store_id: storeId,
-          account_id: line.account_id,
+          account_id: accountId,
           account_code: account.account_code,
           period_start: periodStart,
           period_end: periodEnd,
+          opening_balance_debit_bs: 0,
+          opening_balance_credit_bs: 0,
+          opening_balance_debit_usd: 0,
+          opening_balance_credit_usd: 0,
+          period_debit_bs: 0,
+          period_credit_bs: 0,
+          period_debit_usd: 0,
+          period_credit_usd: 0,
         });
       }
 
-      balance.period_debit_bs += line.debit_amount_bs;
-      balance.period_credit_bs += line.credit_amount_bs;
-      balance.period_debit_usd += line.debit_amount_usd;
-      balance.period_credit_usd += line.credit_amount_usd;
+      // ⚠️ FIX: Asegurar que los valores numéricos no sean null/undefined/NaN
+      const safeNumber = (val: any): number => {
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+      };
 
-      balance.closing_balance_debit_bs = balance.opening_balance_debit_bs + balance.period_debit_bs;
-      balance.closing_balance_credit_bs = balance.opening_balance_credit_bs + balance.period_credit_bs;
-      balance.closing_balance_debit_usd = balance.opening_balance_debit_usd + balance.period_debit_usd;
-      balance.closing_balance_credit_usd = balance.opening_balance_credit_usd + balance.period_credit_usd;
+      // Actualizar period balances
+      balance.period_debit_bs = safeNumber(balance.period_debit_bs) + safeNumber(totals.debit_bs);
+      balance.period_credit_bs = safeNumber(balance.period_credit_bs) + safeNumber(totals.credit_bs);
+      balance.period_debit_usd = safeNumber(balance.period_debit_usd) + safeNumber(totals.debit_usd);
+      balance.period_credit_usd = safeNumber(balance.period_credit_usd) + safeNumber(totals.credit_usd);
+
+      // Calcular closing balances (asegurando valores numéricos seguros)
+      const openingDebitBs = safeNumber(balance.opening_balance_debit_bs);
+      const openingCreditBs = safeNumber(balance.opening_balance_credit_bs);
+      const openingDebitUsd = safeNumber(balance.opening_balance_debit_usd);
+      const openingCreditUsd = safeNumber(balance.opening_balance_credit_usd);
+
+      balance.closing_balance_debit_bs = openingDebitBs + safeNumber(balance.period_debit_bs);
+      balance.closing_balance_credit_bs = openingCreditBs + safeNumber(balance.period_credit_bs);
+      balance.closing_balance_debit_usd = openingDebitUsd + safeNumber(balance.period_debit_usd);
+      balance.closing_balance_credit_usd = openingCreditUsd + safeNumber(balance.period_credit_usd);
 
       balance.last_calculated_at = new Date();
-      await this.balanceRepository.save(balance);
+      balancesToSave.push(balance);
+    }
+
+    // ⚡ OPTIMIZACIÓN: Batch save
+    if (balancesToSave.length > 0) {
+      await this.balanceRepository.save(balancesToSave);
     }
   }
 
@@ -844,13 +1090,21 @@ export class AccountingService {
         }
       }
 
-      // Obtener mapeos de cuentas
-      const revenueMapping = await this.getAccountMapping(storeId, 'sale_revenue', null);
-      const taxMapping = await this.getAccountMapping(storeId, 'sale_tax', null);
-      const receivableMapping = await this.getAccountMapping(storeId, 'accounts_receivable', null);
-      const cashMapping = await this.getAccountMapping(storeId, 'cash_asset', null);
-      const costMapping = await this.getAccountMapping(storeId, 'sale_cost', null);
-      const inventoryMapping = await this.getAccountMapping(storeId, 'inventory_asset', null);
+      // ⚡ OPTIMIZACIÓN: Obtener todos los mapeos de cuentas en batch
+      const mappings = await this.getAccountMappingsBatch(storeId, [
+        'sale_revenue',
+        'sale_tax',
+        'accounts_receivable',
+        'cash_asset',
+        'sale_cost',
+        'inventory_asset',
+      ]);
+      const revenueMapping = mappings.get('sale_revenue');
+      const taxMapping = mappings.get('sale_tax');
+      const receivableMapping = mappings.get('accounts_receivable');
+      const cashMapping = mappings.get('cash_asset');
+      const costMapping = mappings.get('sale_cost');
+      const inventoryMapping = mappings.get('inventory_asset');
 
       if (!revenueMapping) {
         this.logger.warn(`No se encontraron mapeos de cuentas para factura fiscal ${fiscalInvoice.id}`);
@@ -1767,6 +2021,76 @@ export class AccountingService {
   }
 
   /**
+   * Calcular saldos de múltiples cuentas hasta una fecha específica (optimizado para batch)
+   * Evita N+1 queries cuando se necesitan balances de múltiples cuentas
+   */
+  private async calculateAccountBalancesBatch(
+    storeId: string,
+    accountIds: string[],
+    asOfDate: Date,
+  ): Promise<Map<string, { balance_bs: number; balance_usd: number }>> {
+    if (accountIds.length === 0) {
+      return new Map();
+    }
+
+    // Obtener todos los asientos posteados hasta la fecha para todas las cuentas en una query
+    const balances = await this.journalEntryLineRepository
+      .createQueryBuilder('line')
+      .innerJoin('line.entry', 'entry')
+      .where('entry.store_id = :storeId', { storeId })
+      .andWhere('line.account_id IN (:...accountIds)', { accountIds })
+      .andWhere('entry.status = :status', { status: 'posted' })
+      .andWhere('entry.entry_date <= :asOfDate', { asOfDate })
+      .select('line.account_id', 'account_id')
+      .addSelect('SUM(line.debit_amount_bs)', 'total_debit_bs')
+      .addSelect('SUM(line.credit_amount_bs)', 'total_credit_bs')
+      .addSelect('SUM(line.debit_amount_usd)', 'total_debit_usd')
+      .addSelect('SUM(line.credit_amount_usd)', 'total_credit_usd')
+      .groupBy('line.account_id')
+      .getRawMany();
+
+    // Obtener tipos de cuenta para todas las cuentas en una query
+    const accounts = await this.accountRepository.find({
+      where: { id: In(accountIds), store_id: storeId },
+      select: ['id', 'account_type'],
+    });
+
+    const accountTypesMap = new Map(accounts.map((a) => [a.id, a.account_type]));
+
+    const result = new Map<string, { balance_bs: number; balance_usd: number }>();
+
+    for (const accountId of accountIds) {
+      const balanceData = balances.find((b) => b.account_id === accountId);
+      const accountType = accountTypesMap.get(accountId);
+
+      if (!accountType) {
+        result.set(accountId, { balance_bs: 0, balance_usd: 0 });
+        continue;
+      }
+
+      const totalDebitBs = Number(balanceData?.total_debit_bs || 0);
+      const totalCreditBs = Number(balanceData?.total_credit_bs || 0);
+      const totalDebitUsd = Number(balanceData?.total_debit_usd || 0);
+      const totalCreditUsd = Number(balanceData?.total_credit_usd || 0);
+
+      let balanceBs = 0;
+      let balanceUsd = 0;
+
+      if (accountType === 'asset' || accountType === 'expense') {
+        balanceBs = totalDebitBs - totalCreditBs;
+        balanceUsd = totalDebitUsd - totalCreditUsd;
+      } else {
+        balanceBs = totalCreditBs - totalDebitBs;
+        balanceUsd = totalCreditUsd - totalDebitUsd;
+      }
+
+      result.set(accountId, { balance_bs: balanceBs, balance_usd: balanceUsd });
+    }
+
+    return result;
+  }
+
+  /**
    * Calcular saldo de cuenta hasta una fecha específica
    */
   private async calculateAccountBalance(
@@ -1879,8 +2203,12 @@ export class AccountingService {
       balance_usd: number;
     }> = [];
 
+    // Optimización: Calcular todos los balances en batch (evita N+1 queries)
+    const accountIds = accounts.map((a) => a.id);
+    const balancesMap = await this.calculateAccountBalancesBatch(storeId, accountIds, asOfDate);
+
     for (const account of accounts) {
-      const balance = await this.calculateAccountBalance(storeId, account.id, asOfDate);
+      const balance = balancesMap.get(account.id) || { balance_bs: 0, balance_usd: 0 };
 
       if (Math.abs(balance.balance_bs) < 0.01 && Math.abs(balance.balance_usd) < 0.01) {
         continue; // Omitir cuentas con saldo cero
@@ -2291,9 +2619,13 @@ export class AccountingService {
       total_credits_usd: number;
     }> = [];
 
+    // Optimización: Calcular todos los balances iniciales en batch (evita N+1 queries)
+    const accountIdList = accounts.map((a) => a.id);
+    const openingBalances = await this.calculateAccountBalancesBatch(storeId, accountIdList, startDate);
+
     for (const account of accounts) {
-      // Calcular saldo inicial (antes del período)
-      const openingBalance = await this.calculateAccountBalance(storeId, account.id, startDate);
+      // Obtener saldo inicial del Map (ya calculado en batch)
+      const openingBalance = openingBalances.get(account.id) || { balance_bs: 0, balance_usd: 0 };
 
       // Obtener movimientos en el período
       const movementsQuery = this.journalEntryLineRepository
@@ -2470,11 +2802,20 @@ export class AccountingService {
       },
     });
 
+    // Optimización: Calcular balances de cash accounts en batch
+    const cashAccountIds = cashAccounts.map((a) => a.id);
+    const cashBalancesStart = cashAccountIds.length > 0
+      ? await this.calculateAccountBalancesBatch(storeId, cashAccountIds, startDate)
+      : new Map();
+    const cashBalancesEnd = cashAccountIds.length > 0
+      ? await this.calculateAccountBalancesBatch(storeId, cashAccountIds, endDate)
+      : new Map();
+
     // Calcular saldos al inicio del período
     let cashAtBeginningBs = 0;
     let cashAtBeginningUsd = 0;
     for (const account of cashAccounts) {
-      const balance = await this.calculateAccountBalance(storeId, account.id, startDate);
+      const balance = cashBalancesStart.get(account.id) || { balance_bs: 0, balance_usd: 0 };
       cashAtBeginningBs += balance.balance_bs;
       cashAtBeginningUsd += balance.balance_usd;
     }
@@ -2483,7 +2824,7 @@ export class AccountingService {
     let cashAtEndBs = 0;
     let cashAtEndUsd = 0;
     for (const account of cashAccounts) {
-      const balance = await this.calculateAccountBalance(storeId, account.id, endDate);
+      const balance = cashBalancesEnd.get(account.id) || { balance_bs: 0, balance_usd: 0 };
       cashAtEndBs += balance.balance_bs;
       cashAtEndUsd += balance.balance_usd;
     }
@@ -2496,23 +2837,36 @@ export class AccountingService {
     let inventoryChangeBs = 0;
     let inventoryChangeUsd = 0;
 
+    // Optimización: Calcular balances de cuentas especiales en batch
+    const specialAccountIds: string[] = [];
+    if (receivableAccount) specialAccountIds.push(receivableAccount.id);
+    if (payableAccount) specialAccountIds.push(payableAccount.id);
+    if (inventoryAccount) specialAccountIds.push(inventoryAccount.id);
+
+    const specialBalancesStart = specialAccountIds.length > 0
+      ? await this.calculateAccountBalancesBatch(storeId, specialAccountIds, startDate)
+      : new Map();
+    const specialBalancesEnd = specialAccountIds.length > 0
+      ? await this.calculateAccountBalancesBatch(storeId, specialAccountIds, endDate)
+      : new Map();
+
     if (receivableAccount) {
-      const balanceStart = await this.calculateAccountBalance(storeId, receivableAccount.id, startDate);
-      const balanceEnd = await this.calculateAccountBalance(storeId, receivableAccount.id, endDate);
+      const balanceStart = specialBalancesStart.get(receivableAccount.id) || { balance_bs: 0, balance_usd: 0 };
+      const balanceEnd = specialBalancesEnd.get(receivableAccount.id) || { balance_bs: 0, balance_usd: 0 };
       receivableChangeBs = balanceEnd.balance_bs - balanceStart.balance_bs;
       receivableChangeUsd = balanceEnd.balance_usd - balanceStart.balance_usd;
     }
 
     if (payableAccount) {
-      const balanceStart = await this.calculateAccountBalance(storeId, payableAccount.id, startDate);
-      const balanceEnd = await this.calculateAccountBalance(storeId, payableAccount.id, endDate);
+      const balanceStart = specialBalancesStart.get(payableAccount.id) || { balance_bs: 0, balance_usd: 0 };
+      const balanceEnd = specialBalancesEnd.get(payableAccount.id) || { balance_bs: 0, balance_usd: 0 };
       payableChangeBs = balanceEnd.balance_bs - balanceStart.balance_bs;
       payableChangeUsd = balanceEnd.balance_usd - balanceStart.balance_usd;
     }
 
     if (inventoryAccount) {
-      const balanceStart = await this.calculateAccountBalance(storeId, inventoryAccount.id, startDate);
-      const balanceEnd = await this.calculateAccountBalance(storeId, inventoryAccount.id, endDate);
+      const balanceStart = specialBalancesStart.get(inventoryAccount.id) || { balance_bs: 0, balance_usd: 0 };
+      const balanceEnd = specialBalancesEnd.get(inventoryAccount.id) || { balance_bs: 0, balance_usd: 0 };
       inventoryChangeBs = balanceEnd.balance_bs - balanceStart.balance_bs;
       inventoryChangeUsd = balanceEnd.balance_usd - balanceStart.balance_usd;
     }
@@ -2747,9 +3101,15 @@ export class AccountingService {
       description?: string;
     }> = [];
 
+    // Optimización: Calcular balances de revenue accounts en batch
+    const revenueAccountIds = revenueAccounts.map((a) => a.id);
+    const revenueBalances = revenueAccountIds.length > 0
+      ? await this.calculateAccountBalancesBatch(storeId, revenueAccountIds, periodEnd)
+      : new Map();
+
     // Cerrar ingresos: Débito a Ingresos, Crédito a Ganancias Retenidas
     for (const account of revenueAccounts) {
-      const balance = await this.calculateAccountBalance(storeId, account.id, periodEnd);
+      const balance = revenueBalances.get(account.id) || { balance_bs: 0, balance_usd: 0 };
       const revenueAmountBs = balance.balance_bs;
       const revenueAmountUsd = balance.balance_usd;
 
@@ -2784,9 +3144,15 @@ export class AccountingService {
       }
     }
 
+    // Optimización: Calcular balances de expense accounts en batch
+    const expenseAccountIds = expenseAccounts.map((a) => a.id);
+    const expenseBalances = expenseAccountIds.length > 0
+      ? await this.calculateAccountBalancesBatch(storeId, expenseAccountIds, periodEnd)
+      : new Map();
+
     // Cerrar gastos: Crédito a Gasto, Débito a Ganancias Retenidas
     for (const account of expenseAccounts) {
-      const balance = await this.calculateAccountBalance(storeId, account.id, periodEnd);
+      const balance = expenseBalances.get(account.id) || { balance_bs: 0, balance_usd: 0 };
       const expenseAmountBs = Math.abs(balance.balance_bs);
       const expenseAmountUsd = Math.abs(balance.balance_usd);
 

@@ -1,17 +1,18 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ChartOfAccountsTree from '@/components/accounting/ChartOfAccountsTree'
-import AccountFormModal from '@/components/accounting/AccountFormModal'
+// ⚡ OPTIMIZACIÓN: Lazy load de modales grandes - solo cargar cuando se abren
+const AccountFormModal = lazy(() => import('@/components/accounting/AccountFormModal'))
 import EntriesList from '@/components/accounting/EntriesList'
-import EntryFormModal from '@/components/accounting/EntryFormModal'
+const EntryFormModal = lazy(() => import('@/components/accounting/EntryFormModal'))
 import EntryDetailModal from '@/components/accounting/EntryDetailModal'
 import AccountMappingsList from '@/components/accounting/AccountMappingsList'
-import MappingFormModal from '@/components/accounting/MappingFormModal'
+const MappingFormModal = lazy(() => import('@/components/accounting/MappingFormModal'))
 import ExportsList from '@/components/accounting/ExportsList'
-import ExportFormModal from '@/components/accounting/ExportFormModal'
+const ExportFormModal = lazy(() => import('@/components/accounting/ExportFormModal'))
 import AccountBalanceView from '@/components/accounting/AccountBalanceView'
 import BalanceSheetReport from '@/components/accounting/BalanceSheetReport'
 import IncomeStatementReport from '@/components/accounting/IncomeStatementReport'
@@ -268,21 +269,43 @@ export default function AccountingPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Modales */}
-      <AccountFormModal
-        isOpen={isAccountFormOpen}
-        onClose={() => setIsAccountFormOpen(false)}
-        onSuccess={() => setIsAccountFormOpen(false)}
-      />
+      {/* Modales - Lazy loaded para reducir bundle inicial */}
+      {isAccountFormOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <AccountFormModal
+            isOpen={isAccountFormOpen}
+            onClose={() => setIsAccountFormOpen(false)}
+            onSuccess={() => setIsAccountFormOpen(false)}
+          />
+        </Suspense>
+      )}
 
-      <EntryFormModal
-        isOpen={isEntryFormOpen}
-        onClose={() => setIsEntryFormOpen(false)}
-        onSuccess={() => {
-          setIsEntryFormOpen(false)
-          queryClient.invalidateQueries({ queryKey: ['accounting', 'entries'] })
-        }}
-      />
+      {isEntryFormOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <EntryFormModal
+            isOpen={isEntryFormOpen}
+            onClose={() => setIsEntryFormOpen(false)}
+            onSuccess={() => {
+              setIsEntryFormOpen(false)
+              queryClient.invalidateQueries({ queryKey: ['accounting', 'entries'] })
+            }}
+          />
+        </Suspense>
+      )}
 
       <EntryDetailModal
         isOpen={isEntryDetailOpen}
@@ -297,24 +320,46 @@ export default function AccountingPage() {
         }}
       />
 
-      <MappingFormModal
-        isOpen={isMappingFormOpen}
-        onClose={() => {
-          setIsMappingFormOpen(false)
-          setEditingMapping(null)
-        }}
-        mapping={editingMapping}
-        onSuccess={() => {
-          setIsMappingFormOpen(false)
-          setEditingMapping(null)
-        }}
-      />
+      {isMappingFormOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <MappingFormModal
+            isOpen={isMappingFormOpen}
+            onClose={() => {
+              setIsMappingFormOpen(false)
+              setEditingMapping(null)
+            }}
+            mapping={editingMapping}
+            onSuccess={() => {
+              setIsMappingFormOpen(false)
+              setEditingMapping(null)
+            }}
+          />
+        </Suspense>
+      )}
 
-      <ExportFormModal
-        isOpen={isExportFormOpen}
-        onClose={() => setIsExportFormOpen(false)}
-        onSuccess={() => setIsExportFormOpen(false)}
-      />
+      {isExportFormOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
+          <ExportFormModal
+            isOpen={isExportFormOpen}
+            onClose={() => setIsExportFormOpen(false)}
+            onSuccess={() => setIsExportFormOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

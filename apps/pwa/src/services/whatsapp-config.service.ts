@@ -1,6 +1,9 @@
 import { api } from '@/lib/api'
 import { db } from '@/db/database'
 import type { LocalWhatsAppConfig } from '@/db/database'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('WhatsAppConfig')
 
 export interface WhatsAppConfig {
   id: string
@@ -60,8 +63,9 @@ export const whatsappConfigService = {
       }
 
       return config
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 404) {
         // No hay configuración
         return null
       }
@@ -70,7 +74,7 @@ export const whatsappConfigService = {
       // Nota: Para obtener storeId del cache, necesitaríamos decodificar el token JWT
       // Por ahora, retornamos null si no hay conexión
       if (!navigator.onLine) {
-        console.log('[WhatsApp] Sin conexión, no se puede obtener configuración')
+        logger.debug('Sin conexión, no se puede obtener configuración')
         return null
       }
 
@@ -92,7 +96,7 @@ export const whatsappConfigService = {
         await this.saveLocal(config.store_id, config)
         return config
       } catch (error) {
-        console.error('[WhatsApp] Error creando configuración:', error)
+        logger.error('Error creando configuración', error)
         throw error
       }
     }
@@ -123,7 +127,7 @@ export const whatsappConfigService = {
         await this.saveLocal(config.store_id, config)
         return config
       } catch (error) {
-        console.error('[WhatsApp] Error actualizando configuración:', error)
+        logger.error('Error actualizando configuración', error)
         throw error
       }
     }

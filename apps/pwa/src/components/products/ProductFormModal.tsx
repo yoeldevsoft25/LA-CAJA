@@ -156,17 +156,25 @@ export default function ProductFormModal({
   const safeNumber = (value: number | null | undefined) =>
     typeof value === 'number' && Number.isFinite(value) ? value : 0
 
-  const priceUsdValue = safeNumber(priceUsd)
-  const costUsdValue = safeNumber(costUsd)
-  const profitUsd = priceUsdValue - costUsdValue
-  const marginPercent =
-    priceUsdValue > 0 ? (profitUsd / priceUsdValue) * 100 : 0
+  // Memoizar cálculos de profit y margin para evitar recálculos innecesarios
+  const priceUsdValue = useMemo(() => safeNumber(priceUsd), [priceUsd])
+  const costUsdValue = useMemo(() => safeNumber(costUsd), [costUsd])
+  const profitUsd = useMemo(() => priceUsdValue - costUsdValue, [priceUsdValue, costUsdValue])
+  const marginPercent = useMemo(
+    () => (priceUsdValue > 0 ? (profitUsd / priceUsdValue) * 100 : 0),
+    [priceUsdValue, profitUsd]
+  )
 
-  const weightPriceUsdValue = safeNumber(pricePerWeightUsd)
-  const weightCostUsdValue = safeNumber(costPerWeightUsd)
-  const weightProfitUsd = weightPriceUsdValue - weightCostUsdValue
-  const weightMarginPercent =
-    weightPriceUsdValue > 0 ? (weightProfitUsd / weightPriceUsdValue) * 100 : 0
+  const weightPriceUsdValue = useMemo(() => safeNumber(pricePerWeightUsd), [pricePerWeightUsd])
+  const weightCostUsdValue = useMemo(() => safeNumber(costPerWeightUsd), [costPerWeightUsd])
+  const weightProfitUsd = useMemo(
+    () => weightPriceUsdValue - weightCostUsdValue,
+    [weightPriceUsdValue, weightCostUsdValue]
+  )
+  const weightMarginPercent = useMemo(
+    () => (weightPriceUsdValue > 0 ? (weightProfitUsd / weightPriceUsdValue) * 100 : 0),
+    [weightPriceUsdValue, weightProfitUsd]
+  )
 
   const previousWeightUnitRef = useRef<WeightUnit | null>(null)
   const weightUnitInitializedRef = useRef(false)

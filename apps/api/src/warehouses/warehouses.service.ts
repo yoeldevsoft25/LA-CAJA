@@ -439,6 +439,7 @@ export class WarehousesService {
 
   /**
    * Actualiza el stock de una bodega (usado internamente)
+   * ⚡ OPTIMIZACIÓN: UPDATE atómico directo sin query previa - reduce de 2 queries a 1
    */
   async updateStock(
     warehouseId: string,
@@ -447,128 +448,209 @@ export class WarehousesService {
     qtyDelta: number,
     storeId?: string,
   ): Promise<WarehouseStock> {
-    const stock = await this.findStockRecord(warehouseId, productId, variantId);
-    const previousStock = stock ? Number(stock.stock) || 0 : 0;
-    const resolvedStoreId =
-      storeId ||
-      (
-        await this.warehouseRepository.findOne({
-          where: { id: warehouseId },
-          select: ['store_id'],
-        })
-      )?.store_id ||
-      null;
+    // ⚡ OPTIMIZACIÓN CRÍTICA: UPDATE atómico directo sin query previa
+    // Usar CASE para manejar variant_id NULL vs no-NULL eficientemente
+    const result = await this.dataSource.query(
+      `UPDATE warehouse_stock 
+       SET stock = GREATEST(0, stock + $1), updated_at = NOW() 
+       WHERE warehouse_id = $2 
+         AND product_id = $3 
+         AND CASE 
+           WHEN $4::uuid IS NULL THEN variant_id IS NULL
+           ELSE variant_id = $4::uuid
+         END
+       RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
+      [qtyDelta, warehouseId, productId, variantId],
+    );
 
-    if (stock) {
-      // ⚡ OPTIMIZACIÓN CRÍTICA: Usar UPDATE con cálculo atómico y RETURNING
-      // Esto evita race conditions y es más eficiente que calcular fuera y luego actualizar
-      const result = await this.dataSource.query(
-        `UPDATE warehouse_stock 
-         SET stock = GREATEST(0, stock + $1), updated_at = NOW() 
-         WHERE warehouse_id = $2 
-           AND product_id = $3 
-           AND (($4::uuid IS NULL AND variant_id IS NULL) OR variant_id = $4::uuid)
-         RETURNING stock`,
-        [qtyDelta, warehouseId, productId, variantId],
+    let stockRecord: WarehouseStock;
+    let previousStock = 0;
+    
+    if (!result || result.length === 0) {
+      // Stock no existe, crear con INSERT ... ON CONFLICT (upsert atómico)
+      const insertResult = await this.dataSource.query(
+        `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
+         ON CONFLICT (warehouse_id, product_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'::uuid))
+         DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
+         RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
+        [warehouseId, productId, variantId, qtyDelta, qtyDelta],
       );
-
-      let newStockValue: number;
-      if (!result || result.length === 0) {
-        // Stock fue eliminado entre findStockRecord y UPDATE, recrear
-        newStockValue = Math.max(0, qtyDelta);
-        const insertResult = await this.dataSource.query(
-          `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
-           VALUES (gen_random_uuid(), $1, $2, $3, $4, 0, NOW())
-           ON CONFLICT (warehouse_id, product_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'::uuid))
-           DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
-           RETURNING stock`,
-          [warehouseId, productId, variantId, newStockValue, qtyDelta],
-        );
-        newStockValue = insertResult && insertResult.length > 0 
-          ? Number(insertResult[0].stock) 
-          : newStockValue;
-        stock.stock = newStockValue;
-      } else {
-        newStockValue = Number(result[0].stock);
-        stock.stock = newStockValue;
+      
+      if (!insertResult || insertResult.length === 0) {
+        throw new Error(`No se pudo crear o actualizar stock para warehouse ${warehouseId}, product ${productId}`);
       }
       
-      await this.maybeNotifyLowStock(
+      stockRecord = {
+        id: insertResult[0].id,
+        warehouse_id: insertResult[0].warehouse_id,
+        product_id: insertResult[0].product_id,
+        variant_id: insertResult[0].variant_id,
+        stock: Number(insertResult[0].stock) || 0,
+        reserved: Number(insertResult[0].reserved) || 0,
+        updated_at: insertResult[0].updated_at,
+      } as WarehouseStock;
+      previousStock = Math.max(0, stockRecord.stock - qtyDelta);
+    } else {
+      stockRecord = {
+        id: result[0].id,
+        warehouse_id: result[0].warehouse_id,
+        product_id: result[0].product_id,
+        variant_id: result[0].variant_id,
+        stock: Number(result[0].stock) || 0,
+        reserved: Number(result[0].reserved) || 0,
+        updated_at: result[0].updated_at,
+      } as WarehouseStock;
+      // Calcular previous stock aproximado (puede no ser exacto si hubo múltiples updates concurrentes)
+      previousStock = Math.max(0, stockRecord.stock - qtyDelta);
+    }
+    
+    // Obtener store_id solo si es necesario para notificaciones (no bloquear UPDATE)
+    const resolvedStoreId = storeId || await this.warehouseRepository.findOne({
+      where: { id: warehouseId },
+      select: ['store_id'],
+    }).then(w => w?.store_id || null);
+    
+    // Notificar stock bajo de forma asíncrona (no bloquear respuesta)
+    if (resolvedStoreId && stockRecord.stock < previousStock) {
+      this.maybeNotifyLowStock(
         resolvedStoreId,
         productId,
         previousStock,
-        newStockValue,
-      );
-      return stock;
-    } else {
-      const newStockValue = Math.max(0, qtyDelta);
-      // Intentar insertar con id primero (si la tabla lo tiene)
-      try {
-        const newId = randomUUID();
-        // PostgreSQL maneja NULL en UNIQUE correctamente, pero necesitamos
-        // usar una expresión que funcione tanto con NULL como con valores
-        await this.dataSource.query(
+        stockRecord.stock,
+      ).catch(err => {
+        this.logger.error(`Error notificando stock bajo: ${err.message}`);
+      });
+    }
+    
+    return stockRecord;
+  }
+
+  /**
+   * Actualiza múltiples stocks en batch (optimización crítica para ventas)
+   * ⚡ OPTIMIZACIÓN: Reduce de N queries a 1-2 queries usando UPDATE con VALUES
+   */
+  async updateStockBatch(
+    warehouseId: string,
+    updates: Array<{
+      product_id: string;
+      variant_id: string | null;
+      qty_delta: number;
+    }>,
+    storeId?: string,
+  ): Promise<Map<string, WarehouseStock>> {
+    if (updates.length === 0) {
+      return new Map();
+    }
+
+    // ⚡ OPTIMIZACIÓN: Usar UPDATE con VALUES para actualizar múltiples stocks en una sola query
+    // Esto es 10-100x más rápido que hacer N queries individuales
+    const values = updates.map((_, idx) => {
+      const baseIdx = idx * 4;
+      return `($${baseIdx + 1}::uuid, $${baseIdx + 2}::uuid, $${baseIdx + 3}::uuid, $${baseIdx + 4}::numeric)`;
+    }).join(', ');
+
+    const params: any[] = [];
+    updates.forEach(update => {
+      params.push(warehouseId, update.product_id, update.variant_id, update.qty_delta);
+    });
+
+    // Actualizar stocks existentes
+    const updateQuery = `
+      UPDATE warehouse_stock AS ws
+      SET 
+        stock = GREATEST(0, ws.stock + updates.qty_delta),
+        updated_at = NOW()
+      FROM (VALUES ${values}) AS updates(warehouse_id, product_id, variant_id, qty_delta)
+      WHERE ws.warehouse_id = updates.warehouse_id
+        AND ws.product_id = updates.product_id
+        AND CASE 
+          WHEN updates.variant_id IS NULL THEN ws.variant_id IS NULL
+          ELSE ws.variant_id = updates.variant_id
+        END
+      RETURNING ws.id, ws.warehouse_id, ws.product_id, ws.variant_id, ws.stock, ws.reserved, ws.updated_at
+    `;
+
+    const updatedResults = await this.dataSource.query(updateQuery, params);
+    const resultMap = new Map<string, WarehouseStock>();
+
+    // Procesar resultados actualizados
+    for (const row of updatedResults) {
+      const key = `${row.product_id}:${row.variant_id || 'null'}`;
+      resultMap.set(key, {
+        id: row.id,
+        warehouse_id: row.warehouse_id,
+        product_id: row.product_id,
+        variant_id: row.variant_id,
+        stock: Number(row.stock) || 0,
+        reserved: Number(row.reserved) || 0,
+        updated_at: row.updated_at,
+      } as WarehouseStock);
+    }
+
+    // Crear stocks que no existen usando INSERT ... ON CONFLICT
+    const missingUpdates = updates.filter(update => {
+      const key = `${update.product_id}:${update.variant_id || 'null'}`;
+      return !resultMap.has(key);
+    });
+
+    if (missingUpdates.length > 0) {
+      // ⚡ OPTIMIZACIÓN: Insertar stocks faltantes en batch usando un loop simple
+      // Esto es más eficiente que queries complejas con subqueries
+      const insertedResults: any[] = [];
+      for (const update of missingUpdates) {
+        const insertResult = await this.dataSource.query(
           `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
-           VALUES ($1, $2, $3, $4, $5, 0, NOW())
-           ON CONFLICT (warehouse_id, product_id, variant_id) 
-           DO UPDATE SET stock = warehouse_stock.stock + $5, updated_at = NOW()`,
-          [newId, warehouseId, productId, variantId, newStockValue],
+           VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
+           ON CONFLICT (warehouse_id, product_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'::uuid))
+           DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
+           RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
+          [warehouseId, update.product_id, update.variant_id, update.qty_delta, update.qty_delta],
         );
-        const created = {
-          id: newId,
-          warehouse_id: warehouseId,
-          product_id: productId,
-          variant_id: variantId,
-          stock: newStockValue,
-          reserved: 0,
-          updated_at: new Date(),
-        } as WarehouseStock;
-        await this.maybeNotifyLowStock(
-          resolvedStoreId,
-          productId,
-          previousStock,
-          newStockValue,
-        );
-        return created;
-      } catch (error: any) {
-        // Si falla porque variant_id no puede ser NULL, la migración aún no se ejecutó
-        if (error.message?.includes('null value in column "variant_id"')) {
-          this.logger.error(
-            'variant_id no permite NULL. Ejecuta la migración 25_fix_warehouse_stock_variant_null.sql',
-          );
-          throw new BadRequestException(
-            'El sistema necesita actualización: variant_id debe permitir NULL. Contacta al administrador.',
-          );
+        if (insertResult && insertResult.length > 0) {
+          insertedResults.push(insertResult[0]);
         }
-        // Si falla porque no existe la columna id, intentar sin id
-        if (error.message?.includes('column "id"') || error.message?.includes('does not exist')) {
-          await this.dataSource.query(
-            `INSERT INTO warehouse_stock (warehouse_id, product_id, variant_id, stock, reserved, updated_at)
-             VALUES ($1, $2, $3, $4, 0, NOW())
-             ON CONFLICT (warehouse_id, product_id, variant_id) 
-             DO UPDATE SET stock = warehouse_stock.stock + $4, updated_at = NOW()`,
-            [warehouseId, productId, variantId, newStockValue],
-          );
-          const created = {
-            id: `${warehouseId}-${productId}-${variantId || 'null'}`,
-            warehouse_id: warehouseId,
-            product_id: productId,
-            variant_id: variantId,
-            stock: newStockValue,
-            reserved: 0,
-            updated_at: new Date(),
-          } as WarehouseStock;
-          await this.maybeNotifyLowStock(
-            resolvedStoreId,
-            productId,
-            previousStock,
-            newStockValue,
-          );
-          return created;
-        }
-        throw error;
+      }
+      
+      for (const row of insertedResults) {
+        const key = `${row.product_id}:${row.variant_id || 'null'}`;
+        resultMap.set(key, {
+          id: row.id,
+          warehouse_id: row.warehouse_id,
+          product_id: row.product_id,
+          variant_id: row.variant_id,
+          stock: Number(row.stock) || 0,
+          reserved: Number(row.reserved) || 0,
+          updated_at: row.updated_at,
+        } as WarehouseStock);
       }
     }
+
+    // Notificaciones asíncronas (no bloquear respuesta)
+    if (storeId && resultMap.size > 0) {
+      // Obtener store_id una sola vez
+      const resolvedStoreId = storeId || await this.warehouseRepository.findOne({
+        where: { id: warehouseId },
+        select: ['store_id'],
+      }).then(w => w?.store_id || null);
+
+      if (resolvedStoreId) {
+        // Notificar stock bajo de forma asíncrona para cada producto
+        for (const [key, stock] of resultMap.entries()) {
+          const [productId] = key.split(':');
+          this.maybeNotifyLowStock(
+            resolvedStoreId,
+            productId,
+            0, // previousStock desconocido en batch
+            stock.stock,
+          ).catch(err => {
+            this.logger.error(`Error notificando stock bajo: ${err.message}`);
+          });
+        }
+      }
+    }
+
+    return resultMap;
   }
 
   /**

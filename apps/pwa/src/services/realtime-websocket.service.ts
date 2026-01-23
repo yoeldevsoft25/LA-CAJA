@@ -4,6 +4,9 @@ import {
   RealTimeAlert,
   SalesHeatmapData,
 } from '@/types/realtime-analytics.types'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('RealtimeWebSocket')
 
 type MetricUpdateCallback = (metric: RealTimeMetric) => void
 type AlertNewCallback = (alert: RealTimeAlert) => void
@@ -32,7 +35,7 @@ class RealtimeWebSocketService {
 
     const token = localStorage.getItem('auth_token')
     if (!token) {
-      console.warn('[RealtimeWS] No hay token de autenticación')
+      logger.warn('No hay token de autenticación')
       return
     }
 
@@ -87,22 +90,22 @@ class RealtimeWebSocketService {
 
     this.socket.on('connect', () => {
       this.isConnected = true
-      console.log('[RealtimeWS] Conectado')
+      logger.info('Conectado')
     })
 
     this.socket.on('disconnect', () => {
       this.isConnected = false
-      console.log('[RealtimeWS] Desconectado')
+      logger.info('Desconectado')
     })
 
     this.socket.on('connected', (data?: { message?: string }) => {
       if (data?.message) {
-        console.log('[RealtimeWS]', data.message)
+        logger.debug('Connected message', { message: data.message })
       }
     })
 
     this.socket.on('subscribed', (data: { channel: string }) => {
-      console.log('[RealtimeWS] Suscrito a:', data.channel)
+      logger.debug('Suscrito a canal', { channel: data.channel })
     })
 
     this.socket.on('metric:update', (metric: RealTimeMetric) => {
@@ -125,18 +128,18 @@ class RealtimeWebSocketService {
       const errorMessage = error?.message || 'Error desconocido'
       // No mostrar errores de autenticación como errores críticos
       if (errorMessage.includes('autenticado') || errorMessage.includes('auth')) {
-        console.debug('[RealtimeWS] Autenticación requerida o servidor no disponible')
+        logger.debug('Autenticación requerida o servidor no disponible')
         return
       }
-      console.error('[RealtimeWS] Error:', errorMessage)
+      logger.error('Error en WebSocket', new Error(errorMessage))
       this.errorCallbacks.forEach((callback) => callback(errorMessage))
     })
 
     // Manejar errores de conexión
-    this.socket.on('connect_error', (error: any) => {
+    this.socket.on('connect_error', (error: Error) => {
       // Solo mostrar como debug en desarrollo, no inundar la consola
       if (import.meta.env.DEV) {
-        console.debug('[RealtimeWS] Error de conexión (esperado si el backend no está corriendo):', error.message)
+        logger.debug('Error de conexión (esperado si el backend no está corriendo)', { error: error.message })
       }
     })
   }
@@ -146,7 +149,7 @@ class RealtimeWebSocketService {
    */
   subscribeToMetrics(metricTypes?: string[]): void {
     if (!this.socket?.connected) {
-      console.warn('[RealtimeWS] No conectado, no se puede suscribir')
+      logger.warn('No conectado, no se puede suscribir')
       return
     }
 
@@ -158,7 +161,7 @@ class RealtimeWebSocketService {
    */
   subscribeToAlerts(): void {
     if (!this.socket?.connected) {
-      console.warn('[RealtimeWS] No conectado, no se puede suscribir')
+      logger.warn('No conectado, no se puede suscribir')
       return
     }
 

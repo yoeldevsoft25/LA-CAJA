@@ -1,12 +1,11 @@
 import {
   Injectable,
-  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
-import { AccountingExport, AccountingExportType, AccountingExportStatus } from '../database/entities/accounting-export.entity';
+import { AccountingExport } from '../database/entities/accounting-export.entity';
 import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { ExportAccountingDto } from './dto/export-accounting.dto';
 import * as ExcelJS from 'exceljs';
@@ -16,7 +15,6 @@ import * as path from 'path';
 
 @Injectable()
 export class AccountingExportService {
-  private readonly logger = new Logger(AccountingExportService.name);
   private readonly exportsDir = path.join(process.cwd(), 'exports');
 
   constructor(

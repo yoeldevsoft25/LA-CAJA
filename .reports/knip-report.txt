@@ -1,0 +1,361 @@
+Unused files (38)
+apps/api/check-code.js                                            
+apps/api/src/common/decorators/api-docs.decorator.ts              
+apps/api/src/inventory/dto/stock-status.dto.ts                    
+apps/api/src/sales/pipes/clean-sale-dto.pipe.ts                   
+apps/desktop/src/App.css                                          
+apps/desktop/src/components/ui/collapsible.tsx                    
+apps/desktop/src/lib/utils.ts                                     
+apps/pwa/dev-dist/registerSW.js                                   
+apps/pwa/dev-dist/sw.js                                           
+apps/pwa/dev-dist/workbox-1ed862ea.js                             
+apps/pwa/public/sw-push.js                                        
+apps/pwa/src/App.css                                              
+apps/pwa/src/components/discounts/DiscountAuthorizationModal.tsx  
+apps/pwa/src/components/landing/OptimizedMotion.tsx               
+apps/pwa/src/components/loader/AdvancedParticleLoader.tsx         
+apps/pwa/src/components/loader/ParticleLoader.tsx                 
+apps/pwa/src/components/notifications/index.ts                    
+apps/pwa/src/components/notifications/NotificationBell.tsx        
+apps/pwa/src/components/notifications/NotificationsPanel.tsx      
+apps/pwa/src/components/seo/SEOHead.tsx                           
+apps/pwa/src/components/ui/empty-state.tsx                        
+apps/pwa/src/components/ui/page-loader.tsx                        
+apps/pwa/src/components/ui/sync-status.tsx                        
+apps/pwa/src/components/ui/toast.tsx                              
+apps/pwa/src/hooks/use-modal-form.ts                              
+apps/pwa/src/hooks/use-modal.ts                                   
+apps/pwa/src/hooks/use-products-cache.ts                          
+apps/pwa/src/hooks/use-sync.ts                                    
+apps/pwa/src/hooks/useNotificationBadge.ts                        
+apps/pwa/src/hooks/useSplitPayment.ts                             
+apps/pwa/src/hooks/useUnsavedChanges.ts                           
+apps/pwa/src/pages/LandingPage.tsx                                
+apps/pwa/src/services/ab-testing.service.ts                       
+apps/pwa/src/services/analytics.service.ts                        
+apps/pwa/src/services/contact.service.ts                          
+apps/pwa/src/services/offline-indicator.service.ts                
+apps/pwa/src/sw/background-sync-handler.ts                        
+apps/pwa/src/utils/accessibility.ts                               
+Unused dependencies (18)
+@bull-board/api              apps/api/package.json:23:6            
+@bull-board/nestjs           apps/api/package.json:24:6            
+@nestjs/bull                 apps/api/package.json:27:6            
+bull                         apps/api/package.json:50:6            
+i18next                      apps/api/package.json:56:6            
+pino-pretty                  apps/api/package.json:63:6            
+uuid                         apps/api/package.json:72:6            
+@radix-ui/react-collapsible  apps/desktop/package.json:17:6        
+class-variance-authority     apps/desktop/package.json:20:6        
+clsx                         apps/desktop/package.json:21:6        
+dexie-react-hooks            apps/desktop/package.json:24:6        
+tailwind-merge               apps/desktop/package.json:31:6        
+@radix-ui/react-toast        apps/pwa/package.json:41:6            
+dexie-react-hooks            apps/pwa/package.json:50:6            
+react-helmet-async           apps/pwa/package.json:57:6            
+react-hot-toast              apps/pwa/package.json:59:6            
+react-helmet-async           package.json:38:6                     
+@la-caja/domain              packages/application/package.json:12:6
+Unused devDependencies (11)
+@types/supertest             apps/api/package.json:83:6    
+@types/uuid                  apps/api/package.json:84:6    
+source-map-support           apps/api/package.json:93:6    
+supertest                    apps/api/package.json:94:6    
+ts-loader                    apps/api/package.json:96:6    
+tsconfig-paths               apps/api/package.json:98:6    
+@types/uuid                  apps/desktop/package.json:41:6
+@testing-library/user-event  apps/pwa/package.json:75:6    
+@types/uuid                  apps/pwa/package.json:78:6    
+depcheck                     package.json:28:6             
+ts-prune                     package.json:30:6             
+Unlisted dependencies (4)
+fastify                          apps/api/src/health/health.controller.ts:2:31      
+@hapi/boom                       apps/api/src/whatsapp/whatsapp-bot.service.ts:12:23
+@radix-ui/react-collapsible      apps/pwa/src/components/ui/collapsible.tsx:1:40    
+@radix-ui/react-visually-hidden  apps/pwa/src/components/ui/visually-hidden.tsx:1:43
+Unused exports (208)
+retailTemplate                        apps/api/src/accounting/templates/chart-templates.ts:18:14      
+servicesTemplate                      apps/api/src/accounting/templates/chart-templates.ts:127:14     
+restaurantTemplate                    apps/api/src/accounting/templates/chart-templates.ts:207:14     
+generalTemplate                       apps/api/src/accounting/templates/chart-templates.ts:297:14     
+User                                  apps/api/src/database/entities/index.ts:4:10                    
+Event                                 apps/api/src/database/entities/index.ts:6:10                    
+SecurityAuditLog                      apps/api/src/database/entities/index.ts:7:10                    
+RefreshToken                          apps/api/src/database/entities/index.ts:8:10                    
+EmailVerificationToken                apps/api/src/database/entities/index.ts:9:10                    
+PinRecoveryToken                      apps/api/src/database/entities/index.ts:10:10                   
+TwoFactorAuth                         apps/api/src/database/entities/index.ts:11:10                   
+Product                               apps/api/src/database/entities/index.ts:14:10                   
+ProductVariant                        apps/api/src/database/entities/index.ts:15:10                   
+ProductLot                            apps/api/src/database/entities/index.ts:16:10                   
+LotMovement                           apps/api/src/database/entities/index.ts:17:10                   
+ProductSerial                         apps/api/src/database/entities/index.ts:18:10                   
+InventoryMovement                     apps/api/src/database/entities/index.ts:19:10                   
+QuickProduct                          apps/api/src/database/entities/index.ts:20:10                   
+Sale                                  apps/api/src/database/entities/index.ts:23:10                   
+SaleItem                              apps/api/src/database/entities/index.ts:24:10                   
+SaleReturn                            apps/api/src/database/entities/index.ts:25:10                   
+SaleReturnItem                        apps/api/src/database/entities/index.ts:26:10                   
+InvoiceSeries                         apps/api/src/database/entities/index.ts:27:10                   
+CashSession                           apps/api/src/database/entities/index.ts:30:10                   
+CashSessionStatus                     apps/api/src/database/entities/index.ts:30:23                   
+Shift                                 apps/api/src/database/entities/index.ts:31:10                   
+ShiftStatus                           apps/api/src/database/entities/index.ts:31:17                   
+ShiftCut                              apps/api/src/database/entities/index.ts:32:10                   
+CutType                               apps/api/src/database/entities/index.ts:32:20                   
+PaymentMethodConfig                   apps/api/src/database/entities/index.ts:33:10                   
+CashMovement                          apps/api/src/database/entities/index.ts:34:10                   
+CashMovementType                      apps/api/src/database/entities/index.ts:34:24                   
+Customer                              apps/api/src/database/entities/index.ts:37:10                   
+Debt                                  apps/api/src/database/entities/index.ts:38:10                   
+DebtStatus                            apps/api/src/database/entities/index.ts:38:16                   
+DebtPayment                           apps/api/src/database/entities/index.ts:39:10                   
+Table                                 apps/api/src/database/entities/index.ts:42:10                   
+QRCode                                apps/api/src/database/entities/index.ts:43:10                   
+Reservation                           apps/api/src/database/entities/index.ts:44:10                   
+Order                                 apps/api/src/database/entities/index.ts:45:10                   
+OrderItem                             apps/api/src/database/entities/index.ts:46:10                   
+OrderPayment                          apps/api/src/database/entities/index.ts:47:10                   
+PeripheralConfig                      apps/api/src/database/entities/index.ts:50:10                   
+PriceList                             apps/api/src/database/entities/index.ts:51:10                   
+PriceListItem                         apps/api/src/database/entities/index.ts:52:10                   
+DiscountConfig                        apps/api/src/database/entities/index.ts:53:10                   
+DiscountAuthorization                 apps/api/src/database/entities/index.ts:54:10                   
+FastCheckoutConfig                    apps/api/src/database/entities/index.ts:55:10                   
+Promotion                             apps/api/src/database/entities/index.ts:58:10                   
+PromotionProduct                      apps/api/src/database/entities/index.ts:59:10                   
+PromotionUsage                        apps/api/src/database/entities/index.ts:60:10                   
+Warehouse                             apps/api/src/database/entities/index.ts:63:10                   
+WarehouseStock                        apps/api/src/database/entities/index.ts:64:10                   
+Transfer                              apps/api/src/database/entities/index.ts:65:10                   
+TransferItem                          apps/api/src/database/entities/index.ts:66:10                   
+Supplier                              apps/api/src/database/entities/index.ts:69:10                   
+SupplierPriceList                     apps/api/src/database/entities/index.ts:70:10                   
+SupplierPriceListItem                 apps/api/src/database/entities/index.ts:71:10                   
+PurchaseOrder                         apps/api/src/database/entities/index.ts:72:10                   
+PurchaseOrderItem                     apps/api/src/database/entities/index.ts:73:10                   
+FiscalInvoice                         apps/api/src/database/entities/index.ts:76:10                   
+FiscalInvoiceItem                     apps/api/src/database/entities/index.ts:77:10                   
+FiscalConfig                          apps/api/src/database/entities/index.ts:78:10                   
+WhatsAppConfig                        apps/api/src/database/entities/index.ts:81:10                   
+WhatsAppMessageQueue                  apps/api/src/database/entities/index.ts:82:10                   
+DemandPrediction                      apps/api/src/database/entities/index.ts:91:10                   
+ProductRecommendation                 apps/api/src/database/entities/index.ts:92:10                   
+DetectedAnomaly                       apps/api/src/database/entities/index.ts:93:10                   
+MLModelMetric                         apps/api/src/database/entities/index.ts:94:10                   
+RealTimeMetric                        apps/api/src/database/entities/index.ts:95:10                   
+AlertThreshold                        apps/api/src/database/entities/index.ts:96:10                   
+RealTimeAlert                         apps/api/src/database/entities/index.ts:97:10                   
+SalesHeatmap                          apps/api/src/database/entities/index.ts:98:10                   
+ComparativeMetric                     apps/api/src/database/entities/index.ts:99:10                   
+Notification                          apps/api/src/database/entities/index.ts:102:10                  
+NotificationPreference                apps/api/src/database/entities/index.ts:103:10                  
+NotificationSubscription              apps/api/src/database/entities/index.ts:104:10                  
+NotificationDelivery                  apps/api/src/database/entities/index.ts:105:10                  
+NotificationBadge                     apps/api/src/database/entities/index.ts:106:10                  
+NotificationTemplate                  apps/api/src/database/entities/index.ts:107:10                  
+MLInsight                             apps/api/src/database/entities/index.ts:108:10                  
+NotificationAnalytics                 apps/api/src/database/entities/index.ts:109:10                  
+EmailQueue                            apps/api/src/database/entities/index.ts:110:10                  
+ChartOfAccount                        apps/api/src/database/entities/index.ts:113:10                  
+JournalEntry                          apps/api/src/database/entities/index.ts:114:10                  
+JournalEntryLine                      apps/api/src/database/entities/index.ts:115:10                  
+AccountingAccountMapping              apps/api/src/database/entities/index.ts:116:10                  
+AccountBalance                        apps/api/src/database/entities/index.ts:117:10                  
+AccountingExport                      apps/api/src/database/entities/index.ts:118:10                  
+AccountingERPSync                     apps/api/src/database/entities/index.ts:119:10                  
+AccountingPeriod                      apps/api/src/database/entities/index.ts:120:10                  
+AccountingPeriodStatus                apps/api/src/database/entities/index.ts:120:28                  
+LicensePaymentStatus                  apps/api/src/database/entities/index.ts:125:3                   
+LicensePaymentMethod                  apps/api/src/database/entities/index.ts:126:3                   
+LicensePlan                           apps/api/src/database/entities/index.ts:127:3                   
+BillingPeriod                         apps/api/src/database/entities/index.ts:128:3                   
+DocumentFileType                      apps/api/src/database/entities/index.ts:132:3                   
+VerificationMethod                    apps/api/src/database/entities/index.ts:136:3                   
+VerificationStatus                    apps/api/src/database/entities/index.ts:137:3                   
+bankerRound                 function  apps/api/src/exchange/exchange.service.ts:109:17                
+LaCajaDB                    class     apps/desktop/src/db/database.ts:40:14                           
+ProductsCacheService        class     apps/desktop/src/services/products-cache.service.ts:4:14        
+VZLA_DENOMINATIONS                    apps/desktop/src/utils/vzla-denominations.ts:17:14              
+getChangeTotal              function  apps/desktop/src/utils/vzla-denominations.ts:88:17              
+AuroraBackground            function  apps/pwa/src/components/aceternity/aurora-background.tsx:22:17  
+default                               apps/pwa/src/components/aceternity/aurora-background.tsx:107:16 
+default                               apps/pwa/src/components/aceternity/floating-particles.tsx:104:16
+GlowingBorder               function  apps/pwa/src/components/aceternity/glowing-border.tsx:25:17     
+ShimmerButton               function  apps/pwa/src/components/aceternity/glowing-border.tsx:85:17     
+default                               apps/pwa/src/components/aceternity/glowing-border.tsx:122:16    
+GridPattern                 function  apps/pwa/src/components/aceternity/grid-pattern.tsx:27:17       
+DotPattern                  function  apps/pwa/src/components/aceternity/grid-pattern.tsx:95:17       
+default                               apps/pwa/src/components/aceternity/grid-pattern.tsx:122:16      
+AuroraBackground                      apps/pwa/src/components/aceternity/index.ts:9:10                
+Spotlight                             apps/pwa/src/components/aceternity/index.ts:10:10               
+SpotlightCard                         apps/pwa/src/components/aceternity/index.ts:10:21               
+GridPattern                           apps/pwa/src/components/aceternity/index.ts:11:10               
+DotPattern                            apps/pwa/src/components/aceternity/index.ts:11:23               
+GlowingBorder                         apps/pwa/src/components/aceternity/index.ts:13:10               
+ShimmerButton                         apps/pwa/src/components/aceternity/index.ts:13:25               
+Spotlight                   function  apps/pwa/src/components/aceternity/spotlight.tsx:23:17          
+SpotlightCard               function  apps/pwa/src/components/aceternity/spotlight.tsx:87:17          
+default                               apps/pwa/src/components/aceternity/spotlight.tsx:100:16         
+AnimatedButton                        apps/pwa/src/components/animated/animated-button.tsx:37:14      
+IconButton                            apps/pwa/src/components/animated/animated-button.tsx:130:14     
+default                               apps/pwa/src/components/animated/animated-button.tsx:152:16     
+AnimatedCard                          apps/pwa/src/components/animated/animated-card.tsx:32:14        
+default                               apps/pwa/src/components/animated/animated-card.tsx:109:16       
+AnimatedContainer                     apps/pwa/src/components/animated/animated-container.tsx:39:14   
+StaggerContainer            function  apps/pwa/src/components/animated/animated-container.tsx:93:17   
+StaggerItem                 function  apps/pwa/src/components/animated/animated-container.tsx:130:17  
+default                               apps/pwa/src/components/animated/animated-container.tsx:142:16  
+AnimatedContainer                     apps/pwa/src/components/animated/index.ts:8:10                  
+StaggerContainer                      apps/pwa/src/components/animated/index.ts:8:29                  
+StaggerItem                           apps/pwa/src/components/animated/index.ts:8:47                  
+AnimatedCard                          apps/pwa/src/components/animated/index.ts:9:10                  
+AnimatedButton                        apps/pwa/src/components/animated/index.ts:10:10                 
+IconButton                            apps/pwa/src/components/animated/index.ts:10:26                 
+PageTransition                        apps/pwa/src/components/animated/index.ts:11:10                 
+FadeIn                                apps/pwa/src/components/animated/index.ts:11:26                 
+ScaleIn                               apps/pwa/src/components/animated/index.ts:11:34                 
+PageTransition              function  apps/pwa/src/components/animated/page-transition.tsx:64:17      
+FadeIn                      function  apps/pwa/src/components/animated/page-transition.tsx:101:17     
+ScaleIn                     function  apps/pwa/src/components/animated/page-transition.tsx:137:17     
+default                               apps/pwa/src/components/animated/page-transition.tsx:155:16     
+AlertDialogPortal                     apps/pwa/src/components/ui/alert-dialog.tsx:129:3               
+AlertDialogOverlay                    apps/pwa/src/components/ui/alert-dialog.tsx:130:3               
+AlertDialogTrigger                    apps/pwa/src/components/ui/alert-dialog.tsx:131:3               
+AvatarImage                           apps/pwa/src/components/ui/avatar.tsx:48:18                     
+CalendarDayButton                     apps/pwa/src/components/ui/calendar.tsx:212:20                  
+CardFooter                            apps/pwa/src/components/ui/card.tsx:79:28                       
+DialogPortal                          apps/pwa/src/components/ui/dialog.tsx:162:3                     
+DialogOverlay                         apps/pwa/src/components/ui/dialog.tsx:163:3                     
+DialogClose                           apps/pwa/src/components/ui/dialog.tsx:164:3                     
+DialogTrigger                         apps/pwa/src/components/ui/dialog.tsx:165:3                     
+VisuallyHidden                        apps/pwa/src/components/ui/dialog.tsx:171:3                     
+DropdownMenuCheckboxItem              apps/pwa/src/components/ui/dropdown-menu.tsx:189:3              
+DropdownMenuRadioItem                 apps/pwa/src/components/ui/dropdown-menu.tsx:190:3              
+DropdownMenuShortcut                  apps/pwa/src/components/ui/dropdown-menu.tsx:193:3              
+DropdownMenuGroup                     apps/pwa/src/components/ui/dropdown-menu.tsx:194:3              
+DropdownMenuPortal                    apps/pwa/src/components/ui/dropdown-menu.tsx:195:3              
+DropdownMenuSub                       apps/pwa/src/components/ui/dropdown-menu.tsx:196:3              
+DropdownMenuSubContent                apps/pwa/src/components/ui/dropdown-menu.tsx:197:3              
+DropdownMenuSubTrigger                apps/pwa/src/components/ui/dropdown-menu.tsx:198:3              
+DropdownMenuRadioGroup                apps/pwa/src/components/ui/dropdown-menu.tsx:199:3              
+default                               apps/pwa/src/components/ui/keyboard-shortcuts-help.tsx:156:16   
+ScrollBar                             apps/pwa/src/components/ui/scroll-area.tsx:55:22                
+SelectGroup                           apps/pwa/src/components/ui/select.tsx:149:3                     
+SelectLabel                           apps/pwa/src/components/ui/select.tsx:153:3                     
+SelectSeparator                       apps/pwa/src/components/ui/select.tsx:155:3                     
+SelectScrollUpButton                  apps/pwa/src/components/ui/select.tsx:156:3                     
+SelectScrollDownButton                apps/pwa/src/components/ui/select.tsx:157:3                     
+SheetPortal                           apps/pwa/src/components/ui/sheet.tsx:131:3                      
+SheetOverlay                          apps/pwa/src/components/ui/sheet.tsx:132:3                      
+SheetClose                            apps/pwa/src/components/ui/sheet.tsx:134:3                      
+SheetFooter                           apps/pwa/src/components/ui/sheet.tsx:137:3                      
+TableCaption                          apps/pwa/src/components/ui/table.tsx:116:3                      
+getBank                               apps/pwa/src/constants/venezuelan-banks.ts:156:14               
+getBankByName                         apps/pwa/src/constants/venezuelan-banks.ts:160:14               
+getBanksWithPayoMovil                 apps/pwa/src/constants/venezuelan-banks.ts:167:14               
+getBanksWithTransfer                  apps/pwa/src/constants/venezuelan-banks.ts:171:14               
+LaCajaDB                    class     apps/pwa/src/db/database.ts:86:14                               
+durations                             apps/pwa/src/design-system/tokens/animations.ts:9:14            
+easings                               apps/pwa/src/design-system/tokens/animations.ts:19:14           
+hoverTapEffects                       apps/pwa/src/design-system/tokens/animations.ts:107:14          
+durations                             apps/pwa/src/design-system/tokens/index.ts:9:3                  
+easings                               apps/pwa/src/design-system/tokens/index.ts:10:3                 
+hoverTapEffects                       apps/pwa/src/design-system/tokens/index.ts:12:3                 
+default                               apps/pwa/src/hooks/use-barcode-scanner.ts:221:16                
+getAnimationProps           function  apps/pwa/src/hooks/use-reduced-motion.ts:46:17                  
+default                               apps/pwa/src/layouts/AuthLayout.tsx:170:16                      
+APP_TIME_ZONE                         apps/pwa/src/lib/timezone.ts:8:14                               
+normalizeWeightToKg                   apps/pwa/src/lib/weight.ts:6:14                                 
+toCents                     function  apps/pwa/src/services/exchange.service.ts:57:17                 
+fromCents                   function  apps/pwa/src/services/exchange.service.ts:64:17                 
+usdToBs                     function  apps/pwa/src/services/exchange.service.ts:71:17                 
+bsToUsd                     function  apps/pwa/src/services/exchange.service.ts:81:17                 
+bankerRound                 function  apps/pwa/src/services/exchange.service.ts:91:17                 
+calculateBsChangeBreakdown  function  apps/pwa/src/services/exchange.service.ts:110:17                
+ProductsCacheService        class     apps/pwa/src/services/products-cache.service.ts:9:14            
+formatModelMetrics          function  apps/pwa/src/utils/ml-formatters.ts:67:17                       
+looksLikeRIF                function  apps/pwa/src/utils/rif-validator.ts:179:17                      
+getRIFTypeName              function  apps/pwa/src/utils/rif-validator.ts:188:17                      
+VZLA_DENOMINATIONS                    apps/pwa/src/utils/vzla-denominations.ts:17:14                  
+getChangeTotal              function  apps/pwa/src/utils/vzla-denominations.ts:88:17                  
+formatSaleWithThankYou      function  apps/pwa/src/utils/whatsapp.ts:93:17                            
+formatPhoneForWhatsApp      function  apps/pwa/src/utils/whatsapp.ts:160:17                           
+createWhatsAppUrl           function  apps/pwa/src/utils/whatsapp.ts:182:17                           
+Unused exported types (143)
+CashSessionStatus                enum       apps/api/src/database/entities/cash-session.entity.ts:4:13      
+RateByType                       interface  apps/api/src/exchange/exchange.service.ts:58:18                 
+KitchenOrderItem                 interface  apps/api/src/kitchen/kitchen-display.service.ts:10:18           
+DemandInsightData                interface  apps/api/src/notifications/services/ml-insights.service.ts:12:18
+AnomalyInsightData               interface  apps/api/src/notifications/services/ml-insights.service.ts:23:18
+RecommendationInsightData        interface  apps/api/src/notifications/services/ml-insights.service.ts:33:18
+WeightProduct                    interface  apps/desktop/src/components/pos/WeightInputModal.tsx:4:18       
+LocalEvent                       interface  apps/desktop/src/db/database.ts:8:18                            
+LoginRequest                     interface  apps/desktop/src/services/auth.service.ts:3:18                  
+LoginResponse                    interface  apps/desktop/src/services/auth.service.ts:8:18                  
+Store                            interface  apps/desktop/src/services/auth.service.ts:16:18                 
+Cashier                          interface  apps/desktop/src/services/auth.service.ts:21:18                 
+CashSessionsResponse             interface  apps/desktop/src/services/cash.service.ts:75:18                 
+CreateCustomerDto                interface  apps/desktop/src/services/customers.service.ts:13:18            
+UpdateCustomerDto                interface  apps/desktop/src/services/customers.service.ts:20:18            
+DebtSummary                      interface  apps/desktop/src/services/debts.service.ts:40:18                
+CreateDebtPaymentDto             interface  apps/desktop/src/services/debts.service.ts:51:18                
+BCVRateResponse                  interface  apps/desktop/src/services/exchange.service.ts:3:18              
+StockStatusResponse              interface  apps/desktop/src/services/inventory.service.ts:16:18            
+StockStatusSearchParams          interface  apps/desktop/src/services/inventory.service.ts:21:18            
+ProductStock                     interface  apps/desktop/src/services/inventory.service.ts:63:18            
+MovementsResponse                interface  apps/desktop/src/services/inventory.service.ts:68:18            
+LotMovementType                  type       apps/desktop/src/services/product-lots.service.ts:3:13          
+LotMovement                      interface  apps/desktop/src/services/product-lots.service.ts:37:18         
+CreateLotMovementRequest         interface  apps/desktop/src/services/product-lots.service.ts:48:18         
+AssignSerialsRequest             interface  apps/desktop/src/services/product-serials.service.ts:36:18      
+GroupedVariants                  interface  apps/desktop/src/services/product-variants.service.ts:31:18     
+VariantStockResponse             interface  apps/desktop/src/services/product-variants.service.ts:35:18     
+ProductSearchParams              interface  apps/desktop/src/services/products.service.ts:31:18             
+ProductSearchResponse            interface  apps/desktop/src/services/products.service.ts:39:18             
+ReportDateRange                  interface  apps/desktop/src/services/reports.service.ts:62:18              
+CartItemDto                      interface  apps/desktop/src/services/sales.service.ts:3:18                 
+CreateSaleRequest                interface  apps/desktop/src/services/sales.service.ts:16:18                
+Warehouse                        interface  apps/desktop/src/services/warehouses.service.ts:3:18            
+WarehouseStock                   interface  apps/desktop/src/services/warehouses.service.ts:17:18           
+CreateWarehouseDto               interface  apps/desktop/src/services/warehouses.service.ts:38:18           
+UpdateWarehouseDto               interface  apps/desktop/src/services/warehouses.service.ts:47:18           
+AuthUser                         interface  apps/desktop/src/stores/auth.store.ts:4:18                      
+Denomination                     interface  apps/desktop/src/utils/vzla-denominations.ts:6:18               
+OrderItemStatus                  type       apps/pwa/src/components/public/OrderProgressBar.tsx:4:13        
+BadgeProps                       interface  apps/pwa/src/components/ui/badge.tsx:26:18                      
+BreadcrumbItem                   interface  apps/pwa/src/components/ui/breadcrumbs.tsx:6:18                 
+ButtonProps                      interface  apps/pwa/src/components/ui/button.tsx:8:18                      
+LocalSale                        interface  apps/pwa/src/db/database.ts:51:18                               
+Duration                         type       apps/pwa/src/design-system/tokens/animations.ts:133:13          
+Easing                           type       apps/pwa/src/design-system/tokens/animations.ts:134:13          
+MotionVariant                    type       apps/pwa/src/design-system/tokens/animations.ts:135:13          
+ColorToken                       type       apps/pwa/src/design-system/tokens/colors.ts:46:13               
+ColorToken                       type       apps/pwa/src/design-system/tokens/index.ts:6:15                 
+Duration                         type       apps/pwa/src/design-system/tokens/index.ts:15:15                
+Easing                           type       apps/pwa/src/design-system/tokens/index.ts:15:25                
+MotionVariant                    type       apps/pwa/src/design-system/tokens/index.ts:15:33                
+WeightUnit                       type       apps/pwa/src/lib/weight.ts:1:13                                 
+LoginRequest                     interface  apps/pwa/src/services/auth.service.ts:3:18                      
+Store                            interface  apps/pwa/src/services/auth.service.ts:21:18                     
+Cashier                          interface  apps/pwa/src/services/auth.service.ts:28:18                     
+RegisterRequest                  interface  apps/pwa/src/services/auth.service.ts:34:18                     
+CashSessionsResponse             interface  apps/pwa/src/services/cash.service.ts:77:18                     
+CustomerPurchaseHistory          interface  apps/pwa/src/services/customers.service.ts:39:18                
+CreditCheckResult                interface  apps/pwa/src/services/customers.service.ts:56:18                
+CreateDebtPaymentDto             interface  apps/pwa/src/services/debts.service.ts:51:18                    
+DiscountAuthorization            interface  apps/pwa/src/services/discounts.service.ts:29:18                
+AuthorizeDiscountRequest         interface  apps/pwa/src/services/discounts.service.ts:42:18                
+DiscountAuthorizationsResponse   interface  apps/pwa/src/services/discounts.service.ts:48:18                
+DiscountSummary                  interface  apps/pwa/src/services/discounts.service.ts:53:18                
+ExchangeRateType                 type       apps/pwa/src/services/exchange.service.ts:8:13                  
+BCVRateResponse                  interface  apps/pwa/src/services/exchange.service.ts:10:18                 
+MultiRateResponse                interface  apps/pwa/src/services/exchange.service.ts:18:18                 
+RateConfig                       interface  apps/pwa/src/services/exchange.service.ts:26:18                 
+SetRateInput                     interface  apps/pwa/src/services/exchange.service.ts:43:18                 
+FiscalConfig                     interface  apps/pwa/src/services/fiscal-configs.service.ts:3:18            
+CreateFiscalConfigRequest        interface  apps/pwa/src/services/fiscal-configs.service.ts:22:18           
+UpdateFiscalConfigRequest        interface  apps/pwa/src/services/fiscal-configs.service.ts:36:18           
+CreateFiscalInvoiceItem          interface  apps/pwa/src/services/fiscal-invoices.service.ts:86:18          
+CreateFiscalInvoiceRequest       interface  apps/pwa/src/services/fiscal-invoices.service.ts:97:18          
+FiscalInvoiceStat

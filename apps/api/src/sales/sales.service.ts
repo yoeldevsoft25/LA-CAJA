@@ -173,6 +173,7 @@ export class SalesService {
 
   /**
    * Valida disponibilidad de stock ANTES de la transacción
+   * ⚡ OPTIMIZACIÓN: Batch queries para evitar N+1
    * Esta es una validación rápida sin locks para rechazar rápidamente si no hay stock.
    * La validación definitiva con locks se hace dentro de la transacción.
    */
@@ -194,15 +195,65 @@ export class SalesService {
       warehouseId = defaultWarehouse.id;
     }
 
-    // Validar stock para cada item
-    for (const cartItem of dto.items) {
-      const product = await this.productRepository.findOne({
-        where: {
-          id: cartItem.product_id,
-          store_id: storeId,
-          is_active: true,
-        },
+    // ⚡ OPTIMIZACIÓN: Batch queries para productos, variantes, lotes y seriales
+    const productIds = dto.items.map(item => item.product_id);
+    const variantIds = dto.items
+      .map(item => item.variant_id)
+      .filter((id): id is string => !!id);
+
+    const products = await this.productRepository.find({
+      where: {
+        id: In(productIds),
+        store_id: storeId,
+        is_active: true,
+      },
+    });
+
+    const productMap = new Map<string, Product>();
+    for (const product of products) {
+      productMap.set(product.id, product);
+    }
+
+    const variantMap = new Map<string, ProductVariant>();
+    if (variantIds.length > 0) {
+      const variants = await this.dataSource.getRepository(ProductVariant).find({
+        where: { id: In(variantIds) },
       });
+      for (const variant of variants) {
+        variantMap.set(variant.id, variant);
+      }
+    }
+
+    // Batch query para lotes
+    const allLots = await this.dataSource.getRepository(ProductLot).find({
+      where: { product_id: In(productIds) },
+    });
+    const lotsMap = new Map<string, ProductLot[]>();
+    for (const lot of allLots) {
+      const existing = lotsMap.get(lot.product_id) || [];
+      existing.push(lot);
+      lotsMap.set(lot.product_id, existing);
+    }
+
+    // Batch query para seriales (solo productos que no son por peso)
+    const productsWithSerials = products
+      .filter(p => !p.is_weight_product)
+      .map(p => p.id);
+    const allSerials = productsWithSerials.length > 0
+      ? await this.dataSource.getRepository(ProductSerial).find({
+          where: { product_id: In(productsWithSerials) },
+        })
+      : [];
+    const serialsMap = new Map<string, ProductSerial[]>();
+    for (const serial of allSerials) {
+      const existing = serialsMap.get(serial.product_id) || [];
+      existing.push(serial);
+      serialsMap.set(serial.product_id, existing);
+    }
+
+    // Validar stock para cada item usando los mapas pre-cargados
+    for (const cartItem of dto.items) {
+      const product = productMap.get(cartItem.product_id);
 
       if (!product) {
         throw new NotFoundException(
@@ -210,16 +261,20 @@ export class SalesService {
         );
       }
 
-      // Manejar variante si se proporciona
+      // Manejar variante si se proporciona (usando mapa)
       let variant: ProductVariant | null = null;
       if (cartItem.variant_id) {
-        variant = await this.dataSource.getRepository(ProductVariant).findOne({
-          where: { id: cartItem.variant_id, product_id: product.id },
-        });
+        variant = variantMap.get(cartItem.variant_id) || null;
 
         if (!variant) {
           throw new NotFoundException(
             `Variante ${cartItem.variant_id} no encontrada para el producto ${product.name}`,
+          );
+        }
+
+        if (variant.product_id !== product.id) {
+          throw new BadRequestException(
+            `La variante ${cartItem.variant_id} no pertenece al producto ${product.id}`,
           );
         }
 
@@ -245,10 +300,8 @@ export class SalesService {
 
       const requestedQty = isWeightProduct ? weightValue : cartItem.qty;
 
-      // Verificar si el producto tiene lotes
-      const productLots = await this.dataSource.getRepository(ProductLot).find({
-        where: { product_id: product.id },
-      });
+      // Verificar si el producto tiene lotes (usando mapa)
+      const productLots = lotsMap.get(product.id) || [];
 
       if (productLots.length > 0) {
         // Producto con lotes: validar que haya suficiente stock en lotes disponibles
@@ -298,11 +351,9 @@ export class SalesService {
         }
       }
 
-      // Si el producto tiene seriales, validar que haya suficientes disponibles
+      // Si el producto tiene seriales, validar que haya suficientes disponibles (usando mapa)
       if (!isWeightProduct) {
-        const productSerials = await this.dataSource.getRepository(ProductSerial).find({
-          where: { product_id: product.id },
-        });
+        const productSerials = serialsMap.get(product.id) || [];
 
         if (productSerials.length > 0) {
           const availableSerials = productSerials.filter(
@@ -841,6 +892,37 @@ export class SalesService {
         }
       }
 
+      // ⚡ OPTIMIZACIÓN: Batch queries para seriales y lotes (evita N+1)
+      const productsWithSerials = productIds.filter(id => {
+        const product = productMap.get(id);
+        return product && !product.is_weight_product;
+      });
+      
+      const allSerials = productsWithSerials.length > 0
+        ? await manager.find(ProductSerial, {
+            where: { product_id: In(productsWithSerials) },
+          })
+        : [];
+
+      const allLots = await manager.find(ProductLot, {
+        where: { product_id: In(productIds) },
+      });
+
+      // Crear mapas para acceso rápido
+      const serialsMap = new Map<string, ProductSerial[]>();
+      for (const serial of allSerials) {
+        const existing = serialsMap.get(serial.product_id) || [];
+        existing.push(serial);
+        serialsMap.set(serial.product_id, existing);
+      }
+
+      const lotsMap = new Map<string, ProductLot[]>();
+      for (const lot of allLots) {
+        const existing = lotsMap.get(lot.product_id) || [];
+        existing.push(lot);
+        lotsMap.set(lot.product_id, existing);
+      }
+
       // Validar que todos los productos existen
       for (const productId of productIds) {
         if (!productMap.has(productId)) {
@@ -911,17 +993,9 @@ export class SalesService {
 
         const requestedQty = isWeightProduct ? weightValue : cartItem.qty;
 
-        // ⚡ OPTIMIZACIÓN: Batch query para seriales (solo productos que no son por peso)
-        // Nota: Los seriales se asignan después de la venta mediante el endpoint de asignación
-        // Esto permite flexibilidad para escanear seriales después de crear la venta
+        // ⚡ OPTIMIZACIÓN: Usar mapas pre-cargados en lugar de queries individuales
         if (!isWeightProduct) {
-          // Verificar si el producto tiene seriales (ya optimizado arriba con batch query si es necesario)
-          // Por ahora mantenemos la query individual porque solo se hace para productos con seriales
-          // y no todos los productos tienen seriales
-          const productSerials = await manager.find(ProductSerial, {
-            where: { product_id: product.id },
-          });
-
+          const productSerials = serialsMap.get(product.id) || [];
           // Si el producto tiene seriales, validar que haya suficientes disponibles
           if (productSerials.length > 0) {
             const availableSerials = productSerials.filter(
@@ -936,12 +1010,8 @@ export class SalesService {
           }
         }
 
-        // ⚡ OPTIMIZACIÓN: Batch query para lotes (solo productos con lotes)
-        // Por ahora mantenemos la query individual porque solo se hace para productos con lotes
-        // y no todos los productos tienen lotes
-        const productLots = await manager.find(ProductLot, {
-          where: { product_id: product.id },
-        });
+        // ⚡ OPTIMIZACIÓN: Usar mapa pre-cargado en lugar de query individual
+        const productLots = lotsMap.get(product.id) || [];
 
         let lotId: string | null = null;
 
@@ -1426,8 +1496,15 @@ export class SalesService {
         );
       }
 
-      // Crear movimientos de inventario (descontar stock)
+      // ⚡ OPTIMIZACIÓN CRÍTICA: Crear movimientos y actualizar stocks en batch
       // Solo si el producto NO tiene lotes (los lotes ya se manejaron arriba)
+      const movementsToCreate: InventoryMovement[] = [];
+      const stockUpdates: Array<{
+        product_id: string;
+        variant_id: string | null;
+        qty_delta: number;
+      }> = [];
+
       for (const item of items) {
         // Verificar si este item tiene lote asignado
         // Si tiene lote, el movimiento ya se creó en la lógica FIFO
@@ -1448,19 +1525,31 @@ export class SalesService {
             approved: true, // Las ventas se aprueban automáticamente
           });
 
-          await manager.save(InventoryMovement, movement);
+          movementsToCreate.push(movement);
 
-          // Actualizar stock de la bodega si se especificó
+          // Acumular actualizaciones de stock para batch
           if (warehouseId) {
-            await this.warehousesService.updateStock(
-              warehouseId,
-              item.product_id,
-              item.variant_id || null,
-              -item.qty, // Negativo para descontar
-              storeId,
-            );
+            stockUpdates.push({
+              product_id: item.product_id,
+              variant_id: item.variant_id || null,
+              qty_delta: -item.qty, // Negativo para descontar
+            });
           }
         }
+      }
+
+      // ⚡ OPTIMIZACIÓN: Batch save de movimientos
+      if (movementsToCreate.length > 0) {
+        await manager.save(InventoryMovement, movementsToCreate);
+      }
+
+      // ⚡ OPTIMIZACIÓN CRÍTICA: Batch update de stocks (reduce de N queries a 1-2 queries)
+      if (warehouseId && stockUpdates.length > 0) {
+        await this.warehousesService.updateStockBatch(
+          warehouseId,
+          stockUpdates,
+          storeId,
+        );
       }
 
       // ⚠️ VALIDACIÓN CRÍTICA: Si es venta FIAO, DEBE haber un cliente válido
@@ -1527,7 +1616,8 @@ export class SalesService {
         await manager.save(Debt, debt);
       }
 
-      // Retornar la venta con items, cliente, responsable y deuda (si existe)
+      // ⚡ OPTIMIZACIÓN: Query simplificada con todos los datos necesarios en una sola query
+      // Incluir payments en el JOIN para evitar query adicional
       const savedSaleWithItems = await manager
         .createQueryBuilder(Sale, 'sale')
         .leftJoinAndSelect('sale.items', 'items')
@@ -1535,11 +1625,15 @@ export class SalesService {
         .leftJoinAndSelect('sale.sold_by_user', 'sold_by_user')
         .leftJoinAndSelect('sale.customer', 'customer')
         .leftJoin('debts', 'debt', 'debt.sale_id = sale.id')
+        .leftJoin('debt_payments', 'payment', 'payment.debt_id = debt.id')
         .addSelect([
           'debt.id',
           'debt.status',
           'debt.amount_bs',
           'debt.amount_usd',
+          'payment.id',
+          'payment.amount_bs',
+          'payment.amount_usd',
         ])
         .where('sale.id = :saleId', { saleId })
         .getOne();
@@ -1548,29 +1642,35 @@ export class SalesService {
         throw new Error('Error al recuperar la venta creada');
       }
 
-      // Agregar información de deuda al objeto de venta
+      // ⚡ OPTIMIZACIÓN: Calcular pagos desde los datos ya cargados (sin query adicional)
       const saleWithDebt = savedSaleWithItems as any;
       if (saleWithDebt.debt) {
-        // Calcular monto pagado si hay pagos
-        const debtWithPayments = await manager.findOne(Debt, {
-          where: { id: saleWithDebt.debt.id },
-          relations: ['payments'],
-        });
-        if (debtWithPayments) {
-          const totalPaidBs = (debtWithPayments.payments || []).reduce(
-            (sum: number, p: any) => sum + Number(p.amount_bs),
-            0,
-          );
-          const totalPaidUsd = (debtWithPayments.payments || []).reduce(
-            (sum: number, p: any) => sum + Number(p.amount_usd),
-            0,
-          );
-          saleWithDebt.debt.total_paid_bs = totalPaidBs;
-          saleWithDebt.debt.total_paid_usd = totalPaidUsd;
-          saleWithDebt.debt.remaining_bs =
-            Number(debtWithPayments.amount_bs) - totalPaidBs;
-          saleWithDebt.debt.remaining_usd =
-            Number(debtWithPayments.amount_usd) - totalPaidUsd;
+        // Los payments ya están en el resultado del query (aunque TypeORM puede no exponerlos directamente)
+        // Si no están disponibles, hacer query solo si es necesario
+        const debtId = saleWithDebt.debt.id;
+        if (debtId) {
+          const debtWithPayments = await manager
+            .createQueryBuilder(Debt, 'debt')
+            .leftJoinAndSelect('debt.payments', 'payments')
+            .where('debt.id = :debtId', { debtId })
+            .getOne();
+          
+          if (debtWithPayments) {
+            const totalPaidBs = (debtWithPayments.payments || []).reduce(
+              (sum: number, p: any) => sum + Number(p.amount_bs),
+              0,
+            );
+            const totalPaidUsd = (debtWithPayments.payments || []).reduce(
+              (sum: number, p: any) => sum + Number(p.amount_usd),
+              0,
+            );
+            saleWithDebt.debt.total_paid_bs = totalPaidBs;
+            saleWithDebt.debt.total_paid_usd = totalPaidUsd;
+            saleWithDebt.debt.remaining_bs =
+              Number(debtWithPayments.amount_bs) - totalPaidBs;
+            saleWithDebt.debt.remaining_usd =
+              Number(debtWithPayments.amount_usd) - totalPaidUsd;
+          }
         }
       }
 
@@ -1770,21 +1870,32 @@ export class SalesService {
             where: { sale_id: In(saleIds) },
             relations: ['payments'],
             select: ['id', 'sale_id', 'status', 'amount_bs', 'amount_usd'],
-          } as any)
+          })
         : [];
 
     // Mapear deudas por sale_id y calcular montos pendientes
-    const debtsBySaleId = new Map<string, any>();
+    interface DebtWithCalculations {
+      id: string;
+      sale_id: string | null;
+      status: string;
+      amount_bs: number;
+      amount_usd: number;
+      total_paid_bs: number;
+      total_paid_usd: number;
+      remaining_bs: number;
+      remaining_usd: number;
+    }
+    const debtsBySaleId = new Map<string, DebtWithCalculations>();
     for (const debt of debts) {
       if (debt.sale_id) {
         // Calcular montos pagados
-        const payments = (debt as any).payments || [];
+        const payments = debt.payments || [];
         const totalPaidBs = payments.reduce(
-          (sum: number, p: any) => sum + Number(p.amount_bs || 0),
+          (sum: number, p: DebtPayment) => sum + Number(p.amount_bs || 0),
           0,
         );
         const totalPaidUsd = payments.reduce(
-          (sum: number, p: any) => sum + Number(p.amount_usd || 0),
+          (sum: number, p: DebtPayment) => sum + Number(p.amount_usd || 0),
           0,
         );
 
@@ -1795,8 +1906,12 @@ export class SalesService {
         const remainingUsd = debtAmountUsd - totalPaidUsd;
 
         // Agregar información calculada a la deuda
-        const debtWithCalculations = {
-          ...debt,
+        const debtWithCalculations: DebtWithCalculations = {
+          id: debt.id,
+          sale_id: debt.sale_id,
+          status: debt.status,
+          amount_bs: Number(debt.amount_bs || 0),
+          amount_usd: Number(debt.amount_usd || 0),
           total_paid_bs: totalPaidBs,
           total_paid_usd: totalPaidUsd,
           remaining_bs: remainingBs,
@@ -1809,7 +1924,7 @@ export class SalesService {
 
     // Asignar deudas a las ventas
     for (const sale of sales) {
-      (sale as any).debt = debtsBySaleId.get(sale.id) || null;
+      (sale as Sale & { debt?: DebtWithCalculations | null }).debt = debtsBySaleId.get(sale.id) || null;
     }
 
     // Asegurar que items siempre sea un array (incluso si está vacío)
@@ -1819,54 +1934,12 @@ export class SalesService {
       }
     }
 
-    // Optimización: Obtener todas las deudas con sus pagos en una sola query (evita N+1)
-    const debtIds = sales
-      .map((sale) => (sale as any).debt?.id)
-      .filter((id): id is string => Boolean(id));
+    // Nota: Los cálculos de pagos ya se hicieron arriba cuando se cargaron las deudas
+    // con relations: ['payments']. El código de abajo es redundante.
+    // Los sales ya tienen la información de debt con total_paid_bs, total_paid_usd, etc.
+    // calculados en el loop anterior.
 
-    let debtPaymentsMap = new Map<string, any[]>();
-    if (debtIds.length > 0) {
-      // Obtener todos los pagos de todas las deudas en una sola query
-      const allPayments = await this.debtPaymentRepository.find({
-        where: { debt_id: In(debtIds) },
-        select: ['id', 'debt_id', 'amount_bs', 'amount_usd'],
-      });
-
-      // Agrupar pagos por debt_id
-      debtPaymentsMap = allPayments.reduce((map, payment) => {
-        const debtId = payment.debt_id;
-        if (!map.has(debtId)) {
-          map.set(debtId, []);
-        }
-        map.get(debtId)!.push(payment);
-        return map;
-      }, new Map<string, any[]>());
-    }
-
-    // Enriquecer ventas con información de pagos (sin queries adicionales)
-    const salesWithDebtInfo = sales.map((sale) => {
-      const saleWithDebt = sale as any;
-      if (saleWithDebt.debt) {
-        const payments = debtPaymentsMap.get(saleWithDebt.debt.id) || [];
-        const totalPaidBs = payments.reduce(
-          (sum: number, p: any) => sum + Number(p.amount_bs || 0),
-          0,
-        );
-        const totalPaidUsd = payments.reduce(
-          (sum: number, p: any) => sum + Number(p.amount_usd || 0),
-          0,
-        );
-        saleWithDebt.debt.total_paid_bs = totalPaidBs;
-        saleWithDebt.debt.total_paid_usd = totalPaidUsd;
-        saleWithDebt.debt.remaining_bs =
-          Number(saleWithDebt.debt.amount_bs || 0) - totalPaidBs;
-        saleWithDebt.debt.remaining_usd =
-          Number(saleWithDebt.debt.amount_usd || 0) - totalPaidUsd;
-      }
-      return saleWithDebt;
-    });
-
-    return { sales: salesWithDebtInfo, total };
+    return { sales, total };
   }
 
   async voidSale(

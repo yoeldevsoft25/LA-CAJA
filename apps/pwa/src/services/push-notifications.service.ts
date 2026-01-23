@@ -1,5 +1,8 @@
 import { api } from '@/lib/api'
 import type { PushSubscription } from '@/types/notifications.types'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('PushNotifications')
 
 /**
  * Servicio para manejar push notifications en PWA
@@ -24,7 +27,7 @@ class PushNotificationsService {
   async requestPermissionAndSubscribe(): Promise<PushSubscription | null> {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       if (import.meta.env.DEV) {
-        console.debug('[PushNotifications] Push notifications no soportadas en este navegador')
+        logger.debug('Push notifications no soportadas en este navegador')
       }
       return null
     }
@@ -32,7 +35,7 @@ class PushNotificationsService {
     if (!this.VAPID_PUBLIC_KEY) {
       // En desarrollo, solo mostrar como debug para no saturar la consola
       if (import.meta.env.DEV) {
-        console.debug('[PushNotifications] VAPID_PUBLIC_KEY no configurada (opcional en desarrollo)')
+        logger.debug('VAPID_PUBLIC_KEY no configurada (opcional en desarrollo)')
       }
       return null
     }
@@ -41,7 +44,7 @@ class PushNotificationsService {
       // Solicitar permiso
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
-        console.warn('[PushNotifications] Permiso de notificaciones denegado')
+        logger.warn('Permiso de notificaciones denegado')
         return null
       }
 
@@ -56,7 +59,7 @@ class PushNotificationsService {
 
       // Validar que la suscripción tenga endpoint
       if (!subscription || !subscription.endpoint || typeof subscription.endpoint !== 'string' || !subscription.endpoint.trim()) {
-        console.warn('[PushNotifications] La suscripción no tiene un endpoint válido')
+        logger.warn('La suscripción no tiene un endpoint válido')
         return null
       }
 
@@ -66,7 +69,7 @@ class PushNotificationsService {
       
       // Validar que las claves estén presentes antes de continuar
       if (!p256dhKey || !authKey) {
-        console.warn('[PushNotifications] Las claves de suscripción no están disponibles')
+        logger.warn('Las claves de suscripción no están disponibles')
         return null
       }
 
@@ -76,14 +79,14 @@ class PushNotificationsService {
 
       // Validar que las conversiones a base64 fueron exitosas
       if (!p256dhKeyBase64 || !p256dhKeyBase64.trim() || !authKeyBase64 || !authKeyBase64.trim()) {
-        console.warn('[PushNotifications] Error al convertir claves a base64')
+        logger.warn('Error al convertir claves a base64')
         return null
       }
 
       // Obtener device_id
       const deviceId = this.getDeviceId()
       if (!deviceId || !deviceId.trim()) {
-        console.warn('[PushNotifications] No se pudo obtener o generar device_id')
+        logger.warn('No se pudo obtener o generar device_id')
         return null
       }
 
@@ -97,7 +100,7 @@ class PushNotificationsService {
 
       // Validar que todos los campos requeridos estén presentes
       if (!pushSubscription.device_id || !pushSubscription.endpoint || !pushSubscription.p256dh_key || !pushSubscription.auth_key) {
-        console.error('[PushNotifications] Faltan campos requeridos en la suscripción:', {
+        logger.error('Faltan campos requeridos en la suscripción', undefined, {
           hasDeviceId: !!pushSubscription.device_id,
           hasEndpoint: !!pushSubscription.endpoint,
           hasP256dhKey: !!pushSubscription.p256dh_key,
@@ -108,25 +111,22 @@ class PushNotificationsService {
 
       // Enviar al backend
       await api.post('/notifications/push/subscribe', pushSubscription)
-      console.log('[PushNotifications] Suscripción exitosa')
+      logger.info('Suscripción exitosa')
 
       return pushSubscription
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Log detallado del error para debugging
-      const errorMessage = error?.response?.data?.message || error?.message || 'Error desconocido'
-      const errorStatus = error?.response?.status
-      const errorData = error?.response?.data
+      const axiosError = error as { response?: { data?: { message?: string }; status?: number }; message?: string };
+      const errorMessage = axiosError?.response?.data?.message || axiosError?.message || 'Error desconocido'
+      const errorStatus = axiosError?.response?.status
 
       if (import.meta.env.DEV) {
-        console.error('[PushNotifications] Error suscribiéndose a push notifications:', {
-          message: errorMessage,
+        logger.error('Error suscribiéndose a push notifications', error, {
           status: errorStatus,
-          data: errorData,
-          fullError: error,
         })
       } else {
         // En producción, solo loguear mensaje simplificado
-        console.warn(`[PushNotifications] Error al suscribirse: ${errorMessage}`)
+        logger.warn('Error al suscribirse', { message: errorMessage })
       }
 
       return null
@@ -146,10 +146,10 @@ class PushNotificationsService {
         await api.post('/notifications/push/unsubscribe', {
           device_id: this.getDeviceId(),
         })
-        console.log('[PushNotifications] Desuscripción exitosa')
+        logger.info('Desuscripción exitosa')
       }
     } catch (error) {
-      console.error('[PushNotifications] Error desuscribiéndose de push notifications', error)
+      logger.error('Error desuscribiéndose de push notifications', error)
     }
   }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search,
@@ -38,7 +38,8 @@ import { warehousesService } from '@/services/warehouses.service'
 import { inventoryService } from '@/services/inventory.service'
 import { promotionsService } from '@/services/promotions.service'
 import toast from '@/lib/toast'
-import CheckoutModal from '@/components/pos/CheckoutModal'
+// ⚡ OPTIMIZACIÓN: Lazy load del modal grande (1916 líneas) - solo cargar cuando se abre
+const CheckoutModal = lazy(() => import('@/components/pos/CheckoutModal'))
 import QuickProductsGrid from '@/components/fast-checkout/QuickProductsGrid'
 import VariantSelector from '@/components/variants/VariantSelector'
 import WeightInputModal, { WeightProduct } from '@/components/pos/WeightInputModal'
@@ -2158,15 +2159,26 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* Modal de checkout */}
-      <CheckoutModal
-        isOpen={showCheckout}
-        onClose={() => setShowCheckout(false)}
-        items={items}
-        total={total}
-        onConfirm={handleCheckout}
-        isLoading={createSaleMutation.isPending}
-      />
+      {/* Modal de checkout - Lazy loaded para reducir bundle inicial */}
+      {showCheckout && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando checkout...</p>
+            </div>
+          </div>
+        }>
+          <CheckoutModal
+            isOpen={showCheckout}
+            onClose={() => setShowCheckout(false)}
+            items={items}
+            total={total}
+            onConfirm={handleCheckout}
+            isLoading={createSaleMutation.isPending}
+          />
+        </Suspense>
+      )}
 
       {/* Selector de variantes */}
       {selectedProductForVariant && (

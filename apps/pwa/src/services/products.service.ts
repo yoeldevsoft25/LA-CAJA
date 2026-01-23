@@ -1,5 +1,8 @@
 import { api } from '@/lib/api'
 import { productsCacheService } from './products-cache.service'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('ProductsService')
 
 export interface Product {
   id: string
@@ -40,7 +43,28 @@ export interface ProductSearchResponse {
   total: number
 }
 
+/**
+ * Servicio para gestión de productos con soporte offline-first
+ * 
+ * @remarks
+ * Utiliza estrategia Stale-While-Revalidate: siempre intenta cargar desde cache primero,
+ * luego actualiza en background si está online.
+ */
 export const productsService = {
+  /**
+   * Busca productos según los parámetros especificados
+   * 
+   * @param params - Parámetros de búsqueda (query, categoría, estado activo, paginación)
+   * @param storeId - ID de la tienda (opcional, usado para cache local)
+   * @returns Promise que resuelve con los productos encontrados y el total
+   * @throws Error si está offline y no hay datos en cache
+   * 
+   * @remarks
+   * - Estrategia: Stale-While-Revalidate
+   * - Si hay cache, lo retorna inmediatamente
+   * - Si está online, actualiza en background
+   * - Si falla la API, usa cache como fallback
+   */
   async search(params: ProductSearchParams, storeId?: string): Promise<ProductSearchResponse> {
     const isOnline = navigator.onLine;
 
@@ -69,7 +93,7 @@ export const productsService = {
           };
         }
       } catch (error) {
-        console.warn('[productsService] Error cargando desde cache:', error);
+        logger.warn('Error cargando desde cache', { error });
       }
     }
 
@@ -83,11 +107,11 @@ export const productsService = {
 
     // Si está online, intentar actualizar desde API
     try {
-      const backendParams = {
+      const backendParams: Omit<ProductSearchParams, 'q'> & { search?: string } = {
         ...params,
         search: params.q,
       }
-      delete (backendParams as any).q
+      delete backendParams.q
       
       const response = await api.get<ProductSearchResponse>('/products', { params: backendParams })
       
@@ -100,10 +124,11 @@ export const productsService = {
       
       // Retornar datos frescos del API
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Si falla la petición, usar cache como fallback
+      const axiosError = error as { message?: string };
       if (cachedData) {
-        console.warn('[productsService] Error en API, usando cache local:', error.message);
+        logger.warn('Error en API, usando cache local', { error: axiosError.message });
         return cachedData;
       }
 
@@ -112,6 +137,18 @@ export const productsService = {
     }
   },
 
+  /**
+   * Obtiene un producto por su ID
+   * 
+   * @param id - ID del producto
+   * @param storeId - ID de la tienda (opcional, usado para cache local)
+   * @returns Promise que resuelve con el producto
+   * 
+   * @remarks
+   * - Intenta cargar desde cache primero
+   * - Si está online, actualiza desde API
+   * - Si falla la API, usa cache como fallback
+   */
   async getById(id: string, storeId?: string): Promise<Product> {
     const isOnline = navigator.onLine;
 
@@ -127,7 +164,7 @@ export const productsService = {
       try {
         cachedProduct = await productsCacheService.getProductByIdFromCache(id);
       } catch (error) {
-        console.warn('[productsService] Error cargando producto desde cache:', error);
+        logger.warn('Error cargando producto desde cache', { error });
       }
     }
 
@@ -154,7 +191,7 @@ export const productsService = {
     } catch (error: any) {
       // Si falla y hay cache, usar cache como fallback
       if (cachedProduct) {
-        console.warn('[productsService] Error en API, usando cache local:', error.message);
+        logger.warn('Error en API, usando cache local', { error: error.message });
         return cachedProduct;
       }
       throw error;

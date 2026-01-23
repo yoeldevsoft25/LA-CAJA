@@ -438,9 +438,9 @@ export class FiscalInvoicesService {
    * Una vez emitida, la factura no puede ser modificada (solo mediante notas de crédito/débito).
    */
   async issue(storeId: string, invoiceId: string): Promise<FiscalInvoice> {
+    // ⚡ OPTIMIZACIÓN: No cargar items aquí, generateEntryFromFiscalInvoice los obtiene desde sale_items
     const invoice = await this.fiscalInvoiceRepository.findOne({
       where: { id: invoiceId, store_id: storeId },
-      relations: ['items'],
     });
 
     if (!invoice) {

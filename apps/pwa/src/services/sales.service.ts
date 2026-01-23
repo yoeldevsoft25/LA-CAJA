@@ -2,6 +2,10 @@ import { api } from '@/lib/api'
 import { syncService } from './sync.service'
 import { exchangeService } from './exchange.service'
 import { BaseEvent, SaleCreatedPayload, SaleItem as DomainSaleItem } from '@la-caja/domain'
+import { createLogger } from '@/lib/logger'
+import type { Product } from './products.service'
+
+const logger = createLogger('SalesService')
 
 // Función auxiliar para generar UUIDs
 function randomUUID(): string {
@@ -101,7 +105,7 @@ export interface SaleItem {
 }
 
 function resolveOfflineItemPricing(
-  product: any,
+  product: Product,
   item: CartItemDto,
 ): {
   qty: number
@@ -248,12 +252,44 @@ function getDeviceId(): string {
   return deviceId
 }
 
+/**
+ * Servicio para gestión de ventas con soporte offline-first
+ * 
+ * @remarks
+ * Este servicio maneja la creación de ventas tanto en modo online como offline.
+ * En modo offline, las ventas se guardan localmente y se sincronizan cuando hay conexión.
+ * 
+ * @example
+ * ```typescript
+ * const sale = await salesService.create({
+ *   items: [{ product_id: '123', qty: 2 }],
+ *   exchange_rate: 36,
+ *   currency: 'USD',
+ *   payment_method: 'CASH_USD',
+ *   store_id: 'store-123',
+ *   user_id: 'user-456'
+ * });
+ * ```
+ */
 export const salesService = {
+  /**
+   * Crea una nueva venta
+   * 
+   * @param data - Datos de la venta a crear
+   * @returns Promise que resuelve con la venta creada
+   * @throws Error si falta store_id o user_id en modo offline
+   * @throws Error si la venta FIAO no tiene cliente asociado
+   * 
+   * @remarks
+   * - En modo offline, guarda la venta localmente inmediatamente
+   * - En modo online, intenta enviar al servidor primero
+   * - Si falla la conexión, guarda offline como fallback
+   */
   async create(data: CreateSaleRequest): Promise<Sale> {
     // Verificar estado de conexión PRIMERO
     const isOnline = navigator.onLine
     
-    console.log('[Sales] Iniciando creación de venta:', {
+    logger.debug('Iniciando creación de venta', {
       isOnline,
       hasStoreId: !!data.store_id,
       hasUserId: !!data.user_id,
@@ -277,7 +313,7 @@ export const salesService = {
         }
       }
       
-      console.log('[Sales] ⚠️ Modo OFFLINE detectado - guardando localmente inmediatamente')
+      logger.info('Modo OFFLINE detectado - guardando localmente inmediatamente')
       const saleId = randomUUID()
       const deviceId = getDeviceId()
       const now = Date.now()
@@ -291,7 +327,7 @@ export const salesService = {
         } else {
           // Si no hay tasa guardada, usar un valor por defecto (pero esto no debería pasar)
           exchangeRate = 36 // Valor por defecto
-          console.warn('No se encontró tasa de cambio guardada, usando valor por defecto:', exchangeRate)
+          logger.warn('No se encontró tasa de cambio guardada, usando valor por defecto', { exchangeRate })
         }
       }
 
@@ -387,9 +423,9 @@ export const salesService = {
       // Guardar evento localmente - CRÍTICO: debe funcionar incluso si syncService falla
       try {
         await syncService.enqueueEvent(event)
-        console.log('[Sales] ✅ Venta guardada localmente para sincronización:', saleId)
-      } catch (error: any) {
-        console.error('[Sales] ❌ Error guardando venta en syncService:', error)
+        logger.info('Venta guardada localmente para sincronización', { saleId })
+      } catch (error: unknown) {
+        logger.error('Error guardando venta en syncService', error)
         // Intentar guardar directamente en IndexedDB como fallback
         try {
           const { db } = await import('@/db/database')
@@ -398,9 +434,9 @@ export const salesService = {
             sync_status: 'pending',
             sync_attempts: 0,
           })
-          console.log('[Sales] ✅ Venta guardada directamente en IndexedDB como fallback')
+          logger.info('Venta guardada directamente en IndexedDB como fallback', { saleId })
         } catch (dbError) {
-          console.error('[Sales] ❌ Error guardando en IndexedDB:', dbError)
+          logger.error('Error guardando en IndexedDB', dbError)
           // Aún así continuar - la venta se procesó localmente
         }
       }
@@ -467,12 +503,12 @@ export const salesService = {
     // Si llegamos aquí, significa que está ONLINE
     // Intentar hacer la llamada HTTP normal
     // Si falla por error de red, guardar como evento offline
-    console.log('[Sales] ✅ Modo ONLINE - intentando llamada HTTP')
+    logger.info('Modo ONLINE - intentando llamada HTTP')
     
     // Verificar nuevamente antes de intentar (puede haber cambiado)
     if (!navigator.onLine) {
       // Si se perdió la conexión mientras procesábamos, guardar offline
-      console.log('[Sales] ⚠️ Conexión perdida durante el proceso, guardando offline...')
+      logger.warn('Conexión perdida durante el proceso, guardando offline')
       // Reutilizar la lógica offline (código duplicado pero necesario)
       const saleId = randomUUID()
       const deviceId = getDeviceId()
@@ -485,7 +521,7 @@ export const salesService = {
           exchangeRate = cachedRate.rate
         } else {
           exchangeRate = 36
-          console.warn('No se encontró tasa de cambio guardada, usando valor por defecto:', exchangeRate)
+          logger.warn('No se encontró tasa de cambio guardada, usando valor por defecto', { exchangeRate })
         }
       }
 
@@ -579,9 +615,9 @@ export const salesService = {
 
       try {
         await syncService.enqueueEvent(event)
-        console.log('[Sales] ✅ Venta guardada localmente (conexión perdida):', saleId)
+        logger.info('Venta guardada localmente (conexión perdida)', { saleId })
       } catch (error) {
-        console.error('[Sales] ❌ Error guardando venta localmente:', error)
+        logger.error('Error guardando venta localmente', error)
       }
 
       const mockSale: Sale = {
@@ -642,9 +678,8 @@ export const salesService = {
     }
 
     try {
-      console.log('📤 [Frontend] Sending sale data (before cleaning):', {
+      logger.debug('Sending sale data (before cleaning)', {
         cash_session_id: data.cash_session_id,
-        cash_session_id_type: typeof data.cash_session_id,
         payment_method: data.payment_method,
         items_count: data.items?.length,
       })
@@ -659,55 +694,53 @@ export const salesService = {
         )
       ) as CreateSaleRequest
 
-      console.log('📤 [Frontend] Sending sale data (after cleaning):', {
+      logger.debug('Sending sale data (after cleaning)', {
         cash_session_id: cleanedData.cash_session_id,
-        cash_session_id_type: typeof cleanedData.cash_session_id,
         hasCashSessionId: 'cash_session_id' in cleanedData,
-        keys: Object.keys(cleanedData),
       })
 
       // El interceptor de axios ya rechaza si está offline, así que esto solo se ejecuta si está online
-      console.log('[Sales] ⏳ Iniciando llamada HTTP...')
+      logger.debug('Iniciando llamada HTTP')
 
       const response = await api.post<Sale>('/sales', cleanedData).then((res) => {
-        console.log('[Sales] ✅ Respuesta HTTP recibida exitosamente')
+        logger.debug('Respuesta HTTP recibida exitosamente')
         return res
       }).catch((err) => {
-        console.log('[Sales] ❌ Error en llamada HTTP:', err)
+        logger.error('Error en llamada HTTP', err)
         throw err
       })
       
-      console.log('[Sales] ✅ Venta procesada exitosamente:', response.data?.id)
+      logger.info('Venta procesada exitosamente', { saleId: response.data?.id })
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Si falla por error de red, timeout, o error offline y tenemos los datos necesarios, guardar offline
       // El interceptor de axios rechaza con ERR_INTERNET_DISCONNECTED si está offline
+      const axiosError = error as { response?: unknown; code?: string; message?: string; isOffline?: boolean };
       const isNetworkError =
-        !error.response || 
-        error.code === 'ECONNABORTED' || 
-        error.code === 'ERR_NETWORK' ||
-        error.code === 'ERR_INTERNET_DISCONNECTED' ||
-        error.isOffline ||
+        !axiosError.response || 
+        axiosError.code === 'ECONNABORTED' || 
+        axiosError.code === 'ERR_NETWORK' ||
+        axiosError.code === 'ERR_INTERNET_DISCONNECTED' ||
+        axiosError.isOffline ||
         !navigator.onLine
       
-      console.log('[Sales] ❌ Error capturado en catch:', {
-        code: error.code,
-        isOffline: error.isOffline,
-        message: error.message,
+      logger.debug('Error capturado en catch', {
+        code: axiosError.code,
+        isOffline: axiosError.isOffline,
+        message: axiosError.message,
         navigatorOnLine: navigator.onLine,
         isNetworkError,
         hasStoreId: !!data.store_id,
         hasUserId: !!data.user_id,
-        error: error,
       })
       
       // Si no es un error de red o no tenemos los datos necesarios, lanzar el error
       if (!isNetworkError || !data.store_id || !data.user_id) {
-        console.error('[Sales] ❌ Error no manejable o faltan datos:', error)
+        logger.error('Error no manejable o faltan datos', error)
         throw error
       }
       
-      console.log('[Sales] ⚠️ Error de red detectado - guardando offline como fallback')
+      logger.warn('Error de red detectado - guardando offline como fallback')
 
       if (isNetworkError && data.store_id && data.user_id) {
         // Reutilizar la lógica offline
@@ -724,7 +757,7 @@ export const salesService = {
           } else {
             // Si no hay tasa guardada, usar un valor por defecto (pero esto no debería pasar)
             exchangeRate = 36 // Valor por defecto
-            console.warn('No se encontró tasa de cambio guardada, usando valor por defecto:', exchangeRate)
+            logger.warn('No se encontró tasa de cambio guardada, usando valor por defecto', { exchangeRate })
           }
         }
 
@@ -820,9 +853,9 @@ export const salesService = {
         // Guardar evento localmente
         try {
         await syncService.enqueueEvent(event)
-          console.log('[Sales] ✅ Venta guardada localmente después de error de red:', saleId)
+          logger.info('Venta guardada localmente después de error de red', { saleId })
         } catch (error) {
-          console.error('[Sales] ❌ Error guardando venta localmente después de error de red:', error)
+          logger.error('Error guardando venta localmente después de error de red', error)
           // Aún así retornar la venta mock para que la UI muestre éxito
         }
 

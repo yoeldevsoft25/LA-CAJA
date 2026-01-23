@@ -1,6 +1,9 @@
 import { api } from '@/lib/api'
 import { CacheManager, CacheLevel } from '@la-caja/sync'
 import { db, LocalCustomer } from '@/db/database'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('CustomersService')
 
 // Singleton del cache manager para clientes
 const customerCache = new CacheManager('customers-cache')
@@ -78,7 +81,7 @@ async function saveCustomerToLocalDB(customer: Customer): Promise<void> {
     }
     await db.customers.put(localCustomer)
   } catch (error) {
-    console.error('[CustomersService] Error saving to local DB:', error)
+    logger.error('Error saving to local DB', error)
   }
 }
 
@@ -99,11 +102,29 @@ async function saveCustomersToLocalDB(customers: Customer[]): Promise<void> {
     }))
     await db.customers.bulkPut(localCustomers)
   } catch (error) {
-    console.error('[CustomersService] Error bulk saving to local DB:', error)
+    logger.error('Error bulk saving to local DB', error)
   }
 }
 
+/**
+ * Servicio para gestión de clientes con soporte offline-first
+ * 
+ * @remarks
+ * Utiliza cache local para búsquedas rápidas y soporte offline.
+ * Los clientes se sincronizan automáticamente cuando hay conexión.
+ */
 export const customersService = {
+  /**
+   * Busca clientes por nombre, cédula o teléfono
+   * 
+   * @param search - Término de búsqueda (opcional)
+   * @returns Promise que resuelve con la lista de clientes encontrados
+   * 
+   * @remarks
+   * - Si está online, busca en API y cachea resultados
+   * - Si está offline, busca en IndexedDB local
+   * - La búsqueda es case-insensitive y busca en nombre, cédula y teléfono
+   */
   async search(search?: string): Promise<Customer[]> {
     const cacheKey = search ? `customers:search:${search}` : 'customers:all'
     
@@ -111,14 +132,14 @@ export const customersService = {
     if (navigator.onLine) {
       const cached = await customerCache.get<Customer[]>(cacheKey)
       if (cached) {
-        console.log('[CustomersService] Cache hit:', cacheKey)
+        logger.debug('Cache hit', { cacheKey })
         return cached
       }
     }
 
     // 2. Si offline, buscar en IndexedDB local
     if (!navigator.onLine) {
-      console.log('[CustomersService] Offline mode: searching in IndexedDB')
+      logger.debug('Offline mode: searching in IndexedDB')
       const localCustomers = await db.customers.toArray()
       
       if (search) {
@@ -171,7 +192,7 @@ export const customersService = {
       return customers
     } catch (error) {
       // Si falla la petición, intentar desde IndexedDB como fallback
-      console.warn('[CustomersService] API error, falling back to IndexedDB:', error)
+      logger.warn('API error, falling back to IndexedDB', { error })
       const localCustomers = await db.customers.toArray()
       if (search) {
         const searchLower = search.toLowerCase()
@@ -210,6 +231,17 @@ export const customersService = {
     }
   },
 
+  /**
+   * Obtiene un cliente por su ID
+   * 
+   * @param id - ID del cliente
+   * @returns Promise que resuelve con el cliente
+   * 
+   * @remarks
+   * - Intenta cargar desde cache primero
+   * - Si está online, actualiza desde API
+   * - Si falla la API, usa cache como fallback
+   */
   async getById(id: string): Promise<Customer> {
     const cacheKey = `customer:${id}`
     
@@ -217,14 +249,14 @@ export const customersService = {
     if (navigator.onLine) {
       const cached = await customerCache.get<Customer>(cacheKey)
       if (cached) {
-        console.log('[CustomersService] Cache hit:', cacheKey)
+        logger.debug('Cache hit', { cacheKey })
         return cached
       }
     }
 
     // 2. Si offline, buscar en IndexedDB local
     if (!navigator.onLine) {
-      console.log('[CustomersService] Offline mode: searching in IndexedDB')
+      logger.debug('Offline mode: searching in IndexedDB')
       const localCustomer = await db.customers.get(id)
       if (localCustomer) {
         return {
@@ -255,7 +287,7 @@ export const customersService = {
       return customer
     } catch (error) {
       // Si falla, intentar desde IndexedDB como fallback
-      console.warn('[CustomersService] API error, falling back to IndexedDB:', error)
+      logger.warn('API error, falling back to IndexedDB', { error })
       const localCustomer = await db.customers.get(id)
       if (localCustomer) {
         return {
