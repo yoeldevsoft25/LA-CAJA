@@ -20,7 +20,8 @@ export interface PushSyncDto {
   store_id: string;
   device_id: string;
   client_version: string;
-  events: BaseEvent[];
+  // ⚡ Los eventos no incluyen store_id/device_id (van en el DTO principal)
+  events: Omit<BaseEvent, 'store_id' | 'device_id'>[];
 }
 
 export interface PushSyncResponseDto {
@@ -546,6 +547,7 @@ class SyncServiceClass {
         void device_id;
         // Crear evento sin store_id y device_id para enviar al backend
         // El backend los espera solo en el DTO principal, no en cada evento
+        // Remover store_id y device_id del evento (van en el DTO principal)
         return {
           ...rest,
           payload: {
@@ -553,9 +555,9 @@ class SyncServiceClass {
             store_id: undefined,
             device_id: undefined,
           },
-        } as Omit<BaseEvent, 'store_id' | 'device_id'> & { store_id?: undefined; device_id?: undefined };
+        } as Omit<BaseEvent, 'store_id' | 'device_id'>;
       })
-      .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> & { store_id?: undefined; device_id?: undefined } => evt !== null);
+      .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> => evt !== null);
 
     this.logger.debug('Sanitized events', {
       original_count: events.length,

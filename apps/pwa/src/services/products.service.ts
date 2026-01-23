@@ -107,11 +107,12 @@ export const productsService = {
 
     // Si está online, intentar actualizar desde API
     try {
+      // ⚡ FIX: Crear objeto sin 'q' desde el inicio
+      const { q, ...restParams } = params;
       const backendParams: Omit<ProductSearchParams, 'q'> & { search?: string } = {
-        ...params,
-        search: params.q,
+        ...restParams,
+        search: q,
       }
-      delete backendParams.q
       
       const response = await api.get<ProductSearchResponse>('/products', { params: backendParams })
       

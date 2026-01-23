@@ -463,12 +463,21 @@ export const exchangeService = {
         }
       }
 
+      // ⚡ FIX: Type guard para error desconocido
+      const errorMessage = 
+        (error && typeof error === 'object' && 'response' in error && 
+         error.response && typeof error.response === 'object' && 'data' in error.response &&
+         error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data &&
+         typeof error.response.data.message === 'string')
+          ? error.response.data.message
+          : 'Error al obtener la tasa de cambio';
+
       return {
         rate: null,
         source: null,
         timestamp: null,
         available: false,
-        message: error.response?.data?.message || 'Error al obtener la tasa de cambio',
+        message: errorMessage,
       }
     }
   },

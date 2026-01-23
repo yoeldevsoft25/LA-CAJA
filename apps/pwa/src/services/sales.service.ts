@@ -125,10 +125,16 @@ function resolveOfflineItemPricing(
   const itemDiscountBs = item.discount_bs || 0
   const itemDiscountUsd = item.discount_usd || 0
 
+  // ⚡ FIX: Convertir precios a números (PostgreSQL devuelve NUMERIC como string)
+  const toNumber = (value: number | string | null | undefined): number => {
+    if (value === null || value === undefined) return 0;
+    return typeof value === 'string' ? parseFloat(value) || 0 : value;
+  };
+
   if (isWeightProduct) {
     const weightValue = item.weight_value || item.qty || 0
-    const pricePerWeightBs = item.price_per_weight_bs ?? product.price_per_weight_bs ?? 0
-    const pricePerWeightUsd = item.price_per_weight_usd ?? product.price_per_weight_usd ?? 0
+    const pricePerWeightBs = toNumber(item.price_per_weight_bs ?? product.price_per_weight_bs ?? 0)
+    const pricePerWeightUsd = toNumber(item.price_per_weight_usd ?? product.price_per_weight_usd ?? 0)
     const subtotalBs = weightValue * pricePerWeightBs
     const subtotalUsd = weightValue * pricePerWeightUsd
 
@@ -148,8 +154,8 @@ function resolveOfflineItemPricing(
     }
   }
 
-  const unitPriceBs = product.price_bs
-  const unitPriceUsd = product.price_usd
+  const unitPriceBs = toNumber(product.price_bs)
+  const unitPriceUsd = toNumber(product.price_usd)
   const subtotalBs = unitPriceBs * item.qty
   const subtotalUsd = unitPriceUsd * item.qty
 
@@ -340,8 +346,14 @@ export const salesService = {
 
       const saleItems: DomainSaleItem[] = []
       for (const item of data.items) {
-        const product = await db.getProductById(item.product_id)
-        if (!product) continue
+        const localProduct = await db.getProductById(item.product_id)
+        if (!localProduct) continue
+
+        // ⚡ FIX: Convertir LocalProduct a Product (updated_at: number -> string)
+        const product: Product = {
+          ...localProduct,
+          updated_at: new Date(localProduct.updated_at).toISOString(),
+        };
 
         const resolved = resolveOfflineItemPricing(product, item)
 
@@ -533,8 +545,14 @@ export const salesService = {
 
       const saleItems: DomainSaleItem[] = []
       for (const item of data.items) {
-        const product = await db.getProductById(item.product_id)
-        if (!product) continue
+        const localProduct = await db.getProductById(item.product_id)
+        if (!localProduct) continue
+
+        // ⚡ FIX: Convertir LocalProduct a Product (updated_at: number -> string)
+        const product: Product = {
+          ...localProduct,
+          updated_at: new Date(localProduct.updated_at).toISOString(),
+        };
 
         const resolved = resolveOfflineItemPricing(product, item)
 
@@ -770,8 +788,14 @@ export const salesService = {
 
         const saleItems: DomainSaleItem[] = []
         for (const item of data.items) {
-          const product = await db.getProductById(item.product_id)
-          if (!product) continue
+          const localProduct = await db.getProductById(item.product_id)
+          if (!localProduct) continue
+
+          // ⚡ FIX: Convertir LocalProduct a Product (updated_at: number -> string)
+          const product: Product = {
+            ...localProduct,
+            updated_at: new Date(localProduct.updated_at).toISOString(),
+          };
 
           const resolved = resolveOfflineItemPricing(product, item)
 

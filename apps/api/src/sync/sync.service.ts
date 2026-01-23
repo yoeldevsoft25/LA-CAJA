@@ -224,7 +224,14 @@ export class SyncService {
 
         // ⚡ OPTIMIZACIÓN: Detección de conflictos simplificada para eventos de venta
         // Para SaleCreated, los conflictos son raros y se pueden manejar en la proyección
-        let conflictResult = { hasConflict: false, resolved: true };
+        let conflictResult: {
+          hasConflict: boolean;
+          resolved: boolean;
+          resolvedPayload?: any;
+          conflictId?: string;
+          reason?: string;
+          conflictingWith?: string[];
+        } = { hasConflict: false, resolved: true };
         if (event.type !== 'SaleCreated') {
           // Solo detectar conflictos para eventos que no sean ventas (más rápidos)
           conflictResult = await this.detectAndResolveConflicts(
