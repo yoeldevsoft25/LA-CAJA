@@ -1,0 +1,328 @@
+import { useEffect, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { DollarSign, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Customer } from '@/services/customers.service'
+import { debtsService, Debt, calculateDebtTotals, PaymentMethod, CreateDebtPaymentDto } from '@/services/debts.service'
+import { exchangeService } from '@/services/exchange.service'
+import toast from '@/lib/toast'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
+
+const paymentSchema = z.object({
+  amount_usd: z.number().min(0.01, 'El monto debe ser mayor a 0'),
+  amount_bs: z.number().min(0.01, 'El monto debe ser mayor a 0'),
+  method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER']),
+  note: z.string().optional(),
+})
+
+type PaymentFormData = z.infer<typeof paymentSchema>
+
+interface PayAllDebtsModalProps {
+  isOpen: boolean
+  onClose: () => void
+  customer: Customer | null
+  debts: Debt[]
+  onSuccess?: () => void
+}
+
+const paymentMethods: { value: PaymentMethod; label: string }[] = [
+  { value: 'CASH_BS', label: 'Efectivo Bs' },
+  { value: 'CASH_USD', label: 'Efectivo USD' },
+  { value: 'PAGO_MOVIL', label: 'Pago Móvil' },
+  { value: 'TRANSFER', label: 'Transferencia' },
+  { value: 'OTHER', label: 'Otro' },
+]
+
+export default function PayAllDebtsModal({
+  isOpen,
+  onClose,
+  customer,
+  debts,
+  onSuccess,
+}: PayAllDebtsModalProps) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setValue,
+    watch,
+  } = useForm<PaymentFormData>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      amount_usd: 0,
+      amount_bs: 0,
+      method: 'CASH_USD',
+      note: '',
+    },
+  })
+
+  // Obtener tasa BCV
+  const { data: bcvRateData } = useQuery({
+    queryKey: ['exchange', 'bcv'],
+    queryFn: () => exchangeService.getBCVRate(),
+    staleTime: 1000 * 60 * 60 * 2, // 2 horas
+    enabled: isOpen,
+  })
+
+  const exchangeRate = bcvRateData?.rate || 0
+
+  // Calcular totales pendientes
+  const totals = useMemo(() => {
+    const openDebts = debts.filter((d) => d.status !== 'paid')
+    let totalRemainingUsd = 0
+    let totalRemainingBs = 0
+
+    openDebts.forEach((debt) => {
+      const calc = calculateDebtTotals(debt)
+      totalRemainingUsd += calc.remaining_usd
+      totalRemainingBs += calc.remaining_bs
+    })
+
+    return {
+      totalRemainingUsd,
+      totalRemainingBs,
+      openDebtsCount: openDebts.length,
+    }
+  }, [debts])
+
+  // Observar cambios en amount_usd para calcular amount_bs
+  const amountUsd = watch('amount_usd')
+  const selectedMethod = watch('method')
+
+  useEffect(() => {
+    if (amountUsd > 0 && exchangeRate > 0) {
+      const calculatedBs = Math.round(amountUsd * exchangeRate * 100) / 100
+      setValue('amount_bs', calculatedBs, { shouldValidate: false })
+    } else if (amountUsd <= 0) {
+      setValue('amount_bs', 0, { shouldValidate: false })
+    }
+  }, [amountUsd, exchangeRate, setValue])
+
+  // Reset form cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && totals.totalRemainingUsd > 0) {
+      reset({
+        amount_usd: totals.totalRemainingUsd,
+        amount_bs: totals.totalRemainingBs,
+        method: 'CASH_USD',
+        note: `Pago completo de todas las deudas pendientes`,
+      })
+    }
+  }, [isOpen, totals, reset])
+
+  const payAllMutation = useMutation({
+    mutationFn: (data: CreateDebtPaymentDto) => {
+      if (!customer) throw new Error('Cliente no seleccionado')
+      return debtsService.payAllDebts(customer.id, data)
+    },
+    onSuccess: () => {
+      toast.success('Todas las deudas han sido pagadas exitosamente')
+      onSuccess?.()
+      onClose()
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message || 'Error al procesar el pago de todas las deudas'
+      )
+    },
+  })
+
+  const onSubmit = (data: PaymentFormData) => {
+    if (data.amount_usd < totals.totalRemainingUsd) {
+      toast.error(
+        `El monto debe ser al menos $${totals.totalRemainingUsd.toFixed(2)} USD (total pendiente)`
+      )
+      return
+    }
+
+    payAllMutation.mutate(data)
+  }
+
+  if (!customer) return null
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Pago Completo de Deudas</DialogTitle>
+          <DialogDescription>
+            Cliente: {customer.name}
+            {customer.document_id && ` • CI: ${customer.document_id}`}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Resumen de deudas */}
+          <Card className="bg-muted/50">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Pendiente:</span>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-warning">
+                      ${totals.totalRemainingUsd.toFixed(2)} USD
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {totals.totalRemainingBs.toFixed(2)} Bs
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <span className="text-sm text-muted-foreground">Deudas Pendientes:</span>
+                  <span className="font-semibold">{totals.openDebtsCount}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Alerta si el monto es menor */}
+          {amountUsd > 0 && amountUsd < totals.totalRemainingUsd && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Atención</AlertTitle>
+              <AlertDescription>
+                El monto ingresado (${amountUsd.toFixed(2)}) es menor al total pendiente (
+                ${totals.totalRemainingUsd.toFixed(2)}). Por favor, ingrese el monto completo.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Monto USD */}
+            <div className="space-y-2">
+              <Label htmlFor="amount_usd">
+                Monto en USD <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="amount_usd"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className={cn('pl-9', errors.amount_usd && 'border-destructive')}
+                  {...register('amount_usd', {
+                    valueAsNumber: true,
+                    min: {
+                      value: totals.totalRemainingUsd,
+                      message: `El monto mínimo es $${totals.totalRemainingUsd.toFixed(2)}`,
+                    },
+                  })}
+                />
+              </div>
+              {errors.amount_usd && (
+                <p className="text-sm text-destructive">{errors.amount_usd.message}</p>
+              )}
+            </div>
+
+            {/* Monto Bs */}
+            <div className="space-y-2">
+              <Label htmlFor="amount_bs">
+                Monto en Bs <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="amount_bs"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className={cn('pl-9', errors.amount_bs && 'border-destructive')}
+                  {...register('amount_bs', {
+                    valueAsNumber: true,
+                  })}
+                />
+              </div>
+              {errors.amount_bs && (
+                <p className="text-sm text-destructive">{errors.amount_bs.message}</p>
+              )}
+              {exchangeRate > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Tasa BCV: {exchangeRate.toFixed(2)} Bs/USD
+                </p>
+              )}
+            </div>
+
+            {/* Método de pago */}
+            <div className="space-y-2">
+              <Label>
+                Método de Pago <span className="text-destructive">*</span>
+              </Label>
+              <RadioGroup
+                value={selectedMethod}
+                onValueChange={(value) => setValue('method', value as PaymentMethod)}
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  {paymentMethods.map((method) => (
+                    <div key={method.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={method.value} id={method.value} />
+                      <Label
+                        htmlFor={method.value}
+                        className="flex-1 cursor-pointer font-normal"
+                      >
+                        {method.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
+              {errors.method && (
+                <p className="text-sm text-destructive">{errors.method.message}</p>
+              )}
+            </div>
+
+            {/* Nota */}
+            <div className="space-y-2">
+              <Label htmlFor="note">Nota (opcional)</Label>
+              <Textarea
+                id="note"
+                placeholder="Nota sobre el pago..."
+                className="resize-none"
+                rows={3}
+                {...register('note')}
+              />
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+                disabled={payAllMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-success hover:bg-success/90 text-white"
+                disabled={payAllMutation.isPending || amountUsd < totals.totalRemainingUsd}
+              >
+                {payAllMutation.isPending ? (
+                  'Procesando...'
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Pagar Todas las Deudas
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

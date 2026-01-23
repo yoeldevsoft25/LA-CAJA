@@ -371,6 +371,7 @@ export default function DebtsPage() {
                 debts={debts}
                 onViewDebt={handleViewDebt}
                 onAddPayment={handleAddPayment}
+                onPaymentSuccess={handlePaymentSuccess}
               />
             ))
           )}

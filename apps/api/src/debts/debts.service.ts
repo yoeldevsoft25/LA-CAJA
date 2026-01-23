@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { Debt, DebtStatus } from '../database/entities/debt.entity';
 import { DebtPayment } from '../database/entities/debt-payment.entity';
 import { Customer } from '../database/entities/customer.entity';
@@ -573,5 +573,123 @@ export class DebtsService {
       this.logger.error(`Error enviando recordatorio de deudas:`, error);
       return { success: false, error: error.message || 'Error desconocido' };
     }
+  }
+
+  /**
+   * Paga todas las deudas pendientes de un cliente
+   */
+  async payAllDebts(
+    storeId: string,
+    customerId: string,
+    dto: CreateDebtPaymentDto,
+  ): Promise<{ debts: Debt[]; payments: DebtPayment[] }> {
+    // Obtener todas las deudas pendientes del cliente
+    const debts = await this.debtRepository.find({
+      where: {
+        store_id: storeId,
+        customer_id: customerId,
+        status: In([DebtStatus.OPEN, DebtStatus.PARTIAL]),
+      },
+      relations: ['payments'],
+    });
+
+    if (debts.length === 0) {
+      throw new NotFoundException('No hay deudas pendientes para este cliente');
+    }
+
+    // Calcular el total pendiente
+    let totalRemainingUsd = 0;
+    let totalRemainingBs = 0;
+
+    for (const debt of debts) {
+      const totalPaidUsd = (debt.payments || []).reduce(
+        (sum, p) => sum + Number(p.amount_usd),
+        0,
+      );
+      const totalPaidBs = (debt.payments || []).reduce(
+        (sum, p) => sum + Number(p.amount_bs),
+        0,
+      );
+      totalRemainingUsd += Number(debt.amount_usd) - totalPaidUsd;
+      totalRemainingBs += Number(debt.amount_bs) - totalPaidBs;
+    }
+
+    // Validar que el monto del pago sea suficiente
+    if (Number(dto.amount_usd) < totalRemainingUsd) {
+      throw new BadRequestException(
+        `El monto del pago ($${dto.amount_usd.toFixed(2)}) es menor al total pendiente ($${totalRemainingUsd.toFixed(2)})`,
+      );
+    }
+
+    // Procesar pagos en una transacción
+    const payments: DebtPayment[] = [];
+    const updatedDebts: Debt[] = [];
+
+    await this.dataSource.transaction(async (manager) => {
+      const paymentRepository = manager.getRepository(DebtPayment);
+
+      for (const debt of debts) {
+        const totalPaidUsd = (debt.payments || []).reduce(
+          (sum, p) => sum + Number(p.amount_usd),
+          0,
+        );
+        const totalPaidBs = (debt.payments || []).reduce(
+          (sum, p) => sum + Number(p.amount_bs),
+          0,
+        );
+        const remainingUsd = Number(debt.amount_usd) - totalPaidUsd;
+        const remainingBs = Number(debt.amount_bs) - totalPaidBs;
+
+        if (remainingUsd <= 0) continue;
+
+        // Crear pago para esta deuda
+        const paymentId = randomUUID();
+        const paidAt = new Date();
+
+        await manager.query(
+          `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            paymentId,
+            storeId,
+            debt.id,
+            paidAt,
+            remainingBs,
+            remainingUsd,
+            dto.method,
+            dto.note || `Pago completo de todas las deudas`,
+          ],
+        );
+
+        // Actualizar estado de la deuda a PAID
+        await manager
+          .createQueryBuilder()
+          .update(Debt)
+          .set({ status: DebtStatus.PAID })
+          .where('id = :debtId', { debtId: debt.id })
+          .execute();
+
+        // Recargar deuda y pago
+        const updatedDebt = await manager.findOne(Debt, {
+          where: { id: debt.id },
+          relations: ['payments'],
+        });
+
+        const payment = await paymentRepository.findOne({
+          where: { id: paymentId },
+        });
+
+        if (updatedDebt && payment) {
+          updatedDebts.push(updatedDebt);
+          payments.push(payment);
+        }
+      }
+    });
+
+    this.logger.log(
+      `Pago completo realizado para cliente ${customerId}: ${payments.length} pagos, ${updatedDebts.length} deudas actualizadas`,
+    );
+
+    return { debts: updatedDebts, payments };
   }
 }

@@ -145,4 +145,13 @@ export const debtsService = {
     )
     return response.data
   },
+
+  // Pagar todas las deudas pendientes de un cliente
+  async payAllDebts(customerId: string, data: CreateDebtPaymentDto): Promise<{ debts: Debt[]; payments: DebtPayment[] }> {
+    const response = await api.post<{ debts: Debt[]; payments: DebtPayment[] }>(
+      `/debts/customer/${customerId}/pay-all`,
+      data
+    )
+    return response.data
+  },
 }

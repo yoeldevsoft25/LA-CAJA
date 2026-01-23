@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Phone, CreditCard, DollarSign, Clock, CheckCircle, AlertCircle, Eye, Plus, MessageCircle } from 'lucide-react'
+import { Phone, CreditCard, DollarSign, Clock, CheckCircle, AlertCircle, Eye, Plus, MessageCircle, Receipt } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals } from '@/services/debts.service'
 import { format } from 'date-fns'
@@ -12,12 +12,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
 import toast from '@/lib/toast'
+import PayAllDebtsModal from './PayAllDebtsModal'
 
 interface CustomerDebtCardProps {
   customer: Customer
   debts: Debt[]
   onViewDebt: (debt: Debt) => void
   onAddPayment: (debt: Debt) => void
+  onPaymentSuccess?: () => void
 }
 
 const statusConfig = {
@@ -52,8 +54,10 @@ export default function CustomerDebtCard({
   debts,
   onViewDebt,
   onAddPayment,
+  onPaymentSuccess,
 }: CustomerDebtCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isPayAllModalOpen, setIsPayAllModalOpen] = useState(false)
 
   // Obtener resumen del cliente
   const { data: summary } = useQuery({
@@ -186,25 +190,43 @@ export default function CustomerDebtCard({
           <AccordionContent className="px-0 pb-0">
             {/* Resumen */}
             {summary && (
-              <div className="bg-muted/50 px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm border-t border-border">
-                <div>
-                  <p className="text-muted-foreground">Total Fiado</p>
-                  <p className="font-semibold text-foreground">${summary.total_debt_usd.toFixed(2)}</p>
+              <div className="bg-muted/50 px-4 py-3 border-t border-border">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-3">
+                  <div>
+                    <p className="text-muted-foreground">Total Fiado</p>
+                    <p className="font-semibold text-foreground">${summary.total_debt_usd.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">{summary.total_debt_bs.toFixed(2)} Bs</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Total Pagado</p>
+                    <p className="font-semibold text-success">${summary.total_paid_usd.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">{summary.total_paid_bs.toFixed(2)} Bs</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Pendiente</p>
+                    <p className="font-semibold text-warning">${summary.remaining_usd.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">{summary.remaining_bs.toFixed(2)} Bs</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Deudas</p>
+                    <p className="font-semibold text-foreground">
+                      {summary.open_debts_count} abiertas / {summary.total_debts_count} total
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Total Pagado</p>
-                  <p className="font-semibold text-success">${summary.total_paid_usd.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Pendiente</p>
-                  <p className="font-semibold text-warning">${summary.remaining_usd.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Deudas</p>
-                  <p className="font-semibold text-foreground">
-                    {summary.open_debts_count} abiertas / {summary.total_debts_count} total
-                  </p>
-                </div>
+                {/* Botón de pago completo */}
+                {hasOpenDebts && summary.remaining_usd > 0 && (
+                  <div className="pt-3 border-t border-border">
+                    <Button
+                      onClick={() => setIsPayAllModalOpen(true)}
+                      className="w-full bg-success hover:bg-success/90 text-white"
+                      size="sm"
+                    >
+                      <Receipt className="w-4 h-4 mr-2" />
+                      Pagar Todas las Deudas (${summary.remaining_usd.toFixed(2)} USD / {summary.remaining_bs.toFixed(2)} Bs)
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -300,6 +322,18 @@ export default function CustomerDebtCard({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+
+      {/* Modal de pago completo */}
+      <PayAllDebtsModal
+        isOpen={isPayAllModalOpen}
+        onClose={() => setIsPayAllModalOpen(false)}
+        customer={customer}
+        debts={debtsArray}
+        onSuccess={() => {
+          onPaymentSuccess?.()
+          setIsPayAllModalOpen(false)
+        }}
+      />
     </Card>
   )
 }

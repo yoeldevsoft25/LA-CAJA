@@ -99,4 +99,15 @@ export class DebtsController {
     const storeId = req.user.store_id;
     return this.debtsService.sendDebtReminder(storeId, customerId);
   }
+
+  @Post('customer/:customerId/pay-all')
+  @HttpCode(HttpStatus.OK)
+  async payAllDebts(
+    @Param('customerId') customerId: string,
+    @Body() dto: CreateDebtPaymentDto,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    return this.debtsService.payAllDebts(storeId, customerId, dto);
+  }
 }
