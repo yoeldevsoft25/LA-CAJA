@@ -622,7 +622,7 @@ export class WarehousesService {
         const insertResult = await queryExecutor.query(
           `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
            VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
-           ON CONFLICT (warehouse_id, product_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'::uuid))
+           ON CONFLICT (warehouse_id, product_id, variant_id)
            DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
            RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
           [warehouseId, update.product_id, update.variant_id, update.qty_delta, update.qty_delta],
