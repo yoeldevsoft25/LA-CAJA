@@ -484,14 +484,23 @@ export class WarehousesService {
     
     if (!result || result.length === 0) {
       // Stock no existe, crear con INSERT ... ON CONFLICT (upsert atómico)
-      const insertResult = await this.dataSource.query(
-        `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
-         ON CONFLICT (warehouse_id, product_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'::uuid))
-         DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
-         RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
-        [warehouseId, productId, variantId, qtyDelta, qtyDelta],
-      );
+      const insertResult = variantId === null
+        ? await this.dataSource.query(
+            `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+             VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
+             ON CONFLICT (warehouse_id, product_id) WHERE variant_id IS NULL
+             DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
+             RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
+            [warehouseId, productId, variantId, qtyDelta, qtyDelta],
+          )
+        : await this.dataSource.query(
+            `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+             VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
+             ON CONFLICT (warehouse_id, product_id, variant_id)
+             DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
+             RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
+            [warehouseId, productId, variantId, qtyDelta, qtyDelta],
+          );
       
       if (!insertResult || insertResult.length === 0) {
         throw new Error(`No se pudo crear o actualizar stock para warehouse ${warehouseId}, product ${productId}`);
@@ -615,14 +624,31 @@ export class WarehousesService {
     });
 
     if (missingUpdates.length > 0) {
-      // ⚡ OPTIMIZACIÓN: Insertar stocks faltantes en batch usando un loop simple
-      // Esto es más eficiente que queries complejas con subqueries
       const insertedResults: any[] = [];
-      for (const update of missingUpdates) {
+      const nullVariantUpdates = missingUpdates.filter(update => update.variant_id === null);
+      const nonNullVariantUpdates = missingUpdates.filter(update => update.variant_id !== null);
+
+      // Insertar stocks faltantes para variantes no nulas
+      for (const update of nonNullVariantUpdates) {
         const insertResult = await queryExecutor.query(
           `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
            VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
            ON CONFLICT (warehouse_id, product_id, variant_id)
+           DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
+           RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
+          [warehouseId, update.product_id, update.variant_id, update.qty_delta, update.qty_delta],
+        );
+        if (insertResult && insertResult.length > 0) {
+          insertedResults.push(insertResult[0]);
+        }
+      }
+
+      // Insertar stocks faltantes para variant_id NULL (usa indice unico parcial)
+      for (const update of nullVariantUpdates) {
+        const insertResult = await queryExecutor.query(
+          `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+           VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
+           ON CONFLICT (warehouse_id, product_id) WHERE variant_id IS NULL
            DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
            RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
           [warehouseId, update.product_id, update.variant_id, update.qty_delta, update.qty_delta],
