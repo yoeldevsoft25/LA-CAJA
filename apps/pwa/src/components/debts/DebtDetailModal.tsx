@@ -66,6 +66,20 @@ export default function DebtDetailModal({
 }: DebtDetailModalProps) {
   const [showSaleModal, setShowSaleModal] = useState(false)
   const [saleData, setSaleData] = useState<Sale | null>(null)
+  const saleId = debt?.sale_id ?? null
+
+  // Obtener la venta completa cuando se abre el modal de venta
+  const { data: fullSale } = useQuery({
+    queryKey: ['sale', saleId ?? 'none'],
+    queryFn: () => salesService.getById(saleId!),
+    enabled: Boolean(saleId) && showSaleModal,
+  })
+
+  useEffect(() => {
+    if (fullSale) {
+      setSaleData(fullSale)
+    }
+  }, [fullSale])
 
   if (!debt) return null
 
@@ -76,19 +90,6 @@ export default function DebtDetailModal({
   const canAddPayment = debt.status !== 'paid'
   const hasSale = debt.sale && debt.sale_id
   const hasSaleItems = debt.sale?.items && debt.sale.items.length > 0
-
-  // Obtener la venta completa cuando se abre el modal de venta
-  const { data: fullSale } = useQuery({
-    queryKey: ['sale', debt.sale_id],
-    queryFn: () => salesService.getById(debt.sale_id!),
-    enabled: !!debt.sale_id && showSaleModal,
-  })
-
-  useEffect(() => {
-    if (fullSale) {
-      setSaleData(fullSale)
-    }
-  }, [fullSale])
 
   const handleViewSale = () => {
     if (debt.sale_id) {
