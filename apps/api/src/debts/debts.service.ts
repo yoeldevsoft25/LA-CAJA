@@ -352,22 +352,17 @@ export class DebtsService {
   ): Promise<Debt[]> {
     const query = this.debtRepository
       .createQueryBuilder('debt')
+      .leftJoinAndSelect('debt.payments', 'payments')
+      .leftJoinAndSelect('debt.sale', 'sale')
       .where('debt.store_id = :storeId', { storeId })
-      .andWhere('debt.customer_id = :customerId', { customerId });
+      .andWhere('debt.customer_id = :customerId', { customerId })
+      .andWhere('(sale.id IS NULL OR sale.voided_at IS NULL)'); // Excluir deudas de ventas anuladas
 
     if (!includePaid) {
       query.andWhere('debt.status = :status', { status: DebtStatus.OPEN });
     }
 
-    // Excluir deudas asociadas a ventas anuladas
-    query
-      .leftJoin('debt.sale', 'sale')
-      .andWhere('(sale.id IS NULL OR sale.voided_at IS NULL)');
-
-    query
-      .orderBy('debt.created_at', 'DESC')
-      .leftJoinAndSelect('debt.payments', 'payments')
-      .leftJoinAndSelect('debt.sale', 'sale');
+    query.orderBy('debt.created_at', 'DESC');
 
     return query.getMany();
   }
@@ -432,22 +427,17 @@ export class DebtsService {
 
     const query = this.debtRepository
       .createQueryBuilder('debt')
-      .where('debt.store_id = :storeId', { storeId });
+      .leftJoinAndSelect('debt.customer', 'customer')
+      .leftJoinAndSelect('debt.payments', 'payments')
+      .leftJoinAndSelect('debt.sale', 'sale')
+      .where('debt.store_id = :storeId', { storeId })
+      .andWhere('(sale.id IS NULL OR sale.voided_at IS NULL)'); // Excluir deudas de ventas anuladas
 
     if (status) {
       query.andWhere('debt.status = :status', { status });
     }
 
-    // Excluir deudas asociadas a ventas anuladas
-    query
-      .leftJoin('debt.sale', 'sale')
-      .andWhere('(sale.id IS NULL OR sale.voided_at IS NULL)');
-
-    query
-      .orderBy('debt.created_at', 'DESC')
-      .leftJoinAndSelect('debt.customer', 'customer')
-      .leftJoinAndSelect('debt.payments', 'payments')
-      .leftJoinAndSelect('debt.sale', 'sale');
+    query.orderBy('debt.created_at', 'DESC');
 
     return query.getMany();
   }
