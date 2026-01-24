@@ -205,7 +205,7 @@ export class WhatsAppConfigService {
    * Formatea un mensaje de deuda creada
    */
   formatDebtMessage(
-    debt: Debt & { customer?: Customer; sale?: Sale },
+    debt: Debt & { customer?: Customer; sale?: Sale & { items?: any[] } },
     config: WhatsAppConfig,
     storeName: string,
   ): string {
@@ -236,6 +236,37 @@ export class WhatsAppConfigService {
       message += `\n`;
       message += `*VENTA ASOCIADA:*\n`;
       message += `ID: #${debt.sale.id.slice(0, 8).toUpperCase()}\n`;
+      
+      // Incluir artículos de la venta si están disponibles
+      if (debt.sale.items && debt.sale.items.length > 0) {
+        message += `\n`;
+        message += `*ARTÍCULOS DE LA COMPRA:*\n`;
+        debt.sale.items.forEach((item, index) => {
+          const qty = item.is_weight_product
+            ? `${Number(item.weight_value || item.qty).toFixed(2)} ${item.weight_unit || 'kg'}`
+            : item.qty.toString();
+          const unitPrice = item.is_weight_product
+            ? Number(
+                item.price_per_weight_usd ?? item.unit_price_usd,
+              ).toFixed(2)
+            : Number(item.unit_price_usd).toFixed(2);
+          const lineTotal = (
+            Number(item.qty) * Number(item.unit_price_usd) -
+            Number(item.discount_usd || 0)
+          ).toFixed(2);
+
+          const productName = item.product?.name || 'Producto';
+          const variantName = item.variant?.variant_value 
+            ? ` - ${item.variant.variant_type}: ${item.variant.variant_value}` 
+            : '';
+          
+          message += `${index + 1}. ${productName}${variantName}\n`;
+          message += `   ${qty} x $${unitPrice} = $${lineTotal}\n`;
+          if (Number(item.discount_usd || 0) > 0) {
+            message += `   💰 Descuento: $${Number(item.discount_usd).toFixed(2)}\n`;
+          }
+        });
+      }
     }
 
     return message;
@@ -245,7 +276,7 @@ export class WhatsAppConfigService {
    * Formatea un mensaje de recordatorio de deudas pendientes
    */
   formatDebtReminderMessage(
-    debts: (Debt & { customer?: Customer; payments?: any[] })[],
+    debts: (Debt & { customer?: Customer; payments?: any[]; sale?: Sale & { items?: any[] } })[],
     customer: Customer,
     config: WhatsAppConfig,
     storeName: string,
@@ -311,6 +342,34 @@ export class WhatsAppConfigService {
       message += `   💵 Monto: $${Number(debt.amount_usd).toFixed(2)}\n`;
       message += `   ✅ Abonado: $${totalPaid.toFixed(2)}\n`;
       message += `   ⏳ Pendiente: $${remaining.toFixed(2)}\n`;
+      
+      // Incluir artículos de la venta si están disponibles
+      if (debt.sale?.items && debt.sale.items.length > 0) {
+        message += `   \n`;
+        message += `   *Artículos:*\n`;
+        debt.sale.items.forEach((item, itemIndex) => {
+          const qty = item.is_weight_product
+            ? `${Number(item.weight_value || item.qty).toFixed(2)} ${item.weight_unit || 'kg'}`
+            : item.qty.toString();
+          const unitPrice = item.is_weight_product
+            ? Number(
+                item.price_per_weight_usd ?? item.unit_price_usd,
+              ).toFixed(2)
+            : Number(item.unit_price_usd).toFixed(2);
+          const lineTotal = (
+            Number(item.qty) * Number(item.unit_price_usd) -
+            Number(item.discount_usd || 0)
+          ).toFixed(2);
+
+          const productName = item.product?.name || 'Producto';
+          const variantName = item.variant?.variant_value 
+            ? ` - ${item.variant.variant_type}: ${item.variant.variant_value}` 
+            : '';
+          
+          message += `   ${itemIndex + 1}. ${productName}${variantName}\n`;
+          message += `      ${qty} x $${unitPrice} = $${lineTotal}\n`;
+        });
+      }
 
       if (index < activeDebts.length - 1) {
         message += `\n`;

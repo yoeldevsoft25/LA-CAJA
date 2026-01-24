@@ -23,7 +23,19 @@ interface BotInstance {
   isConnected: boolean;
   whatsappNumber: string | null;
   connectionState: ConnectionState | null;
+  /** Intervalo de sendPresenceUpdate para mantener la sesión activa; se limpia en close/disconnect */
+  presenceIntervalId?: ReturnType<typeof setInterval> | null;
+  /** Marca cierre intencional (end) para no disparar reconexión automática */
+  isClosing?: boolean;
 }
+
+/** Códigos de desconexión que NO deben provocar reconexión automática */
+const NO_RECONNECT_CODES = [
+  DisconnectReason.loggedOut,           // 401 - usuario cerró sesión
+  DisconnectReason.forbidden,           // 403 - cuenta baneada/restricción
+  DisconnectReason.multideviceMismatch, // 411 - incompatibilidad multi-dispositivo
+  DisconnectReason.connectionReplaced,  // 440 - otro dispositivo tomó la sesión
+];
 
 /**
  * Servicio para gestionar bots de WhatsApp usando Baileys
@@ -34,6 +46,11 @@ export class WhatsAppBotService implements OnModuleDestroy {
   private readonly logger = new Logger(WhatsAppBotService.name);
   private readonly bots = new Map<string, BotInstance>();
   private readonly sessionsDir = join(process.cwd(), 'whatsapp-sessions');
+  /** Reintentos de reconexión por storeId; se resetea al conectar. Backoff: 3s, 6s, 12s, … (máx 60s). */
+  private readonly reconnectAttempts = new Map<string, number>();
+
+  /** Intervalo para sendPresenceUpdate (mantener sesión activa): 25 segundos */
+  private static readonly PRESENCE_INTERVAL_MS = 25_000;
 
   constructor(
     @InjectRepository(WhatsAppConfig)
@@ -56,6 +73,11 @@ export class WhatsAppBotService implements OnModuleDestroy {
     // Si se fuerza reinicialización, desconectar y eliminar bot existente
     if (forceReinit && existingBot) {
       this.logger.log(`Forzando reinicialización del bot para tienda ${storeId}`);
+      existingBot.isClosing = true;
+      if (existingBot.presenceIntervalId) {
+        clearInterval(existingBot.presenceIntervalId);
+        existingBot.presenceIntervalId = null;
+      }
       if (existingBot.socket) {
         try {
           existingBot.socket.end(undefined);
@@ -64,6 +86,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
         }
       }
       this.bots.delete(storeId);
+      this.reconnectAttempts.delete(storeId);
     } else if (existingBot && !forceReinit) {
       // Si el bot está conectado, no hacer nada
       if (existingBot.isConnected) {
@@ -79,6 +102,11 @@ export class WhatsAppBotService implements OnModuleDestroy {
       
       // Si no está conectado y no hay QR, reinicializar automáticamente
       this.logger.log(`Bot existe pero sin QR ni conexión, reinicializando para tienda ${storeId}`);
+      existingBot.isClosing = true;
+      if (existingBot.presenceIntervalId) {
+        clearInterval(existingBot.presenceIntervalId);
+        existingBot.presenceIntervalId = null;
+      }
       if (existingBot.socket) {
         try {
           existingBot.socket.end(undefined);
@@ -87,6 +115,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
         }
       }
       this.bots.delete(storeId);
+      this.reconnectAttempts.delete(storeId);
     }
 
     const sessionPath = join(this.sessionsDir, storeId);
@@ -102,6 +131,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
       isConnected: false,
       whatsappNumber: null,
       connectionState: null,
+      presenceIntervalId: null,
     };
 
     this.bots.set(storeId, botInstance);
@@ -119,6 +149,9 @@ export class WhatsAppBotService implements OnModuleDestroy {
         },
         logger: pino({ level: 'silent' }), // Silenciar logs de Baileys
         generateHighQualityLinkPreview: true,
+        // Maximizar persistencia: keep-alive cada 20s (por defecto 30s)
+        keepAliveIntervalMs: 20_000,
+        connectTimeoutMs: 25_000,
       });
 
       botInstance.socket = socket;
@@ -152,29 +185,61 @@ export class WhatsAppBotService implements OnModuleDestroy {
         }
 
         if (connection === 'close') {
-          const shouldReconnect =
-            (lastDisconnect?.error as Boom)?.output?.statusCode !==
-            DisconnectReason.loggedOut;
+          // Limpiar intervalo de presencia
+          if (botInstance.presenceIntervalId) {
+            clearInterval(botInstance.presenceIntervalId);
+            botInstance.presenceIntervalId = null;
+          }
 
           botInstance.isConnected = false;
           botInstance.qrCode = null;
 
+          const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+          const shouldReconnect =
+            !botInstance.isClosing &&
+            (statusCode === undefined || !NO_RECONNECT_CODES.includes(statusCode));
+
+          if (botInstance.isClosing) {
+            // Cierre intencional (forceReinit o reinicio): no reconectar
+            botInstance.socket = null;
+            return;
+          }
+
           if (shouldReconnect) {
-            this.logger.log(`Reconectando bot para tienda ${storeId}...`);
-            // Reconectar después de un delay
+            const attempts = (this.reconnectAttempts.get(storeId) ?? 0) + 1;
+            this.reconnectAttempts.set(storeId, attempts);
+            // Backoff: 3s, 6s, 12s, 24s, 48s, 60s (máx 60s)
+            const delayMs = Math.min(3000 * Math.pow(2, Math.min(attempts - 1, 4)), 60_000);
+            this.logger.log(
+              `Reconectando bot para tienda ${storeId} en ${delayMs / 1000}s (intento ${attempts})…`,
+            );
             setTimeout(() => {
               this.initializeBot(storeId).catch((error) => {
                 this.logger.error(`Error reconectando bot para tienda ${storeId}:`, error);
               });
-            }, 3000);
+            }, delayMs);
           } else {
-            this.logger.log(`Bot desconectado permanentemente para tienda ${storeId}. Se requiere re-autenticación.`);
-            // Limpiar sesión si fue logged out
+            this.logger.log(
+              `Bot desconectado permanentemente para tienda ${storeId} (código ${statusCode}). Se requiere re-autenticación.`,
+            );
             botInstance.socket = null;
+            this.reconnectAttempts.delete(storeId);
           }
         } else if (connection === 'open') {
+          this.reconnectAttempts.delete(storeId);
           botInstance.isConnected = true;
           botInstance.qrCode = null;
+
+          // Enviar presencia periódica para mantener la sesión activa y reducir desconexiones por inactividad
+          if (botInstance.presenceIntervalId) {
+            clearInterval(botInstance.presenceIntervalId);
+          }
+          botInstance.presenceIntervalId = setInterval(() => {
+            if (botInstance.socket && botInstance.isConnected) {
+              botInstance.socket.sendPresenceUpdate('available').catch(() => {});
+            }
+          }, WhatsAppBotService.PRESENCE_INTERVAL_MS);
+
           const jid = socket.user?.id;
           if (jid) {
             // Extraer número de WhatsApp del JID (formato: 584121234567@s.whatsapp.net)
@@ -224,6 +289,13 @@ export class WhatsAppBotService implements OnModuleDestroy {
    */
   hasBot(storeId: string): boolean {
     return this.bots.has(storeId);
+  }
+
+  /**
+   * Verifica si el bot tiene un QR activo (esperando escaneo). No dispara inicialización.
+   */
+  hasActiveQR(storeId: string): boolean {
+    return !!this.bots.get(storeId)?.qrCode;
   }
 
   /**
@@ -323,9 +395,17 @@ export class WhatsAppBotService implements OnModuleDestroy {
    */
   async disconnect(storeId: string): Promise<void> {
     const bot = this.bots.get(storeId);
-    if (bot?.socket) {
-      bot.socket.end(undefined);
+    if (bot) {
+      if (bot.presenceIntervalId) {
+        clearInterval(bot.presenceIntervalId);
+        bot.presenceIntervalId = null;
+      }
+      if (bot.socket) {
+        bot.isClosing = true;
+        bot.socket.end(undefined);
+      }
       this.bots.delete(storeId);
+      this.reconnectAttempts.delete(storeId);
       this.logger.log(`Bot desconectado para tienda ${storeId}`);
     }
   }

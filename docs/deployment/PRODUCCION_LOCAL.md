@@ -131,6 +131,24 @@ pm2 startup
 pm2 save
 ```
 
+#### 3.1 **WhatsApp – Persistencia en producción** 📱
+
+Para que la sesión de WhatsApp **sobreviva a reinicios** (deploy, PM2 restart, reinicio del servidor):
+
+1. **Directorio `whatsapp-sessions/`**  
+   La API guarda credenciales en `apps/api/whatsapp-sessions/{store_id}/`. Ese directorio debe **persistir** entre reinicios:
+   - **PM2 en servidor físico/VPS**: por defecto ya es persistente; evita borrar `apps/api/whatsapp-sessions`.
+   - **Docker**: monta un volumen en el directorio donde la API escribe `whatsapp-sessions` (p. ej. `process.cwd()/whatsapp-sessions`),  
+     p. ej. `-v /data/wa-sessions:/app/whatsapp-sessions` (ajusta `/app` al cwd del proceso en el contenedor).
+   - **Render / Railway / Heroku**: el disco suele ser efímero; si se recrea el contenedor, se pierde la sesión y habrá que escanear el QR de nuevo. En esos entornos, valora usar un disco persistente o almacenamiento externo si lo ofrecen.
+
+2. **Arranque y reconexión automática**  
+   - Al iniciar, se restauran bots de tiendas con WhatsApp habilitado y sesión guardada.
+   - Cada 5 minutos se intenta reconectar bots que estén desconectados.
+
+3. **PM2 con varias instancias**  
+   Si usas `instances > 1` en cluster, solo una sesión de WhatsApp por número es válida. Conviene usar `instances: 1` para la API cuando dependas de WhatsApp, o ejecutar un solo worker que corra el módulo de WhatsApp.
+
 ---
 
 ### 4. **Variables de Entorno de Producción** 🔐

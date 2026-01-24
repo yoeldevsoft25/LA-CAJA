@@ -170,6 +170,22 @@ export class WhatsAppMessagingService {
         return { queued: false, error: 'El cliente no tiene teléfono registrado' };
       }
 
+      // Si hay venta asociada, cargar los items con productos y variantes
+      let saleWithItems: Sale | undefined = undefined;
+      if (debt.sale_id) {
+        const saleItems = await this.dataSource
+          .getRepository(SaleItem)
+          .find({
+            where: { sale_id: debt.sale_id },
+            relations: ['product', 'variant'],
+          });
+        
+        saleWithItems = debt.sale ? {
+          ...debt.sale,
+          items: saleItems,
+        } as Sale & { items: SaleItem[] } : undefined;
+      }
+
       // Obtener nombre de la tienda
       const store = await this.storeRepository.findOne({
         where: { id: storeId },
@@ -181,8 +197,8 @@ export class WhatsAppMessagingService {
       const debtForMessage = {
         ...debt,
         customer: debt.customer ?? undefined,
-        sale: debt.sale ? debt.sale : undefined,
-      } as Debt & { customer?: Customer; sale?: Sale };
+        sale: saleWithItems,
+      } as Debt & { customer?: Customer; sale?: Sale & { items?: SaleItem[] } };
       const message = this.whatsappConfigService.formatDebtMessage(
         debtForMessage,
         config,
@@ -236,13 +252,43 @@ export class WhatsAppMessagingService {
           store_id: storeId,
           status: In(['open', 'partial']),
         },
-        relations: ['payments'],
+        relations: ['payments', 'sale'],
         order: { created_at: 'ASC' },
       });
 
       if (debts.length === 0) {
         return { queued: false, error: 'No hay deudas pendientes' };
       }
+
+      // Cargar items de las ventas asociadas a cada deuda
+      const debtsWithItems = await Promise.all(
+        debts.map(async (debt) => {
+          let saleWithItems: (Sale & { items?: SaleItem[] }) | undefined = undefined;
+
+          if (debt.sale_id) {
+            const saleItems = await this.dataSource
+              .getRepository(SaleItem)
+              .find({
+                where: { sale_id: debt.sale_id },
+                relations: ['product', 'variant'],
+              });
+
+            // Siempre adjuntar items cuando hay sale_id: si debt.sale es null
+            // (ej. venta anulada o relación no cargada), crear objeto mínimo con items
+            // para que el formateador pueda mostrar debt.sale?.items
+            saleWithItems = {
+              ...(debt.sale ?? {}),
+              id: debt.sale_id,
+              items: saleItems,
+            } as Sale & { items: SaleItem[] };
+          }
+
+          return {
+            ...debt,
+            sale: saleWithItems,
+          } as Debt & { sale?: Sale & { items?: SaleItem[] } };
+        })
+      );
 
       // Obtener nombre de la tienda
       const store = await this.storeRepository.findOne({
@@ -253,7 +299,7 @@ export class WhatsAppMessagingService {
 
       // Formatear mensaje
       const message = this.whatsappConfigService.formatDebtReminderMessage(
-        debts,
+        debtsWithItems,
         customer,
         config,
         storeName,
