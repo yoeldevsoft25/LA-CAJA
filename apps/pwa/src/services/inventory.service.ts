@@ -179,6 +179,17 @@ export const inventoryService = {
   },
 
   /**
+   * Reconciliar warehouse_stock desde movimientos (received/adjust/sold).
+   * Corrige el stock cuando recepciones se guardaron pero no se actualizó la bodega. Solo owners.
+   */
+  async reconcileStock(): Promise<{ ok: boolean; message: string }> {
+    const response = await api.post<{ ok: boolean; message: string }>(
+      '/inventory/stock/reconcile'
+    )
+    return response.data
+  },
+
+  /**
    * Vaciar TODO el inventario de la tienda
    * Solo owners pueden ejecutar esta acción - PELIGROSO
    */

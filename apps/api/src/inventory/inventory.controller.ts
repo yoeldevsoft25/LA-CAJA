@@ -124,6 +124,14 @@ export class InventoryController {
     );
   }
 
+  @Post('stock/reconcile')
+  @Roles('owner')
+  @HttpCode(HttpStatus.OK)
+  async reconcileStock(@Request() req: any) {
+    const storeId = req.user.store_id;
+    return this.inventoryService.reconcileStockFromMovements(storeId, req.user.role);
+  }
+
   @Get('stock/:productId')
   async getProductStock(
     @Param('productId') productId: string,

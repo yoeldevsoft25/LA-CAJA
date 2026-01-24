@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/stores/auth.store'
-import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History, Trash2, AlertOctagon, Download, ShoppingCart } from 'lucide-react'
+import { Search, Package, AlertTriangle, Plus, TrendingUp, TrendingDown, History, Trash2, AlertOctagon, Download, ShoppingCart, RefreshCw } from 'lucide-react'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
 // ⚡ OPTIMIZACIÓN: Lazy load de modales grandes - solo cargar cuando se abren
@@ -192,6 +192,17 @@ export default function InventoryPage() {
     },
   })
 
+  const reconcileMutation = useMutation({
+    mutationFn: () => inventoryService.reconcileStock(),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al reconciliar stock')
+    },
+  })
+
   const handleReceiveStock = (product: StockStatus) => {
     setSelectedProduct(product)
     setIsStockReceivedModalOpen(true)
@@ -318,6 +329,19 @@ export default function InventoryPage() {
               <Download className="w-4 h-4 mr-2" />
               {isExporting ? 'Exportando...' : 'Exportar Excel'}
             </Button>
+            {/* Solo owners: reconciliar stock (corrige cuando recepciones no sumaron a bodega) */}
+            {isOwner && (
+              <Button
+                variant="outline"
+                onClick={() => reconcileMutation.mutate()}
+                className="w-full sm:w-auto"
+                disabled={reconcileMutation.isPending}
+                title="Reconciliar stock desde movimientos (received/adjust/sold)"
+              >
+                <RefreshCw className={cn('w-4 h-4 mr-2', reconcileMutation.isPending && 'animate-spin')} />
+                {reconcileMutation.isPending ? 'Reconciliando...' : 'Reconciliar Stock'}
+              </Button>
+            )}
             {/* Solo owners pueden vaciar todo el inventario */}
             {isOwner && (
               <Button
