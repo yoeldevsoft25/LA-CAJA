@@ -106,41 +106,33 @@ export function useBarcodeScanner({
       return
     }
 
-    /** Si no fue un escaneo válido y habíamos interceptado en un input, devolver el texto. */
-    const releaseToInput = (text: string) => {
-      if (!text) return
-      const el = document.activeElement
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-        const start = el.selectionStart ?? el.value.length
-        const end = el.selectionEnd ?? el.value.length
-        const next = el.value.slice(0, start) + text + el.value.slice(end)
-        el.value = next
-        el.setSelectionRange(start + text.length, start + text.length)
-        el.dispatchEvent(new Event('input', { bubbles: true }))
-      }
-    }
-
     const scheduleClear = () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
-      timeoutRef.current = setTimeout(() => {
-        const buf = bufferRef.current
-        clearBuffer()
-        if (buf) releaseToInput(buf)
-      }, 500)
+      timeoutRef.current = setTimeout(clearBuffer, 500)
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      const now = Date.now()
-      const timeSinceLastKey = now - lastKeyTimeRef.current
-      const key = event.key
-
       const activeElement = document.activeElement
       const isInputElement =
         activeElement instanceof HTMLInputElement ||
         activeElement instanceof HTMLTextAreaElement ||
         activeElement instanceof HTMLSelectElement
 
-      // Enter: escaneo completo o devolver buffer al input
+      // No interceptar NADA cuando el foco está en un input/textarea/select.
+      // La escritura y la búsqueda funcionan con normalidad. El escaneo solo se
+      // detecta con el foco fuera (p. ej. en la lista, en el body). Si se escanea
+      // con el foco en el buscador, el código se escribe en el input y la búsqueda
+      // se dispara por change o Enter como con cualquier texto.
+      if (isInputElement) {
+        clearBuffer()
+        return
+      }
+
+      const now = Date.now()
+      const timeSinceLastKey = now - lastKeyTimeRef.current
+      const key = event.key
+
+      // Enter: escaneo completo
       if (key === endKey) {
         if (bufferRef.current.length >= minLength && isScanningRef.current) {
           if (preventDefault) {
@@ -150,7 +142,6 @@ export function useBarcodeScanner({
           processBarcode(bufferRef.current)
           return
         }
-        releaseToInput(bufferRef.current)
         clearBuffer()
         return
       }
@@ -161,24 +152,12 @@ export function useBarcodeScanner({
         return
       }
 
-      // En inputs con data-barcode-passthrough (p. ej. buscador POS) no interceptar:
-      // la escritura va directa al input y la búsqueda se actualiza al instante.
-      // Para escanear, usar el lector con el foco fuera del buscador.
-      if (isInputElement && (activeElement as HTMLElement).getAttribute?.('data-barcode-passthrough') === 'true') {
-        return
-      }
-
       const isRapidInput = timeSinceLastKey < maxIntervalMs
 
       if (bufferRef.current.length === 0) {
         bufferRef.current = key
         lastKeyTimeRef.current = now
         isScanningRef.current = false
-        // Interceptar también el primer carácter si está en input (siempre priorizar scanner)
-        if (isInputElement && preventDefault) {
-          event.preventDefault()
-          event.stopPropagation()
-        }
         scheduleClear()
         return
       }
@@ -187,22 +166,12 @@ export function useBarcodeScanner({
         bufferRef.current += key
         lastKeyTimeRef.current = now
         isScanningRef.current = true
-        if (isInputElement && preventDefault) {
-          event.preventDefault()
-          event.stopPropagation()
-        }
         scheduleClear()
         if (bufferRef.current.length > maxLength) clearBuffer()
       } else {
-        // Entrada lenta: no es escaneo. Devolver lo que habíamos interceptado al input antes de resetear.
-        releaseToInput(bufferRef.current)
         clearBuffer()
         bufferRef.current = key
         lastKeyTimeRef.current = now
-        if (isInputElement && preventDefault) {
-          event.preventDefault()
-          event.stopPropagation()
-        }
         scheduleClear()
       }
     }

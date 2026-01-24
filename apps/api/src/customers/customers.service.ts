@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Customer } from '../database/entities/customer.entity';
@@ -111,6 +115,43 @@ export class CustomersService {
     customer.updated_at = new Date();
 
     return this.customerRepository.save(customer);
+  }
+
+  /**
+   * Elimina un cliente si no tiene ventas ni deudas asociadas.
+   * @throws NotFoundException si el cliente no existe o no pertenece a la tienda
+   * @throws ConflictException si el cliente tiene ventas o deudas
+   */
+  async delete(storeId: string, customerId: string): Promise<void> {
+    await this.findOne(storeId, customerId);
+
+    const salesCount = await this.saleRepository.count({
+      where: { customer_id: customerId, store_id: storeId },
+    });
+
+    const debtRows = await this.dataSource.query(
+      `SELECT 1 FROM debts WHERE store_id = $1 AND customer_id = $2 LIMIT 1`,
+      [storeId, customerId],
+    );
+    const hasDebts = debtRows.length > 0;
+
+    if (salesCount > 0 && hasDebts) {
+      throw new ConflictException(
+        'No se puede eliminar el cliente porque tiene ventas y deudas asociadas.',
+      );
+    }
+    if (salesCount > 0) {
+      throw new ConflictException(
+        'No se puede eliminar el cliente porque tiene ventas asociadas.',
+      );
+    }
+    if (hasDebts) {
+      throw new ConflictException(
+        'No se puede eliminar el cliente porque tiene deudas registradas.',
+      );
+    }
+
+    await this.customerRepository.delete({ id: customerId, store_id: storeId });
   }
 
   /**

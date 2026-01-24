@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Put,
@@ -48,6 +49,13 @@ export class CustomersController {
   ) {
     const storeId = req.user.store_id;
     return this.customersService.update(storeId, id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(@Param('id') id: string, @Request() req: any) {
+    const storeId = req.user.store_id;
+    await this.customersService.delete(storeId, id);
   }
 
   /**
