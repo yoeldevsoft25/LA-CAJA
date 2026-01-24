@@ -24,6 +24,7 @@ import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
 type DateRange = 'today' | 'week' | 'month' | 'custom'
+type WeightUnit = 'kg' | 'g' | 'lb' | 'oz' | null
 
 const paymentMethodLabels: Record<string, string> = {
   CASH_BS: 'Efectivo Bs',
@@ -34,6 +35,46 @@ const paymentMethodLabels: Record<string, string> = {
   SPLIT: 'Mixto',
   OTHER: 'Otro',
   unknown: 'Desconocido',
+}
+
+const normalizeWeightToKg = (value: number, unit: WeightUnit) => {
+  const safeValue = Number(value || 0)
+  switch (unit) {
+    case 'g':
+      return safeValue / 1000
+    case 'lb':
+      return safeValue * 0.45359237
+    case 'oz':
+      return safeValue * 0.028349523125
+    case 'kg':
+    default:
+      return safeValue
+  }
+}
+
+const formatNumber = (value: number, decimals: number) => {
+  const safeValue = Number.isFinite(value) ? value : 0
+  const fixed = safeValue.toFixed(decimals)
+  return fixed.replace(/\.?0+$/, '')
+}
+
+const formatQuantity = (
+  value: number,
+  isWeightProduct: boolean,
+  weightUnit: WeightUnit,
+) => {
+  if (isWeightProduct) {
+    const kgValue = normalizeWeightToKg(value, weightUnit)
+    return `${formatNumber(kgValue, 3)} kg`
+  }
+  return `${formatNumber(value, 0)} unid`
+}
+
+const getQuantityMetric = (product: TopProduct) => {
+  if (product.is_weight_product) {
+    return Number(product.quantity_sold_kg ?? normalizeWeightToKg(product.quantity_sold, product.weight_unit))
+  }
+  return Number(product.quantity_sold_units ?? product.quantity_sold)
 }
 
 export default function ReportsPage() {
@@ -477,50 +518,66 @@ export default function ReportsPage() {
           {showProducts && (
             <div className="p-4">
               <div className="space-y-2">
-                {topProducts.map((product, index) => {
-                  const maxQty = topProducts[0]?.quantity_sold || 1
-                  const percentage = (product.quantity_sold / maxQty) * 100
+                {(() => {
+                  const weightValues = topProducts
+                    .filter((p) => p.is_weight_product)
+                    .map(getQuantityMetric)
+                  const unitValues = topProducts
+                    .filter((p) => !p.is_weight_product)
+                    .map(getQuantityMetric)
+                  const weightMax = weightValues.length > 0 ? Math.max(...weightValues) : 1
+                  const unitMax = unitValues.length > 0 ? Math.max(...unitValues) : 1
 
-                  return (
-                    <div
-                      key={product.product_id}
-                      className="relative bg-gray-50 rounded-lg p-3 border border-gray-200 overflow-hidden"
-                    >
-                      {/* Barra de progreso */}
+                  return topProducts.map((product, index) => {
+                    const maxQty = product.is_weight_product ? weightMax : unitMax
+                    const percentage = (getQuantityMetric(product) / maxQty) * 100
+
+                    return (
                       <div
-                        className="absolute inset-0 bg-purple-100 opacity-50"
-                        style={{ width: `${percentage}%` }}
-                      />
-                      <div className="relative flex items-center justify-between">
-                        <div className="flex items-center flex-1 min-w-0">
-                          <span
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 ${
-                              index < 3
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-gray-300 text-gray-700'
-                            }`}
-                          >
-                            {index + 1}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{product.product_name}</p>
-                            <p className="text-xs text-gray-500">
-                              {product.quantity_sold} vendidos • ${product.revenue_usd.toFixed(2)}
+                        key={product.product_id}
+                        className="relative bg-gray-50 rounded-lg p-3 border border-gray-200 overflow-hidden"
+                      >
+                        {/* Barra de progreso */}
+                        <div
+                          className="absolute inset-0 bg-purple-100 opacity-50"
+                          style={{ width: `${percentage}%` }}
+                        />
+                        <div className="relative flex items-center justify-between">
+                          <div className="flex items-center flex-1 min-w-0">
+                            <span
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 ${
+                                index < 3
+                                  ? 'bg-purple-500 text-white'
+                                  : 'bg-gray-300 text-gray-700'
+                              }`}
+                            >
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{product.product_name}</p>
+                              <p className="text-xs text-gray-500">
+                                {formatQuantity(
+                                  product.quantity_sold,
+                                  product.is_weight_product,
+                                  product.weight_unit,
+                                )}{' '}
+                                vendidos • ${product.revenue_usd.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right ml-3 flex-shrink-0">
+                            <p className="font-bold text-green-600">
+                              +${product.profit_usd.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-purple-600">
+                              {product.profit_margin.toFixed(0)}% margen
                             </p>
                           </div>
                         </div>
-                        <div className="text-right ml-3 flex-shrink-0">
-                          <p className="font-bold text-green-600">
-                            +${product.profit_usd.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-purple-600">
-                            {product.profit_margin.toFixed(0)}% margen
-                          </p>
-                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                })()}
               </div>
             </div>
           )}

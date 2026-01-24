@@ -26,6 +26,8 @@ export interface TopProduct {
   product_id: string
   product_name: string
   quantity_sold: number
+  quantity_sold_kg: number
+  quantity_sold_units: number
   revenue_bs: number
   revenue_usd: number
   cost_bs: number

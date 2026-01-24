@@ -49,6 +49,42 @@ export class ReportsService {
     return new Date(year, month, day, 23, 59, 59, 999);
   }
 
+  private normalizeWeightToKg(
+    value: number,
+    unit: 'kg' | 'g' | 'lb' | 'oz' | null | undefined,
+  ): number {
+    const safeValue = Number(value || 0);
+    switch (unit) {
+      case 'g':
+        return safeValue / 1000;
+      case 'lb':
+        return safeValue * 0.45359237;
+      case 'oz':
+        return safeValue * 0.028349523125;
+      case 'kg':
+      default:
+        return safeValue;
+    }
+  }
+
+  private formatNumber(value: number, decimals: number): string {
+    const safeValue = Number.isFinite(value) ? value : 0;
+    const fixed = safeValue.toFixed(decimals);
+    return fixed.replace(/\.?0+$/, '');
+  }
+
+  private formatQuantityForReport(
+    value: number,
+    isWeight: boolean,
+    unit: 'kg' | 'g' | 'lb' | 'oz' | null | undefined,
+  ): string {
+    if (isWeight) {
+      const kgValue = this.normalizeWeightToKg(value, unit);
+      return `${this.formatNumber(kgValue, 3)} kg`;
+    }
+    return `${this.formatNumber(value, 0)} unid`;
+  }
+
   constructor(
     @InjectRepository(Sale)
     private saleRepository: Repository<Sale>,
@@ -293,6 +329,8 @@ export class ReportsService {
       product_id: string;
       product_name: string;
       quantity_sold: number;
+      quantity_sold_kg: number;
+      quantity_sold_units: number;
       revenue_bs: number;
       revenue_usd: number;
       cost_bs: number;
@@ -300,6 +338,8 @@ export class ReportsService {
       profit_bs: number;
       profit_usd: number;
       profit_margin: number;
+      is_weight_product: boolean;
+      weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
     }>
   > {
     const query = this.saleItemRepository
@@ -349,6 +389,8 @@ export class ReportsService {
       {
         product_name: string;
         quantity_sold: number;
+        quantity_sold_kg: number;
+        quantity_sold_units: number;
         revenue_bs: number;
         revenue_usd: number;
         cost_bs: number;
@@ -366,6 +408,8 @@ export class ReportsService {
         productMap.set(productId, {
           product_name: product?.name || 'Producto desconocido',
           quantity_sold: 0,
+          quantity_sold_kg: 0,
+          quantity_sold_units: 0,
           revenue_bs: 0,
           revenue_usd: 0,
           cost_bs: 0,
@@ -376,22 +420,31 @@ export class ReportsService {
       }
 
       const productData = productMap.get(productId)!;
-      productData.quantity_sold += Number(item.qty);
+      const qty = Number(item.qty) || 0;
+      const isWeight = Boolean(item.is_weight_product || product?.is_weight_product);
+      const weightUnit = item.weight_unit || product?.weight_unit || null;
+      productData.quantity_sold += qty;
+      if (isWeight) {
+        productData.quantity_sold_kg += this.normalizeWeightToKg(qty, weightUnit);
+      } else {
+        productData.quantity_sold_units += qty;
+      }
       productData.revenue_bs +=
-        Number(item.unit_price_bs || 0) * item.qty -
+        Number(item.unit_price_bs || 0) * qty -
         Number(item.discount_bs || 0);
       productData.revenue_usd +=
-        Number(item.unit_price_usd || 0) * item.qty -
+        Number(item.unit_price_usd || 0) * qty -
         Number(item.discount_usd || 0);
-      const isWeight = Boolean(item.is_weight_product || product?.is_weight_product);
       const unitCostBs = isWeight
         ? Number(product?.cost_per_weight_bs ?? product?.cost_bs ?? 0)
         : Number(product?.cost_bs ?? 0);
       const unitCostUsd = isWeight
         ? Number(product?.cost_per_weight_usd ?? product?.cost_usd ?? 0)
         : Number(product?.cost_usd ?? 0);
-      productData.cost_bs += unitCostBs * item.qty;
-      productData.cost_usd += unitCostUsd * item.qty;
+      productData.cost_bs += unitCostBs * qty;
+      productData.cost_usd += unitCostUsd * qty;
+      productData.is_weight_product = isWeight;
+      productData.weight_unit = weightUnit;
     }
 
     return Array.from(productMap.entries())
@@ -408,7 +461,11 @@ export class ReportsService {
           profit_margin,
         };
       })
-      .sort((a, b) => b.quantity_sold - a.quantity_sold)
+      .sort((a, b) => {
+        const qtyA = a.is_weight_product ? a.quantity_sold_kg : a.quantity_sold_units;
+        const qtyB = b.is_weight_product ? b.quantity_sold_kg : b.quantity_sold_units;
+        return qtyB - qtyA;
+      })
       .slice(0, limit);
   }
 
@@ -594,7 +651,14 @@ export class ReportsService {
       const method = payment.method || 'unknown';
 
       const itemsStr = items
-        .map((item) => `${item.qty}x ${item.product_id}`)
+        .map((item) => {
+          const qtyLabel = this.formatQuantityForReport(
+            Number(item.qty) || 0,
+            Boolean(item.is_weight_product),
+            item.weight_unit,
+          );
+          return `${qtyLabel} x ${item.product_id}`;
+        })
         .join('; ');
 
       rows.push(
@@ -1188,6 +1252,8 @@ export class ReportsService {
       product_id: string;
       product_name: string;
       quantity_sold: number;
+      quantity_sold_kg: number;
+      quantity_sold_units: number;
       revenue_bs: number;
       revenue_usd: number;
       cost_bs: number;
@@ -1196,6 +1262,9 @@ export class ReportsService {
       profit_usd: number;
       profit_margin: number;
       rotation_rate: number; // Ventas / Stock promedio
+      rotation_unit: 'kg' | 'unid';
+      is_weight_product: boolean;
+      weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
     }>;
   }> {
     const query = this.saleItemRepository
@@ -1215,47 +1284,91 @@ export class ReportsService {
 
     const items = await query.getMany();
 
+    const productIds = [...new Set(items.map((item) => item.product_id))];
+    const products =
+      productIds.length > 0
+        ? await this.productRepository.find({
+            where: { id: In(productIds), store_id: storeId },
+            select: [
+              'id',
+              'name',
+              'cost_bs',
+              'cost_usd',
+              'cost_per_weight_bs',
+              'cost_per_weight_usd',
+              'is_weight_product',
+              'weight_unit',
+            ],
+          })
+        : [];
+
+    const productsMap = new Map<string, Product>();
+    for (const product of products) {
+      productsMap.set(product.id, product);
+    }
+
     const productMap = new Map<
       string,
       {
         product_name: string;
         quantity_sold: number;
+        quantity_sold_kg: number;
+        quantity_sold_units: number;
         revenue_bs: number;
         revenue_usd: number;
         cost_bs: number;
         cost_usd: number;
+        is_weight_product: boolean;
+        weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
       }
     >();
 
     for (const item of items) {
-      const product = await this.productRepository.findOne({
-        where: { id: item.product_id },
-        select: ['id', 'name', 'cost_bs', 'cost_usd'],
-      });
-
+      const product = productsMap.get(item.product_id);
       if (!product) continue;
+
+      const isWeight = Boolean(item.is_weight_product || product.is_weight_product);
+      const weightUnit = item.weight_unit || product.weight_unit || null;
+      const qty = Number(item.qty) || 0;
 
       if (!productMap.has(item.product_id)) {
         productMap.set(item.product_id, {
           product_name: product.name,
           quantity_sold: 0,
+          quantity_sold_kg: 0,
+          quantity_sold_units: 0,
           revenue_bs: 0,
           revenue_usd: 0,
           cost_bs: 0,
           cost_usd: 0,
+          is_weight_product: isWeight,
+          weight_unit: weightUnit,
         });
       }
 
       const productData = productMap.get(item.product_id)!;
-      productData.quantity_sold += Number(item.qty);
+      productData.quantity_sold += qty;
+      if (isWeight) {
+        productData.quantity_sold_kg += this.normalizeWeightToKg(qty, weightUnit);
+      } else {
+        productData.quantity_sold_units += qty;
+      }
       productData.revenue_bs +=
-        Number(item.unit_price_bs || 0) * item.qty -
+        Number(item.unit_price_bs || 0) * qty -
         Number(item.discount_bs || 0);
       productData.revenue_usd +=
-        Number(item.unit_price_usd || 0) * item.qty -
+        Number(item.unit_price_usd || 0) * qty -
         Number(item.discount_usd || 0);
-      productData.cost_bs += Number(product.cost_bs || 0) * item.qty;
-      productData.cost_usd += Number(product.cost_usd || 0) * item.qty;
+      const unitCostBs = isWeight
+        ? Number(product.cost_per_weight_bs ?? product.cost_bs ?? 0)
+        : Number(product.cost_bs ?? 0);
+      const unitCostUsd = isWeight
+        ? Number(product.cost_per_weight_usd ?? product.cost_usd ?? 0)
+        : Number(product.cost_usd ?? 0);
+      productData.cost_bs += unitCostBs * qty;
+      productData.cost_usd += unitCostUsd * qty;
+      productData.is_weight_product = isWeight;
+      productData.weight_unit = weightUnit;
     }
 
     return {
@@ -1266,9 +1379,14 @@ export class ReportsService {
           const profit_margin =
             data.revenue_usd > 0 ? (profit_usd / data.revenue_usd) * 100 : 0;
 
+          const rotation_base = data.is_weight_product
+            ? data.quantity_sold_kg
+            : data.quantity_sold_units;
+          const rotation_unit: 'kg' | 'unid' =
+            data.is_weight_product ? 'kg' : 'unid';
           // Rotación aproximada (ventas / 1, asumiendo stock promedio de 1)
           // En producción, se debería calcular el stock promedio real
-          const rotation_rate = data.quantity_sold;
+          const rotation_rate = rotation_base;
 
           return {
             product_id,
@@ -1277,6 +1395,7 @@ export class ReportsService {
             profit_usd,
             profit_margin,
             rotation_rate,
+            rotation_unit,
           };
         })
         .sort((a, b) => b.rotation_rate - a.rotation_rate),

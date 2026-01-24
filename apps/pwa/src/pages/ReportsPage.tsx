@@ -711,14 +711,20 @@ export default function ReportsPage() {
                 <TabsContent value="weight" className="mt-0">
                   <div className="space-y-2">
                     {(() => {
+                      const getWeightQty = (product: any) =>
+                        Number(product.quantity_sold_kg ?? product.quantity_sold ?? 0)
                       const weightProducts = topProducts
                         .filter((p: any) => p.is_weight_product)
+                        .sort((a: any, b: any) => getWeightQty(b) - getWeightQty(a))
                         .slice(0, 10)
-                      const maxQtyWeight = weightProducts[0]?.quantity_sold || 1
+                      const maxQtyWeight = weightProducts.reduce(
+                        (max: number, product: any) => Math.max(max, getWeightQty(product)),
+                        1,
+                      )
                       
                       return weightProducts.length > 0 ? (
                         weightProducts.map((product: any, index: number) => {
-                          const percentage = (product.quantity_sold / maxQtyWeight) * 100
+                          const percentage = (getWeightQty(product) / maxQtyWeight) * 100
                           return (
                             <Card
                               key={product.product_id}
@@ -778,14 +784,20 @@ export default function ReportsPage() {
                 <TabsContent value="units" className="mt-0">
                   <div className="space-y-2">
                     {(() => {
+                      const getUnitQty = (product: any) =>
+                        Number(product.quantity_sold_units ?? product.quantity_sold ?? 0)
                       const unitProducts = topProducts
                         .filter((p: any) => !p.is_weight_product)
+                        .sort((a: any, b: any) => getUnitQty(b) - getUnitQty(a))
                         .slice(0, 10)
-                      const maxQtyUnits = unitProducts[0]?.quantity_sold || 1
+                      const maxQtyUnits = unitProducts.reduce(
+                        (max: number, product: any) => Math.max(max, getUnitQty(product)),
+                        1,
+                      )
                       
                       return unitProducts.length > 0 ? (
                         unitProducts.map((product: any, index: number) => {
-                          const percentage = (product.quantity_sold / maxQtyUnits) * 100
+                          const percentage = (getUnitQty(product) / maxQtyUnits) * 100
                           return (
                             <Card
                               key={product.product_id}

@@ -26,6 +26,8 @@ export interface TopProduct {
   product_id: string
   product_name: string
   quantity_sold: number
+  quantity_sold_kg: number
+  quantity_sold_units: number
   revenue_bs: number
   revenue_usd: number
   cost_bs: number
@@ -33,6 +35,8 @@ export interface TopProduct {
   profit_bs: number
   profit_usd: number
   profit_margin: number
+  is_weight_product: boolean
+  weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null
 }
 
 export interface DebtSummaryReport {
