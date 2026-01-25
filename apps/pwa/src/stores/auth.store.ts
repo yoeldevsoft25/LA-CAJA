@@ -17,11 +17,14 @@ interface AuthState {
   refreshToken: string | null
   isAuthenticated: boolean
   showLoader: boolean
+  /** Solo en memoria: true cuando zustand-persist terminó de rehidratar (no se persiste) */
+  _hasHydrated: boolean
   login: (token: string, refreshToken: string, user: AuthUser) => void
   logout: () => void
   setUser: (user: AuthUser) => void
   setShowLoader: (show: boolean) => void
   setToken: (token: string) => void
+  setHasHydrated: () => void
 }
 
 export const useAuth = create<AuthState>()(
@@ -32,6 +35,7 @@ export const useAuth = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       showLoader: false,
+      _hasHydrated: false,
       login: (token, refreshToken, user) => {
         localStorage.setItem('auth_token', token)
         localStorage.setItem('refresh_token', refreshToken)
@@ -49,6 +53,7 @@ export const useAuth = create<AuthState>()(
         localStorage.setItem('auth_token', token)
         set({ token })
       },
+      setHasHydrated: () => set({ _hasHydrated: true }),
     }),
     {
       name: 'auth-storage',
@@ -58,6 +63,18 @@ export const useAuth = create<AuthState>()(
         token: state.token,
         refreshToken: state.refreshToken,
       }),
+      onRehydrateStorage: () => (state, err) => {
+        if (err) return
+        // Sincronizar tokens a localStorage si por alguna razón faltan (p. ej. solo se rehidrató persist)
+        if (state?.token && !localStorage.getItem('auth_token')) {
+          localStorage.setItem('auth_token', state.token!)
+        }
+        if (state?.refreshToken && !localStorage.getItem('refresh_token')) {
+          localStorage.setItem('refresh_token', state.refreshToken!)
+        }
+        // Marcar que la rehidratación terminó
+        useAuth.getState().setHasHydrated()
+      },
     }
   )
 )

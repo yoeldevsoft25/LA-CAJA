@@ -84,7 +84,14 @@ export class FiscalInvoicesService {
           storeId,
           seriesId,
         );
-      return invoiceData.invoice_full_number;
+      const fullNumber = invoiceData.invoice_full_number;
+      if (!fullNumber || /undefined|NaN/i.test(fullNumber)) {
+        this.logger.warn(
+          `Número de factura inválido generado desde series: "${fullNumber}". Usando fallback.`,
+        );
+        throw new Error('Invalid invoice number from series');
+      }
+      return fullNumber;
     } catch (error) {
       // Si no hay series, generar número simple
       const count = await this.fiscalInvoiceRepository.count({
@@ -148,11 +155,16 @@ export class FiscalInvoicesService {
     }
 
     return this.dataSource.transaction(async (manager) => {
-      // Generar número de factura
-      const invoiceNumber = await this.generateInvoiceNumber(
-        storeId,
-        sale.invoice_series_id || undefined,
-      );
+      // Usar invoice_full_number de la venta si ya existe (evita consumir dos números: sale + fiscal)
+      let invoiceNumber: string;
+      if (sale.invoice_full_number) {
+        invoiceNumber = sale.invoice_full_number;
+      } else {
+        invoiceNumber = await this.generateInvoiceNumber(
+          storeId,
+          sale.invoice_series_id || undefined,
+        );
+      }
 
       // Obtener información del cliente
       let customerName: string | null = null;
@@ -467,6 +479,7 @@ export class FiscalInvoicesService {
     // ⚡ OPTIMIZACIÓN: No cargar items aquí, generateEntryFromFiscalInvoice los obtiene desde sale_items
     const invoice = await this.fiscalInvoiceRepository.findOne({
       where: { id: invoiceId, store_id: storeId },
+      relations: ['items'],
     });
 
     if (!invoice) {

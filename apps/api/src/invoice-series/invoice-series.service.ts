@@ -139,7 +139,11 @@ export class InvoiceSeriesService {
       // Actualizar e incrementar en una sola query atómica
       const result = await this.dataSource.query(
         `UPDATE invoice_series 
-         SET current_number = current_number + 1, updated_at = NOW()
+         SET current_number = GREATEST(
+           COALESCE(current_number, COALESCE(start_number, 1) - 1) + 1,
+           COALESCE(start_number, 1)
+         ),
+         updated_at = NOW()
          WHERE id = $1 AND store_id = $2 AND is_active = true
          RETURNING id, store_id, series_code, name, prefix, current_number, start_number, is_active, note, created_at, updated_at`,
         [seriesId, storeId],
@@ -151,8 +155,12 @@ export class InvoiceSeriesService {
 
       const series = result[0] as InvoiceSeries;
       // ⚡ FIX CRÍTICO: Validar todos los valores antes de construir el número
-      const currentNumber = Number(series.current_number) || Number(series.start_number) || 1;
-      if (isNaN(currentNumber) || currentNumber <= 0) {
+      const startNumber = Number(series.start_number) || 1;
+      const rawCurrent = Number(series.current_number);
+      const currentNumber = Number.isFinite(rawCurrent)
+        ? Math.max(rawCurrent, startNumber)
+        : startNumber;
+      if (!Number.isFinite(currentNumber) || currentNumber <= 0) {
         throw new BadRequestException(
           `Número de factura inválido: current_number=${series.current_number}, start_number=${series.start_number}`,
         );
@@ -177,7 +185,11 @@ export class InvoiceSeriesService {
       // Esto es 100-1000x más rápido que FOR UPDATE porque no bloquea la fila
       const result = await this.dataSource.query(
         `UPDATE invoice_series 
-         SET current_number = current_number + 1, updated_at = NOW()
+         SET current_number = GREATEST(
+           COALESCE(current_number, COALESCE(start_number, 1) - 1) + 1,
+           COALESCE(start_number, 1)
+         ),
+         updated_at = NOW()
          WHERE ctid = (
            SELECT ctid FROM invoice_series 
            WHERE store_id = $1 AND is_active = true 
@@ -196,8 +208,12 @@ export class InvoiceSeriesService {
 
       const series = result[0] as InvoiceSeries;
       // ⚡ FIX CRÍTICO: Validar todos los valores antes de construir el número
-      const currentNumber = Number(series.current_number) || Number(series.start_number) || 1;
-      if (isNaN(currentNumber) || currentNumber <= 0) {
+      const startNumber = Number(series.start_number) || 1;
+      const rawCurrent = Number(series.current_number);
+      const currentNumber = Number.isFinite(rawCurrent)
+        ? Math.max(rawCurrent, startNumber)
+        : startNumber;
+      if (!Number.isFinite(currentNumber) || currentNumber <= 0) {
         throw new BadRequestException(
           `Número de factura inválido: current_number=${series.current_number}, start_number=${series.start_number}`,
         );

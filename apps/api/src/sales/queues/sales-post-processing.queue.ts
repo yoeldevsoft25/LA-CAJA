@@ -16,7 +16,10 @@ export interface PostProcessSaleJob {
 /**
  * Queue Processor para tareas post-venta
  * Procesa facturas fiscales, asientos contables y otras tareas
- * que no son críticas para la respuesta inmediata al cliente
+ * que no son críticas para la respuesta inmediata al cliente.
+ *
+ * NOTA: No se llama SalePaymentsService.recordSalePayments; sale_payments no se puebla.
+ * El detalle de pago está en sale.payment (JSONB). Ver documentación en sales.service create.
  */
 @Processor('sales-post-processing', {
   concurrency: 5, // Menor concurrencia para operaciones más pesadas

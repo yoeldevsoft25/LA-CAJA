@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ChartOfAccount, AccountType } from '../database/entities/chart-of-accounts.entity';
 import { AccountingAccountMapping } from '../database/entities/accounting-account-mapping.entity';
 import { CreateAccountDto } from './dto/create-account.dto';
@@ -280,6 +280,43 @@ export class ChartOfAccountsService {
     );
 
     return { accounts_created: accountsCreated, mappings_created: mappingsCreated };
+  }
+
+  /**
+   * Estado de mapeos requeridos para asientos de venta (generateEntryFromSale, generateEntryFromFiscalInvoice).
+   * sale_revenue y sale_cost son obligatorios; cash_asset, accounts_receivable, inventory_asset son recomendados.
+   */
+  async getRequiredMappingsForSales(storeId: string): Promise<{
+    sale_revenue: boolean;
+    sale_cost: boolean;
+    cash_asset: boolean;
+    accounts_receivable: boolean;
+    inventory_asset: boolean;
+    canGenerateSaleEntries: boolean;
+  }> {
+    const required = [
+      'sale_revenue',
+      'sale_cost',
+      'cash_asset',
+      'accounts_receivable',
+      'inventory_asset',
+    ] as const;
+    const mappings = await this.mappingRepository.find({
+      where: {
+        store_id: storeId,
+        is_active: true,
+        transaction_type: In(required as unknown as string[]),
+      },
+    });
+    const set = new Set(mappings.map((m) => m.transaction_type));
+    return {
+      sale_revenue: set.has('sale_revenue'),
+      sale_cost: set.has('sale_cost'),
+      cash_asset: set.has('cash_asset'),
+      accounts_receivable: set.has('accounts_receivable'),
+      inventory_asset: set.has('inventory_asset'),
+      canGenerateSaleEntries: set.has('sale_revenue') && set.has('sale_cost'),
+    };
   }
 }
 

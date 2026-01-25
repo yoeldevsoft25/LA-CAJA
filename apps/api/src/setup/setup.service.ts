@@ -322,7 +322,9 @@ export class SetupService {
   }
 
   /**
-   * Validar configuración completa de una tienda
+   * Validar configuración completa de una tienda (prerrequisitos para ventas con fiscal/contable).
+   * Incluye: warehouse, invoice_series, fiscal_config, payment_methods, chart_of_accounts,
+   * y accounting_account_mappings (sale_revenue, sale_cost como mínimo para generateEntryFromSale).
    */
   async validateSetup(storeId: string): Promise<{
     is_complete: boolean;
@@ -334,11 +336,20 @@ export class SetupService {
       has_invoice_series: boolean;
       has_fiscal_config: boolean;
       has_payment_methods: boolean;
+      has_accounting_mappings: boolean;
+      accounting_mappings: {
+        sale_revenue: boolean;
+        sale_cost: boolean;
+        cash_asset: boolean;
+        accounts_receivable: boolean;
+        inventory_asset: boolean;
+      };
       has_products?: boolean;
     };
   }> {
+    // Al menos una bodega activa (getDefaultOrFirst usa is_default o la primera activa)
     const warehouse = await this.warehouseRepository.findOne({
-      where: { store_id: storeId, is_default: true, is_active: true },
+      where: { store_id: storeId, is_active: true },
     });
 
     const priceList = await this.priceListRepository.findOne({
@@ -363,6 +374,9 @@ export class SetupService {
     );
     const enabledPaymentMethods = paymentMethods.filter((pm) => pm.enabled);
 
+    // Mapeos contables para asientos de venta (sale_revenue y sale_cost obligatorios)
+    const mappings = await this.chartOfAccountsService.getRequiredMappingsForSales(storeId);
+
     const missingSteps: string[] = [];
     if (!warehouse) missingSteps.push('warehouse');
     if (!priceList) missingSteps.push('price_list');
@@ -371,6 +385,7 @@ export class SetupService {
     if (!fiscalConfig) missingSteps.push('fiscal_config');
     if (enabledPaymentMethods.length === 0)
       missingSteps.push('payment_methods');
+    if (!mappings.canGenerateSaleEntries) missingSteps.push('accounting_mappings');
 
     return {
       is_complete: missingSteps.length === 0,
@@ -382,6 +397,14 @@ export class SetupService {
         has_invoice_series: !!invoiceSeries,
         has_fiscal_config: !!fiscalConfig,
         has_payment_methods: enabledPaymentMethods.length > 0,
+        has_accounting_mappings: mappings.canGenerateSaleEntries,
+        accounting_mappings: {
+          sale_revenue: mappings.sale_revenue,
+          sale_cost: mappings.sale_cost,
+          cash_asset: mappings.cash_asset,
+          accounts_receivable: mappings.accounts_receivable,
+          inventory_asset: mappings.inventory_asset,
+        },
       },
     };
   }
