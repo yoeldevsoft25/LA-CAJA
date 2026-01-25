@@ -269,12 +269,11 @@ export default function POSPage() {
     refetchInterval: 60000, // Refrescar cada minuto
   })
 
-  // Obtener configuración de modo rápido (solo cuando hay sesión para evitar 401)
+  // Obtener configuración de modo rápido
   const { data: fastCheckoutConfig } = useQuery({
     queryKey: ['fast-checkout', 'config'],
     queryFn: () => fastCheckoutService.getFastCheckoutConfig(),
     staleTime: 1000 * 60 * 5, // 5 minutos
-    enabled: !!user?.store_id,
   })
 
   // Obtener tasa BCV para convertir descuentos
@@ -285,12 +284,11 @@ export default function POSPage() {
     gcTime: Infinity,
   })
 
-  // Obtener bodega por defecto (solo cuando hay sesión para evitar 401)
+  // Obtener bodega por defecto
   const { data: defaultWarehouse } = useQuery({
     queryKey: ['warehouses', 'default'],
     queryFn: () => warehousesService.getDefault(),
     staleTime: 1000 * 60 * 5, // 5 minutos
-    enabled: !!user?.store_id,
   })
 
   // Obtener promociones activas

@@ -1847,10 +1847,6 @@ export class SalesService {
     // ⚡ OPTIMIZACIÓN: Encolar tareas post-venta de forma asíncrona
     // Esto permite retornar la respuesta inmediatamente sin esperar
     // facturas fiscales y asientos contables (que pueden tardar 1-3 segundos)
-    // NOTA: SalePaymentsService.recordSalePayments no se invoca aquí; sale_payments queda vacío.
-    // El detalle de pago está en sale.payment (JSONB). Las vistas usan fallback a payment->>'method'.
-    // Si se requiere trazabilidad por pago individual (reembolsos, conciliación), integrar
-    // recordSalePayments en post-processing para SPLIT y, si aplica, otros métodos.
     try {
       await this.salesPostProcessingQueue.add(
         'post-process-sale',
@@ -1885,7 +1881,6 @@ export class SalesService {
         `Error encolando tareas post-venta para venta ${saleWithDebt.id}:`,
         error instanceof Error ? error.stack : String(error),
       );
-      await this.processPostSaleFallback(storeId, saleWithDebt.id, userId || undefined);
     }
 
     // Retornar venta inmediatamente (sin factura fiscal ni asiento contable)
@@ -1908,87 +1903,6 @@ export class SalesService {
     }
 
     return saleWithDebt;
-  }
-
-  private async processPostSaleFallback(
-    storeId: string,
-    saleId: string,
-    userId?: string,
-  ): Promise<void> {
-    // Fallback: si la cola falla, procesar inline para no perder facturación/contabilidad.
-    try {
-      let fiscalInvoiceIssued = false;
-      let fiscalInvoiceFound = false;
-
-      try {
-        const hasFiscalConfig =
-          await this.fiscalInvoicesService.hasActiveFiscalConfig(storeId);
-
-        if (hasFiscalConfig) {
-          const existingInvoice =
-            await this.fiscalInvoicesService.findBySale(storeId, saleId);
-
-          if (existingInvoice) {
-            fiscalInvoiceFound = true;
-            if (existingInvoice.status === 'draft') {
-              const issuedInvoice = await this.fiscalInvoicesService.issue(
-                storeId,
-                existingInvoice.id,
-              );
-              fiscalInvoiceIssued = issuedInvoice.status === 'issued';
-            } else {
-              fiscalInvoiceIssued = existingInvoice.status === 'issued';
-            }
-          } else {
-            const createdInvoice =
-              await this.fiscalInvoicesService.createFromSale(
-                storeId,
-                saleId,
-                userId || null,
-              );
-            fiscalInvoiceFound = true;
-            const issuedInvoice = await this.fiscalInvoicesService.issue(
-              storeId,
-              createdInvoice.id,
-            );
-            fiscalInvoiceIssued = issuedInvoice.status === 'issued';
-          }
-        }
-      } catch (error) {
-        this.logger.error(
-          `Error procesando factura fiscal inline para venta ${saleId}:`,
-          error instanceof Error ? error.stack : String(error),
-        );
-      }
-
-      if (!fiscalInvoiceIssued && !fiscalInvoiceFound) {
-        try {
-          const sale = await this.saleRepository.findOne({
-            where: { id: saleId, store_id: storeId },
-            relations: ['items', 'items.product', 'customer'],
-          });
-
-          if (!sale) {
-            this.logger.warn(
-              `Venta ${saleId} no encontrada para generar asiento contable inline`,
-            );
-            return;
-          }
-
-          await this.accountingService.generateEntryFromSale(storeId, sale);
-        } catch (error) {
-          this.logger.error(
-            `Error generando asiento contable inline para venta ${saleId}:`,
-            error instanceof Error ? error.stack : String(error),
-          );
-        }
-      }
-    } catch (error) {
-      this.logger.error(
-        `Error inesperado en post-procesamiento inline para venta ${saleId}:`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
   }
 
   async findOne(storeId: string, saleId: string): Promise<Sale> {

@@ -25,16 +25,7 @@ export default function ProtectedRoute({
   allowLicenseBlocked: _allowLicenseBlocked = false, // Prefijo _ para indicar que no se usa (mantenido para compatibilidad)
   allowedRoles,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, user, _hasHydrated } = useAuth()
-
-  // Esperar a que zustand-persist rehidrate para no redirigir a /login por un instante
-  if (!_hasHydrated) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    )
-  }
+  const { isAuthenticated, user } = useAuth()
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />

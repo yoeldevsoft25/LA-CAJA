@@ -12,8 +12,6 @@ import { DebtPayment } from '../database/entities/debt-payment.entity';
 import { WhatsAppModule } from '../whatsapp/whatsapp.module';
 import { FiscalInvoicesModule } from '../fiscal-invoices/fiscal-invoices.module';
 import { WarehousesModule } from '../warehouses/warehouses.module';
-import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
-import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
   imports: [
@@ -30,8 +28,6 @@ import { AccountingModule } from '../accounting/accounting.module';
     WhatsAppModule,
     FiscalInvoicesModule,
     WarehousesModule,
-    InvoiceSeriesModule,
-    AccountingModule,
   ],
   providers: [ProjectionsService],
   exports: [ProjectionsService],

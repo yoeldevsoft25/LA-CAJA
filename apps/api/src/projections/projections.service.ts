@@ -15,8 +15,6 @@ import { randomUUID } from 'crypto';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
-import { InvoiceSeriesService } from '../invoice-series/invoice-series.service';
-import { AccountingService } from '../accounting/accounting.service';
 
 @Injectable()
 export class ProjectionsService {
@@ -43,8 +41,6 @@ export class ProjectionsService {
     private whatsappMessagingService: WhatsAppMessagingService,
     private fiscalInvoicesService: FiscalInvoicesService,
     private warehousesService: WarehousesService,
-    private invoiceSeriesService: InvoiceSeriesService,
-    private accountingService: AccountingService,
   ) {}
 
   private async resolveWarehouseId(
@@ -311,49 +307,12 @@ export class ProjectionsService {
       payload.warehouse_id ?? null,
     );
 
-    // Generar invoice_* y sale_number para ventas por Sync (mismo criterio que sales.service)
-    let invoiceSeriesId: string | null = null;
-    let invoiceNumber: string | null = null;
-    let invoiceFullNumber: string | null = null;
-    let saleNumber: number | null = null;
-    try {
-      const inv = await this.invoiceSeriesService.generateNextInvoiceNumber(
-        event.store_id,
-        payload.invoice_series_id || undefined,
-      );
-      invoiceSeriesId = inv.series.id;
-      invoiceNumber = inv.invoice_number;
-      invoiceFullNumber = inv.invoice_full_number;
-    } catch (e) {
-      this.logger.warn(
-        `No se pudo generar número de factura para venta ${payload.sale_id}:`,
-        e instanceof Error ? e.message : String(e),
-      );
-    }
-    try {
-      const seq = await this.dataSource.query(
-        `INSERT INTO sale_sequences (store_id, current_number, created_at, updated_at)
-         VALUES ($1, 1, NOW(), NOW())
-         ON CONFLICT (store_id)
-         DO UPDATE SET current_number = sale_sequences.current_number + 1, updated_at = NOW()
-         RETURNING current_number`,
-        [event.store_id],
-      );
-      saleNumber = Number(seq?.[0]?.current_number ?? 0) || null;
-    } catch (e) {
-      this.logger.warn(
-        `No se pudo generar sale_number para venta ${payload.sale_id}:`,
-        e instanceof Error ? e.message : String(e),
-      );
-    }
-
     // Crear venta
     const sale = this.saleRepository.create({
       id: payload.sale_id,
       store_id: event.store_id,
       cash_session_id: payload.cash_session_id || null,
       sold_at: payload.sold_at ? new Date(payload.sold_at) : event.created_at,
-      sale_number: saleNumber,
       exchange_rate: Number(payload.exchange_rate) || 0,
       currency: payload.currency || 'BS',
       totals: payload.totals || {},
@@ -361,9 +320,6 @@ export class ProjectionsService {
       customer_id: payload.customer?.customer_id || payload.customer_id || null,
       sold_by_user_id: event.actor_user_id, // ⚠️ CRÍTICO: Asignar responsable desde el evento
       note: payload.note || null,
-      invoice_series_id: invoiceSeriesId,
-      invoice_number: invoiceNumber,
-      invoice_full_number: invoiceFullNumber,
     });
 
     const savedSale = await this.saleRepository.save(sale);
@@ -587,23 +543,6 @@ export class ProjectionsService {
         this.logger.warn(
           `⚠️ No hay configuración fiscal activa para store ${event.store_id}. No se generará factura fiscal para venta ${payload.sale_id}.`,
         );
-        // Corrección: generar asiento contable cuando no hay fiscal (mismo criterio que post-processing)
-        try {
-          const entry = await this.accountingService.generateEntryFromSale(
-            event.store_id,
-            savedSale,
-          );
-          if (entry) {
-            this.logger.log(
-              `✅ Asiento contable generado para venta ${payload.sale_id} (sin fiscal)`,
-            );
-          }
-        } catch (accError) {
-          this.logger.error(
-            `Error generando asiento contable para venta ${payload.sale_id} (sin fiscal):`,
-            accError instanceof Error ? accError.stack : String(accError),
-          );
-        }
       }
     } catch (error) {
       // No fallar la proyección si hay error en factura fiscal, pero loguear el error completo

@@ -240,9 +240,6 @@ export class CashService {
             Math.round((expectedUsdVerify + amount) * 100) / 100;
         }
       } else if (payment.method === 'SPLIT' && payment.split) {
-        // NOTA: Solo se usa payment.split (cash_bs, cash_usd). payment.split_payments (array)
-        // no se usa para expected. Si en el futuro split_payments es la fuente canónica para
-        // efectivo en SPLIT, unificar aquí para no sub/superestimar expected.
         const cashBs =
           Math.round(Number(payment.split.cash_bs || 0) * 100) / 100;
         const cashUsd =
