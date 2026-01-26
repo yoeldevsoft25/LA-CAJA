@@ -897,7 +897,6 @@ export default function SalesPage() {
                         const isFIAO = sale.payment.method === 'FIAO'
                         const debtStatus = sale.debt?.status || null
                         const isPending = isFIAO && (debtStatus === 'open' || debtStatus === 'partial')
-                        const isPaid = isFIAO && debtStatus === 'paid'
                         const isVoided = Boolean(sale.voided_at)
 
                         return (

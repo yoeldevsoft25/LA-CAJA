@@ -111,9 +111,8 @@ function KPICard({
               <TrendingDown className="w-4 h-4 text-red-600" />
             )}
             <p
-              className={`text-xs ${
-                trend.value >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
+              className={`text-xs ${trend.value >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
             >
               {trend.value >= 0 ? '+' : ''}
               {trend.value.toFixed(1)}% {trend.label}
@@ -236,7 +235,7 @@ export default function DashboardPage() {
       toast.error('No hay datos disponibles para exportar')
       return
     }
-    
+
     try {
       exportDashboardToExcel(kpis, trends, { start: startDate, end: endDate })
       toast.success('Reporte exportado exitosamente')
@@ -275,7 +274,7 @@ export default function DashboardPage() {
     const error = kpisError || trendsError
     const is403 = error?.response?.status === 403
     const errorMessage = error?.response?.data?.message || error?.message || 'Error desconocido'
-    
+
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="border-destructive">
@@ -319,716 +318,716 @@ export default function DashboardPage() {
 
   return (
     <>
-    <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6 print:hidden">
-      {/* Setup Status Banner - Solo para owners */}
-      {isOwner && setupStatus && !setupStatus.is_complete && (
-        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
-                  Configuración Incompleta
-                </h3>
-                <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
-                  Tu sistema requiere configuración adicional para funcionar correctamente.
-                </p>
-                <div className="space-y-2 mb-4">
-                  <p className="text-xs font-medium text-orange-900 dark:text-orange-100">
-                    Pasos faltantes:
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6 print:hidden">
+        {/* Setup Status Banner - Solo para owners */}
+        {isOwner && setupStatus && !setupStatus.is_complete && (
+          <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                    Configuración Incompleta
+                  </h3>
+                  <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                    Tu sistema requiere configuración adicional para funcionar correctamente.
                   </p>
-                  <ul className="space-y-1">
-                    {setupStatus.missing_steps.map((step) => (
-                      <li key={step} className="flex items-center gap-2 text-xs text-orange-700 dark:text-orange-300">
-                        <XCircle className="w-3 h-3" />
-                        <span className="capitalize">
-                          {step === 'warehouse' && 'Almacén'}
-                          {step === 'price_list' && 'Lista de Precios'}
-                          {step === 'chart_of_accounts' && 'Plan de Cuentas'}
-                          {step === 'invoice_series' && 'Serie de Factura'}
-                          {!['warehouse', 'price_list', 'chart_of_accounts', 'invoice_series'].includes(step) && step}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <Button
-                  onClick={() => navigate('/onboarding')}
-                  size="sm"
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Completar Configuración
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Setup Status Success - Opcional, solo mostrar si todo está completo */}
-      {isOwner && setupStatus && setupStatus.is_complete && (
-        <Card className="border-green-200 bg-green-50 dark:bg-green-900/20 print:hidden">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <p className="text-sm text-green-800 dark:text-green-200">
-                <strong>Configuración completa.</strong> Todos los componentes del sistema están configurados correctamente.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {/* Header */}
-      <div className="space-y-4">
-        {/* Título y descripción */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-primary flex-shrink-0" />
-              <span className="truncate">Dashboard Ejecutivo</span>
-            </h1>
-            <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
-              Resumen de KPIs y métricas del negocio
-            </p>
-          </div>
-          {/* Estado de actualización */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
-            {isFetching ? (
-              <>
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                <span>Actualizando datos...</span>
-              </>
-            ) : kpisUpdatedAt ? (
-              <span>Actualizado: {new Date(kpisUpdatedAt).toLocaleTimeString()}</span>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Filtros de fecha y botones */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-          <div className="grid grid-cols-2 gap-2 flex-1 sm:flex-initial">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="startDate" className="text-xs">
-                Fecha Inicio
-              </Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full text-xs sm:text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="endDate" className="text-xs">
-                Fecha Fin
-              </Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full text-xs sm:text-sm"
-              />
-            </div>
-          </div>
-          {/* Botones de exportar */}
-          <div className="flex gap-2 flex-shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportExcel}
-              disabled={isLoading || !kpis || !trends}
-              className="gap-1.5 print:hidden"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span className="hidden sm:inline">Excel</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              disabled={isLoading || !kpis || !trends}
-              className="gap-1.5 print:hidden"
-            >
-              <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">PDF</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-40" />
-            ))}
-          </div>
-        </div>
-      ) : !kpis || !trends ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">No hay datos disponibles</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* KPIs Principales - Ventas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KPICard
-              title="Ventas Hoy"
-              value={formatNumber(kpis.sales.today_count)}
-              subtitle={`${formatCurrency(kpis.sales.today_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.today_amount_usd, 'USD')}`}
-              color="blue"
-              icon={<DollarSign className="w-5 h-5" />}
-              link="/app/sales"
-            />
-            <KPICard
-              title="Ventas del Período"
-              value={formatNumber(kpis.sales.period_count)}
-              subtitle={`${formatCurrency(kpis.sales.period_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.period_amount_usd, 'USD')}`}
-              color="green"
-              icon={<ShoppingCart className="w-5 h-5" />}
-              link="/app/sales"
-            />
-            <KPICard
-              title="Crecimiento"
-              value={`${kpis.sales.growth_percentage >= 0 ? '+' : ''}${kpis.sales.growth_percentage.toFixed(1)}%`}
-              subtitle="vs período anterior"
-              color={kpis.sales.growth_percentage >= 0 ? 'green' : 'red'}
-              icon={
-                kpis.sales.growth_percentage >= 0 ? (
-                  <TrendingUp className="w-5 h-5" />
-                ) : (
-                  <TrendingDown className="w-5 h-5" />
-                )
-              }
-            />
-            <KPICard
-              title="Ticket Promedio"
-              value={formatCurrency(kpis.performance.avg_sale_amount_bs, 'BS')}
-              subtitle={formatCurrency(kpis.performance.avg_sale_amount_usd, 'USD')}
-              color="purple"
-              icon={<ReceiptText className="w-5 h-5" />}
-            />
-          </div>
-
-          {/* KPIs Secundarios */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Inventario */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Inventario
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Total Productos:
-                  </span>
-                  <span className="font-semibold text-sm">
-                    {formatNumber(kpis.inventory.total_products)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Stock Bajo:
-                  </span>
-                  <Badge variant="destructive" className="text-xs">
-                    {formatNumber(kpis.inventory.low_stock_count)}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Por Vencer:
-                  </span>
-                  <Badge variant="destructive" className="text-xs">
-                    {formatNumber(kpis.inventory.expiring_soon_count)}
-                  </Badge>
-                </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Valor Inventario:
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {formatCurrency(kpis.inventory.total_stock_value_bs, 'BS')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(kpis.inventory.total_stock_value_usd, 'USD')}
-                  </p>
-                </div>
-                <Link
-                  to="/app/inventory"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                >
-                  Ver inventario <ArrowUpRight className="w-3 h-3" />
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Finanzas */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  Finanzas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Deuda Total:
-                  </span>
-                  <span className="font-semibold text-sm text-red-600">
-                    {formatCurrency(kpis.finances.total_debt_bs, 'BS')}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Cobrado:
-                  </span>
-                  <span className="font-semibold text-sm text-green-600">
-                    {formatCurrency(kpis.finances.total_collected_bs, 'BS')}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Pendiente:
-                  </span>
-                  <span className="font-semibold text-sm text-orange-600">
-                    {formatCurrency(kpis.finances.pending_collections_bs, 'BS')}
-                  </span>
-                </div>
-                <Link
-                  to="/app/debts"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                >
-                  Ver detalles <ArrowUpRight className="w-3 h-3" />
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Compras */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" />
-                  Compras
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Pendientes:
-                  </span>
-                  <Badge variant="destructive" className="text-xs">
-                    {formatNumber(kpis.purchases.pending_orders)}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Completadas:
-                  </span>
-                  <Badge variant="default" className="text-xs bg-green-600">
-                    {formatNumber(kpis.purchases.completed_orders)}
-                  </Badge>
-                </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Total Compras:
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {formatCurrency(kpis.purchases.total_purchases_bs, 'BS')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(kpis.purchases.total_purchases_usd, 'USD')}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Fiscal */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <ReceiptText className="w-4 h-4" />
-                  Facturación Fiscal
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    Emitidas:
-                  </span>
-                  <Badge variant="default" className="text-xs bg-green-600">
-                    {formatNumber(kpis.fiscal.issued_invoices)}
-                  </Badge>
-                </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Total Facturado:
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {formatCurrency(kpis.fiscal.total_fiscal_amount_bs, 'BS')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(kpis.fiscal.total_fiscal_amount_usd, 'USD')}
-                  </p>
-                </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Impuestos:
-                  </p>
-                  <p className="text-sm font-semibold text-blue-600">
-                    {formatCurrency(kpis.fiscal.total_tax_collected_bs, 'BS')}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(kpis.fiscal.total_tax_collected_usd, 'USD')}
-                  </p>
-                </div>
-                <Link
-                  to="/app/fiscal-invoices"
-                  className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                >
-                  Ver facturas <ArrowUpRight className="w-3 h-3" />
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Performance y Top Productos */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Producto */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base sm:text-lg">
-                  Producto Más Vendido
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {kpis.performance.top_selling_product ? (
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-primary">
-                      {kpis.performance.top_selling_product.name}
+                  <div className="space-y-2 mb-4">
+                    <p className="text-xs font-medium text-orange-900 dark:text-orange-100">
+                      Pasos faltantes:
                     </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Cantidad vendida:{' '}
-                      <span className="font-semibold">
-                        {formatQuantity(
-                          kpis.performance.top_selling_product.quantity_sold,
-                          kpis.performance.top_selling_product.is_weight_product,
-                          kpis.performance.top_selling_product.weight_unit,
-                        )}
-                      </span>
-                    </p>
-                    <Link
-                      to="/app/products"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                    >
-                      Ver producto <ArrowUpRight className="w-3 h-3" />
-                    </Link>
+                    <ul className="space-y-1">
+                      {setupStatus.missing_steps.map((step) => (
+                        <li key={step} className="flex items-center gap-2 text-xs text-orange-700 dark:text-orange-300">
+                          <XCircle className="w-3 h-3" />
+                          <span className="capitalize">
+                            {step === 'warehouse' && 'Almacén'}
+                            {step === 'price_list' && 'Lista de Precios'}
+                            {step === 'chart_of_accounts' && 'Plan de Cuentas'}
+                            {step === 'invoice_series' && 'Serie de Factura'}
+                            {!['warehouse', 'price_list', 'chart_of_accounts', 'invoice_series'].includes(step) && step}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                ) : (
-                  <p className="text-muted-foreground">
-                    No hay datos disponibles
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Categoría Más Vendida */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base sm:text-lg">
-                  Categoría Más Vendida
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {kpis.performance.best_selling_category ? (
-                  <div>
-                    <p className="text-lg sm:text-xl font-bold text-green-600">
-                      {kpis.performance.best_selling_category}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">
-                    No hay datos disponibles
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Alertas y Indicadores */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-            <ExpiringLotsAlert variant="card" />
-            <PendingOrdersIndicator variant="card" />
-          </div>
-
-          {/* Gráfico de Tendencias de Ventas - Interactivo */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base sm:text-lg">
-                Tendencias de Ventas (Últimos 7 Días)
-              </CardTitle>
-              <Tabs
-                value={chartCurrency}
-                onValueChange={(v) => setChartCurrency(v as 'BS' | 'USD')}
-                className="w-auto"
-              >
-                <TabsList className="h-8">
-                  <TabsTrigger value="BS" className="text-xs px-3 h-7">
-                    Bs.
-                  </TabsTrigger>
-                  <TabsTrigger value="USD" className="text-xs px-3 h-7">
-                    USD
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardHeader>
-            <CardContent>
-              <SalesTrendChart data={trends.sales_trend} currency={chartCurrency} />
+                  <Button
+                    onClick={() => navigate('/onboarding')}
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Completar Configuración
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
+        )}
 
-          {/* Top 10 Productos de la Semana - Grid con Gráficos Separados */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {/* Gráfico: Productos por Peso */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base sm:text-lg">
-                  Top Productos por Peso
-                </CardTitle>
-                <Badge variant="outline" className="text-xs">
-                  {chartCurrency}
-                </Badge>
-              </CardHeader>
-              <CardContent>
-                <TopProductsChart
-                  data={trends.top_products_trend.filter(p => p.is_weight_product)}
-                  currency={chartCurrency}
-                  limit={10}
-                  sortBy="revenue"
-                />
-              </CardContent>
-            </Card>
-
-            {/* Gráfico: Productos por Cantidad */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base sm:text-lg">
-                  Top Productos por Cantidad
-                </CardTitle>
-                <Badge variant="outline" className="text-xs">
-                  {chartCurrency}
-                </Badge>
-              </CardHeader>
-              <CardContent>
-                <TopProductsChart
-                  data={trends.top_products_trend.filter(p => !p.is_weight_product)}
-                  currency={chartCurrency}
-                  limit={10}
-                  sortBy="revenue"
-                />
-              </CardContent>
-            </Card>
+        {/* Setup Status Success - Opcional, solo mostrar si todo está completo */}
+        {isOwner && setupStatus && setupStatus.is_complete && (
+          <Card className="border-green-200 bg-green-50 dark:bg-green-900/20 print:hidden">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  <strong>Configuración completa.</strong> Todos los componentes del sistema están configurados correctamente.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {/* Header */}
+        <div className="space-y-4">
+          {/* Título y descripción */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
+                <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-primary flex-shrink-0" />
+                <span className="truncate">Dashboard Ejecutivo</span>
+              </h1>
+              <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
+                Resumen de KPIs y métricas del negocio
+              </p>
+            </div>
+            {/* Estado de actualización */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
+              {isFetching ? (
+                <>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                  <span>Actualizando datos...</span>
+                </>
+              ) : kpisUpdatedAt ? (
+                <span>Actualizado: {new Date(kpisUpdatedAt).toLocaleTimeString()}</span>
+              ) : null}
+            </div>
           </div>
 
-          {/* Tabla Detallada */}
-          <div className="grid grid-cols-1 gap-6 mt-6">
+          {/* Filtros de fecha y botones */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+            <div className="grid grid-cols-2 gap-2 flex-1 sm:flex-initial">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="startDate" className="text-xs">
+                  Fecha Inicio
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full text-xs sm:text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="endDate" className="text-xs">
+                  Fecha Fin
+                </Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full text-xs sm:text-sm"
+                />
+              </div>
+            </div>
+            {/* Botones de exportar */}
+            <div className="flex gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportExcel}
+                disabled={isLoading || !kpis || !trends}
+                className="gap-1.5 print:hidden"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span className="hidden sm:inline">Excel</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                disabled={isLoading || !kpis || !trends}
+                className="gap-1.5 print:hidden"
+              >
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">PDF</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-32" />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-40" />
+              ))}
+            </div>
+          </div>
+        ) : !kpis || !trends ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">No hay datos disponibles</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* KPIs Principales - Ventas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPICard
+                title="Ventas Hoy"
+                value={formatNumber(kpis.sales.today_count)}
+                subtitle={`${formatCurrency(kpis.sales.today_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.today_amount_usd, 'USD')}`}
+                color="blue"
+                icon={<DollarSign className="w-5 h-5" />}
+                link="/app/sales"
+              />
+              <KPICard
+                title="Ventas del Período"
+                value={formatNumber(kpis.sales.period_count)}
+                subtitle={`${formatCurrency(kpis.sales.period_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.period_amount_usd, 'USD')}`}
+                color="green"
+                icon={<ShoppingCart className="w-5 h-5" />}
+                link="/app/sales"
+              />
+              <KPICard
+                title="Crecimiento"
+                value={`${kpis.sales.growth_percentage >= 0 ? '+' : ''}${kpis.sales.growth_percentage.toFixed(1)}%`}
+                subtitle="vs período anterior"
+                color={kpis.sales.growth_percentage >= 0 ? 'green' : 'red'}
+                icon={
+                  kpis.sales.growth_percentage >= 0 ? (
+                    <TrendingUp className="w-5 h-5" />
+                  ) : (
+                    <TrendingDown className="w-5 h-5" />
+                  )
+                }
+              />
+              <KPICard
+                title="Ticket Promedio"
+                value={formatCurrency(kpis.performance.avg_sale_amount_bs, 'BS')}
+                subtitle={formatCurrency(kpis.performance.avg_sale_amount_usd, 'USD')}
+                color="purple"
+                icon={<ReceiptText className="w-5 h-5" />}
+              />
+            </div>
+
+            {/* KPIs Secundarios */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Inventario */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Inventario
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Total Productos:
+                    </span>
+                    <span className="font-semibold text-sm">
+                      {formatNumber(kpis.inventory.total_products)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Stock Bajo:
+                    </span>
+                    <Badge variant="destructive" className="text-xs">
+                      {formatNumber(kpis.inventory.low_stock_count)}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Por Vencer:
+                    </span>
+                    <Badge variant="destructive" className="text-xs">
+                      {formatNumber(kpis.inventory.expiring_soon_count)}
+                    </Badge>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Valor Inventario:
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(kpis.inventory.total_stock_value_bs, 'BS')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(kpis.inventory.total_stock_value_usd, 'USD')}
+                    </p>
+                  </div>
+                  <Link
+                    to="/app/inventory"
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
+                  >
+                    Ver inventario <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </CardContent>
+              </Card>
+
+              {/* Finanzas */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Finanzas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Deuda Total:
+                    </span>
+                    <span className="font-semibold text-sm text-red-600">
+                      {formatCurrency(kpis.finances.total_debt_bs, 'BS')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Cobrado:
+                    </span>
+                    <span className="font-semibold text-sm text-green-600">
+                      {formatCurrency(kpis.finances.total_collected_bs, 'BS')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Pendiente:
+                    </span>
+                    <span className="font-semibold text-sm text-orange-600">
+                      {formatCurrency(kpis.finances.pending_collections_bs, 'BS')}
+                    </span>
+                  </div>
+                  <Link
+                    to="/app/debts"
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
+                  >
+                    Ver detalles <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </CardContent>
+              </Card>
+
+              {/* Compras */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4" />
+                    Compras
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Pendientes:
+                    </span>
+                    <Badge variant="destructive" className="text-xs">
+                      {formatNumber(kpis.purchases.pending_orders)}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Completadas:
+                    </span>
+                    <Badge variant="default" className="text-xs bg-green-600">
+                      {formatNumber(kpis.purchases.completed_orders)}
+                    </Badge>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Total Compras:
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(kpis.purchases.total_purchases_bs, 'BS')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(kpis.purchases.total_purchases_usd, 'USD')}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Fiscal */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <ReceiptText className="w-4 h-4" />
+                    Facturación Fiscal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      Emitidas:
+                    </span>
+                    <Badge variant="default" className="text-xs bg-green-600">
+                      {formatNumber(kpis.fiscal.issued_invoices)}
+                    </Badge>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Total Facturado:
+                    </p>
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(kpis.fiscal.total_fiscal_amount_bs, 'BS')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(kpis.fiscal.total_fiscal_amount_usd, 'USD')}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Impuestos:
+                    </p>
+                    <p className="text-sm font-semibold text-blue-600">
+                      {formatCurrency(kpis.fiscal.total_tax_collected_bs, 'BS')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(kpis.fiscal.total_tax_collected_usd, 'USD')}
+                    </p>
+                  </div>
+                  <Link
+                    to="/app/fiscal-invoices"
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
+                  >
+                    Ver facturas <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Performance y Top Productos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top Producto */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg">
+                    Producto Más Vendido
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {kpis.performance.top_selling_product ? (
+                    <div>
+                      <p className="text-lg sm:text-xl font-bold text-primary">
+                        {kpis.performance.top_selling_product.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Cantidad vendida:{' '}
+                        <span className="font-semibold">
+                          {formatQuantity(
+                            kpis.performance.top_selling_product.quantity_sold,
+                            kpis.performance.top_selling_product.is_weight_product,
+                            kpis.performance.top_selling_product.weight_unit,
+                          )}
+                        </span>
+                      </p>
+                      <Link
+                        to="/app/products"
+                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
+                      >
+                        Ver producto <ArrowUpRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No hay datos disponibles
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Categoría Más Vendida */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg">
+                    Categoría Más Vendida
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {kpis.performance.best_selling_category ? (
+                    <div>
+                      <p className="text-lg sm:text-xl font-bold text-green-600">
+                        {kpis.performance.best_selling_category}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No hay datos disponibles
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Alertas y Indicadores */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+              <ExpiringLotsAlert variant="card" />
+              <PendingOrdersIndicator variant="card" />
+            </div>
+
+            {/* Gráfico de Tendencias de Ventas - Interactivo */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base sm:text-lg">
-                  Detalle Top 10 Productos
+                  Tendencias de Ventas (Últimos 7 Días)
                 </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="weight" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="weight">Por Peso</TabsTrigger>
-                    <TabsTrigger value="units">Por Cantidad</TabsTrigger>
+                <Tabs
+                  value={chartCurrency}
+                  onValueChange={(v) => setChartCurrency(v as 'BS' | 'USD')}
+                  className="w-auto"
+                >
+                  <TabsList className="h-8">
+                    <TabsTrigger value="BS" className="text-xs px-3 h-7">
+                      Bs.
+                    </TabsTrigger>
+                    <TabsTrigger value="USD" className="text-xs px-3 h-7">
+                      USD
+                    </TabsTrigger>
                   </TabsList>
-                  
-                  {/* Tab: Productos por Peso */}
-                  <TabsContent value="weight" className="mt-0">
-                    <div className="overflow-x-auto overflow-y-auto max-h-[280px] sm:max-h-[380px] min-h-0 [-webkit-overflow-scrolling:touch]">
-                      <Table>
-                        <TableHeader className="sticky top-0 bg-background z-10">
-                          <TableRow>
-                            <TableHead className="w-12">#</TableHead>
-                            <TableHead>Producto</TableHead>
-                            <TableHead className="text-right">Cant.</TableHead>
-                            <TableHead className="text-right">Ingresos</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(() => {
-                            const weightProducts = trends.top_products_trend
-                              .filter(p => p.is_weight_product)
-                              .sort((a, b) => {
-                                const revenueA = chartCurrency === 'BS' ? a.revenue_bs : a.revenue_usd
-                                const revenueB = chartCurrency === 'BS' ? b.revenue_bs : b.revenue_usd
-                                return revenueB - revenueA // Orden descendente
-                              })
-                              .slice(0, 10)
-                            return weightProducts.length > 0 ? (
-                              weightProducts.map((product, index) => (
-                                <TableRow key={product.product_id} className="hover:bg-muted/50">
-                                  <TableCell>
-                                    <Badge
-                                      variant={index < 3 ? 'default' : 'secondary'}
-                                      className={
-                                        index === 0
-                                          ? 'bg-amber-500 hover:bg-amber-600'
-                                          : index === 1
-                                            ? 'bg-slate-400 hover:bg-slate-500'
-                                            : index === 2
-                                              ? 'bg-orange-600 hover:bg-orange-700'
-                                              : ''
-                                      }
-                                    >
-                                      {index + 1}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="font-medium max-w-[150px] truncate" title={product.product_name}>
-                                    {product.product_name}
-                                  </TableCell>
-                                  <TableCell className="text-right text-sm">
-                                    {formatQuantity(
-                                      product.quantity_sold,
-                                      product.is_weight_product,
-                                      product.weight_unit,
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div>
-                                      <span className="font-semibold text-sm">
-                                        {formatCurrency(product.revenue_bs, 'BS')}
-                                      </span>
-                                      <p className="text-xs text-muted-foreground">
-                                        {formatCurrency(product.revenue_usd, 'USD')}
-                                      </p>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            ) : (
-                              <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                  No hay productos por peso disponibles
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })()}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </TabsContent>
-
-                  {/* Tab: Productos por Cantidad/Unidades */}
-                  <TabsContent value="units" className="mt-0">
-                    <div className="overflow-x-auto overflow-y-auto max-h-[280px] sm:max-h-[380px] min-h-0 [-webkit-overflow-scrolling:touch]">
-                      <Table>
-                        <TableHeader className="sticky top-0 bg-background z-10">
-                          <TableRow>
-                            <TableHead className="w-12">#</TableHead>
-                            <TableHead>Producto</TableHead>
-                            <TableHead className="text-right">Cant.</TableHead>
-                            <TableHead className="text-right">Ingresos</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(() => {
-                            const unitProducts = trends.top_products_trend
-                              .filter(p => !p.is_weight_product)
-                              .sort((a, b) => {
-                                const revenueA = chartCurrency === 'BS' ? a.revenue_bs : a.revenue_usd
-                                const revenueB = chartCurrency === 'BS' ? b.revenue_bs : b.revenue_usd
-                                return revenueB - revenueA // Orden descendente
-                              })
-                              .slice(0, 10)
-                            return unitProducts.length > 0 ? (
-                              unitProducts.map((product, index) => (
-                                <TableRow key={product.product_id} className="hover:bg-muted/50">
-                                  <TableCell>
-                                    <Badge
-                                      variant={index < 3 ? 'default' : 'secondary'}
-                                      className={
-                                        index === 0
-                                          ? 'bg-amber-500 hover:bg-amber-600'
-                                          : index === 1
-                                            ? 'bg-slate-400 hover:bg-slate-500'
-                                            : index === 2
-                                              ? 'bg-orange-600 hover:bg-orange-700'
-                                              : ''
-                                      }
-                                    >
-                                      {index + 1}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="font-medium max-w-[150px] truncate" title={product.product_name}>
-                                    {product.product_name}
-                                  </TableCell>
-                                  <TableCell className="text-right text-sm">
-                                    {formatQuantity(
-                                      product.quantity_sold,
-                                      product.is_weight_product,
-                                      product.weight_unit,
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div>
-                                      <span className="font-semibold text-sm">
-                                        {formatCurrency(product.revenue_bs, 'BS')}
-                                      </span>
-                                      <p className="text-xs text-muted-foreground">
-                                        {formatCurrency(product.revenue_usd, 'USD')}
-                                      </p>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            ) : (
-                              <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                  No hay productos por cantidad disponibles
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })()}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </TabsContent>
                 </Tabs>
+              </CardHeader>
+              <CardContent>
+                <SalesTrendChart data={trends.sales_trend} currency={chartCurrency} />
               </CardContent>
             </Card>
-          </div>
-        </>
+
+            {/* Top 10 Productos de la Semana - Grid con Gráficos Separados */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {/* Gráfico: Productos por Peso */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base sm:text-lg">
+                    Top Productos por Peso
+                  </CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    {chartCurrency}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <TopProductsChart
+                    data={trends.top_products_trend.filter(p => p.is_weight_product)}
+                    currency={chartCurrency}
+                    limit={10}
+                    sortBy="revenue"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Gráfico: Productos por Cantidad */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base sm:text-lg">
+                    Top Productos por Cantidad
+                  </CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    {chartCurrency}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <TopProductsChart
+                    data={trends.top_products_trend.filter(p => !p.is_weight_product)}
+                    currency={chartCurrency}
+                    limit={10}
+                    sortBy="revenue"
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tabla Detallada */}
+            <div className="grid grid-cols-1 gap-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base sm:text-lg">
+                    Detalle Top 10 Productos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="weight" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                      <TabsTrigger value="weight">Por Peso</TabsTrigger>
+                      <TabsTrigger value="units">Por Cantidad</TabsTrigger>
+                    </TabsList>
+
+                    {/* Tab: Productos por Peso */}
+                    <TabsContent value="weight" className="mt-0">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[280px] sm:max-h-[380px] min-h-0 [-webkit-overflow-scrolling:touch]">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-background z-10">
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Producto</TableHead>
+                              <TableHead className="text-right">Cant.</TableHead>
+                              <TableHead className="text-right">Ingresos</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(() => {
+                              const weightProducts = trends.top_products_trend
+                                .filter(p => p.is_weight_product)
+                                .sort((a, b) => {
+                                  const revenueA = chartCurrency === 'BS' ? a.revenue_bs : a.revenue_usd
+                                  const revenueB = chartCurrency === 'BS' ? b.revenue_bs : b.revenue_usd
+                                  return revenueB - revenueA // Orden descendente
+                                })
+                                .slice(0, 10)
+                              return weightProducts.length > 0 ? (
+                                weightProducts.map((product, index) => (
+                                  <TableRow key={product.product_id} className="hover:bg-muted/50">
+                                    <TableCell>
+                                      <Badge
+                                        variant={index < 3 ? 'default' : 'secondary'}
+                                        className={
+                                          index === 0
+                                            ? 'bg-amber-500 hover:bg-amber-600'
+                                            : index === 1
+                                              ? 'bg-slate-400 hover:bg-slate-500'
+                                              : index === 2
+                                                ? 'bg-orange-600 hover:bg-orange-700'
+                                                : ''
+                                        }
+                                      >
+                                        {index + 1}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-medium max-w-[150px] truncate" title={product.product_name}>
+                                      {product.product_name}
+                                    </TableCell>
+                                    <TableCell className="text-right text-sm">
+                                      {formatQuantity(
+                                        product.quantity_sold,
+                                        product.is_weight_product,
+                                        product.weight_unit,
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div>
+                                        <span className="font-semibold text-sm">
+                                          {formatCurrency(product.revenue_bs, 'BS')}
+                                        </span>
+                                        <p className="text-xs text-muted-foreground">
+                                          {formatCurrency(product.revenue_usd, 'USD')}
+                                        </p>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                    No hay productos por peso disponibles
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })()}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>
+
+                    {/* Tab: Productos por Cantidad/Unidades */}
+                    <TabsContent value="units" className="mt-0">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[280px] sm:max-h-[380px] min-h-0 [-webkit-overflow-scrolling:touch]">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-background z-10">
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Producto</TableHead>
+                              <TableHead className="text-right">Cant.</TableHead>
+                              <TableHead className="text-right">Ingresos</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(() => {
+                              const unitProducts = trends.top_products_trend
+                                .filter(p => !p.is_weight_product)
+                                .sort((a, b) => {
+                                  const revenueA = chartCurrency === 'BS' ? a.revenue_bs : a.revenue_usd
+                                  const revenueB = chartCurrency === 'BS' ? b.revenue_bs : b.revenue_usd
+                                  return revenueB - revenueA // Orden descendente
+                                })
+                                .slice(0, 10)
+                              return unitProducts.length > 0 ? (
+                                unitProducts.map((product, index) => (
+                                  <TableRow key={product.product_id} className="hover:bg-muted/50">
+                                    <TableCell>
+                                      <Badge
+                                        variant={index < 3 ? 'default' : 'secondary'}
+                                        className={
+                                          index === 0
+                                            ? 'bg-amber-500 hover:bg-amber-600'
+                                            : index === 1
+                                              ? 'bg-slate-400 hover:bg-slate-500'
+                                              : index === 2
+                                                ? 'bg-orange-600 hover:bg-orange-700'
+                                                : ''
+                                        }
+                                      >
+                                        {index + 1}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-medium max-w-[150px] truncate" title={product.product_name}>
+                                      {product.product_name}
+                                    </TableCell>
+                                    <TableCell className="text-right text-sm">
+                                      {formatQuantity(
+                                        product.quantity_sold,
+                                        product.is_weight_product,
+                                        product.weight_unit,
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div>
+                                        <span className="font-semibold text-sm">
+                                          {formatCurrency(product.revenue_bs, 'BS')}
+                                        </span>
+                                        <p className="text-xs text-muted-foreground">
+                                          {formatCurrency(product.revenue_usd, 'USD')}
+                                        </p>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                    No hay productos por cantidad disponibles
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })()}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+      </div>
+
+      {/* Vista de Impresión (solo visible al imprimir) */}
+      {kpis && trends && (
+        <DashboardPrintView
+          ref={printRef}
+          kpis={kpis}
+          trends={trends}
+          dateRange={{ start: startDate, end: endDate }}
+        />
       )}
-
-    </div>
-
-    {/* Vista de Impresión (solo visible al imprimir) */}
-    {kpis && trends && (
-      <DashboardPrintView
-        ref={printRef}
-        kpis={kpis}
-        trends={trends}
-        dateRange={{ start: startDate, end: endDate }}
-      />
-    )}
     </>
   )
 }

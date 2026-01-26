@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { syncService, SyncStatus } from '@/services/sync.service'
 import { Badge } from '@/components/ui/badge'
-import { Cloud, CloudOff, RefreshCw, AlertCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle } from 'lucide-react'
 
 export function SyncStatusBadge() {
     const [status, setStatus] = useState<SyncStatus>({
