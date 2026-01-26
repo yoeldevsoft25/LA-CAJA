@@ -33,14 +33,18 @@ export function SyncStatusBadge() {
         }
     }, [])
 
+    // Variant: Premium Animated Pill
     if (!isOnline) {
         return (
-            <Badge variant="outline" className="bg-muted text-muted-foreground gap-1.5 px-3 py-1">
-                <CloudOff className="w-3.5 h-3.5" />
-                <span>Sin conexión</span>
+            <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 gap-2 pl-2 pr-3 py-1.5 h-8 rounded-full transition-all hover:bg-red-500/20">
+                <div className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </div>
+                <span className="font-medium">Offline</span>
                 {status.pendingCount > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-muted-foreground/20 rounded-full text-[10px]">
-                        {status.pendingCount} pte.
+                    <span className="ml-1 px-1.5 py-0.5 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] font-bold">
+                        {status.pendingCount}
                     </span>
                 )}
             </Badge>
@@ -49,26 +53,27 @@ export function SyncStatusBadge() {
 
     if (status.isSyncing) {
         return (
-            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 gap-1.5 px-3 py-1">
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 gap-2 pl-2 pr-3 py-1.5 h-8 rounded-full transition-all">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Sincronizando...</span>
+                <span className="font-medium">Sincronizando...</span>
             </Badge>
         )
     }
 
     if (status.lastError && status.pendingCount > 0) {
         return (
-            <Badge variant="destructive" className="gap-1.5 px-3 py-1 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors cursor-pointer" onClick={() => syncService.forceSync()}>
+            <Badge variant="destructive" className="gap-2 pl-2 pr-3 py-1.5 h-8 rounded-full shadow-lg shadow-destructive/20 cursor-pointer hover:scale-105 transition-transform" onClick={() => syncService.forceSync()}>
                 <AlertCircle className="w-3.5 h-3.5" />
-                <span>Error de Sync ({status.pendingCount})</span>
+                <span className="font-medium">Error ({status.pendingCount})</span>
             </Badge>
         )
     }
 
+    // Default: Connected & Synced
     return (
-        <Badge variant="outline" className="bg-success/5 text-success border-success/20 gap-1.5 px-3 py-1">
-            <Cloud className="w-3.5 h-3.5" />
-            <span>Sincronizado</span>
+        <Badge variant="outline" className="bg-emerald-500/5 text-emerald-600 border-emerald-500/20 gap-2 pl-2 pr-3 py-1.5 h-8 rounded-full transition-all hover:bg-emerald-500/10 hover:border-emerald-500/30">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+            <span className="font-medium">En línea</span>
         </Badge>
     )
 }

@@ -24,7 +24,7 @@ export class SyncController {
   constructor(
     private readonly syncService: SyncService,
     private readonly conflictResolutionService: ConflictResolutionService,
-  ) {}
+  ) { }
 
   @Post('push')
   @HttpCode(HttpStatus.OK)
@@ -66,6 +66,19 @@ export class SyncController {
       deviceId,
     );
     return { last_seq: lastSeq };
+  }
+
+  @Get('pull')
+  async pull(
+    @Query('last_checkpoint') lastCheckpoint: string,
+    @Query('device_id') deviceId: string,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const since = new Date(Number(lastCheckpoint) || 0);
+
+    // Si no envía device_id, no excluimos nada (sería raro pero válido)
+    return this.syncService.pullEvents(storeId, since, deviceId);
   }
 
   @Post('resolve-conflict')

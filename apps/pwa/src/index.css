@@ -4,11 +4,12 @@
 
 /* Estilos para impresión de facturas fiscales */
 @media print {
+
   /* Ocultar elementos no deseados */
   .no-print {
     display: none !important;
   }
-  
+
   /* Ocultar header, nav, footer, sidebar del layout */
   header,
   nav,
@@ -16,26 +17,26 @@
   footer {
     display: none !important;
   }
-  
+
   /* Ocultar el wrapper del layout y sidebar */
-  body > div > div > div:first-child,
-  body > div > div > aside {
+  body>div>div>div:first-child,
+  body>div>div>aside {
     display: none !important;
   }
-  
+
   /* Ocultar el wrapper del layout */
   main {
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
   }
-  
+
   /* Ocultar animaciones y transiciones */
   [class*="motion"] {
     opacity: 1 !important;
     transform: none !important;
   }
-  
+
   /* Estilos para el contenedor de factura */
   .invoice-print-container {
     display: block !important;
@@ -46,67 +47,67 @@
     background: white !important;
     position: relative !important;
   }
-  
+
   /* Asegurar que las tablas se muestren correctamente */
   .invoice-print-container table {
     display: table !important;
     width: 100%;
     border-collapse: collapse;
   }
-  
+
   .invoice-print-container tr {
     display: table-row !important;
   }
-  
+
   .invoice-print-container td,
   .invoice-print-container th {
     display: table-cell !important;
   }
-  
+
   .print-break {
     page-break-after: always;
   }
-  
+
   body {
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
   }
-  
+
   .bg-white {
     background: white !important;
   }
-  
+
   .print\\:shadow-none {
     box-shadow: none !important;
   }
-  
+
   .print\\:border-0 {
     border: 0 !important;
   }
-  
+
   /* Asegurar que las tablas se impriman correctamente */
   .invoice-print-container table {
     page-break-inside: avoid;
   }
-  
+
   /* Evitar cortes de página en elementos importantes */
-  .invoice-print-container > * {
+  .invoice-print-container>* {
     page-break-inside: avoid;
   }
-  
+
   /* Asegurar que el QR se imprima correctamente */
   .invoice-print-container img {
     max-width: 100%;
     height: auto;
     display: block !important;
   }
-  
+
   /* Asegurar que los textos se impriman en negro */
   .invoice-print-container {
     color: black !important;
   }
-  
+
   .invoice-print-container * {
     color: black !important;
   }
@@ -114,122 +115,126 @@
 
 @layer base {
   :root {
-    /* Backgrounds - Clean white base */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 4%;
+    /* ✨ Premium Indigo Theme - Light Mode */
 
-    /* Cards */
+    /* Backgrounds - Subtle Off-White/Gray instead of harsh white */
+    --background: 220 14% 96%;
+    --foreground: 224 71% 4%;
+
+    /* Cards - White with shadow depth */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
+    --card-foreground: 224 71% 4%;
 
     /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 4%;
+    --popover-foreground: 224 71% 4%;
 
-    /* Primary - Sophisticated dark slate */
-    --primary: 240 6% 10%;
-    --primary-foreground: 0 0% 98%;
+    /* Primary - Vibrant Indigo */
+    /* Primary - User Requested Blue (rgb(12, 129, 207)) */
+    --primary: 204 89% 43%;
+    --primary-foreground: 210 40% 98%;
 
-    /* Secondary - Subtle neutral */
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 6% 10%;
+    /* Secondary - Soft Violet/Gray */
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 220.9 39.3% 11%;
 
-    /* Muted - Soft gray palette - WCAG AA: al menos 4.5:1 contraste */
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 5% 35%; /* Mejorado de 46% a 35% para mejor contraste WCAG AA */
+    /* Muted */
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 8.9% 46.1%;
 
-    /* Accent - Minimal highlight */
-    --accent: 240 5% 96%;
-    --accent-foreground: 240 6% 10%;
+    /* Accent - Light Indigo Wash */
+    --accent: 240 75% 97%;
+    --accent-foreground: 243 75% 59%;
 
-    /* Destructive - Understated red - WCAG AA: 4.5:1+ contraste */
-    --destructive: 0 72% 48%; /* Mejorado de 51% a 48% para mejor contraste */
-    --destructive-foreground: 0 0% 98%;
+    /* Destructive - Rose */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
 
-    /* Success - Calm green */
-    --success: 142 71% 45%;
+    /* Success - Emerald */
+    --success: 151 65% 52%;
+    /* Emerald 500 */
     --success-foreground: 0 0% 98%;
 
-    /* Warning - Soft amber */
+    /* Warning - Amber */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 98%;
 
-    /* Info - Subtle blue */
+    /* Info - Sky */
     --info: 199 89% 48%;
     --info-foreground: 0 0% 98%;
 
-    /* Chart Colors - Vibrant palette for data visualization */
-    --chart-1: 240 6% 10%; /* Primary color (same as primary) */
-    --chart-2: 173 80% 40%; /* Teal/Cyan */
-    --chart-3: 262 83% 58%; /* Purple */
-    --chart-4: 350 89% 60%; /* Pink/Rose */
-    --chart-5: 38 92% 50%; /* Amber/Yellow */
+    /* Borders & Inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 243 75% 59%;
 
-    /* Borders & Inputs - Visible but refined lines - WCAG AA: contraste visible */
-    --border: 240 5.9% 65%; /* Mejorado de 70% a 65% para mejor visibilidad */
-    --input: 240 5.9% 65%; /* Mejorado de 70% a 65% para mejor visibilidad */
-    --ring: 240 6% 10%;
+    /* Radius - More modern rounded */
+    --radius: 0.75rem;
 
-    /* Radius - Softer corners */
-    --radius: 0.5rem;
+    /* Effects - Glassmorphism */
+    --glass-opacity: 0.7;
+    --glass-border: 0 0% 100% / 0.5;
   }
 
   .dark {
-    /* Backgrounds */
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* ✨ Premium Indigo Theme - Dark Mode */
 
-    /* Cards */
-    --card: 240 10% 8%;
-    --card-foreground: 0 0% 98%;
+    /* Backgrounds - Deep Blue/Slate */
+    --background: 224 71% 4%;
+    /* Deepest Indigo/Black */
+    --foreground: 210 20% 98%;
+
+    /* Cards - Slightly lighter deep blue */
+    --card: 222 47% 11%;
+    --card-foreground: 210 20% 98%;
 
     /* Popover */
-    --popover: 240 10% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 20% 98%;
 
-    /* Primary */
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary - Vibrant Indigo */
+    /* Primary - User Requested Blue */
+    --primary: 204 89% 50%;
+    /* Slightly lighter for dark mode visibility */
+    --primary-foreground: 210 40% 98%;
 
     /* Secondary */
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 20% 98%;
 
-    /* Muted - WCAG AA: al menos 4.5:1 contraste en modo oscuro */
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 75%; /* Mejorado de 64.9% a 75% para mejor contraste */
+    /* Muted */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    /* Accent */
-    --accent: 262 90% 50%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent - Darker Indigo Wash */
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 20% 98%;
 
     /* Destructive */
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 210 20% 98%;
 
     /* Success */
-    --success: 142 70% 45%;
-    --success-foreground: 0 0% 100%;
+    --success: 151 55% 42%;
+    --success-foreground: 0 0% 98%;
 
     /* Warning */
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning-foreground: 0 0% 98%;
 
     /* Info */
     --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
+    --info-foreground: 0 0% 98%;
 
-    /* Chart Colors - Vibrant palette for data visualization (dark mode) */
-    --chart-1: 262 83% 58%; /* Primary color (same as primary) */
-    --chart-2: 173 80% 50%; /* Teal/Cyan - brighter for dark mode */
-    --chart-3: 262 83% 65%; /* Purple - brighter for dark mode */
-    --chart-4: 350 89% 65%; /* Pink/Rose - brighter for dark mode */
-    --chart-5: 38 92% 55%; /* Amber/Yellow - brighter for dark mode */
+    /* Borders & Rings */
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 263 70% 50%;
+    /* Deep Purple Ring */
 
-    /* Borders & Inputs */
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 262 83% 58%;
+    /* Effects */
+    --glass-opacity: 0.6;
+    --glass-border: 255 255 255 / 0.1;
   }
 }
 
@@ -237,35 +242,37 @@
   * {
     @apply border-border/0;
   }
+
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* A11Y-04: Focus visible en todos los elementos interactivos */
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
-  
+
   /* Estilos específicos para botones */
   button:focus-visible,
   [role="button"]:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
-  
+
   /* Estilos para inputs */
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
     @apply outline-none ring-2 ring-ring;
   }
-  
+
   /* Links */
   a:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background rounded-sm;
   }
-  
+
   /* A11Y-07: Soporte para reduced motion ya existente en Tailwind */
   @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
@@ -297,7 +304,7 @@
 
   /* A11Y-03: Utilidades para asegurar contraste WCAG AA */
   /* WCAG AA requiere mínimo 4.5:1 para texto normal y 3:1 para texto grande (18pt+) */
-  
+
   /* Texto sobre fondos de color - asegurar contraste suficiente */
   .text-wcag-safe {
     color: hsl(var(--foreground));

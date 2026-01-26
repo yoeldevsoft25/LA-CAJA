@@ -15,6 +15,7 @@ import {
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
 import { createLogger } from '@/lib/logger';
+import { projectionManager } from './projection.manager';
 
 export interface PushSyncDto {
   store_id: string;
@@ -822,29 +823,71 @@ class SyncServiceClass {
       clearInterval(this.syncIntervalId);
     }
 
-    this.logger.info('Sincronización periódica iniciada', { intervalMs: this.SYNC_INTERVAL_MS });
+    this.logger.info(`Iniciando sincronización periódica cada ${this.SYNC_INTERVAL_MS}ms`);
 
-    this.syncIntervalId = setInterval(() => {
-      // Solo sincronizar si hay conexión
+    this.syncIntervalId = setInterval(async () => {
+      // 1. PUSH: Enviar pendientes si hay conexión
       if (navigator.onLine && this.syncQueue) {
         const stats = this.syncQueue.getStats();
         if (stats.pending > 0) {
-          this.logger.debug('Sincronización periódica', { pending: stats.pending });
-          this.syncQueue.flush().then(() => {
-            const newStats = this.syncQueue?.getStats();
-            this.logger.debug('Sincronización periódica completada', {
-              pending: newStats?.pending || 0,
-              synced: newStats?.synced || 0,
-            });
-          }).catch((err: unknown) => {
-            this.logger.error('Error en sincronización periódica', err);
-            // Silenciar errores, se reintentará en el siguiente intervalo
+          await this.syncQueue.flush().catch((err) => {
+            this.logger.debug('Error en flush periódico (ignorable)', err);
           });
         }
-      } else if (!navigator.onLine) {
-        this.logger.debug('Sincronización periódica omitida (sin conexión)');
+      }
+
+      // 2. PULL: Traer nuevos eventos si hay conexión
+      if (navigator.onLine && this.storeId && this.deviceId) {
+        await this.pullFromServer().catch((err) => {
+          this.logger.debug('Error en pull periódico', err);
+        });
       }
     }, this.SYNC_INTERVAL_MS);
+  }
+
+  /**
+   * Obtiene eventos nuevos del servidor y los aplica localmente
+   */
+  async pullFromServer(): Promise<void> {
+    if (!this.storeId || !this.deviceId || !navigator.onLine) return;
+
+    // Obtener último checkpoint (timestamp de recepción del último evento pull)
+    // Usamos KV store para persistir este cursor
+    const kvKey = 'last_pull_checkpoint';
+    const lastCheckpointItem = await db.kv.get(kvKey);
+    const lastCheckpoint = lastCheckpointItem?.value || 0;
+
+    try {
+      this.logger.debug('Iniciando Pull Sync', { lastCheckpoint });
+
+      const response = await api.get<{ events: BaseEvent[]; last_server_time: number }>('/sync/pull', {
+        params: {
+          last_checkpoint: lastCheckpoint,
+          device_id: this.deviceId // Para excluir eventos propios
+        }
+      });
+
+      const { events, last_server_time } = response.data;
+
+      if (events.length > 0) {
+        this.logger.info(`Recibidos ${events.length} eventos nuevos del servidor`);
+
+        // Aplicar eventos a la DB local
+        await projectionManager.applyEvents(events);
+
+        // Actualizar checkpoint solo si procesamos con éxito
+        // Usamos last_server_time que nos devuelve el servidor para ser precisos
+        await db.kv.put({ key: kvKey, value: last_server_time });
+
+        // Notificar cambios (invalidar caches)
+        // Esto refrescará las UI que dependen de useQuery
+        await this.invalidateCriticalCaches();
+      }
+
+    } catch (error) {
+      this.logger.error('Error en pullFromServer', error);
+      // No lanzamos error para no detener el intervalo
+    }
   }
 
   /**

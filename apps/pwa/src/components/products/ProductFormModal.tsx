@@ -483,7 +483,10 @@ export default function ProductFormModal({
 
   // Mutación para crear/actualizar
   const createMutation = useMutation({
-    mutationFn: (data: Partial<Product>) => productsService.create(data, user?.store_id),
+    mutationFn: (data: Partial<Product>) => productsService.create(data, user?.store_id, {
+      userId: user?.user_id,
+      userRole: user?.role
+    }),
     onSuccess: () => {
       toast.success('Producto creado exitosamente')
       onSuccess?.()
@@ -495,7 +498,10 @@ export default function ProductFormModal({
   })
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<Product>) => productsService.update(product!.id, data, user?.store_id),
+    mutationFn: (data: Partial<Product>) => productsService.update(product!.id, data, user?.store_id, {
+      userId: user?.user_id,
+      userRole: user?.role
+    }),
     onSuccess: () => {
       toast.success('Producto actualizado exitosamente')
       onSuccess?.()

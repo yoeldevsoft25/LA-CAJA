@@ -14,7 +14,7 @@ import { BulkPriceChangeDto } from './dto/bulk-price-change.dto';
 import { SearchProductsDto } from './dto/search-products.dto';
 import { ExchangeService } from '../exchange/exchange.service';
 import { randomUUID } from 'crypto';
-import { PricingCalculator, WeightUnit } from '@la-caja/domain';
+import { PricingCalculator, WeightUnit, normalizeBarcode } from '@la-caja/domain';
 
 @Injectable()
 export class ProductsService {
@@ -27,14 +27,6 @@ export class ProductsService {
     private productRepository: Repository<Product>,
     private exchangeService: ExchangeService,
   ) { }
-
-
-
-  private normalizeBarcode(value?: string | null): string | null {
-    if (value === null || value === undefined) return null;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
 
   private async ensureBarcodeUnique(
     repository: Repository<Product>,
@@ -115,7 +107,7 @@ export class ProductsService {
   }
 
   async create(storeId: string, dto: CreateProductDto): Promise<Product> {
-    const normalizedBarcode = this.normalizeBarcode(dto.barcode);
+    const normalizedBarcode = normalizeBarcode(dto.barcode);
     await this.ensureBarcodeUnique(
       this.productRepository,
       storeId,
@@ -299,7 +291,7 @@ export class ProductsService {
       if (dto.category !== undefined) product.category = dto.category ?? null;
       if (dto.sku !== undefined) product.sku = dto.sku ?? null;
       if (dto.barcode !== undefined) {
-        const normalizedBarcode = this.normalizeBarcode(dto.barcode);
+        const normalizedBarcode = normalizeBarcode(dto.barcode);
         if (normalizedBarcode !== product.barcode) {
           await this.ensureBarcodeUnique(
             productRepo,

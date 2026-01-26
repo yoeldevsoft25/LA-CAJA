@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X, Cloud, CloudOff } from 'lucide-react'
+import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X, Cloud, CloudOff, DollarSign as DollarSignIcon } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { salesService, Sale } from '@/services/sales.service'
 import { useAuth } from '@/stores/auth.store'
@@ -836,21 +836,44 @@ export default function SalesPage() {
                   })}
                 </div>
               ) : (
-                /* Vista de tabla para desktop */
-                <div className="overflow-x-auto">
+                /* Vista de tabla para desktop - Premium Grid */
+                <div className="rounded-xl overflow-hidden border border-white/10 bg-background/50 backdrop-blur-md shadow-inner">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha/Hora</TableHead>
-                        <TableHead className="hidden sm:table-cell">Factura</TableHead>
-                        <TableHead className="hidden sm:table-cell">Productos</TableHead>
-                        <TableHead className="hidden lg:table-cell">Preview</TableHead>
-                        <TableHead className="text-center">Total</TableHead>
-                        <TableHead className="text-center hidden md:table-cell">Moneda</TableHead>
-                        <TableHead className="text-center hidden lg:table-cell">Método de Pago</TableHead>
-                        <TableHead className="hidden md:table-cell">Responsable</TableHead>
-                        <TableHead className="hidden xl:table-cell">Cliente</TableHead>
-                        <TableHead className="text-right">Acción</TableHead>
+                    <TableHeader className="bg-muted/30">
+                      <TableRow className="hover:bg-transparent border-white/5">
+                        <TableHead className="w-[180px]">
+                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            <CalendarIcon className="w-3.5 h-3.5" />
+                            Fecha
+                          </div>
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Factura</span>
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Resumen</span>
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Preview</span>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <div className="flex items-center justify-end gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            <DollarSignIcon className="w-3.5 h-3.5" />
+                            Total
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center hidden md:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pago</span>
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vendedor</span>
+                        </TableHead>
+                        <TableHead className="hidden xl:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cliente</span>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acciones</span>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -866,9 +889,9 @@ export default function SalesPage() {
                         const totalItemsLabel =
                           weightLineItems > 0
                             ? totalUnits > 0
-                              ? `${totalUnits} unidades + ${weightLineItems} por peso`
-                              : `${weightLineItems} por peso`
-                            : `${totalUnits} unidades`
+                              ? `${totalUnits} u + ${weightLineItems} peso`
+                              : `${weightLineItems} peso`
+                            : `${totalUnits} u`
 
                         // Determinar estado de deuda para FIAO
                         const isFIAO = sale.payment.method === 'FIAO'
@@ -877,34 +900,20 @@ export default function SalesPage() {
                         const isPaid = isFIAO && debtStatus === 'paid'
                         const isVoided = Boolean(sale.voided_at)
 
-                        // Clases de color para la fila según estado de deuda
-                        let rowClassName = ''
-                        if (isVoided) {
-                          rowClassName = 'bg-muted/40 text-muted-foreground'
-                        } else if (isPending) {
-                          rowClassName = 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-500'
-                        } else if (isPaid) {
-                          rowClassName = 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500'
-                        }
-
                         return (
                           <TableRow
                             key={sale.id}
-                            className={cn('transition-colors', rowClassName)}
+                            className={cn(
+                              'group transition-all duration-200 border-white/5',
+                              isVoided ? 'bg-red-500/5 hover:bg-red-500/10' : 'hover:bg-primary/5'
+                            )}
                           >
-                            <TableCell>
-                              <div className="text-sm sm:text-base">
-                                <p className="font-semibold text-foreground">
-                                  {format(new Date(sale.sold_at), 'dd/MM/yyyy')}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(sale.sold_at), 'HH:mm')}
-                                </p>
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-semibold tracking-tight">{format(new Date(sale.sold_at), 'dd MMM yyyy')}</span>
+                                <span className="text-xs text-muted-foreground font-mono">{format(new Date(sale.sold_at), 'HH:mm')}</span>
                                 {isVoided && (
-                                  <Badge
-                                    variant="outline"
-                                    className="mt-1 border-destructive/40 text-destructive"
-                                  >
+                                  <Badge variant="outline" className="mt-1 w-fit bg-red-500/10 text-red-500 border-red-500/20 text-[10px] h-5 px-1.5">
                                     Anulada
                                   </Badge>
                                 )}
@@ -912,171 +921,103 @@ export default function SalesPage() {
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               {sale.invoice_full_number ? (
-                                <div className="flex items-center gap-1">
-                                  <Receipt className="w-4 h-4 text-primary" />
-                                  <p className="font-mono font-semibold text-primary text-sm">
-                                    {sale.invoice_full_number}
-                                  </p>
-                                </div>
+                                <Badge variant="secondary" className="font-mono text-xs bg-muted/50 text-foreground border-border/50">
+                                  {sale.invoice_full_number}
+                                </Badge>
                               ) : (
-                                <p className="text-xs text-muted-foreground">-</p>
+                                <span className="text-muted-foreground/30 text-xs">-</span>
                               )}
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
-                              <div className="text-sm">
-                                <p className="font-medium text-foreground">
-                                  {itemCount} producto{itemCount !== 1 ? 's' : ''}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {totalItemsLabel}
-                                </p>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-medium">{itemCount} items</span>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{totalItemsLabel}</span>
                               </div>
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">
-                              <div className="max-w-[200px]">
-                                <div className="flex flex-wrap gap-1">
-                                  {sale.items.slice(0, 3).map((item, idx) => (
-                                    <Badge
-                                      key={idx}
-                                      variant="outline"
-                                      className="text-xs font-normal"
-                                    >
-                                      {item.product?.name || 'Producto'}
-                                      {item.qty > 1 && ` x${item.qty}`}
-                                    </Badge>
-                                  ))}
-                                  {sale.items.length > 3 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      +{sale.items.length - 3} más
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <div className="text-sm sm:text-base">
-                                <p className="font-bold text-foreground">
-                                  {Number(sale.totals.total_bs).toFixed(2)} Bs
-                                </p>
-                                <p className="text-xs sm:text-sm text-muted-foreground">
-                                  ${Number(sale.totals.total_usd).toFixed(2)} USD
-                                </p>
-                                {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
-                                  <p className="text-xs font-medium text-orange-600 mt-1">
-                                    Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs / ${Number(sale.debt.remaining_usd || 0).toFixed(2)} USD
-                                  </p>
+                              <div className="flex -space-x-2 overflow-hidden py-1">
+                                {sale.items.slice(0, 4).map((item, idx) => (
+                                  <div key={idx} className="relative z-0 group-hover:z-10 transition-all hover:scale-110">
+                                    <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-[10px] font-bold shadow-sm" title={item.product?.name}>
+                                      {item.product?.name?.substring(0, 2).toUpperCase() || 'P'}
+                                    </div>
+                                  </div>
+                                ))}
+                                {sale.items.length > 4 && (
+                                  <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-[10px] font-bold z-0">
+                                    +{sale.items.length - 4}
+                                  </div>
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="text-center hidden md:table-cell">
-                              <Badge variant="secondary">
-                                {currencyLabels[sale.currency] || sale.currency}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center hidden lg:table-cell">
-                              <div className="flex flex-col items-center gap-1">
-                                <span className="text-xs sm:text-sm text-foreground">
-                                  {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                            <TableCell className="text-right">
+                              <div className="flex flex-col items-end">
+                                <span className="text-base font-bold font-heading text-foreground tracking-tight">
+                                  ${Number(sale.totals.total_usd).toFixed(2)}
                                 </span>
-                                {isFIAO && sale.debt && (
-                                  <Badge
-                                    variant={
-                                      debtStatus === 'paid'
-                                        ? 'default'
-                                        : debtStatus === 'partial'
-                                          ? 'secondary'
-                                          : 'outline'
-                                    }
-                                    className={
-                                      debtStatus === 'paid'
-                                        ? 'bg-green-100 text-green-800 hover:bg-green-100'
-                                        : debtStatus === 'partial'
-                                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'
-                                          : 'bg-orange-100 text-orange-800 hover:bg-orange-100'
-                                    }
-                                  >
-                                    {debtStatus === 'paid'
-                                      ? 'Pagado'
-                                      : debtStatus === 'partial'
-                                        ? 'Parcial'
-                                        : 'Pendiente'}
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  My Currency: {Number(sale.totals.total_bs).toFixed(2)} Bs
+                                </span>
+                                {isFIAO && sale.debt && isPending && (
+                                  <Badge variant="outline" className="mt-1 bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] h-5 px-1.5 ml-auto">
+                                    Debe: ${Number(sale.debt.remaining_usd || 0).toFixed(2)}
                                   </Badge>
                                 )}
                               </div>
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
-                              <div className="text-sm">
-                                {sale.sold_by_user ? (
-                                  <>
-                                    <p className="font-medium text-foreground">
-                                      {sale.sold_by_user.full_name || 'Sin nombre'}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {sale.sold_by_user_id?.substring(0, 8)}...
-                                    </p>
-                                  </>
-                                ) : (
-                                  <p className="text-muted-foreground text-xs">N/A</p>
-                                )}
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 hover:bg-primary/10">
+                                  {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase">{sale.currency}</span>
                               </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {sale.sold_by_user ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                                    {sale.sold_by_user.full_name?.substring(0, 1) || 'U'}
+                                  </div>
+                                  <span className="text-sm truncate max-w-[100px]">{sale.sold_by_user.full_name}</span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">Sistema</span>
+                              )}
                             </TableCell>
                             <TableCell className="hidden xl:table-cell">
-                              <div className="text-sm">
-                                {sale.customer ? (
-                                  <>
-                                    <p className="font-medium text-foreground">{sale.customer.name}</p>
-                                    {sale.customer.document_id && (
-                                      <p className="text-xs text-muted-foreground">
-                                        CI: {sale.customer.document_id}
-                                      </p>
-                                    )}
-                                  </>
-                                ) : sale.payment.method === 'FIAO' ? (
-                                  <p className="text-orange-600 text-xs font-medium">Fiado</p>
-                                ) : (
-                                  <p className="text-muted-foreground text-xs">-</p>
-                                )}
-                              </div>
+                              {sale.customer ? (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">{sale.customer.name}</span>
+                                  <span className="text-[10px] text-muted-foreground font-mono">{sale.customer.document_id}</span>
+                                </div>
+                              ) : isFIAO ? (
+                                <span className="text-xs font-bold text-orange-500">Sin cliente asignado</span>
+                              ) : (
+                                <span className="text-muted-foreground/30 text-xs">-</span>
+                              )}
                             </TableCell>
-                            <TableCell className="text-right space-x-1">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleViewDetail(sale)}
-                                      className="text-primary hover:text-primary min-h-[44px] min-w-[44px]"
-                                      aria-label="Ver detalles de venta"
-                                    >
-                                      <Eye className="w-4 h-4 mr-1.5" />
-                                      <span className="hidden sm:inline">Ver</span>
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Ver detalles de la venta</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handlePrint(sale)}
-                                      className="text-primary min-h-[44px] min-w-[44px]"
-                                      aria-label="Imprimir ticket"
-                                    >
-                                      <Printer className="w-4 h-4 sm:mr-1" />
-                                      <span className="hidden sm:inline">Ticket</span>
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Imprimir ticket de venta</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleViewDetail(sale)}
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
+                                  title="Ver detalles"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handlePrint(sale)}
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
+                                  title="Imprimir ticket"
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         )

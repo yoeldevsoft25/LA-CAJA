@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { Repository, In } from 'typeorm';
+import { Repository, In, MoreThan } from 'typeorm';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
 import { CashSession } from '../database/entities/cash-session.entity';
@@ -122,7 +122,7 @@ export class SyncService {
     private discountRulesService: DiscountRulesService,
     @InjectQueue('sales-projections')
     private salesProjectionQueue: Queue,
-  ) {}
+  ) { }
 
   async push(
     dto: PushSyncDto,
@@ -613,9 +613,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedSubtotalBs - Number(payload.totals.subtotal_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedSubtotalUsd - Number(payload.totals.subtotal_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,
@@ -626,9 +626,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedDiscountBs - Number(payload.totals.discount_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedDiscountUsd - Number(payload.totals.discount_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,
@@ -639,9 +639,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedTotalBs - Number(payload.totals.total_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedTotalUsd - Number(payload.totals.total_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,
@@ -917,5 +917,55 @@ export class SyncService {
     });
 
     return lastEvent?.seq || 0;
+  }
+
+  /**
+   * Obtiene eventos que ocurrieron después de un punto en el tiempo
+   * Usado para replicación de datos a otros dispositivos (Pull Sync)
+   */
+  async pullEvents(
+    storeId: string,
+    since: Date,
+    excludeDeviceId?: string,
+    limit: number = 100,
+  ): Promise<{ events: any[]; last_server_time: number }> {
+    const events = await this.eventRepository.find({
+      where: {
+        store_id: storeId,
+        received_at: MoreThan(since),
+      },
+      order: {
+        received_at: 'ASC',
+      },
+      take: limit,
+    });
+
+    let filteredEvents = events;
+    if (excludeDeviceId) {
+      filteredEvents = events.filter(e => e.device_id !== excludeDeviceId);
+    }
+
+    const maxDate = events.length > 0 ? events[events.length - 1].received_at.getTime() : since.getTime();
+
+    // Mapear a formato DTO
+    const dtos = filteredEvents.map(e => ({
+      event_id: e.event_id,
+      type: e.type,
+      seq: e.seq, // Del dispositivo original
+      version: e.version,
+      created_at: e.created_at.getTime(),
+      received_at: e.received_at.getTime(),
+      actor: {
+        user_id: e.actor_user_id,
+        role: e.actor_role
+      },
+      payload: e.payload,
+      vector_clock: e.vector_clock
+    }));
+
+    return {
+      events: dtos,
+      last_server_time: maxDate
+    };
   }
 }

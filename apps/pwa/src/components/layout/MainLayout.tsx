@@ -419,9 +419,15 @@ export default function MainLayout() {
     // Cuando está colapsado, mostrar secciones con popovers
     if (sidebarCollapsed && !isMobile) {
       return (
-        <div className="flex flex-col h-full min-h-0">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col h-full min-h-0 bg-background/80 backdrop-blur-xl border-r border-white/10"
+        >
+          <div className="h-4"></div>
+          <div className="h-4"></div>
           <ScrollArea className="flex-1 min-h-0 px-2 py-4">
-            <nav className="space-y-1">
+            <nav className="space-y-2">
               {filteredNavSections.map((section) => {
                 const SectionIcon = section.icon
                 const hasActiveItem = section.items.some((item) => isActive(item.path))
@@ -438,28 +444,38 @@ export default function MainLayout() {
                       <Tooltip delayDuration={300} disableHoverableContent>
                         <TooltipTrigger asChild>
                           <PopoverTrigger asChild>
-                            <button
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                               className={cn(
-                                "w-full flex items-center justify-center px-2 py-2.5 rounded-lg text-sm font-medium transition-all",
+                                "relative w-full flex items-center justify-center px-2 py-3 rounded-xl text-sm font-medium transition-all duration-300",
                                 hasActiveItem
-                                  ? "bg-primary text-primary-foreground shadow-sm"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                  ? "bg-primary text-primary-foreground shadow-[0_4px_20px_-4px_rgba(99,102,241,0.5)]"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                               )}
                             >
-                              <SectionIcon className="w-5 h-5 flex-shrink-0" strokeWidth={2} />
-                            </button>
+                              <SectionIcon className="w-5 h-5 flex-shrink-0" strokeWidth={hasActiveItem ? 2.5 : 2} />
+                              {hasActiveItem && (
+                                <motion.div
+                                  layoutId="active-pill"
+                                  className="absolute inset-0 rounded-xl bg-primary z-[-1]"
+                                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                              )}
+                            </motion.button>
                           </PopoverTrigger>
                         </TooltipTrigger>
                         {!isOpen && (
-                          <TooltipContent side="right">
-                            <p>{section.label}</p>
+                          <TooltipContent side="right" className="bg-popover/90 backdrop-blur-md border-white/10 text-popover-foreground">
+                            <p className="font-medium">{section.label}</p>
                           </TooltipContent>
                         )}
                       </Tooltip>
                     </TooltipProvider>
-                    <PopoverContent side="right" align="start" className="w-56 p-1">
-                      <div className="space-y-0.5">
-                        <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <PopoverContent side="right" align="start" className="w-60 p-2 bg-background/90 backdrop-blur-xl border-white/10 shadow-2xl rounded-2xl ml-2">
+                      {/* Popover content remains same structural logic but styled */}
+                      <div className="space-y-1">
+                        <div className="px-3 py-2 text-xs font-bold text-muted-foreground/70 uppercase tracking-wider">
                           {section.label}
                         </div>
                         {section.items.map((item) => {
@@ -467,27 +483,23 @@ export default function MainLayout() {
                           const active = isActive(item.path)
 
                           return (
-                            <button
+                            <motion.button
                               key={item.path}
                               onClick={() => {
                                 handleNavClick(item.path)
-                                setOpenPopover(null) // Cerrar popover al hacer click
+                                setOpenPopover(null)
                               }}
+                              whileHover={{ x: 4 }}
                               className={cn(
-                                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                                 active
-                                  ? "bg-primary text-primary-foreground shadow-sm"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                  ? "bg-primary/10 text-primary"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                               )}
                             >
-                              <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+                              <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 2} />
                               <span className="flex-1 text-left truncate">{item.label}</span>
-                              {item.badge && (
-                                <Badge variant="secondary" className="text-xs flex-shrink-0">
-                                  {item.badge}
-                                </Badge>
-                              )}
-                            </button>
+                            </motion.button>
                           )
                         })}
                       </div>
@@ -498,67 +510,39 @@ export default function MainLayout() {
             </nav>
           </ScrollArea>
 
-          {/* Collapse Button (Desktop only) */}
-          {!isMobile && (
-            <>
-              <Separator className="flex-shrink-0" />
-              <div className="p-3 flex-shrink-0">
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="w-full hover:bg-accent hover:shadow-sm transition-shadow px-2 justify-center"
-                      >
-                        <ChevronLeft
-                          className={cn(
-                            "w-4 h-4 transition-transform",
-                            sidebarCollapsed && "rotate-180"
-                          )}
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Expandir</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+          {/* Collapse Button */}
+          {
+            !isMobile && (
+              <div className="p-3 flex-shrink-0 border-t border-white/5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className="w-full hover:bg-white/5 text-muted-foreground hover:text-foreground justify-center h-10 rounded-xl"
+                >
+                  <ChevronLeft className="w-5 h-5 rotate-180 transition-transform" />
+                </Button>
               </div>
-            </>
-          )}
-        </div>
+            )
+          }
+        </motion.div >
       )
     }
 
     return (
-      <div className="flex flex-col h-full min-h-0">
-        {/* Logo - Only show in mobile sidebar */}
-        {isMobile && (
-          <div className="flex items-center px-6 h-16 border-b border-border flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <img
-                src="/favicon.svg"
-                alt="LA CAJA Logo"
-                className="w-10 h-10 rounded-lg"
-              />
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight">LA CAJA</h2>
-                <p className="text-xs text-muted-foreground">Sistema POS</p>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="flex flex-col h-full min-h-0 bg-background/80 backdrop-blur-xl border-r border-white/10">
+        {/* Logo - Only show in mobile sidebar or if expanded desktop */}
+        {/* Logo removed as per user request (present in header) */}
+        <div className="h-4"></div>
 
         {/* Navigation with Collapsible Sections */}
-        <ScrollArea className="flex-1 min-h-0 px-3 py-4">
-          <nav className="space-y-1">
+        <ScrollArea className="flex-1 min-h-0 px-4 py-2">
+          <nav className="space-y-4">
             <Accordion
               type="multiple"
               value={openSections}
               onValueChange={setOpenSections}
-              className="w-full"
+              className="w-full space-y-4"
             >
               {filteredNavSections.map((section) => {
                 const SectionIcon = section.icon
@@ -568,44 +552,58 @@ export default function MainLayout() {
                   <AccordionItem key={section.id} value={section.id} className="border-0">
                     <AccordionTrigger
                       className={cn(
-                        "px-3 py-2.5 rounded-lg text-sm font-medium transition-all hover:no-underline",
+                        "px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:no-underline group",
                         hasActiveItem
-                          ? "bg-accent text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                       )}
                     >
                       <div className="flex items-center gap-3 flex-1">
-                        <SectionIcon className="w-5 h-5 flex-shrink-0" strokeWidth={2} />
+                        <SectionIcon className={cn("w-5 h-5 flex-shrink-0 transition-colors", hasActiveItem ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} strokeWidth={2.5} />
                         <span className="flex-1 text-left">{section.label}</span>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pt-1 pb-2">
-                      <div className="space-y-0.5 pl-8">
+                    <AccordionContent className="pt-2 pb-0">
+                      <div className="space-y-1 pl-4 relative">
+                        {/* Connecting line */}
+                        <div className="absolute left-6 top-2 bottom-2 w-[1px] bg-border/50" />
+
                         {section.items.map((item) => {
                           const Icon = item.icon
                           const active = isActive(item.path)
 
                           return (
-                            <button
+                            <motion.button
                               key={item.path}
                               onClick={() => handleNavClick(item.path)}
+                              whileHover={{ x: 4 }}
                               className={cn(
-                                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                                "relative w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ml-2",
                                 active
-                                  ? "bg-primary text-primary-foreground shadow-sm"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                                  ? "text-primary bg-primary/5"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                               )}
-                              aria-current={active ? 'page' : undefined}
-                              aria-label={active ? `${item.label}, página actual` : item.label}
                             >
-                              <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
-                              <span className="flex-1 text-left truncate">{item.label}</span>
+                              <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 2} />
+                              <span className="flex-1 text-left">{item.label}</span>
+                              {active && (
+                                <motion.div
+                                  layoutId="active-dot"
+                                  className="absolute left-0 w-1 h-5 bg-primary rounded-full -ml-[9px]"
+                                />
+                              )}
                               {item.badge && (
-                                <Badge variant="secondary" className="text-xs flex-shrink-0">
+                                <Badge
+                                  variant="secondary"
+                                  className={cn(
+                                    "text-[10px] h-5 px-1.5 flex-shrink-0",
+                                    item.badge === 'Nuevo' ? "bg-indigo-500/20 text-indigo-400" : ""
+                                  )}
+                                >
                                   {item.badge}
                                 </Badge>
                               )}
-                            </button>
+                            </motion.button>
                           )
                         })}
                       </div>
@@ -619,28 +617,17 @@ export default function MainLayout() {
 
         {/* Collapse Button (Desktop only) */}
         {!isMobile && (
-          <>
-            <Separator className="flex-shrink-0" />
-            <div className="p-3 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className={cn(
-                  "w-full hover:bg-accent hover:shadow-sm transition-shadow",
-                  sidebarCollapsed && "px-2"
-                )}
-              >
-                <ChevronLeft
-                  className={cn(
-                    "w-4 h-4 transition-transform",
-                    sidebarCollapsed && "rotate-180"
-                  )}
-                />
-                {!sidebarCollapsed && <span className="ml-2">Contraer</span>}
-              </Button>
-            </div>
-          </>
+          <div className="p-4 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="w-full h-12 rounded-xl border border-border/50 hover:bg-accent/50 hover:border-border transition-all text-muted-foreground group"
+            >
+              <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+              <span className="ml-2 font-medium">Contraer Menú</span>
+            </Button>
+          </div>
         )}
       </div>
     )
@@ -652,8 +639,9 @@ export default function MainLayout() {
       <SkipLinks />
 
       {/* Header */}
+      {/* Header */}
       <header className={cn(
-        "sticky z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        "sticky z-40 bg-background/60 backdrop-blur-md border-b border-white/10 shadow-sm supports-[backdrop-filter]:bg-background/60",
         // Ajustar posición cuando el banner está visible (offline o reconexión)
         isBannerVisible ? "top-[48px]" : "top-0"
       )}>
