@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, CreditCard, Wallet, Banknote, User, Search, Check, Calculator, Split, UserPlus, Loader2, ShoppingCart, ShoppingBag } from 'lucide-react'
 import toast from '@/lib/toast'
@@ -650,49 +649,31 @@ export default function CheckoutModal({
       finalPaymentMethod = fastCheckoutConfig.default_payment_method as any
     }
 
-    // Determinar currency basado en el método de pago
-    let currency: 'BS' | 'USD' | 'MIXED' = 'USD'
-    if (finalPaymentMethod === 'CASH_BS' || finalPaymentMethod === 'PAGO_MOVIL' || finalPaymentMethod === 'TRANSFER') {
-      currency = 'BS'
-    } else if (finalPaymentMethod === 'CASH_USD') {
-      currency = 'USD'
-    }
-
     // Preparar información de pago en efectivo USD
-    // IMPORTANTE: Solo enviamos change_bs si es > 0 (redondeado)
-    // Si es 0, no se envía, y el backend NO descuenta nada (excedente a favor del POS)
     let cashPayment: { received_usd: number; change_bs?: number } | undefined = undefined
     if (finalPaymentMethod === 'CASH_USD' && receivedUsd > 0) {
       cashPayment = {
         received_usd: Math.round(receivedUsd * 100) / 100,
       }
 
-      // Solo incluir change_bs si es mayor a 0 (cambio redondeado)
-      // Si es 0, el excedente queda a favor del POS y NO se descuenta de la caja
-      if (giveChangeInBs && changeBsFromUsd > 0) {
-        cashPayment.change_bs = Math.round(changeBsFromUsd * 100) / 100
+      const rawChangeBs = (receivedUsd * exchangeRate) - (total.usd * exchangeRate)
+      if (giveChangeInBs && rawChangeBs > 0) {
+        cashPayment.change_bs = Math.round(rawChangeBs * 100) / 100
       }
     }
 
     // Preparar información de pago en efectivo Bs
-    // IMPORTANTE: Solo enviamos change_bs si es > 0 (redondeado)
-    // Si es 0, no se envía, y el backend NO descuenta nada (excedente a favor del POS)
     let cashPaymentBs: { received_bs: number; change_bs?: number } | undefined = undefined
     if (finalPaymentMethod === 'CASH_BS' && receivedBs > 0) {
       cashPaymentBs = {
         received_bs: Math.round(receivedBs * 100) / 100,
       }
 
-      // Solo incluir change_bs si es mayor a 0 (cambio redondeado)
-      // Si es 0, el excedente queda a favor del POS y NO se descuenta de la caja
-      if (roundedChangeBs > 0) {
-        cashPaymentBs.change_bs = Math.round(roundedChangeBs * 100) / 100
+      const rawChangeBs = receivedBs - (total.usd * exchangeRate)
+      if (rawChangeBs > 0) {
+        cashPaymentBs.change_bs = Math.round(rawChangeBs * 100) / 100
       }
     }
-
-    // Verificar si hay productos que requieren seriales
-    // Por ahora, omitimos la verificación automática y permitimos que el usuario seleccione seriales opcionalmente
-    // En una implementación completa, verificaríamos con la API si el producto tiene seriales disponibles
 
     // Preparar datos para pagos divididos
     let splitPaymentsForBackend: SplitPaymentForBackend[] | undefined = undefined
@@ -709,31 +690,29 @@ export default function CheckoutModal({
       }))
     }
 
-    // Determinar método de pago final
-    const effectivePaymentMethod = paymentMode === 'SPLIT' ? 'SPLIT' : finalPaymentMethod
-    const effectiveCurrency = paymentMode === 'SPLIT' ? 'MIXED' : currency
-
     onConfirm({
-      payment_method: effectivePaymentMethod,
-      currency: effectiveCurrency,
+      payment_method: selectedMethod === 'FIAO' ? 'FIAO' : (paymentMode === 'SPLIT' ? 'SPLIT' : selectedMethod),
+      currency: selectedMethod === 'CASH_USD' ? 'USD' : (selectedMethod === 'CASH_BS' ? 'BS' : 'MIXED'),
       exchange_rate: exchangeRate,
-      cash_payment: paymentMode === 'SINGLE' ? cashPayment : undefined,
-      cash_payment_bs: paymentMode === 'SINGLE' ? cashPaymentBs : undefined,
-      split_payments: splitPaymentsForBackend,
+      cash_payment: cashPayment,
+      cash_payment_bs: cashPaymentBs,
       customer_id: selectedCustomerId || undefined,
-      customer_name: customerName.trim() || undefined,
-      customer_document_id: customerDocumentId.trim() || undefined,
-      customer_phone: customerPhone.trim() || undefined,
-      customer_note: customerNote.trim() || undefined,
-      note: saleNote.trim() || undefined,
-      serials: Object.keys(selectedSerials).length > 0 ? selectedSerials : undefined,
+      customer_name: customerName || undefined,
+      customer_document_id: customerDocumentId || undefined,
+      customer_phone: customerPhone || undefined,
+      customer_note: customerNote || undefined,
+      note: saleNote || undefined,
+      split_payments: splitPaymentsForBackend,
+      serials: selectedSerials,
       invoice_series_id: selectedInvoiceSeriesId,
       price_list_id: selectedPriceListId,
       promotion_id: selectedPromotionId,
-      warehouse_id: selectedWarehouseId,
+      warehouse_id: selectedWarehouseId
     })
+
     setError('')
   }
+
 
   useEffect(() => {
     confirmActionRef.current = handleConfirm
@@ -1857,6 +1836,7 @@ export default function CheckoutModal({
             </div>
           </SheetContent>
         </Sheet>
+
         {/* Selector de seriales */}
         {serialSelectorItem && (
           <SerialSelector
@@ -1872,69 +1852,60 @@ export default function CheckoutModal({
     )
   }
 
-  // Modal en desktop - usar portal para estar fuera del Dialog
-  const modalContentDesktop = (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-1 sm:p-4"
-      style={{ zIndex: 100 }}
-      onClick={(e) => {
-        // Solo cerrar si el click es directamente en el contenedor (no en hijos)
-        if (e.target === e.currentTarget) {
-          onClose()
-        }
-      }}
-    >
-      <Card
-        className="w-full max-w-md lg:max-w-4xl xl:max-w-5xl h-[85vh] sm:h-[90vh] lg:h-[85vh] flex flex-col border border-border overflow-hidden relative z-10"
-        style={{ zIndex: 101 }}
+  // Modal en desktop
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center p-1 sm:p-4 z-[100]"
         onClick={(e) => {
-          // Prevenir que el click se propague al contenedor padre
-          e.stopPropagation()
+          if (e.target === e.currentTarget) {
+            onClose()
+          }
         }}
       >
-        {/* Header Premium */}
-        <div className="sticky top-0 bg-gradient-to-r from-primary/5 via-background to-primary/5 backdrop-blur-xl border-b border-border/40 px-4 sm:px-5 lg:px-6 py-4 sm:py-5 flex items-center justify-between z-10 rounded-t-lg shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 backdrop-blur-sm">
-              <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+        <Card
+          className="w-full max-w-md lg:max-w-4xl xl:max-w-5xl h-[85vh] sm:h-[90vh] lg:h-[85vh] flex flex-col border border-border overflow-hidden relative z-[101]"
+          onClick={(e) => {
+            e.stopPropagation()
+          }}
+        >
+          {/* Header Premium */}
+          <div className="sticky top-0 bg-gradient-to-r from-primary/5 via-background to-primary/5 backdrop-blur-xl border-b border-border/40 px-4 sm:px-5 lg:px-6 py-4 sm:py-5 flex items-center justify-between z-10 rounded-t-lg shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10 backdrop-blur-sm">
+                <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-foreground">Procesar Venta</h2>
+                <p className="text-xs text-muted-foreground">Completa los datos de pago</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">Procesar Venta</h2>
-              <p className="text-xs text-muted-foreground">Completa los datos de pago</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
-            aria-label="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {modalContent}
-        </div>
-        {/* Selector de seriales */}
-        {serialSelectorItem && (
-          <SerialSelector
-            isOpen={!!serialSelectorItem}
-            onClose={() => setSerialSelectorItem(null)}
-            productId={serialSelectorItem.productId}
-            productName={serialSelectorItem.productName}
-            quantity={serialSelectorItem.quantity}
-            onSelect={handleSerialSelect}
-          />
-        )}
-      </Card>
-    </div>
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            {modalContent}
+          </div>
+          {/* Selector de seriales */}
+          {serialSelectorItem && (
+            <SerialSelector
+              isOpen={!!serialSelectorItem}
+              onClose={() => setSerialSelectorItem(null)}
+              productId={serialSelectorItem.productId}
+              productName={serialSelectorItem.productName}
+              quantity={serialSelectorItem.quantity}
+              onSelect={handleSerialSelect}
+            />
+          )}
+        </Card>
+      </div>
+    </>
   )
-
-  // Renderizar en portal para estar fuera del Dialog
-  if (typeof document !== 'undefined') {
-    return createPortal(modalContentDesktop, document.body)
-  }
-
-  return modalContentDesktop
 }

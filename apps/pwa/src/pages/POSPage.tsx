@@ -43,6 +43,7 @@ import WeightInputModal, { WeightProduct } from '@/components/pos/WeightInputMod
 import ScannerStatusBadge from '@/components/pos/ScannerStatusBadge'
 import ScannerBarcodeStrip from '@/components/pos/ScannerBarcodeStrip'
 import LastSoldProductsCard from '@/components/pos/LastSoldProductsCard'
+import { SuccessOverlay } from '@/components/pos/SuccessOverlay'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -96,10 +97,12 @@ export default function POSPage() {
   // Estado para indicador visual del scanner
   const [lastScannedBarcode, setLastScannedBarcode] = useState<string | null>(null)
   const [scannerStatus, setScannerStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle')
-  const [discountInputs, setDiscountInputs] = useState<Record<string, string>>({})
+  // const [discountInputs, setDiscountInputs] = useState<Record<string, string>>({})
+  /* Se comenta el estado de input de descuentos por desuso en el diseño compacto */
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
   const [scannerSoundEnabled, setScannerSoundEnabled] = useState(true)
+  const [successSaleId, setSuccessSaleId] = useState<string | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const [invalidCartProductIds, setInvalidCartProductIds] = useState<string[]>([])
   const listViewportRef = useRef<HTMLDivElement | null>(null)
@@ -138,7 +141,7 @@ export default function POSPage() {
       if (id === activeCartId) return
       setActiveCart(id)
       setShowCheckout(false)
-      setDiscountInputs({})
+      // setDiscountInputs({})
       setPendingSerials({})
     },
     [activeCartId, setActiveCart]
@@ -149,6 +152,7 @@ export default function POSPage() {
   const totalQty = useMemo(() => items.reduce((sum, item) => sum + item.qty, 0), [items])
   const handleClearCart = useCallback(() => {
     clear()
+    // setDiscountInputs({})
     setIsClearDialogOpen(false)
   }, [clear])
 
@@ -924,14 +928,13 @@ export default function POSPage() {
   const allowDiscounts = !fastCheckoutConfig?.enabled || fastCheckoutConfig?.allow_discounts
   const exchangeRate = bcvRateData?.rate && bcvRateData.rate > 0 ? bcvRateData.rate : 36
 
+  /*
   const resolveItemRate = (item: CartItem) => {
-    const unitUsd = Number(item.unit_price_usd || 0)
-    const unitBs = Number(item.unit_price_bs || 0)
-    if (unitUsd > 0 && unitBs > 0) {
-      return unitBs / unitUsd
-    }
-    return exchangeRate > 0 ? exchangeRate : 1
+    // Si el item tiene tasa guardada, usarla. Si no, usar la global.
+    // TODO: Implementar item.exchange_rate si decidimos guardarla por item
+    return exchangeRate
   }
+  */
 
   // Calcular totales recalculando precios en BS con la tasa actual
   const calculateTotalWithCurrentRate = useMemo(() => {
@@ -992,8 +995,11 @@ export default function POSPage() {
   const totalDiscountUsd = items.reduce((sum, item) => sum + Number(item.discount_usd || 0), 0)
 
   // Porcentaje máximo de descuento permitido (configurable por rol en el futuro)
-  const MAX_DISCOUNT_PERCENT = user?.role === 'owner' ? 100 : 30 // Cajeros: 30%, Dueños: 100%
+  // const MAX_DISCOUNT_PERCENT = user?.role === 'owner' ? 100 : 30 // Cajeros: 30%, Dueños: 100%
 
+  // const [discountInputs, setDiscountInputs] = useState<Record<string, string>>({})
+
+  /*
   const handleDiscountChange = (item: CartItem, value: string) => {
     setDiscountInputs((prev) => ({ ...prev, [item.id]: value }))
 
@@ -1029,7 +1035,9 @@ export default function POSPage() {
     const roundedBs = Math.round(roundedUsd * rate * 100) / 100
     updateItem(item.id, { discount_usd: roundedUsd, discount_bs: roundedBs })
   }
+  */
 
+  /*
   const handleDiscountBlur = (item: CartItem) => {
     const value = Number(item.discount_usd || 0)
     setDiscountInputs((prev) => ({
@@ -1037,9 +1045,10 @@ export default function POSPage() {
       [item.id]: value > 0 ? value.toFixed(2) : '',
     }))
   }
+  */
 
   const handleClearDiscounts = () => {
-    setDiscountInputs({})
+    // setDiscountInputs({})
     items.forEach((item) => {
       if ((item.discount_usd || 0) > 0 || (item.discount_bs || 0) > 0) {
         updateItem(item.id, { discount_usd: 0, discount_bs: 0 })
@@ -1056,9 +1065,11 @@ export default function POSPage() {
     networkMode: 'always',
     onSuccess: async (sale) => {
       const isOnline = navigator.onLine
-      if (isOnline) {
-        toast.success(`Venta #${sale.id.slice(0, 8)} procesada exitosamente`)
-      } else {
+
+      // Activar animación de éxito premium central y evitar toast duplicado en online
+      setSuccessSaleId(sale.id.slice(0, 8))
+
+      if (!isOnline) {
         toast.success(
           `Venta #${sale.id.slice(0, 8)} guardada localmente. Se sincronizará cuando vuelva la conexión.`,
           { duration: 5000 }
@@ -1375,7 +1386,7 @@ export default function POSPage() {
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
       <div className={cn(
         "grid gap-4 sm:gap-6",
-        isTabletLandscape ? "grid-cols-[1.8fr_1fr]" : "grid-cols-1 lg:grid-cols-3"
+        isTabletLandscape ? "grid-cols-[1.3fr_1fr]" : "grid-cols-1 lg:grid-cols-3"
       )}>
         {/* Búsqueda y Lista de Productos */}
         <div className={cn(
@@ -1880,9 +1891,9 @@ export default function POSPage() {
                           }).catch(() => { });
                         }
                         // #endregion
-                        const discountInputValue =
-                          discountInputs[item.id] ??
-                          (lineDiscountUsd > 0 ? lineDiscountUsd.toFixed(2) : '')
+                        // const discountInputValue =
+                        //   discountInputs[item.id] ??
+                        //   (lineDiscountUsd > 0 ? lineDiscountUsd.toFixed(2) : '')
                         const isInvalid = invalidCartProductIds.includes(item.product_id)
 
                         return (
@@ -1897,144 +1908,111 @@ export default function POSPage() {
                             ) : undefined}
                             enabled={isMobile}
                             threshold={80}
-                            className="mb-2 sm:mb-3"
+                            className="mb-0"
                           >
                             <div
                               className={cn(
-                                "bg-gradient-to-br from-background to-muted/20 rounded-xl p-3 sm:p-4 border hover:border-primary/40 transition-all shadow-md hover:shadow-lg",
-                                isInvalid ? "border-destructive/60 bg-destructive/5" : "border-border/30"
+                                "group grid grid-cols-[auto_1fr_auto_auto_32px] gap-3 p-3 transition-all border-b border-border/40 hover:bg-muted/30 relative items-center",
+                                isInvalid && "bg-destructive/5"
                               )}
                             >
-                              <div className="flex items-start justify-between mb-3 gap-3 min-w-0">
-                                <div className="flex-1 min-w-0">
-                                  <p
-                                    className="font-semibold text-sm text-foreground break-words leading-snug flex items-center gap-1.5"
-                                    title={item.product_name}
-                                  >
-                                    {item.is_weight_product && (
-                                      <Scale className="w-3 h-3 text-primary flex-shrink-0" />
-                                    )}
-                                    {item.product_name}
-                                    {isInvalid && (
-                                      <Badge className="ml-1 bg-destructive/10 text-destructive border border-destructive/30">
-                                        Inactivo
-                                      </Badge>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {item.is_weight_product ? (
-                                      <>
-                                        {item.qty} {item.weight_unit || 'kg'} × $
-                                        {Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
-                                          getWeightPriceDecimals(item.weight_unit)
-                                        )}/
-                                        {item.weight_unit || 'kg'}
-                                      </>
-                                    ) : (
-                                      <>${item.unit_price_usd.toFixed(2)} c/u</>
-                                    )}
-                                  </p>
+                              {/* 1. Icono de Categoría */}
+                              <div className={cn(
+                                "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
+                                isInvalid ? "bg-destructive/10 text-destructive" : "bg-primary/5 text-primary/70 group-hover:bg-primary/10 group-hover:text-primary"
+                              )}>
+                                {item.is_weight_product ? (
+                                  <Scale className="w-5 h-5" />
+                                ) : (
+                                  /* Usamos el helper getCategoryIcon o un icono default */
+                                  (() => {
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    const Icon = getCategoryIcon((item as any).category)
+                                    return <Icon className="w-5 h-5" />
+                                  })()
+                                )}
+                              </div>
+
+                              {/* 2. Info Principal (Truncate Force) */}
+                              <div className="min-w-0 flex flex-col justify-center">
+                                <span className={cn(
+                                  "font-semibold text-sm text-foreground truncate block w-full",
+                                  isInvalid && "text-destructive"
+                                )} title={item.product_name}>
+                                  {item.product_name}
+                                </span>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 truncate">
+                                  <span className="font-mono tabular-nums opacity-80">
+                                    ${Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(2)}
+                                  </span>
+                                  {item.is_weight_product && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-muted text-[10px] font-medium flex-shrink-0">
+                                      /{item.weight_unit || 'kg'}
+                                    </span>
+                                  )}
+                                  {isInvalid && (
+                                    <span className="text-destructive font-medium text-[10px] flex-shrink-0">Inactivo</span>
+                                  )}
                                 </div>
+                              </div>
+
+                              {/* 3. Stepper de Cantidad */}
+                              {!item.is_weight_product ? (
+                                <div className="flex items-center h-8 bg-background border border-border/60 rounded-full shadow-sm">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUpdateQty(item.id, item.qty - 1)
+                                    }}
+                                    className="w-7 h-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                                    disabled={item.qty <= 1}
+                                  >
+                                    <Minus className="w-3 h-3" />
+                                  </button>
+                                  <div className="w-6 text-center font-semibold text-sm tabular-nums border-x border-border/30 h-4 flex items-center justify-center">
+                                    {item.qty}
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUpdateQty(item.id, item.qty + 1)
+                                    }}
+                                    className="w-7 h-full flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="px-3 py-1.5 rounded-full bg-muted/50 border border-border/40 text-xs font-semibold tabular-nums whitespace-nowrap">
+                                  {item.qty} {item.weight_unit || 'kg'}
+                                </div>
+                              )}
+
+                              {/* 4. Precio Total */}
+                              <div className="text-right flex flex-col justify-center min-w-[60px]">
+                                <span className="font-bold text-sm text-primary tabular-nums tracking-tight">
+                                  ${lineTotalUsd.toFixed(2)}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/70 font-medium tabular-nums">
+                                  Bs {lineTotalBs.toFixed(2)}
+                                </span>
+                              </div>
+
+                              {/* 5. Acción Eliminar (Grid Column Dedicated) */}
+                              <div className="flex justify-end">
                                 {!isMobile && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
+                                  <button
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       removeItem(item.id)
                                     }}
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 rounded-lg flex-shrink-0 transition-all"
-                                    aria-label="Eliminar producto"
+                                    className="w-8 h-8 flex items-center justify-center rounded-full bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:text-white hover:scale-110 shadow-sm"
+                                    title="Eliminar producto"
                                   >
                                     <Trash2 className="w-4 h-4" />
-                                  </Button>
+                                  </button>
                                 )}
                               </div>
-                              <div className="flex items-center justify-between gap-2">
-                                {/* Solo mostrar controles de cantidad para productos normales */}
-                                {item.is_weight_product ? (
-                                  <Badge variant="outline" className="text-[10px] sm:text-xs">
-                                    Por {item.weight_unit || 'kg'}
-                                  </Badge>
-                                ) : (
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleUpdateQty(item.id, item.qty - 1)
-                                      }}
-                                      className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] rounded-lg border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all"
-                                      aria-label="Disminuir cantidad"
-                                    >
-                                      <Minus className="w-3 h-3" />
-                                    </Button>
-                                    <Input
-                                      type="number"
-                                      inputMode="numeric"
-                                      min={1}
-                                      max={MAX_QTY_PER_PRODUCT}
-                                      value={item.qty}
-                                      onChange={(e) => {
-                                        const newQty = parseInt(e.target.value) || 1
-                                        if (newQty >= 1 && newQty <= MAX_QTY_PER_PRODUCT) {
-                                          handleUpdateQty(item.id, newQty)
-                                        }
-                                      }}
-                                      className="w-16 h-10 sm:h-8 text-center font-bold text-sm sm:text-base tabular-nums border-border/60 rounded-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                      aria-label="Cantidad"
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleUpdateQty(item.id, item.qty + 1)
-                                      }}
-                                      className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] rounded-lg border-border/60 hover:border-primary/50 hover:bg-primary/5 transition-all"
-                                      aria-label="Aumentar cantidad"
-                                    >
-                                      <Plus className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                                <div className="text-right tabular-nums">
-                                  <p className="font-bold text-base text-primary">
-                                    ${lineTotalUsd.toFixed(2)}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    Bs. {lineTotalBs.toFixed(2)}
-                                  </p>
-                                  {lineDiscountUsd > 0 && (
-                                    <p className="text-[11px] text-muted-foreground line-through">
-                                      ${lineSubtotalUsd.toFixed(2)} / Bs. {lineSubtotalBs.toFixed(2)}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              {allowDiscounts && (
-                                <div className="mt-2 flex items-center justify-between gap-2 text-xs">
-                                  <span className="text-muted-foreground">Descuento</span>
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="number"
-                                      inputMode="decimal"
-                                      step="0.01"
-                                      min={0}
-                                      value={discountInputValue}
-                                      onChange={(event) => handleDiscountChange(item, event.target.value)}
-                                      onBlur={() => handleDiscountBlur(item)}
-                                      placeholder="0.00"
-                                      className="h-7 w-20 text-xs text-right"
-                                    />
-                                    <span className="text-muted-foreground">USD</span>
-                                    <span className="text-muted-foreground">
-                                      Bs. {lineDiscountBs.toFixed(2)}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </SwipeableItem>
                         )
@@ -2130,7 +2108,7 @@ export default function POSPage() {
             )}
           </Card>
         </div>
-      </div >
+      </div>
 
       {/* Modal de checkout - Lazy loaded para reducir bundle inicial */}
       {
@@ -2181,6 +2159,13 @@ export default function POSPage() {
         product={selectedWeightProduct}
         onConfirm={handleWeightConfirm}
       />
-    </div >
+
+      {/* Animación de éxito premium centralizada */}
+      <SuccessOverlay
+        isOpen={!!successSaleId}
+        onAnimationComplete={() => setSuccessSaleId(null)}
+        message={`Venta #${successSaleId} procesada exitosamente`}
+      />
+    </div>
   )
 }

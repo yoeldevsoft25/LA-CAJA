@@ -20,6 +20,7 @@ export interface CartItem {
   weight_value?: number | null // Valor del peso (ej: 2.5 kg)
   price_per_weight_bs?: number | null
   price_per_weight_usd?: number | null
+  category?: string
 }
 
 export const CART_IDS = ['cart-1', 'cart-2', 'cart-3', 'cart-4'] as const
