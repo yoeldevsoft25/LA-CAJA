@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { syncService } from './sync.service'
 import { exchangeService } from './exchange.service'
-import { BaseEvent, SaleCreatedPayload, SaleItem as DomainSaleItem } from '@la-caja/domain'
+import { BaseEvent, SaleCreatedPayload, SaleItem as DomainSaleItem, PricingCalculator, WeightUnit } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
 import type { Product } from './products.service'
 
@@ -135,19 +135,30 @@ function resolveOfflineItemPricing(
     const weightValue = item.weight_value || item.qty || 0
     const pricePerWeightBs = toNumber(item.price_per_weight_bs ?? product.price_per_weight_bs ?? 0)
     const pricePerWeightUsd = toNumber(item.price_per_weight_usd ?? product.price_per_weight_usd ?? 0)
-    const subtotalBs = weightValue * pricePerWeightBs
-    const subtotalUsd = weightValue * pricePerWeightUsd
+
+    const totals = PricingCalculator.calculateItemTotals({
+      qty: weightValue,
+      unitPriceBs: 0, // No aplica para producto por peso
+      unitPriceUsd: 0, // No aplica
+      discountBs: itemDiscountBs,
+      discountUsd: itemDiscountUsd,
+      isWeightProduct: true,
+      weightUnit: (item.weight_unit || product.weight_unit || 'kg') as WeightUnit,
+      weightValue: weightValue,
+      pricePerWeightBs: pricePerWeightBs,
+      pricePerWeightUsd: pricePerWeightUsd,
+    });
 
     return {
-      qty: weightValue,
-      unit_price_bs: pricePerWeightBs,
-      unit_price_usd: pricePerWeightUsd,
-      discount_bs: itemDiscountBs,
-      discount_usd: itemDiscountUsd,
-      subtotal_bs: subtotalBs,
-      subtotal_usd: subtotalUsd,
+      qty: totals.qty,
+      unit_price_bs: totals.effectivePriceBs,
+      unit_price_usd: totals.effectivePriceUsd,
+      discount_bs: totals.discountBs,
+      discount_usd: totals.discountUsd,
+      subtotal_bs: totals.subtotalBs,
+      subtotal_usd: totals.subtotalUsd,
       is_weight_product: true,
-      weight_unit: item.weight_unit || product.weight_unit || null,
+      weight_unit: (item.weight_unit || product.weight_unit || null) as any,
       weight_value: weightValue,
       price_per_weight_bs: pricePerWeightBs || null,
       price_per_weight_usd: pricePerWeightUsd || null,
@@ -156,17 +167,24 @@ function resolveOfflineItemPricing(
 
   const unitPriceBs = toNumber(product.price_bs)
   const unitPriceUsd = toNumber(product.price_usd)
-  const subtotalBs = unitPriceBs * item.qty
-  const subtotalUsd = unitPriceUsd * item.qty
+
+  const totals = PricingCalculator.calculateItemTotals({
+    qty: item.qty,
+    unitPriceBs: unitPriceBs,
+    unitPriceUsd: unitPriceUsd,
+    discountBs: itemDiscountBs,
+    discountUsd: itemDiscountUsd,
+    isWeightProduct: false,
+  });
 
   return {
-    qty: item.qty,
-    unit_price_bs: unitPriceBs,
-    unit_price_usd: unitPriceUsd,
-    discount_bs: itemDiscountBs,
-    discount_usd: itemDiscountUsd,
-    subtotal_bs: subtotalBs,
-    subtotal_usd: subtotalUsd,
+    qty: totals.qty,
+    unit_price_bs: totals.effectivePriceBs,
+    unit_price_usd: totals.effectivePriceUsd,
+    discount_bs: totals.discountBs,
+    discount_usd: totals.discountUsd,
+    subtotal_bs: totals.subtotalBs,
+    subtotal_usd: totals.subtotalUsd,
     is_weight_product: false,
     weight_unit: null,
     weight_value: null,
@@ -206,6 +224,7 @@ export interface Sale {
   } | null
   exchange_rate: number | string
   currency: 'BS' | 'USD' | 'MIXED'
+  sync_status?: 'pending' | 'synced' | 'failed' | 'conflict'
   totals: {
     subtotal_bs: number | string
     subtotal_usd: number | string
@@ -294,14 +313,14 @@ export const salesService = {
   async create(data: CreateSaleRequest): Promise<Sale> {
     // Verificar estado de conexión PRIMERO
     const isOnline = navigator.onLine
-    
+
     logger.debug('Iniciando creación de venta', {
       isOnline,
       hasStoreId: !!data.store_id,
       hasUserId: !!data.user_id,
       itemsCount: data.items?.length,
     })
-    
+
     // Si está offline Y tenemos store_id/user_id, guardar como evento local inmediatamente
     // NUNCA intentar llamada HTTP si está offline
     if (!isOnline) {
@@ -313,12 +332,12 @@ export const salesService = {
       if (data.payment_method === 'FIAO') {
         const hasCustomerId = !!data.customer_id
         const hasCustomerData = !!(data.customer_name && data.customer_document_id)
-        
+
         if (!hasCustomerId && !hasCustomerData) {
           throw new Error('Las ventas FIAO requieren un cliente. Debes seleccionar un cliente existente o ingresar nombre y cédula para crear uno nuevo.')
         }
       }
-      
+
       logger.info('Modo OFFLINE detectado - guardando localmente inmediatamente')
       const saleId = randomUUID()
       const deviceId = getDeviceId()
@@ -407,8 +426,8 @@ export const salesService = {
         },
         customer: data.customer_id
           ? {
-              customer_id: data.customer_id,
-            }
+            customer_id: data.customer_id,
+          }
           : undefined,
         note: data.note || undefined,
       }
@@ -464,11 +483,11 @@ export const salesService = {
         sold_by_user: null,
         customer: data.customer_id
           ? {
-              id: data.customer_id,
-              name: data.customer_name || '',
-              document_id: data.customer_document_id || null,
-              phone: data.customer_phone || null,
-            }
+            id: data.customer_id,
+            name: data.customer_name || '',
+            document_id: data.customer_document_id || null,
+            phone: data.customer_phone || null,
+          }
           : null,
         debt: null,
         exchange_rate: exchangeRate,
@@ -516,7 +535,7 @@ export const salesService = {
     // Intentar hacer la llamada HTTP normal
     // Si falla por error de red, guardar como evento offline
     logger.info('Modo ONLINE - intentando llamada HTTP')
-    
+
     // Verificar nuevamente antes de intentar (puede haber cambiado)
     if (!navigator.onLine) {
       // Si se perdió la conexión mientras procesábamos, guardar offline
@@ -607,8 +626,8 @@ export const salesService = {
         customer_id: data.customer_id || undefined, // ⚠️ CRÍTICO: Incluir customer_id directamente
         customer: data.customer_id
           ? {
-              customer_id: data.customer_id,
-            }
+            customer_id: data.customer_id,
+          }
           : undefined,
         note: data.note || undefined,
       }
@@ -647,11 +666,11 @@ export const salesService = {
         sold_by_user: null,
         customer: data.customer_id
           ? {
-              id: data.customer_id,
-              name: data.customer_name || '',
-              document_id: data.customer_document_id || null,
-              phone: data.customer_phone || null,
-            }
+            id: data.customer_id,
+            name: data.customer_name || '',
+            document_id: data.customer_document_id || null,
+            phone: data.customer_phone || null,
+          }
           : null,
         debt: null,
         exchange_rate: exchangeRate,
@@ -730,7 +749,7 @@ export const salesService = {
         logger.error('Error en llamada HTTP', err)
         throw err
       })
-      
+
       logger.info('Venta procesada exitosamente', { saleId: response.data?.id })
       return response.data
     } catch (error: unknown) {
@@ -738,13 +757,13 @@ export const salesService = {
       // El interceptor de axios rechaza con ERR_INTERNET_DISCONNECTED si está offline
       const axiosError = error as { response?: unknown; code?: string; message?: string; isOffline?: boolean };
       const isNetworkError =
-        !axiosError.response || 
-        axiosError.code === 'ECONNABORTED' || 
+        !axiosError.response ||
+        axiosError.code === 'ECONNABORTED' ||
         axiosError.code === 'ERR_NETWORK' ||
         axiosError.code === 'ERR_INTERNET_DISCONNECTED' ||
         axiosError.isOffline ||
         !navigator.onLine
-      
+
       logger.debug('Error capturado en catch', {
         code: axiosError.code,
         isOffline: axiosError.isOffline,
@@ -754,13 +773,13 @@ export const salesService = {
         hasStoreId: !!data.store_id,
         hasUserId: !!data.user_id,
       })
-      
+
       // Si no es un error de red o no tenemos los datos necesarios, lanzar el error
       if (!isNetworkError || !data.store_id || !data.user_id) {
         logger.error('Error no manejable o faltan datos', error)
         throw error
       }
-      
+
       logger.warn('Error de red detectado - guardando offline como fallback')
 
       if (isNetworkError && data.store_id && data.user_id) {
@@ -840,20 +859,20 @@ export const salesService = {
           currency: data.currency,
           items: saleItems,
           totals,
-        payment: {
-          method: data.payment_method,
-          split: data.split ? {
-            cash_bs: data.split.cash_bs ?? 0,
-            cash_usd: data.split.cash_usd ?? 0,
-            pago_movil_bs: data.split.pago_movil_bs ?? 0,
-            transfer_bs: data.split.transfer_bs ?? 0,
-            other_bs: data.split.other_bs ?? 0,
-          } : undefined,
-        },
-        customer: data.customer_id
+          payment: {
+            method: data.payment_method,
+            split: data.split ? {
+              cash_bs: data.split.cash_bs ?? 0,
+              cash_usd: data.split.cash_usd ?? 0,
+              pago_movil_bs: data.split.pago_movil_bs ?? 0,
+              transfer_bs: data.split.transfer_bs ?? 0,
+              other_bs: data.split.other_bs ?? 0,
+            } : undefined,
+          },
+          customer: data.customer_id
             ? {
-                customer_id: data.customer_id,
-              }
+              customer_id: data.customer_id,
+            }
             : undefined,
           note: data.note || undefined,
         }
@@ -879,7 +898,7 @@ export const salesService = {
 
         // Guardar evento localmente
         try {
-        await syncService.enqueueEvent(event)
+          await syncService.enqueueEvent(event)
           logger.info('Venta guardada localmente después de error de red', { saleId })
         } catch (error) {
           logger.error('Error guardando venta localmente después de error de red', error)
@@ -896,11 +915,11 @@ export const salesService = {
           sold_by_user: null,
           customer: data.customer_id
             ? {
-                id: data.customer_id,
-                name: data.customer_name || '',
-                document_id: data.customer_document_id || null,
-                phone: data.customer_phone || null,
-              }
+              id: data.customer_id,
+              name: data.customer_name || '',
+              document_id: data.customer_document_id || null,
+              phone: data.customer_phone || null,
+            }
             : null,
           debt: null,
           exchange_rate: exchangeRate,
@@ -928,17 +947,17 @@ export const salesService = {
             price_per_weight_bs: item.price_per_weight_bs,
             price_per_weight_usd: item.price_per_weight_usd,
           })),
-        payment: {
-          method: data.payment_method,
-          split: data.split ? {
-            cash_bs: data.split.cash_bs ?? 0,
-            cash_usd: data.split.cash_usd ?? 0,
-            pago_movil_bs: data.split.pago_movil_bs ?? 0,
-            transfer_bs: data.split.transfer_bs ?? 0,
-            other_bs: data.split.other_bs ?? 0,
-          } : undefined,
-        },
-        note: data.note || null,
+          payment: {
+            method: data.payment_method,
+            split: data.split ? {
+              cash_bs: data.split.cash_bs ?? 0,
+              cash_usd: data.split.cash_usd ?? 0,
+              pago_movil_bs: data.split.pago_movil_bs ?? 0,
+              transfer_bs: data.split.transfer_bs ?? 0,
+              other_bs: data.split.other_bs ?? 0,
+            } : undefined,
+          },
+          note: data.note || null,
         }
 
         return mockSale

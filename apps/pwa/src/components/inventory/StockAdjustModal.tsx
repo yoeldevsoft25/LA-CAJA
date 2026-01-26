@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from '@/lib/toast'
 import { inventoryService, StockAdjustedRequest, StockStatus } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
@@ -109,23 +109,23 @@ export default function StockAdjustModal({
     queryKey: ['sales', 'recent', product?.product_id, user?.store_id],
     queryFn: async () => {
       if (!product?.product_id || !user?.store_id) return { sales: [], total: 0 }
-      
+
       // Buscar ventas de las últimas 2 horas
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
       const now = new Date().toISOString()
-      
+
       const result = await salesService.list({
         date_from: twoHoursAgo,
         date_to: now,
         limit: 100, // Límite alto para buscar todas las ventas recientes
         store_id: user.store_id,
       })
-      
+
       // Filtrar ventas que incluyan este producto
       const salesWithProduct = result.sales.filter((sale) =>
         sale.items.some((item) => item.product_id === product.product_id)
       )
-      
+
       return {
         sales: salesWithProduct,
         total: salesWithProduct.length,
@@ -183,6 +183,8 @@ export default function StockAdjustModal({
     }
   }, [isOpen, reset, defaultWarehouse])
 
+  const queryClient = useQueryClient()
+
   const stockAdjustMutation = useMutation({
     mutationFn: (data: StockAdjustedRequest) => {
       if (!product) throw new Error('Producto no seleccionado')
@@ -192,14 +194,101 @@ export default function StockAdjustModal({
         warehouse_id: warehouseId || undefined,
       })
     },
+    onMutate: async (newData) => {
+      // Cancelar refetches en curso
+      await queryClient.cancelQueries({ queryKey: ['inventory', 'stock-status'] })
+
+      // Snapshot del valor anterior
+      const previousStock = queryClient.getQueryData(['inventory', 'stock-status'])
+
+      // Optimistic update
+      queryClient.setQueriesData({ queryKey: ['inventory', 'stock-status'] }, (old: any) => {
+        if (!old) return old
+
+        // Manejar estructura paginada { items: [], total: 0 } o array directo
+        const isPaged = old.items && Array.isArray(old.items)
+        const items = isPaged ? old.items : (Array.isArray(old) ? old : [])
+
+        const newItems = items.map((item: StockStatus) => {
+          if (item.product_id === product?.product_id) {
+            return {
+              ...item,
+              current_stock: item.current_stock + newData.qty_delta,
+              // Actualizar estado de bajo stock si es necesario
+              is_low_stock: (item.current_stock + newData.qty_delta) <= item.low_stock_threshold
+            }
+          }
+          return item
+        })
+
+        if (isPaged) {
+          return { ...old, items: newItems }
+        }
+        return newItems
+      })
+
+      return { previousStock }
+    },
     onSuccess: () => {
       toast.success('Stock ajustado exitosamente')
-      onClose() // Cerrar modal después de éxito
+      onClose()
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: async (error: any, variables, context) => {
+      // ✅ OFFLINE-FIRST: Si falla por conexión, encolar evento
+      if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED' || !navigator.onLine) {
+        try {
+          // Importar dinámicamente para evitar ciclos si fuera necesario
+          const { syncService } = await import('@/services/sync.service')
+
+          if (!product) return
+
+          // Construir evento
+          await syncService.enqueueEvent({
+            event_id: crypto.randomUUID(),
+            type: 'inventory.stock_adjusted',
+            payload: {
+              ...variables,
+              product_id: product.product_id,
+              warehouse_id: warehouseId || undefined,
+            },
+            created_at: Date.now(),
+            seq: 0, // Se asigna en backend o localmente
+            store_id: user?.store_id || '',
+            device_id: localStorage.getItem('device_id') || 'unknown',
+            version: 1,
+            actor: {
+              user_id: user?.user_id || 'unknown',
+              role: (user?.role as any) || 'cashier',
+            },
+          })
+
+          toast.success('Guardado localmente (sin conexión)')
+          onClose()
+          onSuccess?.()
+
+          // No hacemos rollback porque queremos mantener la UI optimista
+          return
+        } catch (queueError) {
+          console.error('Error al encolar offline:', queueError)
+        }
+      }
+
+      // Si no es error de conexión, rollback
+      if (context?.previousStock) {
+        queryClient.setQueriesData(
+          { queryKey: ['inventory', 'stock-status'] },
+          context.previousStock
+        )
+      }
       toast.error(error.response?.data?.message || 'Error al ajustar stock')
     },
+    onSettled: () => {
+      // Invalidate para asegurar consistencia final (si hay red)
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
+      }
+    }
   })
 
   // Verificar si es un ajuste grande
@@ -207,25 +296,25 @@ export default function StockAdjustModal({
     if (!product) return false
     const absChange = Math.abs(delta)
     const currentStock = product.current_stock || 0
-    
+
     // Más de 100 unidades
     if (absChange >= LARGE_ADJUSTMENT_THRESHOLD_UNITS) return true
-    
+
     // Más del 50% del stock actual (si hay stock)
     if (currentStock > 0) {
       const percentChange = (absChange / currentStock) * 100
       if (percentChange >= LARGE_ADJUSTMENT_THRESHOLD_PERCENT) return true
     }
-    
+
     // Stock resultante negativo
     if (currentStock + delta < 0) return true
-    
+
     return false
   }
 
   const onSubmit = (data: StockAdjustForm) => {
     if (!product) return
-    
+
     // Bloquear ajuste si hay ventas recientes
     if (hasRecentSales) {
       toast.error(
@@ -234,14 +323,14 @@ export default function StockAdjustModal({
       )
       return
     }
-    
+
     // Verificar si necesita confirmación
     if (isLargeAdjustment(data.qty_delta)) {
       setPendingData(data)
       setShowConfirmDialog(true)
       return
     }
-    
+
     // Proceder directamente
     executeAdjustment(data)
   }
@@ -325,7 +414,7 @@ export default function StockAdjustModal({
                 <Alert className="bg-orange-50 dark:bg-orange-950/20 border-orange-500/50">
                   <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
-                    <strong>⚠️ Ajuste bloqueado:</strong> Hay {recentSalesCount} venta(s) reciente(s) que incluyen este producto. 
+                    <strong>⚠️ Ajuste bloqueado:</strong> Hay {recentSalesCount} venta(s) reciente(s) que incluyen este producto.
                     Para evitar inconsistencias, espera al menos 2 horas después de la última venta antes de ajustar el stock.
                   </AlertDescription>
                 </Alert>
@@ -416,8 +505,8 @@ export default function StockAdjustModal({
                   {...register('note')}
                   rows={3}
                   className="mt-2 resize-none"
-                  placeholder={watch('reason') === 'other' 
-                    ? "Describe el motivo del ajuste (obligatorio)" 
+                  placeholder={watch('reason') === 'other'
+                    ? "Describe el motivo del ajuste (obligatorio)"
                     : "Descripción del ajuste (opcional)"}
                 />
                 {errors.note && (
@@ -477,7 +566,7 @@ export default function StockAdjustModal({
                   {pendingData?.qty_delta} unidades
                 </p>
                 <p className="text-muted-foreground text-xs mt-1">
-                  Stock actual: {product?.current_stock} → 
+                  Stock actual: {product?.current_stock} →
                   Stock final: {(product?.current_stock || 0) + (pendingData?.qty_delta || 0)}
                 </p>
               </div>

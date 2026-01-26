@@ -110,8 +110,30 @@ export class SalesPostProcessingQueueProcessor extends WorkerHost {
 
       await job.updateProgress(70);
 
-      // 2. Procesar asiento contable si no hay factura fiscal
-      if (!fiscalInvoiceIssued && !fiscalInvoiceFound) {
+      // 2. Procesar/Verificar asiento contable
+      // Asegurar que exista un asiento contable, ya sea de la factura fiscal o de la venta
+      if (fiscalInvoiceIssued || fiscalInvoiceFound) {
+        try {
+          const invoice = await this.fiscalInvoicesService.findBySale(
+            storeId,
+            saleId,
+          );
+          if (invoice && invoice.status === 'issued') {
+            await this.accountingService.generateEntryFromFiscalInvoice(
+              storeId,
+              invoice,
+            );
+            this.logger.log(
+              `✅ Asiento contable verificado/generado para factura fiscal ${invoice.invoice_number}`,
+            );
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error generando asiento contable para factura fiscal de venta ${saleId}:`,
+            error instanceof Error ? error.stack : String(error),
+          );
+        }
+      } else {
         try {
           // Obtener la venta completa para el asiento contable
           const sale = await this.saleRepository.findOne({

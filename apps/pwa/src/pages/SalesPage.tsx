@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X } from 'lucide-react'
+import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X, Cloud, CloudOff } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { salesService, Sale } from '@/services/sales.service'
 import { useAuth } from '@/stores/auth.store'
@@ -104,7 +104,7 @@ export default function SalesPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const limit = 20
-  
+
   // Filtros avanzados
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'voided'>('all')
@@ -174,16 +174,16 @@ export default function SalesPage() {
   // Filtrar ventas del día (aplicar mismos filtros que las ventas principales, pero sin anuladas para el gráfico)
   const daySalesForChart = useMemo(() => {
     if (!allDaySalesData?.sales) return []
-    
+
     return allDaySalesData.sales.filter((sale: Sale) => {
       // No mostrar ventas anuladas en el gráfico
       if (sale.voided_at) return false
-      
+
       // Aplicar filtros de método de pago
       if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
         return false
       }
-      
+
       // Aplicar filtro de deuda
       if (debtFilter === 'with_debt') {
         if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
@@ -198,7 +198,7 @@ export default function SalesPage() {
           return false
         }
       }
-      
+
       // Aplicar filtro de rango de montos
       const amountUsd = Number(sale.totals.total_usd)
       if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
@@ -207,7 +207,7 @@ export default function SalesPage() {
       if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
         return false
       }
-      
+
       // Aplicar filtro de búsqueda de cliente
       if (customerSearch.trim()) {
         const searchLower = customerSearch.toLowerCase().trim()
@@ -217,18 +217,18 @@ export default function SalesPage() {
           return false
         }
       }
-      
+
       return true
     })
   }, [allDaySalesData, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
-  
+
   // Aplicar filtros avanzados (filtrado en frontend)
   const sales = rawSales.filter((sale: Sale) => {
     // Filtro por método de pago
     if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
       return false
     }
-    
+
     // Filtro por estado (anulada/no anulada)
     if (statusFilter === 'voided' && !sale.voided_at) {
       return false
@@ -236,7 +236,7 @@ export default function SalesPage() {
     if (statusFilter === 'completed' && sale.voided_at) {
       return false
     }
-    
+
     // Filtro por deuda
     if (debtFilter === 'with_debt') {
       if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
@@ -251,7 +251,7 @@ export default function SalesPage() {
         return false
       }
     }
-    
+
     // Filtro por rango de montos (USD)
     const amountUsd = Number(sale.totals.total_usd)
     if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
@@ -260,7 +260,7 @@ export default function SalesPage() {
     if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
       return false
     }
-    
+
     // Filtro por búsqueda de cliente
     if (customerSearch.trim()) {
       const searchLower = customerSearch.toLowerCase().trim()
@@ -270,10 +270,10 @@ export default function SalesPage() {
         return false
       }
     }
-    
+
     return true
   })
-  
+
   const totalPages = Math.ceil(total / limit)
 
   // Calcular totales (de las ventas filtradas)
@@ -285,7 +285,7 @@ export default function SalesPage() {
     (sum: number, sale: Sale) => sum + Number(sale.totals.total_usd),
     0
   )
-  
+
   // Contar filtros activos
   const activeFiltersCount = [
     paymentMethodFilter !== 'all',
@@ -294,7 +294,7 @@ export default function SalesPage() {
     minAmountUsd !== '' || maxAmountUsd !== '',
     customerSearch.trim() !== '',
   ].filter(Boolean).length
-  
+
   const handleResetAdvancedFilters = () => {
     setPaymentMethodFilter('all')
     setStatusFilter('all')
@@ -339,7 +339,7 @@ export default function SalesPage() {
     }
 
     const timestamp = format(new Date(), 'yyyy-MM-dd')
-    const dateRangeStr = dateFrom && dateTo 
+    const dateRangeStr = dateFrom && dateTo
       ? `${format(dateFrom, 'dd-MM-yyyy')}_a_${format(dateTo, 'dd-MM-yyyy')}`
       : timestamp
 
@@ -478,9 +478,9 @@ export default function SalesPage() {
       {/* Filtros */}
       <Card className="mb-4 sm:mb-6 border border-border">
         <CardContent className="p-3 sm:p-4">
-        <div className="space-y-3 sm:space-y-4">
-          {/* Filtros de fecha */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="space-y-3 sm:space-y-4">
+            {/* Filtros de fecha */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <DatePicker
                 date={dateFrom}
                 onDateChange={(date) => {
@@ -497,157 +497,157 @@ export default function SalesPage() {
                 }}
                 label="Hasta"
               />
-          <div className="flex items-end">
+              <div className="flex items-end">
                 <Button
                   variant="outline"
-              onClick={handleResetDates}
+                  onClick={handleResetDates}
                   className="w-full"
-            >
-              Reiniciar
+                >
+                  Reiniciar
                 </Button>
-          </div>
-          </div>
-          
-          {/* Filtros avanzados */}
-          <div className="border-t border-border pt-3 sm:pt-4 mt-3 sm:mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className="gap-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filtros Avanzados
-                {activeFiltersCount > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {activeFiltersCount}
-                  </Badge>
-                )}
-              </Button>
-              {activeFiltersCount > 0 && (
+              </div>
+            </div>
+
+            {/* Filtros avanzados */}
+            <div className="border-t border-border pt-3 sm:pt-4 mt-3 sm:mt-4">
+              <div className="flex items-center justify-between mb-3">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleResetAdvancedFilters}
-                  className="text-xs gap-1"
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="gap-2"
                 >
-                  <X className="w-3 h-3" />
-                  Limpiar
+                  <Filter className="w-4 h-4" />
+                  Filtros Avanzados
+                  {activeFiltersCount > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
                 </Button>
+                {activeFiltersCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetAdvancedFilters}
+                    className="text-xs gap-1"
+                  >
+                    <X className="w-3 h-3" />
+                    Limpiar
+                  </Button>
+                )}
+              </div>
+
+              {showAdvancedFilters && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-2">
+                  {/* Método de pago */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Método de Pago
+                    </Label>
+                    <Select
+                      value={paymentMethodFilter}
+                      onValueChange={setPaymentMethodFilter}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Estado */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Estado
+                    </Label>
+                    <Select
+                      value={statusFilter}
+                      onValueChange={(v) => setStatusFilter(v as 'all' | 'completed' | 'voided')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        <SelectItem value="completed">Completadas</SelectItem>
+                        <SelectItem value="voided">Anuladas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Estado de deuda */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Estado de Deuda
+                    </Label>
+                    <Select
+                      value={debtFilter}
+                      onValueChange={(v) => setDebtFilter(v as 'all' | 'with_debt' | 'without_debt' | 'paid')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        <SelectItem value="with_debt">Con deuda pendiente</SelectItem>
+                        <SelectItem value="without_debt">Sin deuda</SelectItem>
+                        <SelectItem value="paid">Deuda pagada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Monto mínimo USD */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Monto Mínimo (USD)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={minAmountUsd}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinAmountUsd(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* Monto máximo USD */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Monto Máximo (USD)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={maxAmountUsd}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxAmountUsd(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* Búsqueda por cliente */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Buscar Cliente
+                    </Label>
+                    <Input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
+                      placeholder="Nombre o cédula/RIF"
+                    />
+                  </div>
+                </div>
               )}
             </div>
-            
-            {showAdvancedFilters && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-2">
-                {/* Método de pago */}
-                <div>
-                  <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                    Método de Pago
-                  </Label>
-                  <Select
-                    value={paymentMethodFilter}
-                    onValueChange={setPaymentMethodFilter}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {Object.entries(paymentMethodLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Estado */}
-                <div>
-                  <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                    Estado
-                  </Label>
-                  <Select
-                    value={statusFilter}
-                    onValueChange={(v) => setStatusFilter(v as 'all' | 'completed' | 'voided')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="completed">Completadas</SelectItem>
-                      <SelectItem value="voided">Anuladas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Estado de deuda */}
-                <div>
-                  <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                    Estado de Deuda
-                  </Label>
-                  <Select
-                    value={debtFilter}
-                    onValueChange={(v) => setDebtFilter(v as 'all' | 'with_debt' | 'without_debt' | 'paid')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="with_debt">Con deuda pendiente</SelectItem>
-                      <SelectItem value="without_debt">Sin deuda</SelectItem>
-                      <SelectItem value="paid">Deuda pagada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Monto mínimo USD */}
-                <div>
-                  <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                    Monto Mínimo (USD)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={minAmountUsd}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinAmountUsd(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                {/* Monto máximo USD */}
-                <div>
-                  <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                    Monto Máximo (USD)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={maxAmountUsd}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxAmountUsd(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                {/* Búsqueda por cliente */}
-                <div>
-                  <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                    Buscar Cliente
-                  </Label>
-                  <Input
-                    type="text"
-                    value={customerSearch}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
-                    placeholder="Nombre o cédula/RIF"
-                  />
-                </div>
-              </div>
-            )}
           </div>
-        </div>
         </CardContent>
       </Card>
 
@@ -663,7 +663,7 @@ export default function SalesPage() {
       {/* Lista de ventas */}
       <Card className="border border-border">
         <CardContent className="p-0">
-        {isError ? (
+          {isError ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
                 <AlertCircle className="w-12 h-12 mx-auto mb-3 text-destructive" />
@@ -680,14 +680,14 @@ export default function SalesPage() {
                 </Button>
               </div>
             </div>
-        ) : isLoading ? (
+          ) : isLoading ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center gap-3">
                 <Skeleton className="h-12 w-12 rounded-full" />
                 <Skeleton className="h-4 w-32" />
               </div>
-          </div>
-        ) : rawSales.length === 0 ? (
+            </div>
+          ) : rawSales.length === 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -700,8 +700,8 @@ export default function SalesPage() {
                   No se encontraron ventas en el período seleccionado
                 </p>
               </div>
-          </div>
-        ) : sales.length === 0 && activeFiltersCount > 0 ? (
+            </div>
+          ) : sales.length === 0 && activeFiltersCount > 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -721,397 +721,409 @@ export default function SalesPage() {
                   Limpiar filtros
                 </Button>
               </div>
-          </div>
-        ) : (
-          <>
-            {/* Vista de cards swipeables para móvil */}
-            {isMobile ? (
-              <div className="space-y-2">
-                {sales.map((sale: Sale) => {
-                  const itemCount = sale.items.length
-                  const isFIAO = sale.payment.method === 'FIAO'
-                  const debtStatus = sale.debt?.status || null
-                  const isPending = isFIAO && (debtStatus === 'open' || debtStatus === 'partial')
-                  const isPaid = isFIAO && debtStatus === 'paid'
-                  const isVoided = Boolean(sale.voided_at)
-
-                  return (
-                    <SwipeableItem
-                      key={sale.id}
-                      onSwipeRight={() => handleViewDetail(sale)}
-                      rightAction={
-                        <div className="flex items-center gap-3 px-4">
-                          <Eye className="w-5 h-5" />
-                          <span className="font-medium">Ver Detalles</span>
-                        </div>
-                      }
-                      onSwipeLeft={() => handlePrint(sale)}
-                      leftAction={
-                        <div className="flex items-center gap-3 px-4">
-                          <Printer className="w-5 h-5" />
-                          <span className="font-medium">Imprimir</span>
-                        </div>
-                      }
-                      enabled={isMobile}
-                      threshold={80}
-                    >
-                      <Card
-                        className={cn(
-                          'transition-colors cursor-pointer',
-                          isVoided && 'bg-muted/40 border-muted',
-                          isPending && 'bg-orange-50 border-orange-200 border-l-4',
-                          isPaid && 'bg-green-50 border-green-200 border-l-4'
-                        )}
-                        onClick={() => handleViewDetail(sale)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <p className="font-semibold text-foreground text-sm">
-                                  {format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}
-                                </p>
-                                {isVoided && (
-                                  <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
-                                    Anulada
-                                  </Badge>
-                                )}
-                              </div>
-                              
-                              {sale.invoice_full_number && (
-                                <div className="flex items-center gap-1 mb-1">
-                                  <Receipt className="w-3.5 h-3.5 text-primary" />
-                                  <p className="font-mono font-semibold text-primary text-xs">
-                                    {sale.invoice_full_number}
-                                  </p>
-                                </div>
-                              )}
-                              
-                              <p className="text-xs text-muted-foreground mb-2">
-                                {itemCount} producto{itemCount !== 1 ? 's' : ''}
-                              </p>
-                              
-                              {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
-                                <p className="text-xs font-medium text-orange-600 mt-1">
-                                  Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs
-                                </p>
-                              )}
-                            </div>
-                            
-                            <div className="text-right flex-shrink-0">
-                              <p className="font-bold text-foreground text-base">
-                                {Number(sale.totals.total_bs).toFixed(2)} Bs
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                ${Number(sale.totals.total_usd).toFixed(2)} USD
-                              </p>
-                              <Badge variant="secondary" className="mt-1 text-[10px]">
-                                {paymentMethodLabels[sale.payment.method] || sale.payment.method}
-                              </Badge>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Desliza para acciones →</span>
-                            {sale.customer && (
-                              <span className="truncate max-w-[150px]">{sale.customer.name}</span>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </SwipeableItem>
-                  )
-                })}
-              </div>
-            ) : (
-              /* Vista de tabla para desktop */
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha/Hora</TableHead>
-                      <TableHead className="hidden sm:table-cell">Factura</TableHead>
-                      <TableHead className="hidden sm:table-cell">Productos</TableHead>
-                      <TableHead className="hidden lg:table-cell">Preview</TableHead>
-                      <TableHead className="text-center">Total</TableHead>
-                      <TableHead className="text-center hidden md:table-cell">Moneda</TableHead>
-                      <TableHead className="text-center hidden lg:table-cell">Método de Pago</TableHead>
-                      <TableHead className="hidden md:table-cell">Responsable</TableHead>
-                      <TableHead className="hidden xl:table-cell">Cliente</TableHead>
-                      <TableHead className="text-right">Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+            </div>
+          ) : (
+            <>
+              {/* Vista de cards swipeables para móvil */}
+              {isMobile ? (
+                <div className="space-y-2">
                   {sales.map((sale: Sale) => {
                     const itemCount = sale.items.length
-                    const totalUnits = sale.items.reduce(
-                      (sum: number, item: any) => sum + (item.is_weight_product ? 0 : item.qty),
-                      0
-                    )
-                    const weightLineItems = sale.items.filter(
-                      (item: any) => item.is_weight_product
-                    ).length
-                    const totalItemsLabel =
-                      weightLineItems > 0
-                        ? totalUnits > 0
-                          ? `${totalUnits} unidades + ${weightLineItems} por peso`
-                          : `${weightLineItems} por peso`
-                        : `${totalUnits} unidades`
-                    
-                    // Determinar estado de deuda para FIAO
                     const isFIAO = sale.payment.method === 'FIAO'
                     const debtStatus = sale.debt?.status || null
                     const isPending = isFIAO && (debtStatus === 'open' || debtStatus === 'partial')
                     const isPaid = isFIAO && debtStatus === 'paid'
                     const isVoided = Boolean(sale.voided_at)
-                    
-                    // Clases de color para la fila según estado de deuda
-                      let rowClassName = ''
-                    if (isVoided) {
-                        rowClassName = 'bg-muted/40 text-muted-foreground'
-                    } else if (isPending) {
-                        rowClassName = 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-500'
-                    } else if (isPaid) {
-                        rowClassName = 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500'
-                    }
 
                     return (
-                      <TableRow
+                      <SwipeableItem
                         key={sale.id}
-                        className={cn('transition-colors', rowClassName)}
+                        onSwipeRight={() => handleViewDetail(sale)}
+                        rightAction={
+                          <div className="flex items-center gap-3 px-4">
+                            <Eye className="w-5 h-5" />
+                            <span className="font-medium">Ver Detalles</span>
+                          </div>
+                        }
+                        onSwipeLeft={() => handlePrint(sale)}
+                        leftAction={
+                          <div className="flex items-center gap-3 px-4">
+                            <Printer className="w-5 h-5" />
+                            <span className="font-medium">Imprimir</span>
+                          </div>
+                        }
+                        enabled={isMobile}
+                        threshold={80}
                       >
-                          <TableCell>
-                          <div className="text-sm sm:text-base">
-                              <p className="font-semibold text-foreground">
-                              {format(new Date(sale.sold_at), 'dd/MM/yyyy')}
-                            </p>
-                              <p className="text-xs text-muted-foreground">
-                              {format(new Date(sale.sold_at), 'HH:mm')}
-                            </p>
-                            {isVoided && (
-                              <Badge
-                                variant="outline"
-                                className="mt-1 border-destructive/40 text-destructive"
-                              >
-                                Anulada
-                              </Badge>
-                            )}
-                          </div>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                          {sale.invoice_full_number ? (
-                            <div className="flex items-center gap-1">
-                              <Receipt className="w-4 h-4 text-primary" />
-                              <p className="font-mono font-semibold text-primary text-sm">
-                                {sale.invoice_full_number}
-                              </p>
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">-</p>
+                        <Card
+                          className={cn(
+                            'transition-colors cursor-pointer',
+                            isVoided && 'bg-muted/40 border-muted',
+                            isPending && 'bg-orange-50 border-orange-200 border-l-4',
+                            isPaid && 'bg-green-50 border-green-200 border-l-4'
                           )}
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                          <div className="text-sm">
-                              <p className="font-medium text-foreground">
-                              {itemCount} producto{itemCount !== 1 ? 's' : ''}
-                            </p>
-                              <p className="text-xs text-muted-foreground">
-                              {totalItemsLabel}
-                            </p>
-                          </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            <div className="max-w-[200px]">
-                              <div className="flex flex-wrap gap-1">
-                                {sale.items.slice(0, 3).map((item, idx) => (
+                          onClick={() => handleViewDetail(sale)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <p className="font-semibold text-foreground text-sm">
+                                    {format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}
+                                  </p>
+                                  {isVoided && (
+                                    <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
+                                      Anulada
+                                    </Badge>
+                                  )}
+                                  {sale.id.startsWith('temp-') || sale.sync_status === 'pending' ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <CloudOff className="w-3.5 h-3.5 text-amber-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>Pendiente de sincronizar</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <Cloud className="w-3.5 h-3.5 text-success/60" />
+                                  )}
+                                </div>
+
+                                {sale.invoice_full_number && (
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <Receipt className="w-3.5 h-3.5 text-primary" />
+                                    <p className="font-mono font-semibold text-primary text-xs">
+                                      {sale.invoice_full_number}
+                                    </p>
+                                  </div>
+                                )}
+
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  {itemCount} producto{itemCount !== 1 ? 's' : ''}
+                                </p>
+
+                                {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
+                                  <p className="text-xs font-medium text-orange-600 mt-1">
+                                    Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="text-right flex-shrink-0">
+                                <p className="font-bold text-foreground text-base">
+                                  {Number(sale.totals.total_bs).toFixed(2)} Bs
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  ${Number(sale.totals.total_usd).toFixed(2)} USD
+                                </p>
+                                <Badge variant="secondary" className="mt-1 text-[10px]">
+                                  {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Desliza para acciones →</span>
+                              {sale.customer && (
+                                <span className="truncate max-w-[150px]">{sale.customer.name}</span>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </SwipeableItem>
+                    )
+                  })}
+                </div>
+              ) : (
+                /* Vista de tabla para desktop */
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha/Hora</TableHead>
+                        <TableHead className="hidden sm:table-cell">Factura</TableHead>
+                        <TableHead className="hidden sm:table-cell">Productos</TableHead>
+                        <TableHead className="hidden lg:table-cell">Preview</TableHead>
+                        <TableHead className="text-center">Total</TableHead>
+                        <TableHead className="text-center hidden md:table-cell">Moneda</TableHead>
+                        <TableHead className="text-center hidden lg:table-cell">Método de Pago</TableHead>
+                        <TableHead className="hidden md:table-cell">Responsable</TableHead>
+                        <TableHead className="hidden xl:table-cell">Cliente</TableHead>
+                        <TableHead className="text-right">Acción</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sales.map((sale: Sale) => {
+                        const itemCount = sale.items.length
+                        const totalUnits = sale.items.reduce(
+                          (sum: number, item: any) => sum + (item.is_weight_product ? 0 : item.qty),
+                          0
+                        )
+                        const weightLineItems = sale.items.filter(
+                          (item: any) => item.is_weight_product
+                        ).length
+                        const totalItemsLabel =
+                          weightLineItems > 0
+                            ? totalUnits > 0
+                              ? `${totalUnits} unidades + ${weightLineItems} por peso`
+                              : `${weightLineItems} por peso`
+                            : `${totalUnits} unidades`
+
+                        // Determinar estado de deuda para FIAO
+                        const isFIAO = sale.payment.method === 'FIAO'
+                        const debtStatus = sale.debt?.status || null
+                        const isPending = isFIAO && (debtStatus === 'open' || debtStatus === 'partial')
+                        const isPaid = isFIAO && debtStatus === 'paid'
+                        const isVoided = Boolean(sale.voided_at)
+
+                        // Clases de color para la fila según estado de deuda
+                        let rowClassName = ''
+                        if (isVoided) {
+                          rowClassName = 'bg-muted/40 text-muted-foreground'
+                        } else if (isPending) {
+                          rowClassName = 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-500'
+                        } else if (isPaid) {
+                          rowClassName = 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500'
+                        }
+
+                        return (
+                          <TableRow
+                            key={sale.id}
+                            className={cn('transition-colors', rowClassName)}
+                          >
+                            <TableCell>
+                              <div className="text-sm sm:text-base">
+                                <p className="font-semibold text-foreground">
+                                  {format(new Date(sale.sold_at), 'dd/MM/yyyy')}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(sale.sold_at), 'HH:mm')}
+                                </p>
+                                {isVoided && (
                                   <Badge
-                                    key={idx}
                                     variant="outline"
-                                    className="text-xs font-normal"
+                                    className="mt-1 border-destructive/40 text-destructive"
                                   >
-                                    {item.product?.name || 'Producto'}
-                                    {item.qty > 1 && ` x${item.qty}`}
-                                  </Badge>
-                                ))}
-                                {sale.items.length > 3 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    +{sale.items.length - 3} más
+                                    Anulada
                                   </Badge>
                                 )}
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                          <div className="text-sm sm:text-base">
-                              <p className="font-bold text-foreground">
-                              {Number(sale.totals.total_bs).toFixed(2)} Bs
-                            </p>
-                              <p className="text-xs sm:text-sm text-muted-foreground">
-                              ${Number(sale.totals.total_usd).toFixed(2)} USD
-                            </p>
-                            {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
-                              <p className="text-xs font-medium text-orange-600 mt-1">
-                                Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs / ${Number(sale.debt.remaining_usd || 0).toFixed(2)} USD
-                              </p>
-                            )}
-                          </div>
-                          </TableCell>
-                          <TableCell className="text-center hidden md:table-cell">
-                            <Badge variant="secondary">
-                            {currencyLabels[sale.currency] || sale.currency}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center hidden lg:table-cell">
-                          <div className="flex flex-col items-center gap-1">
-                              <span className="text-xs sm:text-sm text-foreground">
-                              {paymentMethodLabels[sale.payment.method] || sale.payment.method}
-                            </span>
-                            {isFIAO && sale.debt && (
-                                <Badge
-                                  variant={
-                                    debtStatus === 'paid'
-                                      ? 'default'
-                                      : debtStatus === 'partial'
-                                      ? 'secondary'
-                                      : 'outline'
-                                  }
-                                  className={
-                                  debtStatus === 'paid'
-                                      ? 'bg-green-100 text-green-800 hover:bg-green-100'
-                                    : debtStatus === 'partial'
-                                      ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'
-                                      : 'bg-orange-100 text-orange-800 hover:bg-orange-100'
-                                  }
-                              >
-                                {debtStatus === 'paid'
-                                  ? 'Pagado'
-                                  : debtStatus === 'partial'
-                                  ? 'Parcial'
-                                  : 'Pendiente'}
-                                </Badge>
-                            )}
-                          </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                          <div className="text-sm">
-                            {sale.sold_by_user ? (
-                              <>
-                                  <p className="font-medium text-foreground">
-                                  {sale.sold_by_user.full_name || 'Sin nombre'}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {sale.invoice_full_number ? (
+                                <div className="flex items-center gap-1">
+                                  <Receipt className="w-4 h-4 text-primary" />
+                                  <p className="font-mono font-semibold text-primary text-sm">
+                                    {sale.invoice_full_number}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">-</p>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <div className="text-sm">
+                                <p className="font-medium text-foreground">
+                                  {itemCount} producto{itemCount !== 1 ? 's' : ''}
                                 </p>
-                                  <p className="text-xs text-muted-foreground">
-                                  {sale.sold_by_user_id?.substring(0, 8)}...
+                                <p className="text-xs text-muted-foreground">
+                                  {totalItemsLabel}
                                 </p>
-                              </>
-                            ) : (
-                                <p className="text-muted-foreground text-xs">N/A</p>
-                            )}
-                          </div>
-                          </TableCell>
-                          <TableCell className="hidden xl:table-cell">
-                          <div className="text-sm">
-                            {sale.customer ? (
-                              <>
-                                  <p className="font-medium text-foreground">{sale.customer.name}</p>
-                                {sale.customer.document_id && (
-                                    <p className="text-xs text-muted-foreground">
-                                    CI: {sale.customer.document_id}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <div className="max-w-[200px]">
+                                <div className="flex flex-wrap gap-1">
+                                  {sale.items.slice(0, 3).map((item, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="outline"
+                                      className="text-xs font-normal"
+                                    >
+                                      {item.product?.name || 'Producto'}
+                                      {item.qty > 1 && ` x${item.qty}`}
+                                    </Badge>
+                                  ))}
+                                  {sale.items.length > 3 && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      +{sale.items.length - 3} más
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="text-sm sm:text-base">
+                                <p className="font-bold text-foreground">
+                                  {Number(sale.totals.total_bs).toFixed(2)} Bs
+                                </p>
+                                <p className="text-xs sm:text-sm text-muted-foreground">
+                                  ${Number(sale.totals.total_usd).toFixed(2)} USD
+                                </p>
+                                {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
+                                  <p className="text-xs font-medium text-orange-600 mt-1">
+                                    Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs / ${Number(sale.debt.remaining_usd || 0).toFixed(2)} USD
                                   </p>
                                 )}
-                              </>
-                            ) : sale.payment.method === 'FIAO' ? (
-                              <p className="text-orange-600 text-xs font-medium">Fiado</p>
-                            ) : (
-                                <p className="text-muted-foreground text-xs">-</p>
-                            )}
-                          </div>
-                          </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleViewDetail(sale)}
-                                    className="text-primary hover:text-primary min-h-[44px] min-w-[44px]"
-                                    aria-label="Ver detalles de venta"
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center hidden md:table-cell">
+                              <Badge variant="secondary">
+                                {currencyLabels[sale.currency] || sale.currency}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center hidden lg:table-cell">
+                              <div className="flex flex-col items-center gap-1">
+                                <span className="text-xs sm:text-sm text-foreground">
+                                  {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                                </span>
+                                {isFIAO && sale.debt && (
+                                  <Badge
+                                    variant={
+                                      debtStatus === 'paid'
+                                        ? 'default'
+                                        : debtStatus === 'partial'
+                                          ? 'secondary'
+                                          : 'outline'
+                                    }
+                                    className={
+                                      debtStatus === 'paid'
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-100'
+                                        : debtStatus === 'partial'
+                                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'
+                                          : 'bg-orange-100 text-orange-800 hover:bg-orange-100'
+                                    }
                                   >
-                                    <Eye className="w-4 h-4 mr-1.5" />
-                                    <span className="hidden sm:inline">Ver</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Ver detalles de la venta</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handlePrint(sale)}
-                                    className="text-primary min-h-[44px] min-w-[44px]"
-                                    aria-label="Imprimir ticket"
-                                  >
-                                    <Printer className="w-4 h-4 sm:mr-1" />
-                                    <span className="hidden sm:inline">Ticket</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Imprimir ticket de venta</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </TableCell>
-                        </TableRow>
-                    )
-                  })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                                    {debtStatus === 'paid'
+                                      ? 'Pagado'
+                                      : debtStatus === 'partial'
+                                        ? 'Parcial'
+                                        : 'Pendiente'}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="text-sm">
+                                {sale.sold_by_user ? (
+                                  <>
+                                    <p className="font-medium text-foreground">
+                                      {sale.sold_by_user.full_name || 'Sin nombre'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {sale.sold_by_user_id?.substring(0, 8)}...
+                                    </p>
+                                  </>
+                                ) : (
+                                  <p className="text-muted-foreground text-xs">N/A</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden xl:table-cell">
+                              <div className="text-sm">
+                                {sale.customer ? (
+                                  <>
+                                    <p className="font-medium text-foreground">{sale.customer.name}</p>
+                                    {sale.customer.document_id && (
+                                      <p className="text-xs text-muted-foreground">
+                                        CI: {sale.customer.document_id}
+                                      </p>
+                                    )}
+                                  </>
+                                ) : sale.payment.method === 'FIAO' ? (
+                                  <p className="text-orange-600 text-xs font-medium">Fiado</p>
+                                ) : (
+                                  <p className="text-muted-foreground text-xs">-</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right space-x-1">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleViewDetail(sale)}
+                                      className="text-primary hover:text-primary min-h-[44px] min-w-[44px]"
+                                      aria-label="Ver detalles de venta"
+                                    >
+                                      <Eye className="w-4 h-4 mr-1.5" />
+                                      <span className="hidden sm:inline">Ver</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Ver detalles de la venta</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handlePrint(sale)}
+                                      className="text-primary min-h-[44px] min-w-[44px]"
+                                      aria-label="Imprimir ticket"
+                                    >
+                                      <Printer className="w-4 h-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">Ticket</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Imprimir ticket de venta</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="border-t border-border px-4 py-3 sm:px-6">
-                <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
-                  <div className="text-sm text-muted-foreground">
-                    Mostrando{' '}
-                    <span className="font-medium text-foreground">
-                      {(currentPage - 1) * limit + 1}
-                    </span>{' '}
-                    a{' '}
-                    <span className="font-medium text-foreground">
-                      {Math.min(currentPage * limit, total)}
-                    </span>{' '}
-                    de <span className="font-medium text-foreground">{total}</span> ventas
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Siguiente
-                    </Button>
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="border-t border-border px-4 py-3 sm:px-6">
+                  <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando{' '}
+                      <span className="font-medium text-foreground">
+                        {(currentPage - 1) * limit + 1}
+                      </span>{' '}
+                      a{' '}
+                      <span className="font-medium text-foreground">
+                        {Math.min(currentPage * limit, total)}
+                      </span>{' '}
+                      de <span className="font-medium text-foreground">{total}</span> ventas
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 

@@ -80,7 +80,7 @@ const isReactChunkModule = (
   ];
 
   // Verificar si alguna dependencia es React
-  const result = deps.some((dep) => 
+  const result = deps.some((dep) =>
     isReactChunkModule(dep, getModuleInfo, stack, depth + 1)
   );
 
@@ -170,173 +170,10 @@ export default defineConfig(({ mode }) => ({
     react(),
     // Habilitar PWA también en desarrollo para soporte offline
     VitePWA({
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
-      // Evitar minificado del SW porque Terser se estaba colgando en renderChunk
-      // y bloqueaba el build (workbox+terser issue).
-      minify: false,
-      devOptions: {
-        enabled: mode === 'production', // Desactivar en desarrollo para evitar cache/HMR issues
-        type: 'module', // Usar module type para desarrollo
-        navigateFallback: 'index.html',
-        // Deshabilitar en desarrollo porque Vite necesita el servidor
-        // En producción funciona perfectamente offline
-      },
-      workbox: {
-        // CRÍTICO: Incluir runtime de Workbox directamente en el Service Worker
-        // Esto evita el error "importScripts() of new scripts after service worker installation is not allowed"
-        inlineWorkboxRuntime: true,
-        // CRÍTICO: Precachear index.html explícitamente y todos los assets
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}'],
-        globIgnores: ['**/node_modules/**/*', '**/sw.js'],
-        // NO agregar index.html manualmente - Workbox lo detecta automáticamente
-        // Si lo agregamos manualmente, causa conflicto con la entrada automática
-        // Usar modo development para evitar minificación con Terser (estaba colgando el build)
-        mode: 'development',
-        // Estrategia para navegación: NetworkFirst con fallback a CacheFirst para offline
-        runtimeCaching: [
-          {
-            // Interceptar TODAS las peticiones de navegación
-            urlPattern: ({ request, url }) => {
-              // Capturar navegación y documentos HTML
-              const isNavigation = request.mode === 'navigate';
-              const isDocument = request.destination === 'document';
-              const isRoot = url.pathname === '/' || url.pathname === '/index.html';
-              const isHtml = url.pathname.endsWith('.html');
-              
-              return isNavigation || isDocument || isRoot || isHtml;
-            },
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'html-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60, // 1 hora
-              },
-              cacheableResponse: {
-                statuses: [200], // Evitar cachear respuestas offline o parciales
-              },
-              networkTimeoutSeconds: 3, // Dar tiempo real a la red antes de usar cache
-            },
-          },
-          {
-            // CRÍTICO: Interceptar módulos de Vite en desarrollo
-            urlPattern: ({ url }) => {
-              // Capturar módulos de Vite (@vite/client, @react-refresh, etc.)
-              const pathname = url.pathname;
-              return pathname.startsWith('/@') || 
-                     pathname.startsWith('/src/') ||
-                     pathname.includes('@vite') ||
-                     pathname.includes('@react-refresh') ||
-                     pathname.includes('vite-plugin-pwa') ||
-                     pathname.endsWith('.tsx') ||
-                     pathname.endsWith('.ts') ||
-                     pathname.endsWith('.jsx') ||
-                     (pathname.endsWith('.js') && !pathname.includes('node_modules'));
-            },
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'vite-modules',
-              expiration: {
-                maxEntries: 1000, // Más entradas para desarrollo
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 días
-              },
-              cacheableResponse: {
-                statuses: [0, 200], // Cachear incluso errores de red
-              },
-              networkTimeoutSeconds: 1, // Timeout rápido para detectar offline
-            },
-          },
-          {
-            // CRÍTICO: Assets estáticos (JS, CSS, imágenes) que NO están en /assets/
-            // Los archivos en /assets/ están en el precache de Workbox y se manejan automáticamente
-            // Solo cachear archivos fuera de /assets/ (como favicon, etc.)
-            urlPattern: ({ url }) => {
-              // Excluir /assets/ porque están en el precache de Workbox
-              return /\.(?:js|css|woff2?|png|jpg|jpeg|svg|gif|ico)$/i.test(url.pathname) &&
-                     !url.pathname.startsWith('/assets/');
-            },
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'static-resources',
-              expiration: {
-                maxEntries: 50, // Menos entradas porque excluimos /assets/
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 días
-              },
-              cacheableResponse: {
-                statuses: [200],
-              },
-              networkTimeoutSeconds: 3,
-            },
-          },
-          {
-            // Interceptar manifest.webmanifest
-            urlPattern: ({ url }) => url.pathname.includes('manifest.webmanifest'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'html-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-              networkTimeoutSeconds: 1,
-            },
-          },
-          {
-            // CRÍTICO: Cachear respuestas de API para máximo rendimiento offline
-            urlPattern: ({ url }) => {
-              // Cachear todas las peticiones a la API
-              return url.origin.includes('onrender.com') || url.pathname.startsWith('/api/')
-            },
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 500, // Muchas respuestas de API
-                maxAgeSeconds: 60 * 60 * 24, // 1 día
-              },
-              cacheableResponse: {
-                statuses: [0, 200], // Cachear incluso errores de red
-              },
-              networkTimeoutSeconds: 2, // Timeout de 2 segundos
-              plugins: [
-                {
-                  cacheWillUpdate: async ({ response }) => {
-                    // Solo cachear respuestas exitosas o errores de red
-                    if (response && (response.status === 0 || response.status === 200)) {
-                      return response
-                    }
-                    return null
-                  },
-                },
-              ],
-            },
-          },
-        ],
-        skipWaiting: true,
-        clientsClaim: true,
-        // CRÍTICO: navigateFallback para servir index.html cuando falla la navegación
-        navigateFallback: '/index.html',
-        navigateFallbackAllowlist: [
-          /^(?!\/_).*/,              // Permitir todas las rutas excepto las que empiezan con _
-        ],
-        navigateFallbackDenylist: [
-          /^\/_/,                    // Excluir rutas que empiezan con _
-          /\.(js|css|json|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico|webp)$/i, // Excluir todos los archivos estáticos con extensión
-          /^\/assets\//,             // Excluir toda la carpeta /assets/ (archivos JS/CSS/imágenes)
-          /^\/sw\.js$/,              // Excluir Service Worker
-          /^\/manifest\.webmanifest$/, // Excluir manifest
-          /^\/favicon\.(svg|ico)$/,  // Excluir favicons
-          /^\/api\//,                // Excluir rutas de API
-          /^\/socket\.io\//,         // Excluir WebSocket
-        ],
-        // No hacer cache busting para index.html
-        dontCacheBustURLsMatching: /^\/index\.html$/,
-        // Asegurar que el precache incluya todos los assets necesarios
-        cleanupOutdatedCaches: true,
-      },
+      injectRegister: 'auto',
       manifest: {
         name: 'LA CAJA',
         short_name: 'LA CAJA',

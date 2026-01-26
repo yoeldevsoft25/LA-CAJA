@@ -2,8 +2,9 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { customersService, Customer, CreateCustomerDto, UpdateCustomerDto } from '@/services/customers.service'
+import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -98,30 +99,143 @@ export default function CustomerFormModal({
     }
   }, [isOpen, customer, reset])
 
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+
   const createMutation = useMutation({
     mutationFn: customersService.create,
+    onMutate: async (newCustomer) => {
+      await queryClient.cancelQueries({ queryKey: ['customers'] })
+      const previousCustomers = queryClient.getQueryData(['customers', '']) // Asumiendo búsqueda vacía
+
+      queryClient.setQueriesData({ queryKey: ['customers'] }, (old: any) => {
+        if (!old) return old
+        // Optimistic add (con ID temporal)
+        const tempCustomer = {
+          ...newCustomer,
+          id: `temp-${Date.now()}`,
+          store_id: user?.store_id || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          document_id: newCustomer.document_id || null,
+          phone: newCustomer.phone || null,
+          email: newCustomer.email || null,
+          credit_limit: newCustomer.credit_limit || null,
+          note: newCustomer.note || null,
+        }
+        return Array.isArray(old) ? [tempCustomer, ...old] : [tempCustomer]
+      })
+
+      return { previousCustomers }
+    },
     onSuccess: () => {
       toast.success('Cliente creado exitosamente')
       onSuccess?.()
       onClose()
     },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error al crear el cliente'
-      toast.error(message)
+    onError: async (error: any, variables, context) => {
+      // ✅ OFFLINE-FIRST
+      if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED' || !navigator.onLine) {
+        try {
+          const { syncService } = await import('@/services/sync.service')
+
+          await syncService.enqueueEvent({
+            event_id: crypto.randomUUID(),
+            type: 'customers.created',
+            payload: { ...variables, store_id: user?.store_id },
+            created_at: Date.now(),
+            seq: 0,
+            store_id: user?.store_id || '',
+            device_id: localStorage.getItem('device_id') || 'unknown',
+            version: 1,
+            actor: {
+              user_id: user?.user_id || 'unknown',
+              role: (user?.role as any) || 'cashier',
+            },
+          })
+
+          toast.success('Guardado localmente (sin conexión)')
+          onSuccess?.()
+          onClose()
+          return
+        } catch (queueError) {
+          console.error('Error al encolar offline:', queueError)
+        }
+      }
+
+      if (context?.previousCustomers) {
+        queryClient.setQueriesData({ queryKey: ['customers'] }, context.previousCustomers)
+      }
+      toast.error(error.response?.data?.message || 'Error al crear el cliente')
     },
+    onSettled: () => {
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: ['customers'] })
+      }
+    }
   })
 
   const updateMutation = useMutation({
     mutationFn: (data: UpdateCustomerDto) => customersService.update(customer!.id, data),
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ['customers'] })
+      const previousCustomers = queryClient.getQueryData(['customers', '']) // Asumiendo búsqueda vacía
+
+      queryClient.setQueriesData({ queryKey: ['customers'] }, (old: any) => {
+        if (!Array.isArray(old)) return old
+        return old.map((c: Customer) =>
+          c.id === customer!.id ? { ...c, ...variables } : c
+        )
+      })
+
+      return { previousCustomers }
+    },
     onSuccess: () => {
       toast.success('Cliente actualizado exitosamente')
       onSuccess?.()
       onClose()
     },
-    onError: (error: any) => {
+    onError: async (error: any, variables, context) => {
+      // ✅ OFFLINE-FIRST
+      if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED' || !navigator.onLine) {
+        try {
+          const { syncService } = await import('@/services/sync.service')
+
+          await syncService.enqueueEvent({
+            event_id: crypto.randomUUID(),
+            type: 'customers.updated',
+            payload: { id: customer!.id, ...variables },
+            created_at: Date.now(),
+            seq: 0,
+            store_id: user?.store_id || '',
+            device_id: localStorage.getItem('device_id') || 'unknown',
+            version: 1,
+            actor: {
+              user_id: user?.user_id || 'unknown',
+              role: (user?.role as any) || 'cashier',
+            },
+          })
+
+          toast.success('Guardado localmente (sin conexión)')
+          onSuccess?.()
+          onClose()
+          return
+        } catch (queueError) {
+          console.error('Error al encolar offline:', queueError)
+        }
+      }
+
+      if (context?.previousCustomers) {
+        queryClient.setQueriesData({ queryKey: ['customers'] }, context.previousCustomers)
+      }
       const message = error.response?.data?.message || 'Error al actualizar el cliente'
       toast.error(message)
     },
+    onSettled: () => {
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: ['customers'] })
+      }
+    }
   })
 
   const onSubmit = (data: CustomerFormData) => {
@@ -131,7 +245,7 @@ export default function CustomerFormModal({
       email: data.email || undefined,
       credit_limit: data.credit_limit ?? undefined,
     }
-    
+
     if (isEditing) {
       updateMutation.mutate(cleanData as UpdateCustomerDto)
     } else {

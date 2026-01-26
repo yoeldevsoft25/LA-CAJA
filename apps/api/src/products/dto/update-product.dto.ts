@@ -103,6 +103,18 @@ export class UpdateProductDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
+  price_bs?: number;
+
+  @Transform(({ value }) => toOptionalNumber(value))
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  cost_bs?: number;
+
+  @Transform(({ value }) => toOptionalNumber(value))
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
   price_usd?: number;
 
   @Transform(({ value }) => toOptionalNumber(value))

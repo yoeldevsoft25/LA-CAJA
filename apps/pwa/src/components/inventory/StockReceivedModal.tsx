@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from '@/lib/toast'
 import { inventoryService, StockReceivedRequest, StockStatus } from '@/services/inventory.service'
 import { productsService, Product } from '@/services/products.service'
@@ -285,7 +285,7 @@ export default function StockReceivedModal({
   const handleBarcodeScan = async (barcode: string) => {
     try {
       const products = productsData?.products || []
-      
+
       // Buscar producto por código de barras exacto
       const product = products.find(
         (p) => p.barcode?.toLowerCase() === barcode.toLowerCase()
@@ -361,11 +361,54 @@ export default function StockReceivedModal({
     )
   }
 
+  const queryClient = useQueryClient()
+
   const stockReceivedMutation = useMutation({
     mutationFn: async (requests: StockReceivedRequest[]) => {
       // Ejecutar todas las peticiones en paralelo
       const promises = requests.map((req) => inventoryService.stockReceived(req))
       return Promise.all(promises)
+    },
+    onMutate: async (newRequests) => {
+      // Cancelar refetches en curso
+      await queryClient.cancelQueries({ queryKey: ['inventory', 'stock-status'] })
+
+      // Snapshot del valor anterior
+      const previousStock = queryClient.getQueryData(['inventory', 'stock-status'])
+
+      // Optimistic update para CADA producto en la solicitud
+      queryClient.setQueriesData({ queryKey: ['inventory', 'stock-status'] }, (old: any) => {
+        if (!old) return old
+
+        const isPaged = old.items && Array.isArray(old.items)
+        const items = isPaged ? old.items : (Array.isArray(old) ? old : [])
+
+        // Crear mapa de cambios por producto
+        const changesByProduct = new Map<string, number>()
+        newRequests.forEach(req => {
+          const current = changesByProduct.get(req.product_id) || 0
+          changesByProduct.set(req.product_id, current + req.qty)
+        })
+
+        const newItems = items.map((item: StockStatus) => {
+          const qtyToAdd = changesByProduct.get(item.product_id)
+          if (qtyToAdd) {
+            return {
+              ...item,
+              current_stock: item.current_stock + qtyToAdd,
+              is_low_stock: (item.current_stock + qtyToAdd) <= item.low_stock_threshold
+            }
+          }
+          return item
+        })
+
+        if (isPaged) {
+          return { ...old, items: newItems }
+        }
+        return newItems
+      })
+
+      return { previousStock }
     },
     onSuccess: (results) => {
       toast.success(
@@ -374,9 +417,56 @@ export default function StockReceivedModal({
       onClose()
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: async (error: any, variables, context) => {
+      // ✅ OFFLINE-FIRST: Si falla por conexión
+      if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED' || !navigator.onLine) {
+        try {
+          const { syncService } = await import('@/services/sync.service')
+
+          // Encolar un evento por cada request (o un evento batch si soportamos batch)
+          // DB soporta batch pero SyncService.enqueueEvent es uno a uno por ahora.
+          // Haremos un loop.
+
+          for (const req of variables) {
+            await syncService.enqueueEvent({
+              event_id: crypto.randomUUID(),
+              type: 'inventory.stock_received',
+              payload: req,
+              created_at: Date.now(),
+              seq: 0,
+              store_id: user?.store_id || '',
+              device_id: localStorage.getItem('device_id') || 'unknown',
+              version: 1,
+              actor: {
+                user_id: user?.user_id || 'unknown',
+                role: (user?.role as any) || 'cashier',
+              },
+            })
+          }
+
+          toast.success(`Guardado localmente (${variables.length} productos)`)
+          onClose()
+          onSuccess?.()
+          return
+        } catch (queueError) {
+          console.error('Error al encolar offline:', queueError)
+        }
+      }
+
+      // Rollback si no es offline
+      if (context?.previousStock) {
+        queryClient.setQueriesData(
+          { queryKey: ['inventory', 'stock-status'] },
+          context.previousStock
+        )
+      }
       toast.error(error.response?.data?.message || 'Error al recibir stock')
     },
+    onSettled: () => {
+      if (navigator.onLine) {
+        queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
+      }
+    }
   })
 
   const handleSubmit = () => {
@@ -410,9 +500,9 @@ export default function StockReceivedModal({
         ref:
           supplier || invoice
             ? {
-                supplier: supplier || undefined,
-                invoice: invoice || undefined,
-              }
+              supplier: supplier || undefined,
+              invoice: invoice || undefined,
+            }
             : undefined,
       }
     })
@@ -585,10 +675,10 @@ export default function StockReceivedModal({
                                 ? item.weight_unit === 'g'
                                   ? 'Ej: 500 (gramos)'
                                   : item.weight_unit === 'kg'
-                                  ? 'Ej: 2.5 (kilos)'
-                                  : item.weight_unit === 'lb'
-                                  ? 'Ej: 1.5 (libras)'
-                                  : 'Ej: 8 (onzas)'
+                                    ? 'Ej: 2.5 (kilos)'
+                                    : item.weight_unit === 'lb'
+                                      ? 'Ej: 1.5 (libras)'
+                                      : 'Ej: 8 (onzas)'
                                 : 'Ej: 10'
                             }
                             value={item.qty || ''}

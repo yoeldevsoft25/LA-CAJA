@@ -56,7 +56,7 @@ export class WarehousesService {
     private productRepository: Repository<Product>,
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   /**
    * Crea una nueva bodega
@@ -138,12 +138,14 @@ export class WarehousesService {
     });
   }
 
-  async getDefaultOrFirst(storeId: string): Promise<Warehouse> {
+  async getDefaultOrFirst(storeId: string, manager?: EntityManager): Promise<Warehouse> {
+    const repo = manager?.getRepository(Warehouse) || this.warehouseRepository;
+
     // ⚡ OPTIMIZACIÓN CRÍTICA: Query optimizada usando índice parcial para bodega por defecto
     // Primero intenta obtener la bodega por defecto (usando índice parcial)
     // Si no existe, obtiene la primera activa
     // Esto reduce el tiempo de 1042ms a <50ms típicamente
-    let warehouse = await this.warehouseRepository
+    let warehouse = await repo
       .createQueryBuilder('warehouse')
       .where('warehouse.store_id = :storeId', { storeId })
       .andWhere('warehouse.is_active = true')
@@ -153,14 +155,14 @@ export class WarehousesService {
 
     // Si no hay bodega por defecto, obtener la primera activa
     if (!warehouse) {
-      warehouse = await this.warehouseRepository
+      warehouse = await (manager?.getRepository(Warehouse) || this.warehouseRepository)
         .createQueryBuilder('warehouse')
         .where('warehouse.store_id = :storeId', { storeId })
         .andWhere('warehouse.is_active = true')
         .orderBy('warehouse.name', 'ASC')
         .limit(1)
         .getOne();
-      
+
       if (warehouse) {
         this.logger.warn(
           `Tienda ${storeId} sin bodega por defecto. Usando ${warehouse.id} como fallback temporal.`,
@@ -288,18 +290,18 @@ export class WarehousesService {
           updated_at: stock.updated_at,
           product: product
             ? {
-                id: product.id,
-                name: product.name,
-                sku: product.sku ?? null,
-                barcode: product.barcode ?? null,
-              }
+              id: product.id,
+              name: product.name,
+              sku: product.sku ?? null,
+              barcode: product.barcode ?? null,
+            }
             : null,
           variant: variant
             ? {
-                id: variant.id,
-                variant_type: variant.variant_type,
-                variant_value: variant.variant_value,
-              }
+              id: variant.id,
+              variant_type: variant.variant_type,
+              variant_value: variant.variant_value,
+            }
             : null,
         };
       }),
@@ -463,10 +465,12 @@ export class WarehousesService {
     variantId: string | null,
     qtyDelta: number,
     storeId?: string,
+    manager?: EntityManager,
   ): Promise<WarehouseStock> {
+    const queryExecutor = manager || this.dataSource;
     // ⚡ OPTIMIZACIÓN CRÍTICA: UPDATE atómico directo sin query previa
     // Usar CASE para manejar variant_id NULL vs no-NULL eficientemente
-    const result = await this.dataSource.query(
+    const result = await queryExecutor.query(
       `UPDATE warehouse_stock 
        SET stock = GREATEST(0, stock + $1), updated_at = NOW() 
        WHERE warehouse_id = $2 
@@ -481,31 +485,31 @@ export class WarehousesService {
 
     let stockRecord: WarehouseStock;
     let previousStock = 0;
-    
+
     if (!result || result.length === 0) {
       // Stock no existe, crear con INSERT ... ON CONFLICT (upsert atómico)
       const insertResult = variantId === null
-        ? await this.dataSource.query(
-            `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+        ? await queryExecutor.query(
+          `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
              VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
              ON CONFLICT (warehouse_id, product_id) WHERE variant_id IS NULL
              DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
              RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
-            [warehouseId, productId, variantId, qtyDelta, qtyDelta],
-          )
-        : await this.dataSource.query(
-            `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+          [warehouseId, productId, variantId, qtyDelta, qtyDelta],
+        )
+        : await queryExecutor.query(
+          `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
              VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
              ON CONFLICT (warehouse_id, product_id, variant_id)
              DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
              RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
-            [warehouseId, productId, variantId, qtyDelta, qtyDelta],
-          );
-      
+          [warehouseId, productId, variantId, qtyDelta, qtyDelta],
+        );
+
       if (!insertResult || insertResult.length === 0) {
         throw new Error(`No se pudo crear o actualizar stock para warehouse ${warehouseId}, product ${productId}`);
       }
-      
+
       stockRecord = {
         id: insertResult[0].id,
         warehouse_id: insertResult[0].warehouse_id,
@@ -529,13 +533,13 @@ export class WarehousesService {
       // Calcular previous stock aproximado (puede no ser exacto si hubo múltiples updates concurrentes)
       previousStock = Math.max(0, stockRecord.stock - qtyDelta);
     }
-    
+
     // Obtener store_id solo si es necesario para notificaciones (no bloquear UPDATE)
     const resolvedStoreId = storeId || await this.warehouseRepository.findOne({
       where: { id: warehouseId },
       select: ['store_id'],
     }).then(w => w?.store_id || null);
-    
+
     // Notificar stock bajo de forma asíncrona (no bloquear respuesta)
     if (resolvedStoreId && stockRecord.stock < previousStock) {
       this.maybeNotifyLowStock(
@@ -547,7 +551,7 @@ export class WarehousesService {
         this.logger.error(`Error notificando stock bajo: ${err.message}`);
       });
     }
-    
+
     return stockRecord;
   }
 
@@ -657,7 +661,7 @@ export class WarehousesService {
           insertedResults.push(insertResult[0]);
         }
       }
-      
+
       for (const row of insertedResults) {
         const key = `${row.product_id}:${row.variant_id || 'null'}`;
         resultMap.set(key, {

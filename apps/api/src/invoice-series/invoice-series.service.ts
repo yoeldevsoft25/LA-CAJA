@@ -19,7 +19,7 @@ export class InvoiceSeriesService {
     @InjectRepository(InvoiceSeries)
     private seriesRepository: Repository<InvoiceSeries>,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   /**
    * Crea una nueva serie de factura
@@ -139,7 +139,7 @@ export class InvoiceSeriesService {
       // Actualizar e incrementar en una sola query atómica
       const result = await this.dataSource.query(
         `UPDATE invoice_series 
-         SET current_number = current_number + 1, updated_at = NOW()
+         SET current_number = COALESCE(current_number, 0) + 1, updated_at = NOW()
          WHERE id = $1 AND store_id = $2 AND is_active = true
          RETURNING id, store_id, series_code, name, prefix, current_number, start_number, is_active, note, created_at, updated_at`,
         [seriesId, storeId],
@@ -158,7 +158,7 @@ export class InvoiceSeriesService {
         );
       }
       const invoiceNumber = currentNumber.toString().padStart(6, '0');
-      
+
       // ⚡ FIX CRÍTICO: Validar que series_code existe y no es undefined/null
       const seriesCode = series.series_code || 'FAC';
       const prefix = series.prefix || null;
@@ -177,7 +177,7 @@ export class InvoiceSeriesService {
       // Esto es 100-1000x más rápido que FOR UPDATE porque no bloquea la fila
       const result = await this.dataSource.query(
         `UPDATE invoice_series 
-         SET current_number = current_number + 1, updated_at = NOW()
+         SET current_number = COALESCE(current_number, 0) + 1, updated_at = NOW()
          WHERE ctid = (
            SELECT ctid FROM invoice_series 
            WHERE store_id = $1 AND is_active = true 
@@ -203,7 +203,7 @@ export class InvoiceSeriesService {
         );
       }
       const invoiceNumber = currentNumber.toString().padStart(6, '0');
-      
+
       // ⚡ FIX CRÍTICO: Validar que series_code existe y no es undefined/null
       const seriesCode = series.series_code || 'FAC';
       const prefix = series.prefix || null;

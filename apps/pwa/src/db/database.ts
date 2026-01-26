@@ -7,7 +7,7 @@ import { BaseEvent } from '@la-caja/domain';
  */
 export interface LocalEvent extends BaseEvent {
   id?: number; // Auto-increment para Dexie
-  sync_status: 'pending' | 'synced' | 'failed';
+  sync_status: 'pending' | 'synced' | 'failed' | 'conflict';
   sync_attempts: number;
   synced_at?: number;
 }
@@ -94,19 +94,19 @@ export class LaCajaDB extends Dexie {
 
   constructor() {
     super('LaCajaDB');
-    
+
     // Versión 1: Schema original (mantener para compatibilidad)
     this.version(1).stores({
       localEvents: '++id, event_id, store_id, device_id, seq, type, sync_status, created_at',
       kv: 'key',
     });
-    
+
     // Versión 2: Índices optimizados
     this.version(2).stores({
       localEvents: '++id, event_id, store_id, device_id, seq, type, sync_status, created_at, [sync_status+created_at], [store_id+device_id+sync_status]',
       kv: 'key',
     });
-    
+
     // Versión 3: Agregar read models locales (productos, clientes, ventas)
     this.version(3).stores({
       localEvents: '++id, event_id, store_id, device_id, seq, type, sync_status, created_at, [sync_status+created_at], [store_id+device_id+sync_status]',
@@ -139,7 +139,7 @@ export class LaCajaDB extends Dexie {
       kv: 'key',
     });
   }
-  
+
   /**
    * Query optimizada para obtener eventos pendientes de sincronización
    * Usa el índice compuesto [sync_status+created_at] para mejor performance
@@ -186,7 +186,7 @@ export class LaCajaDB extends Dexie {
     await Promise.all(updates);
     return failed.length;
   }
-  
+
   /**
    * Query optimizada para obtener eventos por dispositivo y estado
    */
@@ -235,7 +235,7 @@ export class LaCajaDB extends Dexie {
     }
 
     const products = await query.toArray();
-    
+
     // Ordenar por nombre
     products.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -297,9 +297,9 @@ export class LaCajaDB extends Dexie {
       .where('store_id')
       .equals(storeId)
       .toArray();
-    
+
     sales.sort((a, b) => (b.sold_at as number) - (a.sold_at as number));
-    
+
     if (limit) {
       return sales.slice(0, limit);
     }

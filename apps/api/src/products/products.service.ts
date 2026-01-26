@@ -14,55 +14,21 @@ import { BulkPriceChangeDto } from './dto/bulk-price-change.dto';
 import { SearchProductsDto } from './dto/search-products.dto';
 import { ExchangeService } from '../exchange/exchange.service';
 import { randomUUID } from 'crypto';
+import { PricingCalculator, WeightUnit } from '@la-caja/domain';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
-  private readonly weightUnitToKg: Record<'kg' | 'g' | 'lb' | 'oz', number> = {
-    kg: 1,
-    g: 0.001,
-    lb: 0.45359237,
-    oz: 0.028349523125,
-  };
+
 
   constructor(
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
     private exchangeService: ExchangeService,
-  ) {}
+  ) { }
 
-  /**
-   * Redondea un número a 2 decimales
-   */
-  private roundToTwoDecimals(value: number): number {
-    return Math.round(value * 100) / 100;
-  }
 
-  private roundToDecimals(value: number, decimals: number): number {
-    const factor = 10 ** decimals;
-    return Math.round(value * factor) / factor;
-  }
-
-  private convertWeightValue(
-    value: number,
-    fromUnit: 'kg' | 'g' | 'lb' | 'oz',
-    toUnit: 'kg' | 'g' | 'lb' | 'oz',
-  ): number {
-    return (
-      value * (this.weightUnitToKg[fromUnit] / this.weightUnitToKg[toUnit])
-    );
-  }
-
-  private convertWeightPrice(
-    value: number,
-    fromUnit: 'kg' | 'g' | 'lb' | 'oz',
-    toUnit: 'kg' | 'g' | 'lb' | 'oz',
-  ): number {
-    return (
-      value * (this.weightUnitToKg[toUnit] / this.weightUnitToKg[fromUnit])
-    );
-  }
 
   private normalizeBarcode(value?: string | null): string | null {
     if (value === null || value === undefined) return null;
@@ -94,11 +60,11 @@ export class ProductsService {
     manager: EntityManager,
     storeId: string,
     productId: string,
-    fromUnit: 'kg' | 'g' | 'lb' | 'oz',
-    toUnit: 'kg' | 'g' | 'lb' | 'oz',
+    fromUnit: WeightUnit,
+    toUnit: WeightUnit,
   ): Promise<void> {
-    const quantityFactor = this.convertWeightValue(1, fromUnit, toUnit);
-    const priceFactor = this.convertWeightPrice(1, fromUnit, toUnit);
+    const quantityFactor = PricingCalculator.convertWeightValue(1, fromUnit, toUnit);
+    const priceFactor = PricingCalculator.convertWeightPrice(1, fromUnit, toUnit);
 
     if (!Number.isFinite(quantityFactor) || !Number.isFinite(priceFactor)) {
       throw new BadRequestException(
@@ -160,11 +126,30 @@ export class ProductsService {
     const bcvRate = await this.exchangeService.getBCVRate();
     const exchangeRate = bcvRate?.rate || 36; // Fallback a 36 si no se puede obtener
 
-    // Calcular precios en Bs desde USD usando la tasa BCV y redondear a 2 decimales
-    const price_bs = this.roundToTwoDecimals(dto.price_usd * exchangeRate);
-    const cost_bs = this.roundToTwoDecimals(dto.cost_usd * exchangeRate);
-    const price_usd = this.roundToTwoDecimals(dto.price_usd);
-    const cost_usd = this.roundToTwoDecimals(dto.cost_usd);
+    // Calcular precios
+    let price_bs: number;
+    let price_usd: number;
+
+    // Si se proporciona price_bs, priorizarlo para mantener el valor exacto en bolívares
+    if (dto.price_bs !== undefined && dto.price_bs !== null) {
+      price_bs = PricingCalculator.roundToTwoDecimals(dto.price_bs);
+      price_usd = PricingCalculator.roundToTwoDecimals(price_bs / exchangeRate);
+    } else {
+      price_usd = PricingCalculator.roundToTwoDecimals(dto.price_usd);
+      price_bs = PricingCalculator.roundToTwoDecimals(price_usd * exchangeRate);
+    }
+
+    let cost_bs: number;
+    let cost_usd: number;
+
+    // Si se proporciona cost_bs, priorizarlo
+    if (dto.cost_bs !== undefined && dto.cost_bs !== null) {
+      cost_bs = PricingCalculator.roundToTwoDecimals(dto.cost_bs);
+      cost_usd = PricingCalculator.roundToTwoDecimals(cost_bs / exchangeRate);
+    } else {
+      cost_usd = PricingCalculator.roundToTwoDecimals(dto.cost_usd);
+      cost_bs = PricingCalculator.roundToTwoDecimals(cost_usd * exchangeRate);
+    }
 
     this.logger.log(
       `Creando producto: price_usd=${price_usd} -> price_bs=${price_bs.toFixed(2)} (tasa=${exchangeRate})`,
@@ -173,11 +158,11 @@ export class ProductsService {
     const isWeightProduct = dto.is_weight_product ?? false;
     const pricePerWeightUsd =
       isWeightProduct && dto.price_per_weight_usd != null
-        ? this.roundToDecimals(dto.price_per_weight_usd, 4)
+        ? PricingCalculator.roundToDecimals(dto.price_per_weight_usd, 4)
         : null;
     const pricePerWeightBs =
       isWeightProduct && pricePerWeightUsd !== null
-        ? this.roundToDecimals(pricePerWeightUsd * exchangeRate, 4)
+        ? PricingCalculator.roundToDecimals(pricePerWeightUsd * exchangeRate, 4)
         : isWeightProduct
           ? dto.price_per_weight_bs ?? null
           : null;
@@ -185,11 +170,11 @@ export class ProductsService {
     // Calcular costo por peso
     const costPerWeightUsd =
       isWeightProduct && dto.cost_per_weight_usd != null
-        ? this.roundToDecimals(dto.cost_per_weight_usd, 6)
+        ? PricingCalculator.roundToDecimals(dto.cost_per_weight_usd, 6)
         : null;
     const costPerWeightBs =
       isWeightProduct && costPerWeightUsd !== null
-        ? this.roundToDecimals(costPerWeightUsd * exchangeRate, 6)
+        ? PricingCalculator.roundToDecimals(costPerWeightUsd * exchangeRate, 6)
         : isWeightProduct
           ? dto.cost_per_weight_bs ?? null
           : null;
@@ -331,27 +316,38 @@ export class ProductsService {
       if (dto.is_weight_product !== undefined)
         product.is_weight_product = dto.is_weight_product;
 
-      // Si se actualiza el precio USD, recalcular el precio Bs usando la tasa BCV
-      // SIEMPRE recalcular, ignorando cualquier price_bs que venga en el DTO
-      if (dto.price_usd !== undefined && exchangeRate !== null) {
-        product.price_usd = this.roundToTwoDecimals(dto.price_usd);
-        product.price_bs = this.roundToTwoDecimals(
+      // Lógica para actualizar precios: Si se envía price_bs, priorizarlo para mantener exactitud.
+      if (dto.price_bs !== undefined && dto.price_bs !== null && exchangeRate !== null) {
+        product.price_bs = PricingCalculator.roundToTwoDecimals(dto.price_bs);
+        product.price_usd = PricingCalculator.roundToTwoDecimals(product.price_bs / exchangeRate);
+        this.logger.log(
+          `Actualizando precio (Base Bs): price_bs=${product.price_bs} -> price_usd=${product.price_usd} (tasa=${exchangeRate})`,
+        );
+      } else if (dto.price_usd !== undefined && exchangeRate !== null) {
+        product.price_usd = PricingCalculator.roundToTwoDecimals(dto.price_usd);
+        product.price_bs = PricingCalculator.roundToTwoDecimals(
           dto.price_usd * exchangeRate,
         );
         this.logger.log(
-          `Actualizando precio: price_usd=${product.price_usd} -> price_bs=${product.price_bs.toFixed(2)} (tasa=${exchangeRate})`,
+          `Actualizando precio (Base USD): price_usd=${product.price_usd} -> price_bs=${product.price_bs.toFixed(2)} (tasa=${exchangeRate})`,
         );
       }
 
-      // Si se actualiza el costo USD, recalcular el costo Bs usando la tasa BCV
-      // SIEMPRE recalcular, ignorando cualquier cost_bs que venga en el DTO
-      if (dto.cost_usd !== undefined && exchangeRate !== null) {
-        product.cost_usd = this.roundToTwoDecimals(dto.cost_usd);
-        product.cost_bs = this.roundToTwoDecimals(
+
+      // Lógica para actualizar costos
+      if (dto.cost_bs !== undefined && dto.cost_bs !== null && exchangeRate !== null) {
+        product.cost_bs = PricingCalculator.roundToTwoDecimals(dto.cost_bs);
+        product.cost_usd = PricingCalculator.roundToTwoDecimals(product.cost_bs / exchangeRate);
+        this.logger.log(
+          `Actualizando costo (Base Bs): cost_bs=${product.cost_bs} -> cost_usd=${product.cost_usd} (tasa=${exchangeRate})`,
+        );
+      } else if (dto.cost_usd !== undefined && exchangeRate !== null) {
+        product.cost_usd = PricingCalculator.roundToTwoDecimals(dto.cost_usd);
+        product.cost_bs = PricingCalculator.roundToTwoDecimals(
           dto.cost_usd * exchangeRate,
         );
         this.logger.log(
-          `Actualizando costo: cost_usd=${product.cost_usd} -> cost_bs=${product.cost_bs.toFixed(2)} (tasa=${exchangeRate})`,
+          `Actualizando costo (Base USD): cost_usd=${product.cost_usd} -> cost_bs=${product.cost_bs.toFixed(2)} (tasa=${exchangeRate})`,
         );
       }
 
@@ -386,8 +382,8 @@ export class ProductsService {
             dto.price_per_weight_bs == null
           ) {
             if (product.price_per_weight_usd != null) {
-              product.price_per_weight_usd = this.roundToDecimals(
-                this.convertWeightPrice(
+              product.price_per_weight_usd = PricingCalculator.roundToDecimals(
+                PricingCalculator.convertWeightPrice(
                   product.price_per_weight_usd,
                   previousUnit,
                   currentUnit,
@@ -400,8 +396,8 @@ export class ProductsService {
               product.price_per_weight_bs != null &&
               (product.price_per_weight_usd == null || exchangeRate === null)
             ) {
-              product.price_per_weight_bs = this.roundToDecimals(
-                this.convertWeightPrice(
+              product.price_per_weight_bs = PricingCalculator.roundToDecimals(
+                PricingCalculator.convertWeightPrice(
                   product.price_per_weight_bs,
                   previousUnit,
                   currentUnit,
@@ -411,7 +407,7 @@ export class ProductsService {
             }
 
             if (product.price_per_weight_usd != null && exchangeRate !== null) {
-              product.price_per_weight_bs = this.roundToDecimals(
+              product.price_per_weight_bs = PricingCalculator.roundToDecimals(
                 product.price_per_weight_usd * exchangeRate,
                 4,
               );
@@ -423,8 +419,8 @@ export class ProductsService {
             dto.cost_per_weight_bs == null
           ) {
             if (product.cost_per_weight_usd != null) {
-              product.cost_per_weight_usd = this.roundToDecimals(
-                this.convertWeightPrice(
+              product.cost_per_weight_usd = PricingCalculator.roundToDecimals(
+                PricingCalculator.convertWeightPrice(
                   product.cost_per_weight_usd,
                   previousUnit,
                   currentUnit,
@@ -437,8 +433,8 @@ export class ProductsService {
               product.cost_per_weight_bs != null &&
               (product.cost_per_weight_usd == null || exchangeRate === null)
             ) {
-              product.cost_per_weight_bs = this.roundToDecimals(
-                this.convertWeightPrice(
+              product.cost_per_weight_bs = PricingCalculator.roundToDecimals(
+                PricingCalculator.convertWeightPrice(
                   product.cost_per_weight_bs,
                   previousUnit,
                   currentUnit,
@@ -448,7 +444,7 @@ export class ProductsService {
             }
 
             if (product.cost_per_weight_usd != null && exchangeRate !== null) {
-              product.cost_per_weight_bs = this.roundToDecimals(
+              product.cost_per_weight_bs = PricingCalculator.roundToDecimals(
                 product.cost_per_weight_usd * exchangeRate,
                 6,
               );
@@ -456,8 +452,8 @@ export class ProductsService {
           }
 
           if (dto.min_weight === undefined && product.min_weight != null) {
-            product.min_weight = this.roundToDecimals(
-              this.convertWeightValue(
+            product.min_weight = PricingCalculator.roundToDecimals(
+              PricingCalculator.convertWeightValue(
                 product.min_weight,
                 previousUnit,
                 currentUnit,
@@ -467,8 +463,8 @@ export class ProductsService {
           }
 
           if (dto.max_weight === undefined && product.max_weight != null) {
-            product.max_weight = this.roundToDecimals(
-              this.convertWeightValue(
+            product.max_weight = PricingCalculator.roundToDecimals(
+              PricingCalculator.convertWeightValue(
                 product.max_weight,
                 previousUnit,
                 currentUnit,
@@ -485,16 +481,16 @@ export class ProductsService {
           product.scale_department = dto.scale_department;
 
         if (dto.price_per_weight_usd != null && exchangeRate !== null) {
-          product.price_per_weight_usd = this.roundToDecimals(
+          product.price_per_weight_usd = PricingCalculator.roundToDecimals(
             dto.price_per_weight_usd,
             4,
           );
-          product.price_per_weight_bs = this.roundToDecimals(
+          product.price_per_weight_bs = PricingCalculator.roundToDecimals(
             dto.price_per_weight_usd * exchangeRate,
             4,
           );
         } else if (dto.price_per_weight_bs != null) {
-          product.price_per_weight_bs = this.roundToDecimals(
+          product.price_per_weight_bs = PricingCalculator.roundToDecimals(
             dto.price_per_weight_bs,
             4,
           );
@@ -502,16 +498,16 @@ export class ProductsService {
 
         // Manejar cost_per_weight
         if (dto.cost_per_weight_usd != null && exchangeRate !== null) {
-          product.cost_per_weight_usd = this.roundToDecimals(
+          product.cost_per_weight_usd = PricingCalculator.roundToDecimals(
             dto.cost_per_weight_usd,
             6,
           );
-          product.cost_per_weight_bs = this.roundToDecimals(
+          product.cost_per_weight_bs = PricingCalculator.roundToDecimals(
             dto.cost_per_weight_usd * exchangeRate,
             6,
           );
         } else if (dto.cost_per_weight_bs != null) {
-          product.cost_per_weight_bs = this.roundToDecimals(
+          product.cost_per_weight_bs = PricingCalculator.roundToDecimals(
             dto.cost_per_weight_bs,
             6,
           );
@@ -549,19 +545,19 @@ export class ProductsService {
     const exchangeRate = bcvRate?.rate || 36;
 
     // Calcular price_bs desde price_usd usando la tasa BCV
-    const priceUsd = this.roundToTwoDecimals(dto.price_usd);
+    const priceUsd = PricingCalculator.roundToTwoDecimals(dto.price_usd);
     let priceBs = priceUsd * exchangeRate;
 
     // Aplicar redondeo si se especifica
     const rounding = dto.rounding || 'none';
     if (rounding !== 'none') {
-      priceBs = this.applyPriceChange(priceBs, 0, rounding);
+      priceBs = PricingCalculator.applyPriceChange(priceBs, 0, rounding);
       // Si hay redondeo, también se puede aplicar al USD si es necesario
       // Por ahora solo redondeamos el Bs
     }
 
     // Siempre redondear a 2 decimales al final
-    priceBs = this.roundToTwoDecimals(priceBs);
+    priceBs = PricingCalculator.roundToTwoDecimals(priceBs);
 
     this.logger.log(
       `Cambiando precio: price_usd=${priceUsd} -> price_bs=${priceBs.toFixed(2)} (tasa=${exchangeRate}, redondeo=${rounding})`,
@@ -616,12 +612,12 @@ export class ProductsService {
       for (const product of productsToUpdate) {
         if (percentage_change) {
           // Aplicar cambio porcentual
-          product.price_bs = this.applyPriceChange(
+          product.price_bs = PricingCalculator.applyPriceChange(
             product.price_bs,
             percentage_change,
             rounding,
           );
-          product.price_usd = this.applyPriceChange(
+          product.price_usd = PricingCalculator.applyPriceChange(
             product.price_usd,
             percentage_change,
             rounding,
@@ -640,12 +636,12 @@ export class ProductsService {
       for (const product of productsToUpdate) {
         if (percentage_change) {
           // Aplicar cambio porcentual
-          product.price_bs = this.applyPriceChange(
+          product.price_bs = PricingCalculator.applyPriceChange(
             product.price_bs,
             percentage_change,
             rounding,
           );
-          product.price_usd = this.applyPriceChange(
+          product.price_usd = PricingCalculator.applyPriceChange(
             product.price_usd,
             percentage_change,
             rounding,
@@ -666,33 +662,7 @@ export class ProductsService {
     };
   }
 
-  private applyPriceChange(
-    currentPrice: number,
-    percentageChange: number,
-    rounding: 'none' | '0.1' | '0.5' | '1',
-  ): number {
-    let newPrice = currentPrice * (1 + percentageChange / 100);
 
-    switch (rounding) {
-      case '0.1':
-        newPrice = Math.round(newPrice * 10) / 10;
-        break;
-      case '0.5':
-        newPrice = Math.round(newPrice * 2) / 2;
-        break;
-      case '1':
-        newPrice = Math.round(newPrice);
-        break;
-      case 'none':
-      default:
-        // Redondear a 2 decimales por defecto
-        newPrice = this.roundToTwoDecimals(newPrice);
-        break;
-    }
-
-    // Siempre asegurar máximo 2 decimales al final y que no sea negativo
-    return Math.max(0, this.roundToTwoDecimals(newPrice));
-  }
 
   async deactivate(storeId: string, productId: string): Promise<Product> {
     const product = await this.findOne(storeId, productId);

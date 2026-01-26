@@ -100,7 +100,7 @@ class SyncServiceClass {
         this.logger.debug('Servicio no inicializado aún, se sincronizará cuando esté listo');
         this.pendingSyncOnInit = true;
       }
-      
+
       // Intentar registrar background sync (por si acaso)
       this.registerBackgroundSync();
     };
@@ -229,6 +229,18 @@ class SyncServiceClass {
         this.logger.warn('Error en sincronización pendiente (se reintentará)', { error: err });
       });
     }
+
+    // ✅ OFFLINE-FIRST: Guardar API_URL para Service Worker
+    if (api.defaults.baseURL) {
+      db.kv.put({ key: 'api_url', value: api.defaults.baseURL }).catch((err) => {
+        this.logger.warn('No se pudo guardar API_URL para SW', err);
+      });
+    }
+
+    // ✅ OFFLINE-FIRST: Guardar device_id para Service Worker
+    db.kv.put({ key: 'device_id', value: deviceId }).catch((err) => {
+      this.logger.warn('No se pudo guardar device_id para SW', err);
+    });
   }
 
   /**
@@ -257,12 +269,12 @@ class SyncServiceClass {
     if (this.isInitialized && this.syncQueue) {
       this.syncQueue.enqueue(event);
       this.logger.debug('Evento encolado, intentando flush');
-      
+
       // Si estamos offline, registrar background sync
       if (!navigator.onLine) {
         await this.registerBackgroundSync();
       }
-      
+
       this.syncQueue.flush().catch(() => {
         // Silenciar, ya hay flush periódico
         // Si falla y estamos offline, registrar background sync
@@ -343,6 +355,14 @@ class SyncServiceClass {
     }
 
     await this.syncQueue.flush();
+  }
+
+  /**
+   * Fuerza la sincronización y resetea contadores de error
+   */
+  async forceSync(): Promise<void> {
+    await db.resetFailedEventsToPending();
+    await this.syncNow();
   }
 
   /**
@@ -475,7 +495,7 @@ class SyncServiceClass {
       clearInterval(this.syncIntervalId);
       this.syncIntervalId = null;
     }
-    
+
     // Remover listeners de conectividad
     if (this.onlineListener) {
       window.removeEventListener('online', this.onlineListener);
@@ -485,7 +505,7 @@ class SyncServiceClass {
       window.removeEventListener('offline', this.offlineListener);
       this.offlineListener = null;
     }
-    
+
     this.syncQueue?.flush();
     this.isInitialized = false;
   }
@@ -628,6 +648,19 @@ class SyncServiceClass {
       if (response.data.conflicted && response.data.conflicted.length > 0) {
         for (const conflict of response.data.conflicted) {
           await this.handleConflict(conflict);
+        }
+
+        // Intentar resolver conflictos automáticamente
+        try {
+          const { conflictResolutionService } = await import('./conflict-resolution.service');
+          const resolved = await conflictResolutionService.processPendingConflicts();
+          if (resolved > 0) {
+            this.logger.info('Conflictos resueltos automáticamente', { count: resolved });
+            // Si resolvimos conflictos, invalidamos cache para refrescar datos del servidor
+            await this.invalidateCriticalCaches();
+          }
+        } catch (err) {
+          this.logger.error('Error ejecutando resolución automática de conflictos', err);
         }
       }
 

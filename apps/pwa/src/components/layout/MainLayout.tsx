@@ -73,6 +73,7 @@ import OfflineBanner from '@/components/offline/OfflineBanner'
 import { KeyboardShortcutsHelp, useKeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help'
 import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { SkipLinks } from '@/components/ui/skip-links'
+import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge'
 
 type NavItem = {
   path: string
@@ -95,7 +96,7 @@ const navSections: NavSection[] = [
     label: 'Ventas',
     icon: ShoppingCart,
     items: [
-  { path: '/app/pos', label: 'Punto de Venta', icon: ShoppingCart, badge: null },
+      { path: '/app/pos', label: 'Punto de Venta', icon: ShoppingCart, badge: null },
       { path: '/app/fast-checkout', label: 'Caja Rápida', icon: Zap, badge: null },
       { path: '/app/sales', label: 'Ventas', icon: FileText, badge: null },
       { path: '/app/tables', label: 'Mesas y Órdenes', icon: Square, badge: null },
@@ -108,8 +109,8 @@ const navSections: NavSection[] = [
     label: 'Productos e Inventario',
     icon: Package,
     items: [
-  { path: '/app/products', label: 'Productos', icon: Package, badge: null },
-  { path: '/app/inventory', label: 'Inventario', icon: Boxes, badge: null },
+      { path: '/app/products', label: 'Productos', icon: Package, badge: null },
+      { path: '/app/inventory', label: 'Inventario', icon: Boxes, badge: null },
       { path: '/app/warehouses', label: 'Bodegas', icon: Warehouse, badge: null },
       { path: '/app/transfers', label: 'Transferencias', icon: Truck, badge: null },
       { path: '/app/suppliers', label: 'Proveedores', icon: Building2, badge: null },
@@ -122,11 +123,11 @@ const navSections: NavSection[] = [
     label: 'Configuración',
     icon: Settings,
     items: [
-  { path: '/app/cash', label: 'Caja', icon: DollarSign, badge: null },
-  { path: '/app/shifts', label: 'Turnos', icon: Clock, badge: null },
-  { path: '/app/payments', label: 'Pagos', icon: Settings, badge: null },
-  { path: '/app/license', label: 'Mi Licencia', icon: CreditCard, badge: null },
-  { path: '/app/discounts', label: 'Descuentos', icon: Percent, badge: null },
+      { path: '/app/cash', label: 'Caja', icon: DollarSign, badge: null },
+      { path: '/app/shifts', label: 'Turnos', icon: Clock, badge: null },
+      { path: '/app/payments', label: 'Pagos', icon: Settings, badge: null },
+      { path: '/app/license', label: 'Mi Licencia', icon: CreditCard, badge: null },
+      { path: '/app/discounts', label: 'Descuentos', icon: Percent, badge: null },
       { path: '/app/promotions', label: 'Promociones', icon: Tag, badge: null },
       { path: '/app/price-lists', label: 'Listas de Precio', icon: DollarSignIcon, badge: null },
       { path: '/app/invoice-series', label: 'Series de Factura', icon: Receipt, badge: null },
@@ -142,8 +143,8 @@ const navSections: NavSection[] = [
     label: 'Clientes',
     icon: Users,
     items: [
-  { path: '/app/customers', label: 'Clientes', icon: Users, badge: null },
-  { path: '/app/debts', label: 'Fiao', icon: Users, badge: 'Beta' },
+      { path: '/app/customers', label: 'Clientes', icon: Users, badge: null },
+      { path: '/app/debts', label: 'Fiao', icon: Users, badge: 'Beta' },
     ],
   },
   {
@@ -177,11 +178,11 @@ export default function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { isOnline } = useOnline()
   const { add, addUnique } = useNotifications()
-  
+
   // Detectar cuando el banner offline está visible (misma lógica que OfflineBanner)
   const [showBanner, setShowBanner] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
-  
+
   // Replicar lógica de visibilidad del banner
   useEffect(() => {
     if (!isOnline) {
@@ -194,7 +195,7 @@ export default function MainLayout() {
       return () => clearTimeout(timer)
     }
   }, [isOnline])
-  
+
   // Obtener conteo de eventos pendientes
   useEffect(() => {
     const updatePendingCount = () => {
@@ -205,18 +206,18 @@ export default function MainLayout() {
         setPendingCount(0)
       }
     }
-    
+
     updatePendingCount()
     const interval = setInterval(updatePendingCount, 5000)
     return () => clearInterval(interval)
   }, [])
-  
+
   // El banner está visible si showBanner es true o hay eventos pendientes
   const isBannerVisible = showBanner || pendingCount > 0
   // Usar el hook de sincronización que combina ambos sistemas
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationsSync()
   const storeId = user?.store_id
-  
+
   // Modal de ayuda de atajos de teclado
   const { isOpen: isShortcutsHelpOpen, setIsOpen: setShortcutsHelpOpen } = useKeyboardShortcutsHelp()
   const userRole = (user?.role || 'cashier') as Role
@@ -349,25 +350,25 @@ export default function MainLayout() {
   // Solo activa la ruta más específica que coincida
   const isActive = useCallback((path: string) => {
     const currentPath = location.pathname
-    
+
     // Coincidencia exacta
     if (currentPath === path) return true
-    
+
     // Si la ruta actual empieza con este path, verificar que no haya una ruta más específica
     if (currentPath.startsWith(path + '/')) {
       // Buscar en todas las secciones si hay alguna ruta más específica que también coincida
       const allPaths = filteredNavSections.flatMap((section) =>
         section.items.map((item) => item.path)
       )
-      const hasMoreSpecificMatch = allPaths.some(itemPath => 
-        itemPath !== path && 
+      const hasMoreSpecificMatch = allPaths.some(itemPath =>
+        itemPath !== path &&
         currentPath.startsWith(itemPath + '/') &&
         itemPath.startsWith(path + '/')
       )
       // Solo estar activo si no hay una coincidencia más específica
       return !hasMoreSpecificMatch
     }
-    
+
     return false
   }, [location.pathname, filteredNavSections])
 
@@ -532,26 +533,26 @@ export default function MainLayout() {
     }
 
     return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Logo - Only show in mobile sidebar */}
-      {isMobile && (
-        <div className="flex items-center px-6 h-16 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <img
-              src="/favicon.svg"
-              alt="LA CAJA Logo"
-              className="w-10 h-10 rounded-lg"
-            />
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">LA CAJA</h2>
-              <p className="text-xs text-muted-foreground">Sistema POS</p>
+      <div className="flex flex-col h-full min-h-0">
+        {/* Logo - Only show in mobile sidebar */}
+        {isMobile && (
+          <div className="flex items-center px-6 h-16 border-b border-border flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <img
+                src="/favicon.svg"
+                alt="LA CAJA Logo"
+                className="w-10 h-10 rounded-lg"
+              />
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">LA CAJA</h2>
+                <p className="text-xs text-muted-foreground">Sistema POS</p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
         {/* Navigation with Collapsible Sections */}
-      <ScrollArea className="flex-1 min-h-0 px-3 py-4">
+        <ScrollArea className="flex-1 min-h-0 px-3 py-4">
           <nav className="space-y-1">
             <Accordion
               type="multiple"
@@ -581,30 +582,30 @@ export default function MainLayout() {
                     <AccordionContent className="pt-1 pb-2">
                       <div className="space-y-0.5 pl-8">
                         {section.items.map((item) => {
-            const Icon = item.icon
-            const active = isActive(item.path)
+                          const Icon = item.icon
+                          const active = isActive(item.path)
 
-            return (
-                    <button
+                          return (
+                            <button
                               key={item.path}
-                      onClick={() => handleNavClick(item.path)}
-                      className={cn(
+                              onClick={() => handleNavClick(item.path)}
+                              className={cn(
                                 "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
-                        active
-                          ? "bg-primary text-primary-foreground shadow-sm"
+                                active
+                                  ? "bg-primary text-primary-foreground shadow-sm"
                                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                      )}
-                      aria-current={active ? 'page' : undefined}
-                      aria-label={active ? `${item.label}, página actual` : item.label}
-                    >
+                              )}
+                              aria-current={active ? 'page' : undefined}
+                              aria-label={active ? `${item.label}, página actual` : item.label}
+                            >
                               <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
-                          <span className="flex-1 text-left truncate">{item.label}</span>
-                          {item.badge && (
-                            <Badge variant="secondary" className="text-xs flex-shrink-0">
-                              {item.badge}
-                            </Badge>
-                      )}
-                    </button>
+                              <span className="flex-1 text-left truncate">{item.label}</span>
+                              {item.badge && (
+                                <Badge variant="secondary" className="text-xs flex-shrink-0">
+                                  {item.badge}
+                                </Badge>
+                              )}
+                            </button>
                           )
                         })}
                       </div>
@@ -613,43 +614,43 @@ export default function MainLayout() {
                 )
               })}
             </Accordion>
-        </nav>
-      </ScrollArea>
+          </nav>
+        </ScrollArea>
 
-      {/* Collapse Button (Desktop only) */}
-      {!isMobile && (
-        <>
-          <Separator className="flex-shrink-0" />
-          <div className="p-3 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className={cn(
-                "w-full hover:bg-accent hover:shadow-sm transition-shadow",
-                sidebarCollapsed && "px-2"
-              )}
-            >
-              <ChevronLeft
+        {/* Collapse Button (Desktop only) */}
+        {!isMobile && (
+          <>
+            <Separator className="flex-shrink-0" />
+            <div className="p-3 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 className={cn(
-                  "w-4 h-4 transition-transform",
-                  sidebarCollapsed && "rotate-180"
+                  "w-full hover:bg-accent hover:shadow-sm transition-shadow",
+                  sidebarCollapsed && "px-2"
                 )}
-              />
-              {!sidebarCollapsed && <span className="ml-2">Contraer</span>}
-            </Button>
-          </div>
-        </>
-      )}
-    </div>
-  )
+              >
+                <ChevronLeft
+                  className={cn(
+                    "w-4 h-4 transition-transform",
+                    sidebarCollapsed && "rotate-180"
+                  )}
+                />
+                {!sidebarCollapsed && <span className="ml-2">Contraer</span>}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Skip Links for accessibility */}
       <SkipLinks />
-      
+
       {/* Header */}
       <header className={cn(
         "sticky z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
@@ -673,9 +674,9 @@ export default function MainLayout() {
           {/* Mobile Menu */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="lg:hidden flex-shrink-0"
                 aria-label="Abrir menú de navegación"
                 aria-expanded={mobileOpen}
@@ -708,6 +709,7 @@ export default function MainLayout() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <SyncStatusBadge />
             {/* Exchange Rate Indicator */}
             <ExchangeRateIndicator className="hidden sm:flex" />
             <ExchangeRateIndicator compact className="sm:hidden" />
@@ -715,16 +717,16 @@ export default function MainLayout() {
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="relative"
                   aria-label={`Notificaciones${unreadCount > 0 ? `, ${unreadCount} sin leer` : ''}`}
                   aria-expanded={false}
                 >
                   <Bell className="w-5 h-5" aria-hidden="true" />
                   {unreadCount > 0 && (
-                    <span 
+                    <span
                       className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-destructive text-[10px] leading-[18px] rounded-full text-white text-center"
                       aria-hidden="true"
                     >
@@ -759,16 +761,16 @@ export default function MainLayout() {
                           n.type === 'warning'
                             ? AlertTriangle
                             : n.type === 'success'
-                            ? CheckCircle2
-                            : Info
+                              ? CheckCircle2
+                              : Info
                         const color =
                           n.type === 'warning'
                             ? 'text-amber-600'
                             : n.type === 'success'
-                            ? 'text-emerald-600'
-                            : n.type === 'error'
-                            ? 'text-red-600'
-                            : 'text-primary'
+                              ? 'text-emerald-600'
+                              : n.type === 'error'
+                                ? 'text-red-600'
+                                : 'text-primary'
                         return (
                           <button
                             key={n.id}
@@ -845,7 +847,7 @@ export default function MainLayout() {
           <div className="px-6 pb-3">
             <Alert variant={isExpired ? 'destructive' : 'default'}>
               <AlertTitle>
-                {isExpired ? 'Licencia vencida/suspendida' : `Licencia vence en ${daysToExpire} día(s)` }
+                {isExpired ? 'Licencia vencida/suspendida' : `Licencia vence en ${daysToExpire} día(s)`}
               </AlertTitle>
               <AlertDescription>
                 {isExpired
@@ -857,12 +859,12 @@ export default function MainLayout() {
         )}
       </header>
 
-      <div 
+      <div
         className={cn(
           "flex",
           // Ajustar altura para compensar el banner cuando está visible
-          isBannerVisible 
-            ? "h-[calc(100vh-4rem-48px)]" 
+          isBannerVisible
+            ? "h-[calc(100vh-4rem-48px)]"
             : "h-[calc(100vh-4rem)]"
         )}
         style={{
@@ -885,10 +887,10 @@ export default function MainLayout() {
         </aside>
 
         {/* Main Content */}
-        <main 
+        <main
           id="main-content"
-          className="flex-1 overflow-x-hidden overflow-y-auto" 
-          role="main" 
+          className="flex-1 overflow-x-hidden overflow-y-auto"
+          role="main"
           aria-label="Contenido principal"
         >
           <AnimatePresence mode="wait">
@@ -897,8 +899,8 @@ export default function MainLayout() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
-              transition={{ 
-                duration: 0.25, 
+              transition={{
+                duration: 0.25,
                 ease: [0.4, 0, 0.2, 1] // ease-out cubic bezier para transición más suave
               }}
               className="p-6 lg:p-8"
@@ -920,9 +922,9 @@ export default function MainLayout() {
       <OfflineBanner />
 
       {/* Keyboard Shortcuts Help Modal */}
-      <KeyboardShortcutsHelp 
-        isOpen={isShortcutsHelpOpen} 
-        onOpenChange={setShortcutsHelpOpen} 
+      <KeyboardShortcutsHelp
+        isOpen={isShortcutsHelpOpen}
+        onOpenChange={setShortcutsHelpOpen}
       />
     </div>
   )

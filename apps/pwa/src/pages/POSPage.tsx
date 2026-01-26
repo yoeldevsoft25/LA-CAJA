@@ -70,7 +70,7 @@ export default function POSPage() {
   const { user } = useAuth()
   const isMobile = useMobileDetection()
   const { isLandscape } = useOrientation()
-  
+
   // Detectar si es tablet (no móvil pero pantalla < 1024px)
   const isTablet = !isMobile && window.innerWidth >= 640 && window.innerWidth < 1024
   // Modo landscape optimizado para tablets en horizontal
@@ -923,7 +923,7 @@ export default function POSPage() {
   const hasOpenCash = !!currentCashSession?.id
   const allowDiscounts = !fastCheckoutConfig?.enabled || fastCheckoutConfig?.allow_discounts
   const exchangeRate = bcvRateData?.rate && bcvRateData.rate > 0 ? bcvRateData.rate : 36
-  
+
   const resolveItemRate = (item: CartItem) => {
     const unitUsd = Number(item.unit_price_usd || 0)
     const unitBs = Number(item.unit_price_bs || 0)
@@ -932,7 +932,7 @@ export default function POSPage() {
     }
     return exchangeRate > 0 ? exchangeRate : 1
   }
-  
+
   // Calcular totales recalculando precios en BS con la tasa actual
   const calculateTotalWithCurrentRate = useMemo(() => {
     const baseTotal = getTotal()
@@ -950,9 +950,9 @@ export default function POSPage() {
     // Siempre usar el recalculado con la tasa actual
     return { bs: recalculatedBs, usd: baseTotal.usd }
   }, [items, exchangeRate, bcvRateData, getTotal])
-  
+
   const total = calculateTotalWithCurrentRate
-  
+
   // #region agent log
   // Log para debug: verificar tasa de cambio y totales
   // ⚡ FIX: Solo ejecutar en desarrollo local (no en producción)
@@ -982,7 +982,7 @@ export default function POSPage() {
           runId: 'preview-check',
           hypothesisId: 'A',
         }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [items, total, exchangeRate]);
   // #endregion
@@ -1009,11 +1009,11 @@ export default function POSPage() {
 
     // Calcular el precio unitario total de la línea
     const lineTotal = Number(item.unit_price_usd || 0) * Number(item.qty || 1)
-    
+
     // Validar que el descuento no exceda el % máximo permitido
     const discountPercent = lineTotal > 0 ? (parsed / lineTotal) * 100 : 0
     const maxDiscountAmount = (lineTotal * MAX_DISCOUNT_PERCENT) / 100
-    
+
     if (discountPercent > MAX_DISCOUNT_PERCENT) {
       toast.error(`El descuento no puede exceder el ${MAX_DISCOUNT_PERCENT}% del precio (máx: $${maxDiscountAmount.toFixed(2)})`)
       // Aplicar el máximo permitido
@@ -1065,6 +1065,17 @@ export default function POSPage() {
         )
       }
 
+      // Optimistic update: Inject into sales list cache
+      queryClient.setQueriesData({ queryKey: ['sales', 'list'] }, (old: any) => {
+        if (!old || !old.sales) return old
+        // Prepend the new sale and maintain limit
+        return {
+          ...old,
+          sales: [sale, ...old.sales].slice(0, 50),
+          total: (old.total || 0) + 1,
+        }
+      })
+
       // Asignar seriales si hay
       if (pendingSerials && Object.keys(pendingSerials).length > 0 && isOnline) {
         try {
@@ -1091,7 +1102,7 @@ export default function POSPage() {
       if (shouldPrint) {
         try {
           printService.printSale(sale, {
-          storeName: 'SISTEMA POS',
+            storeName: 'SISTEMA POS',
             cartItems: lastCartSnapshot.current.map((ci) => ({
               product_id: ci.product_id,
               product_name: ci.product_name,
@@ -1119,13 +1130,13 @@ export default function POSPage() {
         response: error.response,
         stack: error.stack,
       })
-      
+
       // Si es un error de "requiere store_id y user_id", es porque está offline sin datos
       if (error.message?.includes('store_id y user_id')) {
         toast.error('Error: No se pueden guardar ventas offline sin datos de usuario. Por favor, recarga la página.')
         return
       }
-      
+
       const message = error.response?.data?.message || error.message || 'Error al procesar la venta'
       toast.error(message)
     },
@@ -1202,11 +1213,11 @@ export default function POSPage() {
         is_weight_product: isWeightProduct,
         ...(isWeightProduct
           ? {
-              weight_unit: item.weight_unit ?? null,
-              weight_value: item.weight_value != null ? item.weight_value : null,
-              price_per_weight_bs: item.price_per_weight_bs != null ? item.price_per_weight_bs : null,
-              price_per_weight_usd: item.price_per_weight_usd != null ? item.price_per_weight_usd : null,
-            }
+            weight_unit: item.weight_unit ?? null,
+            weight_value: item.weight_value != null ? item.weight_value : null,
+            price_per_weight_bs: item.price_per_weight_bs != null ? item.price_per_weight_bs : null,
+            price_per_weight_usd: item.price_per_weight_usd != null ? item.price_per_weight_usd : null,
+          }
           : {}),
       }
     })
@@ -1677,8 +1688,8 @@ export default function POSPage() {
         )}>
           <Card className={cn(
             "border border-border flex flex-col overflow-hidden min-h-0",
-            isTabletLandscape 
-              ? "sticky top-20 h-[calc(100vh-140px)]" 
+            isTabletLandscape
+              ? "sticky top-20 h-[calc(100vh-140px)]"
               : "lg:sticky lg:top-20 h-[calc(100vh-140px)] lg:h-[calc(100vh-12rem)]"
           )}>
             {/* Pestañas de ventas simultáneas */}
@@ -1729,8 +1740,8 @@ export default function POSPage() {
                 </h2>
                 {/* Badge de promoción activa */}
                 {activePromotions.length > 0 && (
-                  <Badge 
-                    variant="default" 
+                  <Badge
+                    variant="default"
                     className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 flex items-center gap-1 text-[10px] sm:text-xs"
                   >
                     <Tag className="w-3 h-3" />
@@ -1801,220 +1812,220 @@ export default function POSPage() {
                           )}
                         </div>
                       )}
-                  {items.map((item) => {
-                    const lineSubtotalUsd = item.qty * Number(item.unit_price_usd || 0)
-                    // Recalcular precio en BS usando la tasa actual si es necesario
-                    // Si el precio en BS no coincide con la conversión actual, usar la tasa
-                    const calculatedBsFromUsd = lineSubtotalUsd * exchangeRate
-                    const lineSubtotalBs = item.qty * Number(item.unit_price_bs || 0)
-                    // Si hay diferencia significativa, usar el precio recalculado
-                    const finalLineSubtotalBs = Math.abs(lineSubtotalBs - calculatedBsFromUsd) > 0.01 
-                      ? calculatedBsFromUsd 
-                      : lineSubtotalBs
-                    const lineDiscountUsd = Number(item.discount_usd || 0)
-                    const lineDiscountBs = Number(item.discount_bs || 0)
-                    // Recalcular descuento en BS si es necesario
-                    const calculatedDiscountBs = lineDiscountUsd * exchangeRate
-                    const finalLineDiscountBs = Math.abs(lineDiscountBs - calculatedDiscountBs) > 0.01
-                      ? calculatedDiscountBs
-                      : lineDiscountBs
-                    const lineTotalUsd = lineSubtotalUsd - lineDiscountUsd
-                    const lineTotalBs = finalLineSubtotalBs - finalLineDiscountBs
-                    
-                    // #region agent log
-                    // Log para debug: verificar cálculo de línea
-                    // ⚡ FIX: Solo ejecutar en desarrollo local (no en producción)
-                    if (import.meta.env.DEV && window.location.hostname === 'localhost' && items.indexOf(item) === 0) {
-                      fetch('http://127.0.0.1:7242/ingest/e5054227-0ba5-4d49-832d-470c860ff731', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          location: 'POSPage.tsx:1830',
-                          message: 'Line item calculation',
-                          data: {
-                            product_name: item.product_name,
-                            unit_price_usd: item.unit_price_usd,
-                            unit_price_bs: item.unit_price_bs,
-                            qty: item.qty,
-                            exchangeRate,
-                            lineSubtotalUsd,
-                            lineSubtotalBs,
-                            calculatedBsFromUsd,
-                            finalLineSubtotalBs,
-                            lineDiscountUsd,
-                            lineDiscountBs,
-                            calculatedDiscountBs,
-                            finalLineDiscountBs,
-                            lineTotalUsd,
-                            lineTotalBs,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: 'debug-session',
-                          runId: 'line-calculation',
-                          hypothesisId: 'B',
-                        }),
-                      }).catch(() => {});
-                    }
-                    // #endregion
-                    const discountInputValue =
-                      discountInputs[item.id] ??
-                      (lineDiscountUsd > 0 ? lineDiscountUsd.toFixed(2) : '')
-                    const isInvalid = invalidCartProductIds.includes(item.product_id)
+                      {items.map((item) => {
+                        const lineSubtotalUsd = item.qty * Number(item.unit_price_usd || 0)
+                        // Recalcular precio en BS usando la tasa actual si es necesario
+                        // Si el precio en BS no coincide con la conversión actual, usar la tasa
+                        const calculatedBsFromUsd = lineSubtotalUsd * exchangeRate
+                        const lineSubtotalBs = item.qty * Number(item.unit_price_bs || 0)
+                        // Si hay diferencia significativa, usar el precio recalculado
+                        const finalLineSubtotalBs = Math.abs(lineSubtotalBs - calculatedBsFromUsd) > 0.01
+                          ? calculatedBsFromUsd
+                          : lineSubtotalBs
+                        const lineDiscountUsd = Number(item.discount_usd || 0)
+                        const lineDiscountBs = Number(item.discount_bs || 0)
+                        // Recalcular descuento en BS si es necesario
+                        const calculatedDiscountBs = lineDiscountUsd * exchangeRate
+                        const finalLineDiscountBs = Math.abs(lineDiscountBs - calculatedDiscountBs) > 0.01
+                          ? calculatedDiscountBs
+                          : lineDiscountBs
+                        const lineTotalUsd = lineSubtotalUsd - lineDiscountUsd
+                        const lineTotalBs = finalLineSubtotalBs - finalLineDiscountBs
 
-                    return (
-                    <SwipeableItem
-                      key={item.id}
-                      onSwipeLeft={isMobile ? () => removeItem(item.id) : undefined}
-                      leftAction={isMobile ? (
-                        <div className="flex items-center gap-2">
-                          <Trash2 className="w-4 h-4" />
-                          <span className="text-sm font-medium">Eliminar</span>
-                        </div>
-                      ) : undefined}
-                      enabled={isMobile}
-                      threshold={80}
-                      className="mb-2 sm:mb-3"
-                    >
-                      <div
-                        className={cn(
-                          "bg-muted/50 rounded-lg p-2.5 sm:p-3 border hover:border-primary/50 transition-all shadow-sm",
-                          isInvalid ? "border-destructive/60 bg-destructive/5" : "border-border"
-                        )}
-                      >
-                        <div className="flex items-start justify-between mb-2 gap-2 min-w-0">
-                          <div className="flex-1 min-w-0">
-                            <p
-                              className="font-medium text-xs sm:text-sm text-foreground break-words leading-snug flex items-center gap-1"
-                              title={item.product_name}
-                            >
-                              {item.is_weight_product && (
-                                <Scale className="w-3 h-3 text-primary flex-shrink-0" />
+                        // #region agent log
+                        // Log para debug: verificar cálculo de línea
+                        // ⚡ FIX: Solo ejecutar en desarrollo local (no en producción)
+                        if (import.meta.env.DEV && window.location.hostname === 'localhost' && items.indexOf(item) === 0) {
+                          fetch('http://127.0.0.1:7242/ingest/e5054227-0ba5-4d49-832d-470c860ff731', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              location: 'POSPage.tsx:1830',
+                              message: 'Line item calculation',
+                              data: {
+                                product_name: item.product_name,
+                                unit_price_usd: item.unit_price_usd,
+                                unit_price_bs: item.unit_price_bs,
+                                qty: item.qty,
+                                exchangeRate,
+                                lineSubtotalUsd,
+                                lineSubtotalBs,
+                                calculatedBsFromUsd,
+                                finalLineSubtotalBs,
+                                lineDiscountUsd,
+                                lineDiscountBs,
+                                calculatedDiscountBs,
+                                finalLineDiscountBs,
+                                lineTotalUsd,
+                                lineTotalBs,
+                              },
+                              timestamp: Date.now(),
+                              sessionId: 'debug-session',
+                              runId: 'line-calculation',
+                              hypothesisId: 'B',
+                            }),
+                          }).catch(() => { });
+                        }
+                        // #endregion
+                        const discountInputValue =
+                          discountInputs[item.id] ??
+                          (lineDiscountUsd > 0 ? lineDiscountUsd.toFixed(2) : '')
+                        const isInvalid = invalidCartProductIds.includes(item.product_id)
+
+                        return (
+                          <SwipeableItem
+                            key={item.id}
+                            onSwipeLeft={isMobile ? () => removeItem(item.id) : undefined}
+                            leftAction={isMobile ? (
+                              <div className="flex items-center gap-2">
+                                <Trash2 className="w-4 h-4" />
+                                <span className="text-sm font-medium">Eliminar</span>
+                              </div>
+                            ) : undefined}
+                            enabled={isMobile}
+                            threshold={80}
+                            className="mb-2 sm:mb-3"
+                          >
+                            <div
+                              className={cn(
+                                "bg-muted/50 rounded-lg p-2.5 sm:p-3 border hover:border-primary/50 transition-all shadow-sm",
+                                isInvalid ? "border-destructive/60 bg-destructive/5" : "border-border"
                               )}
-                              {item.product_name}
-                              {isInvalid && (
-                                <Badge className="ml-1 bg-destructive/10 text-destructive border border-destructive/30">
-                                  Inactivo
-                                </Badge>
+                            >
+                              <div className="flex items-start justify-between mb-2 gap-2 min-w-0">
+                                <div className="flex-1 min-w-0">
+                                  <p
+                                    className="font-medium text-xs sm:text-sm text-foreground break-words leading-snug flex items-center gap-1"
+                                    title={item.product_name}
+                                  >
+                                    {item.is_weight_product && (
+                                      <Scale className="w-3 h-3 text-primary flex-shrink-0" />
+                                    )}
+                                    {item.product_name}
+                                    {isInvalid && (
+                                      <Badge className="ml-1 bg-destructive/10 text-destructive border border-destructive/30">
+                                        Inactivo
+                                      </Badge>
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {item.is_weight_product ? (
+                                      <>
+                                        {item.qty} {item.weight_unit || 'kg'} × $
+                                        {Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
+                                          getWeightPriceDecimals(item.weight_unit)
+                                        )}/
+                                        {item.weight_unit || 'kg'}
+                                      </>
+                                    ) : (
+                                      <>${item.unit_price_usd.toFixed(2)} c/u</>
+                                    )}
+                                  </p>
+                                </div>
+                                {!isMobile && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      removeItem(item.id)
+                                    }}
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7 flex-shrink-0"
+                                    aria-label="Eliminar producto"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                {/* Solo mostrar controles de cantidad para productos normales */}
+                                {item.is_weight_product ? (
+                                  <Badge variant="outline" className="text-[10px] sm:text-xs">
+                                    Por {item.weight_unit || 'kg'}
+                                  </Badge>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleUpdateQty(item.id, item.qty - 1)
+                                      }}
+                                      className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
+                                      aria-label="Disminuir cantidad"
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </Button>
+                                    <Input
+                                      type="number"
+                                      inputMode="numeric"
+                                      min={1}
+                                      max={MAX_QTY_PER_PRODUCT}
+                                      value={item.qty}
+                                      onChange={(e) => {
+                                        const newQty = parseInt(e.target.value) || 1
+                                        if (newQty >= 1 && newQty <= MAX_QTY_PER_PRODUCT) {
+                                          handleUpdateQty(item.id, newQty)
+                                        }
+                                      }}
+                                      className="w-16 h-10 sm:h-8 text-center font-semibold text-sm sm:text-base tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      aria-label="Cantidad"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleUpdateQty(item.id, item.qty + 1)
+                                      }}
+                                      className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
+                                      aria-label="Aumentar cantidad"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <div className="text-right tabular-nums">
+                                  <p className="font-semibold text-sm sm:text-base text-foreground">
+                                    ${lineTotalUsd.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Bs. {lineTotalBs.toFixed(2)}
+                                  </p>
+                                  {lineDiscountUsd > 0 && (
+                                    <p className="text-[11px] text-muted-foreground line-through">
+                                      ${lineSubtotalUsd.toFixed(2)} / Bs. {lineSubtotalBs.toFixed(2)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {allowDiscounts && (
+                                <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+                                  <span className="text-muted-foreground">Descuento</span>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      inputMode="decimal"
+                                      step="0.01"
+                                      min={0}
+                                      value={discountInputValue}
+                                      onChange={(event) => handleDiscountChange(item, event.target.value)}
+                                      onBlur={() => handleDiscountBlur(item)}
+                                      placeholder="0.00"
+                                      className="h-7 w-20 text-xs text-right"
+                                    />
+                                    <span className="text-muted-foreground">USD</span>
+                                    <span className="text-muted-foreground">
+                                      Bs. {lineDiscountBs.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
                               )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.is_weight_product ? (
-                                <>
-                                  {item.qty} {item.weight_unit || 'kg'} × $
-                                  {Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
-                                    getWeightPriceDecimals(item.weight_unit)
-                                  )}/
-                                  {item.weight_unit || 'kg'}
-                                </>
-                              ) : (
-                                <>${item.unit_price_usd.toFixed(2)} c/u</>
-                              )}
-                            </p>
-                          </div>
-                          {!isMobile && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                removeItem(item.id)
-                              }}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7 flex-shrink-0"
-                              aria-label="Eliminar producto"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      <div className="flex items-center justify-between gap-2">
-                        {/* Solo mostrar controles de cantidad para productos normales */}
-                        {item.is_weight_product ? (
-                          <Badge variant="outline" className="text-[10px] sm:text-xs">
-                            Por {item.weight_unit || 'kg'}
-                          </Badge>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleUpdateQty(item.id, item.qty - 1)
-                              }}
-                              className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
-                              aria-label="Disminuir cantidad"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <Input
-                              type="number"
-                              inputMode="numeric"
-                              min={1}
-                              max={MAX_QTY_PER_PRODUCT}
-                              value={item.qty}
-                              onChange={(e) => {
-                                const newQty = parseInt(e.target.value) || 1
-                                if (newQty >= 1 && newQty <= MAX_QTY_PER_PRODUCT) {
-                                  handleUpdateQty(item.id, newQty)
-                                }
-                              }}
-                              className="w-16 h-10 sm:h-8 text-center font-semibold text-sm sm:text-base tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              aria-label="Cantidad"
-                            />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleUpdateQty(item.id, item.qty + 1)
-                              }}
-                              className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
-                              aria-label="Aumentar cantidad"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
-                        <div className="text-right tabular-nums">
-                          <p className="font-semibold text-sm sm:text-base text-foreground">
-                            ${lineTotalUsd.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Bs. {lineTotalBs.toFixed(2)}
-                          </p>
-                          {lineDiscountUsd > 0 && (
-                            <p className="text-[11px] text-muted-foreground line-through">
-                              ${lineSubtotalUsd.toFixed(2)} / Bs. {lineSubtotalBs.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {allowDiscounts && (
-                        <div className="mt-2 flex items-center justify-between gap-2 text-xs">
-                          <span className="text-muted-foreground">Descuento</span>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              inputMode="decimal"
-                              step="0.01"
-                              min={0}
-                              value={discountInputValue}
-                              onChange={(event) => handleDiscountChange(item, event.target.value)}
-                              onBlur={() => handleDiscountBlur(item)}
-                              placeholder="0.00"
-                              className="h-7 w-20 text-xs text-right"
-                            />
-                            <span className="text-muted-foreground">USD</span>
-                            <span className="text-muted-foreground">
-                              Bs. {lineDiscountBs.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      </div>
-                    </SwipeableItem>
-                  )
-                  })}
+                            </div>
+                          </SwipeableItem>
+                        )
+                      })}
                     </div>
                   </ScrollArea>
                 </div>
