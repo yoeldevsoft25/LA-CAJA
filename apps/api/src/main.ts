@@ -6,8 +6,8 @@ import {
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-// @ts-ignore
-import helmet = require('@fastify/helmet');
+import helmet from '@fastify/helmet';
+// import helmet = require('@fastify/helmet');
 import { SecretValidator } from './common/utils/secret-validator';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';

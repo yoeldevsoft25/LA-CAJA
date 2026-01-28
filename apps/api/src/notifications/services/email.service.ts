@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-// import { Resend } from 'resend';
-const { Resend } = require('resend');
+import { Resend } from 'resend';
+// const { Resend } = require('resend');
 import { EmailQueue } from '../../database/entities/email-queue.entity';
 import { NotificationAnalytics } from '../../database/entities/notification-analytics.entity';
 import { randomUUID } from 'crypto';
@@ -40,7 +40,7 @@ export interface EmailWebhookPayload {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private resend: any | null = null;
+  private resend: Resend | null = null;
   private defaultFrom: string;
   private defaultFromName: string;
 

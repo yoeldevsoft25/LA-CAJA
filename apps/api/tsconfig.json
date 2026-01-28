@@ -23,10 +23,12 @@
     "moduleResolution": "node",
     "paths": {
       "resend": [
-        "./node_modules/resend/dist/index.d.cts"
+        "./node_modules/resend/dist/index.d.cts",
+        "../../node_modules/resend/dist/index.d.cts"
       ],
       "@fastify/helmet": [
-        "./node_modules/@fastify/helmet"
+        "./node_modules/@fastify/helmet",
+        "../../node_modules/@fastify/helmet"
       ]
     }
   },
