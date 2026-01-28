@@ -25,7 +25,7 @@ export default function ScannerStatusBadge({
         <div
           className={cn(
             'relative flex items-center w-10 h-5 sm:w-12 sm:h-6 rounded-full transition-colors duration-300',
-            scannerSoundEnabled ? 'bg-foreground' : 'bg-muted border border-border'
+            scannerSoundEnabled ? 'bg-primary' : 'bg-muted border border-border'
           )}
         >
           <div
@@ -35,7 +35,7 @@ export default function ScannerStatusBadge({
             )}
           >
             {scannerSoundEnabled ? (
-              <Volume2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-foreground" />
+              <Volume2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary" />
             ) : (
               <VolumeX className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />
             )}

@@ -891,7 +891,10 @@ export default function MainLayout() {
                 duration: 0.25,
                 ease: [0.4, 0, 0.2, 1] // ease-out cubic bezier para transición más suave
               }}
-              className="p-6 lg:p-8"
+              className={cn(
+                "p-6 lg:p-8",
+                location.pathname.includes('/pos') && "p-0 lg:p-0"
+              )}
             >
               {/* Breadcrumbs removed per user request to save space */}
               {/* <div className="hidden md:block mb-4">

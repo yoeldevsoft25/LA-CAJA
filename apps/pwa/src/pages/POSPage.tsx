@@ -699,16 +699,16 @@ export default function POSPage() {
 
 
   return (
-    <div className="h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] max-w-7xl mx-auto overflow-hidden flex flex-col">
+    <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-hidden flex flex-col p-2 lg:p-4">
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
       <div className={cn(
-        "grid gap-4 sm:gap-6 flex-1 min-h-0",
+        "grid gap-3 sm:gap-4 flex-1 min-h-0",
         isTabletLandscape ? "grid-cols-[1.3fr_1fr]" : "grid-cols-1 lg:grid-cols-3"
       )}>
         {/* Búsqueda y Lista de Productos */}
         {/* Columna Izquierda: Catálogo */}
         <div className={cn(
-          "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border border-border/40 shadow-sm p-4",
+          "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border border-border/40 shadow-sm p-3",
           !isTabletLandscape && "lg:col-span-2"
         )}>
           <CatalogHeader

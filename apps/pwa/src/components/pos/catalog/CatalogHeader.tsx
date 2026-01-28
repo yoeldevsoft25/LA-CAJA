@@ -23,11 +23,11 @@ export function CatalogHeader({
     isRefetching
 }: CatalogHeaderProps) {
     return (
-        <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col gap-2 mb-2">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Punto de Venta</h1>
-                    <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                    <h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">Punto de Venta</h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                         Busca y agrega productos al carrito
                     </p>
                 </div>
