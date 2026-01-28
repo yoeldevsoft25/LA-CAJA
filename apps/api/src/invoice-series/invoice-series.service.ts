@@ -196,7 +196,8 @@ export class InvoiceSeriesService {
 
       const series = result[0] as InvoiceSeries;
       // ⚡ FIX CRÍTICO: Validar todos los valores antes de construir el número
-      const currentNumber = Number(series.current_number) || Number(series.start_number) || 1;
+      // Use explicit null check to allow 0 as valid value
+      const currentNumber = series.current_number != null ? Number(series.current_number) : (series.start_number || 1);
       if (isNaN(currentNumber) || currentNumber <= 0) {
         throw new BadRequestException(
           `Número de factura inválido: current_number=${series.current_number}, start_number=${series.start_number}`,
