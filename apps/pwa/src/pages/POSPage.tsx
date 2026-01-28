@@ -339,8 +339,14 @@ export default function POSPage() {
 
         const frequentIds = Array.from(new Set([...quickIds, ...recentIds])).slice(0, 20)
 
-        await Promise.allSettled(
-          frequentIds.map((productId) => productsService.getById(productId, user?.store_id))
+        await Promise.all(
+          frequentIds.map((productId) =>
+            queryClient.prefetchQuery({
+              queryKey: ['products', productId],
+              queryFn: () => productsService.getById(productId, user?.store_id),
+              staleTime: 1000 * 60 * 10, // 10 minutos de frescura para evitar 429
+            })
+          )
         )
       } catch (error) {
         // Silenciar errores de precarga (opcional)
