@@ -317,7 +317,7 @@ export class PurchaseOrdersService {
               ref: {
                 purchase_order_id: order.id,
                 supplier_id: order.supplier_id,
-                warehouse_id: warehouseId,
+
               },
             },
             userId,
