@@ -714,7 +714,7 @@ export default function POSPage() {
         {/* Búsqueda y Lista de Productos */}
         {/* Columna Izquierda: Catálogo */}
         <div className={cn(
-          "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border border-border/40 shadow-sm p-3"
+          "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border-2 border-border shadow-md p-3"
         )}>
           <CatalogHeader
             searchQuery={searchQuery}
