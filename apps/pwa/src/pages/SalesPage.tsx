@@ -854,7 +854,7 @@ export default function SalesPage() {
                           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Resumen</span>
                         </TableHead>
                         <TableHead className="hidden lg:table-cell">
-                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Preview</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vista Previa</span>
                         </TableHead>
                         <TableHead className="text-right">
                           <div className="flex items-center justify-end gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
