@@ -19,11 +19,12 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApproveStockDto } from './dto/approve-stock.dto';
 import { GetStockStatusDto } from './dto/get-stock-status.dto';
+import { ReconcileStockDto } from './dto/reconcile-stock.dto';
 
 @Controller('inventory')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class InventoryController {
-  constructor(private readonly inventoryService: InventoryService) {}
+  constructor(private readonly inventoryService: InventoryService) { }
 
   private parseDateParam(value?: string): Date | undefined {
     if (!value) return undefined;
@@ -121,6 +122,19 @@ export class InventoryController {
       includePending ? includePending === 'true' : true,
       start,
       end,
+    );
+  }
+
+  @Post('stock/reconcile-physical')
+  @Roles('owner')
+  @HttpCode(HttpStatus.OK)
+  async reconcilePhysicalStock(@Body() dto: ReconcileStockDto, @Request() req: any) {
+    const storeId = req.user.store_id;
+    return this.inventoryService.reconcileStock(
+      storeId,
+      dto,
+      req.user.sub,
+      req.user.role,
     );
   }
 

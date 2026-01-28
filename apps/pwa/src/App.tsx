@@ -62,6 +62,7 @@ const preloadOwnerRoutes = () => {
 const SalesPage = lazy(() => import('./pages/SalesPage'))
 const ProductsPage = lazy(() => import('./pages/ProductsPage'))
 const InventoryPage = lazy(() => import('./pages/InventoryPage'))
+const InventoryCountPage = lazy(() => import('./pages/InventoryCountPage'))
 const CashPage = lazy(() => import('./pages/CashPage'))
 const CustomersPage = lazy(() => import('./pages/CustomersPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -120,7 +121,7 @@ function App() {
   const { isSupported, subscribe } = usePushNotifications()
   const [isLoaderComplete, setIsLoaderComplete] = useState(false)
   const queryClient = useQueryClient()
-  
+
   // Rastrear actividad del usuario para timeout de inactividad
   useActivityTracker()
 
@@ -304,16 +305,16 @@ function App() {
   return (
     <>
       {authShowLoader && !isLoaderComplete && (
-        <SimpleLoader 
-          onComplete={handleLoaderComplete} 
+        <SimpleLoader
+          onComplete={handleLoaderComplete}
           duration={4000}
           userName={user?.full_name}
         />
       )}
       {(isLoaderComplete || !authShowLoader) && (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
       )}
     </>
   )
@@ -409,6 +410,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['owner']}>
                 <InventoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="inventory/count"
+            element={
+              <ProtectedRoute allowedRoles={['owner']}>
+                <InventoryCountPage />
               </ProtectedRoute>
             }
           />

@@ -43,7 +43,7 @@ export class PurchaseOrdersService {
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   /**
    * Genera un número único de orden de compra
@@ -273,28 +273,28 @@ export class PurchaseOrdersService {
         const newReceived = receivedDto.quantity_received;
         const difference = newReceived - previousReceived;
         const totalDifference = newReceived - item.quantity; // Diferencia total vs solicitado
-        
+
         // Actualizar cantidad recibida
         item.quantity_received = newReceived;
-        
+
         // Registrar diferencias en la nota del item si existe discrepancia
         if (totalDifference !== 0) {
-          const differenceNote = totalDifference > 0 
+          const differenceNote = totalDifference > 0
             ? `[Excedente: +${totalDifference} unidades]`
             : `[Faltante: ${totalDifference} unidades]`;
-          
+
           // Agregar o actualizar nota de diferencia
           if (item.note && (item.note.includes('[Faltante:') || item.note.includes('[Excedente:'))) {
             // Reemplazar nota de diferencia anterior
             item.note = item.note.replace(/\[(Faltante|Excedente):[^\]]+\]/g, differenceNote);
           } else {
             // Agregar nota de diferencia
-            item.note = item.note 
+            item.note = item.note
               ? `${item.note} ${differenceNote}`
               : differenceNote;
           }
         }
-        
+
         await manager.save(PurchaseOrderItem, item);
 
         // Si se recibió algo nuevo, actualizar inventario
@@ -302,20 +302,10 @@ export class PurchaseOrdersService {
           const qtyReceived = receivedDto.quantity_received - previousReceived;
           anyReceived = true;
 
-          // Determinar bodega destino
-          const warehouseId = order.warehouse_id;
-          if (warehouseId) {
-            // Actualizar stock en bodega específica
-            await this.warehousesService.updateStock(
-              warehouseId,
-              item.product_id,
-              item.variant_id,
-              qtyReceived,
-              storeId,
-            );
-          }
+          // La actualización de stock en bodega se maneja dentro de inventoryService.stockReceived
+          // Se ha eliminado la llamada directa a warehousesService.updateStock para evitar duplicación (doble suma)
 
-          // Crear movimiento de inventario
+          // Crear movimiento de inventario (y actualizar stock)
           await this.inventoryService.stockReceived(
             storeId,
             {

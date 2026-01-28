@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { X, Search, Scale, Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Monitor } from 'lucide-react'
+import { X, Search, Scale, Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Monitor, Calculator } from 'lucide-react'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
 import { suppliersService } from '@/services/suppliers.service'
@@ -107,6 +107,7 @@ export default function ProductFormModal({
   const [supplierPriceSearch, setSupplierPriceSearch] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('')
   const [applySupplierPriceToSale, setApplySupplierPriceToSale] = useState(false)
+  const [calculatorCurrency, setCalculatorCurrency] = useState<'BS' | 'USD'>('BS')
 
   // Obtener tasa BCV para cálculo automático (usa cache del prefetch)
   // Carga inmediata porque es ligera y necesaria para cálculos
@@ -237,7 +238,7 @@ export default function ProductFormModal({
     setValue('cost_usd', value, { shouldValidate: true })
 
     if (bcvRateData?.available && bcvRateData.rate && !isNaN(value)) {
-      const calculatedBs = Math.round((value * bcvRateData.rate) * 100) / 100
+      const calculatedBs = Math.round((value * bcvRateData.rate) * 10000) / 10000
       setValue('cost_bs', calculatedBs, { shouldValidate: true })
     }
   }
@@ -247,7 +248,7 @@ export default function ProductFormModal({
     setValue('cost_bs', value, { shouldValidate: true })
 
     if (bcvRateData?.available && bcvRateData.rate && !isNaN(value) && bcvRateData.rate > 0) {
-      const calculatedUsd = Math.round((value / bcvRateData.rate) * 100) / 100
+      const calculatedUsd = Math.round((value / bcvRateData.rate) * 10000) / 10000
       setValue('cost_usd', calculatedUsd, { shouldValidate: true })
     }
   }
@@ -915,6 +916,113 @@ export default function ProductFormModal({
               </div>
             </div>
 
+            {/* Calculadora de Costos (Helper) */}
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-3 sm:p-4 transition-colors">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Calculator className="w-4 h-4 text-primary" />
+                  <h4 className="text-sm font-semibold text-primary">Calculadora de Costo Unitario</h4>
+                </div>
+                <div className="flex rounded-md shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setCalculatorCurrency('BS')}
+                    className={`px-3 py-1 text-xs font-medium rounded-l-md border border-primary/20 ${calculatorCurrency === 'BS'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-foreground hover:bg-muted'
+                      }`}
+                  >
+                    Bs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalculatorCurrency('USD')}
+                    className={`px-3 py-1 text-xs font-medium rounded-r-md border border-l-0 border-primary/20 ${calculatorCurrency === 'USD'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-foreground hover:bg-muted'
+                      }`}
+                  >
+                    USD
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">
+                    Total Factura ({calculatorCurrency === 'BS' ? 'Bs' : 'USD'})
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    className="bg-background"
+                    // key para forzar re-render y limpiar al cambiar moneda si se desea, 
+                    // o dejar que el usuario maneje el input
+                    key={`calc-total-${calculatorCurrency}`}
+                    onChange={(e) => {
+                      const total = parseFloat(e.target.value)
+                      const unitsInput = document.getElementById('calc-units') as HTMLInputElement
+                      const units = parseFloat(unitsInput?.value || '0')
+
+                      if (total > 0 && units > 0) {
+                        if (calculatorCurrency === 'BS') {
+                          const unitCostBs = total / units
+                          setValue('cost_bs', Number(unitCostBs.toFixed(4)), { shouldValidate: true })
+                          if (bcvRateData?.rate) {
+                            setValue('cost_usd', Number((unitCostBs / bcvRateData.rate).toFixed(4)), { shouldValidate: true })
+                          }
+                        } else {
+                          const unitCostUsd = total / units
+                          setValue('cost_usd', Number(unitCostUsd.toFixed(4)), { shouldValidate: true })
+                          if (bcvRateData?.rate) {
+                            setValue('cost_bs', Number((unitCostUsd * bcvRateData.rate).toFixed(4)), { shouldValidate: true })
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Unidades en Empaque</Label>
+                  <Input
+                    id="calc-units"
+                    type="number"
+                    placeholder="Ej: 12, 24"
+                    className="bg-background"
+                    onChange={(e) => {
+                      const units = parseFloat(e.target.value)
+                      // Buscar el input hermano de total (más robusto: buscar por placeholder o atributos)
+                      // O usar una ref, pero dado que es stateless local, hacemos query relativa
+                      const container = e.target.closest('.grid')
+                      const inputs = container?.querySelectorAll('input')
+                      // El input de total es el primero (index 0)
+                      const totalInput = inputs?.[0] as HTMLInputElement
+                      const total = parseFloat(totalInput?.value || '0')
+
+                      if (total > 0 && units > 0) {
+                        if (calculatorCurrency === 'BS') {
+                          const unitCostBs = total / units
+                          setValue('cost_bs', Number(unitCostBs.toFixed(4)), { shouldValidate: true })
+                          if (bcvRateData?.rate) {
+                            setValue('cost_usd', Number((unitCostBs / bcvRateData.rate).toFixed(4)), { shouldValidate: true })
+                          }
+                        } else {
+                          const unitCostUsd = total / units
+                          setValue('cost_usd', Number(unitCostUsd.toFixed(4)), { shouldValidate: true })
+                          if (bcvRateData?.rate) {
+                            setValue('cost_bs', Number((unitCostUsd * bcvRateData.rate).toFixed(4)), { shouldValidate: true })
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                * Ingresa el total de la factura y las unidades. El sistema calculará el costo unitario en ambas monedas.
+              </p>
+            </div>
+
             {/* Costos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -925,7 +1033,7 @@ export default function ProductFormModal({
                   id="cost_usd"
                   type="number"
                   inputMode="decimal"
-                  step="0.01"
+                  step="0.0001"
                   {...register('cost_usd', { valueAsNumber: true, onChange: handleCostUsdChange })}
                   className="mt-2 text-base"
                   placeholder="0.00"
@@ -946,7 +1054,7 @@ export default function ProductFormModal({
                 <Input
                   id="cost_bs"
                   type="number"
-                  step="0.01"
+                  step="0.0001"
                   {...register('cost_bs', { valueAsNumber: true, onChange: handleCostBsChange })}
                   className="mt-2 text-base"
                   placeholder="0.00"

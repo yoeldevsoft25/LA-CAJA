@@ -71,7 +71,7 @@ import ExchangeRateIndicator from '@/components/exchange/ExchangeRateIndicator'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import OfflineBanner from '@/components/offline/OfflineBanner'
 import { KeyboardShortcutsHelp, useKeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help'
-import { Breadcrumbs } from '@/components/ui/breadcrumbs'
+// import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { SkipLinks } from '@/components/ui/skip-links'
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge'
 
@@ -893,10 +893,10 @@ export default function MainLayout() {
               }}
               className="p-6 lg:p-8"
             >
-              {/* Breadcrumbs - Solo en desktop para no ocupar espacio en móvil */}
-              <div className="hidden md:block mb-4">
+              {/* Breadcrumbs removed per user request to save space */}
+              {/* <div className="hidden md:block mb-4">
                 <Breadcrumbs />
-              </div>
+              </div> */}
               <Outlet />
             </motion.div>
           </AnimatePresence>

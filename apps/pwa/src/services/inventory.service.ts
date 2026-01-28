@@ -200,4 +200,11 @@ export const inventoryService = {
     )
     return response.data
   },
+  /**
+   * Reconciliar inventario físico (Live Inventory)
+   */
+  async reconcilePhysicalStock(items: { product_id: string; quantity: number; counted_at: string }[]) {
+    const response = await api.post('/inventory/stock/reconcile-physical', { items })
+    return response.data
+  },
 }

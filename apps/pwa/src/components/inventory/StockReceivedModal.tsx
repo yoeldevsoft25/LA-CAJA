@@ -41,6 +41,9 @@ interface ProductItem {
   qty: number
   unit_cost_usd: number
   unit_cost_bs: number
+  total_cost_bs?: number // Campo para input de total exacto en Bs (Factura)
+  total_cost_usd?: number // Campo para input de total exacto en USD (Factura)
+  cost_calculation_currency: 'BS' | 'USD' // Moneda base para el cálculo del total
 }
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
@@ -205,6 +208,7 @@ export default function StockReceivedModal({
           qty: isWeightProduct ? 0 : 1, // Para productos por peso, iniciar en 0 para forzar al usuario a ingresar
           unit_cost_usd: defaultCostUsd,
           unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 1000000) / 1000000,
+          cost_calculation_currency: 'BS', // Por defecto en Bs
         },
       ]
     })
@@ -272,6 +276,7 @@ export default function StockReceivedModal({
       qty: isWeightProduct ? 0 : 1,
       unit_cost_usd: defaultCostUsd,
       unit_cost_bs: defaultCostBs > 0 ? defaultCostBs : Math.round(defaultCostUsd * exchangeRate * 1000000) / 1000000,
+      cost_calculation_currency: 'BS',
     }
     setProductItems((prev) => [...prev, newItem])
     setSearchQuery('')
@@ -349,11 +354,67 @@ export default function StockReceivedModal({
     setProductItems(
       productItems.map((item) => {
         if (item.id === itemId) {
-          const updated = { ...item, [field]: value }
-          // Si cambia unit_cost_usd, recalcular unit_cost_bs
-          if (field === 'unit_cost_usd') {
-            updated.unit_cost_bs = Math.round(Number(value) * exchangeRate * 100) / 100
+          let updated = { ...item, [field]: value }
+
+          // Lógica de cálculo bidireccional
+          if (field === 'qty') {
+            const qty = Number(value) || 0
+            // Si cambiamos cantidad, recalculamos totales basado en unitarios existentes
+            if (item.unit_cost_bs > 0) {
+              updated.total_cost_bs = Number((item.unit_cost_bs * qty).toFixed(2))
+              if (exchangeRate > 0) {
+                updated.total_cost_usd = Number((updated.unit_cost_usd * qty).toFixed(2))
+              }
+            }
+          } else if (field === 'unit_cost_usd') {
+            const unitCostUsd = Number(value) || 0
+            // Si cambiamos costo unitario USD:
+            // 1. Recalcular Unit Bs
+            const unitCostBs = Math.round(unitCostUsd * exchangeRate * 100) / 100
+            updated.unit_cost_bs = unitCostBs
+            // 2. Recalcular Totales
+            updated.total_cost_bs = Number((unitCostBs * item.qty).toFixed(2))
+            updated.total_cost_usd = Number((unitCostUsd * item.qty).toFixed(2))
+          } else if (field === 'total_cost_bs') {
+            const totalCostBs = Number(value) || 0
+            // Si cambiamos total Bs (Factura):
+            // 1. Recalcular Unit Bs con alta precisión
+            if (item.qty > 0) {
+              const preciseUnitBs = totalCostBs / item.qty
+              updated.unit_cost_bs = Number(preciseUnitBs.toFixed(4))
+              // 2. Recalcular Unit USD y Total USD
+              if (exchangeRate > 0) {
+                const preciseUnitUsd = preciseUnitBs / exchangeRate
+                updated.unit_cost_usd = Number(preciseUnitUsd.toFixed(4))
+                updated.total_cost_usd = Number((preciseUnitUsd * item.qty).toFixed(2))
+              }
+            }
+          } else if (field === 'total_cost_usd') {
+            const totalCostUsd = Number(value) || 0
+            // Si cambiamos total USD (Factura):
+            // 1. Recalcular Unit USD con alta precisión
+            if (item.qty > 0) {
+              const preciseUnitUsd = totalCostUsd / item.qty
+              updated.unit_cost_usd = Number(preciseUnitUsd.toFixed(4))
+              // 2. Recalcular Unit Bs y Total Bs
+              const preciseUnitBs = preciseUnitUsd * exchangeRate
+              updated.unit_cost_bs = Number(preciseUnitBs.toFixed(4))
+              updated.total_cost_bs = Number((preciseUnitBs * item.qty).toFixed(2))
+            }
+          } else if (field === 'cost_calculation_currency') {
+            // Al cambiar la moneda, recalculamos el total de la nueva moneda basándonos en el total de la anterior
+            // para que el valor visual sea consistente con el costo actual
+            if (value === 'USD') {
+              if (item.total_cost_bs && exchangeRate > 0) {
+                updated.total_cost_usd = Number((item.total_cost_bs / exchangeRate).toFixed(2))
+              }
+            } else {
+              if (item.total_cost_usd) {
+                updated.total_cost_bs = Number((item.total_cost_usd * exchangeRate).toFixed(2))
+              }
+            }
           }
+
           return updated
         }
         return item
@@ -462,9 +523,19 @@ export default function StockReceivedModal({
       }
       toast.error(error.response?.data?.message || 'Error al recibir stock')
     },
-    onSettled: () => {
+    onSettled: (_data, _error, variables) => {
       if (navigator.onLine) {
+        // Refrescar estado general del inventario
         queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
+
+        // Refrescar lista de productos (para que se refleje en el catálogo/tabla)
+        queryClient.invalidateQueries({ queryKey: ['products'] })
+
+        // Refrescar detalles específicos de los productos afectados
+        variables?.forEach(req => {
+          queryClient.invalidateQueries({ queryKey: ['inventory', 'stock', req.product_id] })
+          queryClient.invalidateQueries({ queryKey: ['products', req.product_id] })
+        })
       }
     }
   })
@@ -644,12 +715,12 @@ export default function StockReceivedModal({
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         {/* Cantidad */}
                         <div>
                           <Label className="text-xs mb-1.5 block">
                             {item.is_weight_product && item.weight_unit
-                              ? `Cantidad en ${item.weight_unit === 'g' ? 'gramos' : item.weight_unit === 'kg' ? 'kilos' : item.weight_unit === 'lb' ? 'libras' : 'onzas'} (${item.weight_unit})`
+                              ? `Cant. (${item.weight_unit})`
                               : 'Cantidad'}{' '}
                             <span className="text-destructive">*</span>
                           </Label>
@@ -662,25 +733,8 @@ export default function StockReceivedModal({
                                   : '0.001'
                                 : '1'
                             }
-                            min={
-                              item.is_weight_product
-                                ? item.weight_unit === 'g' || item.weight_unit === 'oz'
-                                  ? '1'
-                                  : '0.001'
-                                : '1'
-                            }
-                            inputMode="decimal"
-                            placeholder={
-                              item.is_weight_product
-                                ? item.weight_unit === 'g'
-                                  ? 'Ej: 500 (gramos)'
-                                  : item.weight_unit === 'kg'
-                                    ? 'Ej: 2.5 (kilos)'
-                                    : item.weight_unit === 'lb'
-                                      ? 'Ej: 1.5 (libras)'
-                                      : 'Ej: 8 (onzas)'
-                                : 'Ej: 10'
-                            }
+                            min="0"
+                            placeholder="0"
                             value={item.qty || ''}
                             onChange={(e) =>
                               (() => {
@@ -689,8 +743,6 @@ export default function StockReceivedModal({
                                   updateProductItem(item.id, 'qty', 0)
                                   return
                                 }
-                                // Para gramos y onzas: valores enteros
-                                // Para kg y lb: hasta 3 decimales
                                 const normalized = item.is_weight_product
                                   ? item.weight_unit === 'g' || item.weight_unit === 'oz'
                                     ? Math.round(parsed)
@@ -702,41 +754,84 @@ export default function StockReceivedModal({
                           />
                         </div>
 
-                        {/* Costo USD */}
-                        <div>
-                          <Label className="text-xs mb-1.5 block">
-                            {item.is_weight_product && item.weight_unit
-                              ? `Costo por ${item.weight_unit} (USD)`
-                              : 'Costo Unit. USD'}{' '}
-                            <span className="text-destructive">*</span>
+                        {/* Costo Total (Selectable) */}
+                        <div className="flex flex-col gap-1.5">
+                          <Label className="text-xs font-medium text-primary flex items-center justify-between">
+                            <span>Costo Total</span>
+                            <span className="text-[10px] font-normal text-muted-foreground">(Factura)</span>
                           </Label>
-                          <Input
-                            type="number"
-                            step={item.is_weight_product && (item.weight_unit === 'g' || item.weight_unit === 'oz') ? '0.0001' : '0.01'}
-                            min="0"
-                            value={item.unit_cost_usd || ''}
-                            onChange={(e) =>
-                              updateProductItem(item.id, 'unit_cost_usd', parseFloat(e.target.value) || 0)
-                            }
-                            placeholder={item.is_weight_product && item.weight_unit === 'g' ? '0.0080' : '0.00'}
-                          />
+                          <div className="flex rounded-md shadow-sm">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="flex h-9 w-full rounded-l-md border border-r-0 border-primary/20 bg-primary/5 px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+                              placeholder="0.00"
+                              value={
+                                item.cost_calculation_currency === 'BS'
+                                  ? item.total_cost_bs || ''
+                                  : item.total_cost_usd || ''
+                              }
+                              onChange={(e) =>
+                                updateProductItem(
+                                  item.id,
+                                  item.cost_calculation_currency === 'BS' ? 'total_cost_bs' : 'total_cost_usd',
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateProductItem(
+                                  item.id,
+                                  'cost_calculation_currency',
+                                  item.cost_calculation_currency === 'BS' ? 'USD' : 'BS'
+                                )
+                              }}
+                              className="inline-flex items-center justify-center rounded-r-md border border-l-0 border-primary/20 bg-primary/10 px-2.5 text-xs font-medium text-primary hover:bg-primary/20 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                            >
+                              {item.cost_calculation_currency === 'BS' ? 'Bs' : '$'}
+                            </button>
+                          </div>
                         </div>
 
-                        {/* Costo BS (calculado) */}
+                        {/* Costo Unitario USD */}
                         <div>
                           <Label className="text-xs mb-1.5 block">
-                            {item.is_weight_product && item.weight_unit
-                              ? `Costo por ${item.weight_unit} (Bs)`
-                              : 'Costo Unit. Bs'}
+                            Costo Unit. $
                             <span className="text-xs font-normal text-muted-foreground ml-1">
-                              (Calculado)
+                              (Calc)
                             </span>
                           </Label>
                           <Input
                             type="number"
-                            step="0.01"
-                            value={item.unit_cost_bs.toFixed(item.is_weight_product && (item.weight_unit === 'g' || item.weight_unit === 'oz') ? 4 : 2)}
-                            className="bg-muted cursor-not-allowed"
+                            step="0.0001"
+                            min="0"
+                            placeholder="0.00"
+                            value={item.unit_cost_usd || ''}
+                            onChange={(e) =>
+                              updateProductItem(
+                                item.id,
+                                'unit_cost_usd',
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                          />
+                        </div>
+
+                        {/* Costo Bs (Informátivo) */}
+                        <div>
+                          <Label className="text-xs mb-1.5 block">
+                            Costo Unit. Bs
+                            <span className="text-xs font-normal text-muted-foreground ml-1">
+                              (@{exchangeRate})
+                            </span>
+                          </Label>
+                          <Input
+                            type="number"
+                            value={item.unit_cost_bs.toFixed(2)}
+                            className="bg-muted text-muted-foreground"
                             readOnly
                           />
                         </div>

@@ -55,8 +55,8 @@ export function ProductCatalog({
         return () => observer.disconnect()
     }, [])
 
-    const PRODUCT_ROW_HEIGHT = 104
-    const PRODUCT_OVERSCAN = 6
+    const PRODUCT_ROW_HEIGHT = 112 // Aumentado para dar espacio y evitar cortes (104px card + 8px gap)
+    const PRODUCT_OVERSCAN = 12 // Aumentado para mejor experiencia de scroll
     // Altura mínima para asegurar scroll si hay pocos productos pero llenan pantalla
     const listTotalHeight = Math.max(products.length * PRODUCT_ROW_HEIGHT, listViewportHeight + 1)
 
@@ -143,13 +143,15 @@ export function ProductCatalog({
     }
 
     return (
-        <div className="flex-1 min-h-0 relative bg-background/50 rounded-xl border border-border/50 overflow-hidden shadow-inner">
+        <div className="h-full w-full relative bg-background/50 rounded-xl border border-border/50 overflow-hidden shadow-inner">
             <ScrollArea
                 className="h-full"
                 viewportRef={listViewportRef}
-                onScroll={(e) => {
-                    const target = e.currentTarget as HTMLDivElement
-                    setListScrollTop(target.scrollTop)
+                viewportProps={{
+                    onScroll: (e) => {
+                        const target = e.currentTarget as HTMLDivElement
+                        setListScrollTop(target.scrollTop)
+                    }
                 }}
             >
                 <div
@@ -171,7 +173,7 @@ export function ProductCatalog({
                             >
                                 <button
                                     onClick={() => onProductClick(product)}
-                                    className="w-full h-[104px] mt-1 text-left group relative bg-gradient-to-br from-card/90 to-card/50 hover:from-card hover:to-card/80 backdrop-blur-md transition-all duration-300 rounded-2xl border border-white/10 hover:border-primary/20 shadow-sm hover:shadow-lg hover:-translate-y-0.5 overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 active:scale-[0.98] ring-1 ring-transparent hover:ring-primary/10"
+                                    className="w-full h-[104px] text-left group relative bg-gradient-to-br from-card/90 to-card/50 hover:from-card hover:to-card/80 backdrop-blur-md transition-all duration-300 rounded-2xl border border-white/10 hover:border-primary/20 shadow-sm hover:shadow-lg hover:-translate-y-0.5 overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 active:scale-[0.98] ring-1 ring-transparent hover:ring-primary/10"
                                 >
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-all duration-300" />
 

@@ -12,6 +12,7 @@ import { Product } from '../database/entities/product.entity';
 import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { StockReceivedDto } from './dto/stock-received.dto';
 import { StockAdjustedDto } from './dto/stock-adjusted.dto';
+import { ReconcileStockDto } from './dto/reconcile-stock.dto';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { AccountingService } from '../accounting/accounting.service';
 import { randomUUID } from 'crypto';
@@ -793,5 +794,104 @@ export class InventoryService {
 
     this.logger.log(`Reconciliación de stock ejecutada para store ${storeId}`);
     return { ok: true, message: 'Reconciliación de stock ejecutada correctamente' };
+  }
+
+  /**
+   * Reconciliación de inventario "en caliente" (Live Inventory).
+   * Calcula el stock esperado actual basándose en un conteo físico pasado y los movimientos
+   * ocurridos desde ese momento. Genera ajustes solo por la diferencia real.
+   */
+  async reconcileStock(
+    storeId: string,
+    dto: ReconcileStockDto,
+    userId: string,
+    role: string,
+  ): Promise<{ reconciled: number; adjustments: InventoryMovement[] }> {
+    if (role !== 'owner') {
+      throw new ForbiddenException('Solo un owner puede reconciliar inventario');
+    }
+
+    const adjustments: InventoryMovement[] = [];
+    const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(storeId);
+
+    await this.dataSource.transaction(async (manager) => {
+      for (const item of dto.items) {
+        // Validar fecha
+        const countedAt = new Date(item.counted_at);
+        if (isNaN(countedAt.getTime())) {
+          this.logger.warn(`Fecha inválida en reconciliación para producto ${item.product_id}: ${item.counted_at}`);
+          continue;
+        }
+
+        // 1. Obtener suma de deltas (movimientos) POSTERIORES al conteo
+        // Esto nos dice cuánto cambió el stock DESPUÉS de que el usuario contó
+        const movementsAfter = await manager
+          .createQueryBuilder(InventoryMovement, 'im')
+          .where('im.store_id = :storeId', { storeId })
+          .andWhere('im.product_id = :productId', { productId: item.product_id })
+          .andWhere('im.happened_at > :countedAt', { countedAt })
+          .select('SUM(im.qty_delta)', 'delta')
+          .getRawOne();
+
+        const deltaSinceCount = parseFloat(movementsAfter?.delta) || 0;
+
+        // 2. Calcular Stock Esperado HOY
+        // Fórmula: Lo que contaste + Lo que pasó después
+        // Ejemplo: Conté 100. Se vendieron 5. Stock esperado hoy = 95.
+        const expectedCurrentStock = item.quantity + deltaSinceCount;
+
+        // 3. Obtener Stock Real en Sistema HOY
+        const currentSystemStock = await this.getCurrentStock(storeId, item.product_id, manager);
+
+        // 4. Calcular el Ajuste necesario
+        // Ajuste = Stock Esperado - Stock Sistema
+        // Ejemplo: Esperado 95. Sistema tiene 105 (robo de 10 antes del conteo). Ajuste = -10.
+        // Ejemplo: Esperado 95. Sistema tiene 95. Ajuste = 0.
+        const adjustmentQty = expectedCurrentStock - currentSystemStock;
+
+        // Solo ajustar si la diferencia es significativa (evitar ruido de punto flotante)
+        if (Math.abs(adjustmentQty) > 0.0001) {
+          const movement = manager.create(InventoryMovement, {
+            id: randomUUID(),
+            store_id: storeId,
+            product_id: item.product_id,
+            movement_type: 'adjust',
+            qty_delta: adjustmentQty,
+            unit_cost_bs: 0,
+            unit_cost_usd: 0,
+            warehouse_id: defaultWarehouse.id,
+            note: 'Ajuste por Inventario Físico (Reconciliado)',
+            ref: {
+              reason: 'physical_count_reconciliation',
+              counted_qty: item.quantity,
+              counted_at: item.counted_at,
+              delta_since: deltaSinceCount,
+              system_stock_was: currentSystemStock,
+            },
+            happened_at: new Date(), // El ajuste ocurre AHORA para corregir el stock AHORA
+            approved: true,
+            requested_by: userId,
+            approved_by: userId,
+            approved_at: new Date(),
+          });
+
+          const saved = await manager.save(InventoryMovement, movement);
+          adjustments.push(saved);
+
+          // Actualizar stock bodega
+          await this.warehousesService.updateStock(
+            defaultWarehouse.id,
+            item.product_id,
+            null,
+            adjustmentQty,
+            storeId,
+            manager,
+          );
+        }
+      }
+    });
+
+    this.logger.log(`Live Inventory Reconcile: Procesados ${dto.items.length} items, Generados ${adjustments.length} ajustes.`);
+    return { reconciled: dto.items.length, adjustments };
   }
 }
