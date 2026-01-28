@@ -404,7 +404,7 @@ export default function CheckoutModal({
                 <PaymentMethodSelector
                   value={state.selectedMethod}
                   onChange={actions.setPaymentMethod}
-                  disabled={state.paymentMode === 'SPLIT'}
+                  disabled={false}
                 />
 
                 {/* Sección de efectivo USD */}

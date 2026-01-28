@@ -18,7 +18,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Progress } from '@/components/ui/progress'
 import {
   Table,
   TableBody,
@@ -289,46 +288,50 @@ export default function InventoryPage() {
   return (
     <div className="h-full max-w-7xl mx-auto">
 
-      {/* KPI Cards */}
+      {/* KPI Cards: Minimalist Style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <Card className="border-none shadow-sm bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-              <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <Card>
+          <CardContent className="p-6 flex flex-col justify-center">
+            <div className="flex items-center justify-between space-x-2">
+              <span className="text-sm font-medium text-muted-foreground">Total Productos</span>
+              <Package className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Productos</p>
-              <h3 className="text-2xl font-bold text-foreground">{total}</h3>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl font-bold tracking-tight text-foreground">{total}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-background">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
-              <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+        <Card>
+          <CardContent className="p-6 flex flex-col justify-center">
+            <div className="flex items-center justify-between space-x-2">
+              <span className="text-sm font-medium text-muted-foreground">Stock Bajo</span>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Stock Bajo</p>
-              <h3 className="text-2xl font-bold text-orange-700 dark:text-orange-400">
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl font-bold tracking-tight text-foreground">
                 {lowStockCount}
-                <span className="text-xs font-normal text-muted-foreground ml-2">productos</span>
-              </h3>
+              </span>
+              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                productos
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+        <Card>
+          <CardContent className="p-6 flex flex-col justify-center">
+            <div className="flex items-center justify-between space-x-2">
+              <span className="text-sm font-medium text-muted-foreground">Salud de Stock</span>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Salud de Stock</p>
-              <h3 className="text-2xl font-bold text-foreground">
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl font-bold tracking-tight text-foreground">
                 {total > 0 ? Math.round(((total - lowStockCount) / total) * 100) : 0}%
-                <span className="text-xs font-normal text-muted-foreground ml-2">óptimo</span>
-              </h3>
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                óptimo
+              </span>
             </div>
           </CardContent>
         </Card>

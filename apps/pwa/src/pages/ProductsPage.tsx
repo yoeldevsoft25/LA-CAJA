@@ -179,7 +179,7 @@ export default function ProductsPage() {
   }, [user?.store_id, searchQuery, categoryFilter, isActiveFilter, pageSize])
 
   const offset = (currentPage - 1) * pageSize
-  const { data: productsData, isLoading, isError, error, refetch } = useQuery({
+  const { data: productsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['products', 'list', searchQuery, categoryFilter, statusFilter, currentPage, pageSize, user?.store_id],
     queryFn: () =>
       productsService.search({
