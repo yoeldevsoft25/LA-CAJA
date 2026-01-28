@@ -57,16 +57,17 @@ export function ProductCatalog({
 
     const PRODUCT_ROW_HEIGHT = 112 // Aumentado para dar espacio y evitar cortes (104px card + 8px gap)
     const PRODUCT_OVERSCAN = 12 // Aumentado para mejor experiencia de scroll
+    const LIST_TOP_PADDING = 12 // Espacio extra arriba del primer elemento
     // Altura mínima para asegurar scroll si hay pocos productos pero llenan pantalla
-    const listTotalHeight = Math.max(products.length * PRODUCT_ROW_HEIGHT, listViewportHeight + 1)
+    const listTotalHeight = Math.max((products.length * PRODUCT_ROW_HEIGHT) + LIST_TOP_PADDING, listViewportHeight + 1)
 
     const startIndex = Math.max(
         0,
-        Math.floor(listScrollTop / PRODUCT_ROW_HEIGHT) - PRODUCT_OVERSCAN
+        Math.floor((listScrollTop - LIST_TOP_PADDING) / PRODUCT_ROW_HEIGHT) - PRODUCT_OVERSCAN
     )
     const endIndex = Math.min(
         products.length,
-        Math.ceil((listScrollTop + listViewportHeight) / PRODUCT_ROW_HEIGHT) + PRODUCT_OVERSCAN
+        Math.ceil((listScrollTop + listViewportHeight - LIST_TOP_PADDING) / PRODUCT_ROW_HEIGHT) + PRODUCT_OVERSCAN
     )
 
     const visibleProducts = useMemo(
@@ -167,7 +168,7 @@ export function ProductCatalog({
                                 key={product.id}
                                 className="absolute left-0 right-0 px-2"
                                 style={{
-                                    top: originalIndex * PRODUCT_ROW_HEIGHT,
+                                    top: (originalIndex * PRODUCT_ROW_HEIGHT) + LIST_TOP_PADDING,
                                     height: PRODUCT_ROW_HEIGHT
                                 }}
                             >

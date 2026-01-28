@@ -24,7 +24,7 @@ export function QuickActions({
     if (recentProducts.length === 0 && suggestedProducts.length === 0) return null
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="flex flex-col gap-4 mb-4">
             {/* Sugerencias de búsqueda */}
             {suggestedProducts.length > 0 && (
                 <div className="space-y-2">

@@ -709,13 +709,12 @@ export default function POSPage() {
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
       <div className={cn(
         "grid gap-3 sm:gap-4 flex-1 min-h-0",
-        isTabletLandscape ? "grid-cols-[1.3fr_1fr]" : "grid-cols-1 lg:grid-cols-3"
+        isTabletLandscape ? "grid-cols-[1.3fr_1fr]" : "grid-cols-1 lg:grid-cols-[1fr_400px]"
       )}>
         {/* Búsqueda y Lista de Productos */}
         {/* Columna Izquierda: Catálogo */}
         <div className={cn(
-          "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border border-border/40 shadow-sm p-3",
-          !isTabletLandscape && "lg:col-span-2"
+          "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border border-border/40 shadow-sm p-3"
         )}>
           <CatalogHeader
             searchQuery={searchQuery}
