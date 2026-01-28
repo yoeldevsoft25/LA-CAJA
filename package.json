@@ -35,6 +35,8 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "react-helmet-async": "^2.0.5"
+    "@fastify/helmet": "^13.0.2",
+    "react-helmet-async": "^2.0.5",
+    "resend": "^6.9.1"
   }
 }
