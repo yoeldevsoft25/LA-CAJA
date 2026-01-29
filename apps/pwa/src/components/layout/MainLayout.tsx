@@ -885,28 +885,34 @@ export default function MainLayout() {
           role="main"
           aria-label="Contenido principal"
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{
-                duration: 0.25,
-                ease: [0.4, 0, 0.2, 1] // ease-out cubic bezier para transición más suave
-              }}
-              className={cn(
-                "p-6 lg:p-8",
-                location.pathname.includes('/pos') && "p-0 lg:p-0"
-              )}
-            >
-              {/* Breadcrumbs removed per user request to save space */}
-              {/* <div className="hidden md:block mb-4">
-                <Breadcrumbs />
-              </div> */}
+          {location.pathname.includes('/pos') ? (
+            // POS sin animación para evitar conflictos con su estado interno
+            <div className="p-0 lg:p-0">
               <Outlet />
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{
+                  duration: 0.25,
+                  ease: [0.4, 0, 0.2, 1] // ease-out cubic bezier para transición más suave
+                }}
+                className={cn(
+                  "p-6 lg:p-8"
+                )}
+              >
+                {/* Breadcrumbs removed per user request to save space */}
+                {/* <div className="hidden md:block mb-4">
+                  <Breadcrumbs />
+                </div> */}
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          )}
         </main>
       </div>
 

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'
@@ -532,6 +532,9 @@ export default function CheckoutModal({
                 <X className="h-4 w-4" />
               </Button>
             </div>
+            <SheetDescription className="text-xs text-muted-foreground">
+              Confirma los detalles del pago y procesa la venta
+            </SheetDescription>
           </SheetHeader>
           {modalContent}
           {serialSelectorItem && (

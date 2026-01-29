@@ -68,7 +68,7 @@ const enablePersistentStorage = async () => {
 };
 
 const registerPeriodicSync = async (registration: ServiceWorkerRegistration) => {
-  if ('periodicSync' in registration) {
+  if ('periodicSync' in registration && registration.active) {
     try {
       const status = await navigator.permissions.query({
         name: 'periodic-background-sync' as any,

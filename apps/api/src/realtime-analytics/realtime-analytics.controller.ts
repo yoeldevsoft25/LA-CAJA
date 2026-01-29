@@ -28,7 +28,7 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Controller('realtime-analytics')
 @UseGuards(JwtAuthGuard)
-@Roles('owner')
+@Roles('owner', 'cashier') // Allow both owners and cashiers to view metrics
 export class RealTimeAnalyticsController {
   private readonly logger = new Logger(RealTimeAnalyticsController.name);
 
@@ -37,7 +37,7 @@ export class RealTimeAnalyticsController {
     private readonly gateway: RealTimeAnalyticsGateway,
     private readonly notificationsService: NotificationsService,
     private readonly notificationsGateway: NotificationsGateway,
-  ) {}
+  ) { }
 
   /**
    * Obtener métricas en tiempo real

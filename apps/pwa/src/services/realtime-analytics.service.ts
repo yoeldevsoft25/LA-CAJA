@@ -20,10 +20,16 @@ export const realtimeAnalyticsService = {
    */
   async getMetrics(metricTypes?: string[]): Promise<RealTimeMetricsResponse> {
     const startTime = performance.now()
+
+    // Backend expects singular 'metric_type' parameter, not plural 'metric_types'
+    // If no metric types specified, fetch all metrics
     const params: Record<string, string> = {}
     if (metricTypes && metricTypes.length > 0) {
-      params.metric_types = metricTypes.join(',')
+      // If multiple types requested, use first one for now
+      // TODO: Consider making multiple requests or updating backend to accept array
+      params.metric_type = metricTypes[0]
     }
+
     const response = await api.get<RealTimeMetricsResponse>(
       '/realtime-analytics/metrics',
       { params },

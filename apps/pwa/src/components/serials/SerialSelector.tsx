@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Hash, X, Check } from 'lucide-react'
 import { productSerialsService } from '@/services/product-serials.service'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -85,6 +85,9 @@ export default function SerialSelector({
             <Hash className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             Seleccionar Seriales - {productName}
           </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Selecciona los números de serie para este producto.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 flex flex-col">

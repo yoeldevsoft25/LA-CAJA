@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -131,10 +132,10 @@ export default function WeightInputModal({
   const quickWeightsRow1 = unit === 'g'
     ? [100, 250, 500, 1000]
     : unit === 'kg'
-    ? [0.25, 0.5, 1, 2]
-    : unit === 'lb'
-    ? [0.25, 0.5, 1, 2]
-    : [1, 2, 4, 8]
+      ? [0.25, 0.5, 1, 2]
+      : unit === 'lb'
+        ? [0.25, 0.5, 1, 2]
+        : [1, 2, 4, 8]
   const quickWeightsRow2 = unit === 'g' ? [15, 25, 50, 75] : null
 
   return (
@@ -145,6 +146,9 @@ export default function WeightInputModal({
             <Scale className="w-5 h-5 text-primary" />
             Producto por Peso
           </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Introduce el peso del producto para calcular el precio final.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">

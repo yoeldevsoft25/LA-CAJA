@@ -17,6 +17,7 @@ import { useAuth } from '@/stores/auth.store'
 import { inventoryService } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
 import toast from '@/lib/toast'
+
 // Hooks POS Modularizados
 import { usePOSCartActions } from '@/hooks/pos/usePOSCartActions'
 import { usePOSScanner } from '@/hooks/pos/usePOSScanner'
@@ -677,6 +678,13 @@ export default function POSPage() {
     // Guardar seriales para asignar después de crear la venta
     if (checkoutData.serials) {
       setPendingSerials(checkoutData.serials)
+    }
+
+    // Validar tasa de cambio
+    if (!checkoutData.exchange_rate || checkoutData.exchange_rate <= 0) {
+      toast.error('Error: Tasa de cambio inválida. Actualizando...');
+      queryClient.invalidateQueries({ queryKey: ['exchange', 'bcv'] });
+      return;
     }
 
     createSaleMutation.mutate({

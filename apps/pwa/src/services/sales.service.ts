@@ -722,15 +722,23 @@ export const salesService = {
         items_count: data.items?.length,
       })
 
-      // Filtrar campos undefined y cadenas vacías, pero mantener null explícitos
+      // Filtrar campos undefined y cadenas vacías, pero mantener null explícitos y números 0
       const cleanedData = Object.fromEntries(
         Object.entries(data).filter(
           ([key, value]) =>
             !['store_id', 'user_id', 'user_role'].includes(key) &&
             value !== undefined &&
-            value !== ''
+            value !== '' &&
+            // Asegurar que payment_method o exchange_rate no sean nulos si son requeridos
+            (key !== 'exchange_rate' || (value !== null && value !== 0))
         )
       ) as CreateSaleRequest
+
+      // Asegurar que exchange_rate es válido
+      if (!cleanedData.exchange_rate || cleanedData.exchange_rate <= 0) {
+        logger.warn('Tasa de cambio inválida, intentando recuperar última conocida', { rate: cleanedData.exchange_rate });
+        cleanedData.exchange_rate = await exchangeService.getCachedRate().then(r => r.rate || 36);
+      }
 
       logger.debug('Sending sale data (after cleaning)', {
         cash_session_id: cleanedData.cash_session_id,

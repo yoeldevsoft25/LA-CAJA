@@ -25,14 +25,16 @@ const PageLoader = () => (
   </div>
 )
 
-// Lazy loading de páginas - Críticas (login/landing/pos)
+// Lazy loading de páginas - Críticas (login/landing)
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const ForgotPinPage = lazy(() => import('./pages/ForgotPinPage'))
 const ResetPinPage = lazy(() => import('./pages/ResetPinPage'))
 const LandingPageEnhanced = lazy(() => import('./pages/LandingPageEnhanced'))
-const POSPage = lazy(() => import('./pages/POSPage'))
+
+// POS Page - eager load to prevent blank screen on navigation
+import POSPage from './pages/POSPage'
 
 // Preload de rutas críticas para mejor rendimiento
 const preloadCriticalRoutes = () => {

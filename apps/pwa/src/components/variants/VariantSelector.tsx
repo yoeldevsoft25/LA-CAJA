@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Layers } from 'lucide-react'
 import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -61,7 +61,9 @@ export default function VariantSelector({
             <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             Seleccionar Variante
           </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-1">{productName}</p>
+          <div className="text-sm text-muted-foreground mt-1">
+            <DialogDescription>{productName}</DialogDescription>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col min-h-0">
