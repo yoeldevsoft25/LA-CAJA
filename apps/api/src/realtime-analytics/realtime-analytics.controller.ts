@@ -25,6 +25,7 @@ import { GetComparativeDto } from './dto/get-comparative.dto';
 import { RealTimeAnalyticsGateway } from './realtime-analytics.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { AnalyticsDefaultsService } from './analytics-defaults.service';
 
 @Controller('realtime-analytics')
 @UseGuards(JwtAuthGuard)
@@ -37,6 +38,7 @@ export class RealTimeAnalyticsController {
     private readonly gateway: RealTimeAnalyticsGateway,
     private readonly notificationsService: NotificationsService,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly analyticsDefaultsService: AnalyticsDefaultsService,
   ) { }
 
   /**
@@ -200,5 +202,78 @@ export class RealTimeAnalyticsController {
       metricType as any,
       limit ? parseInt(limit, 10) : 10,
     );
+  }
+
+  /**
+   * Obtener preview de la configuración predeterminada de analíticas
+   */
+  @Get('defaults/preview')
+  getDefaultsPreview() {
+    return this.analyticsDefaultsService.getDefaultsPreview();
+  }
+
+  /**
+   * Verificar si la tienda ya tiene umbrales configurados
+   */
+  @Get('defaults/has-thresholds')
+  async hasExistingThresholds(@Request() req: any) {
+    const storeId = req.user.store_id;
+    const hasThresholds =
+      await this.analyticsDefaultsService.hasExistingThresholds(storeId);
+    return { hasThresholds };
+  }
+
+  /**
+   * Aplicar configuración predeterminada de umbrales de alerta
+   */
+  @Post('defaults/apply')
+  @HttpCode(HttpStatus.OK)
+  @Roles('owner') // Solo owners pueden aplicar configuración predeterminada
+  async applyDefaultThresholds(@Request() req: any) {
+    const storeId = req.user.store_id;
+    const userId = req.user.user_id;
+
+    this.logger.log(
+      `Aplicando configuración predeterminada para tienda ${storeId}`,
+    );
+
+    // Verificar si ya tiene umbrales
+    const hasExisting =
+      await this.analyticsDefaultsService.hasExistingThresholds(storeId);
+
+    if (hasExisting) {
+      this.logger.warn(
+        `Tienda ${storeId} ya tiene umbrales configurados. Aplicando defaults igualmente.`,
+      );
+    }
+
+    // Calcular promedios históricos si existen ventas
+    const historicalAverages =
+      await this.analyticsDefaultsService.calculateHistoricalAverages(
+        storeId,
+        // Inyectamos el repositorio de ventas desde el servicio principal
+        this.analyticsService['saleRepository'],
+      );
+
+    // Aplicar configuración predeterminada
+    const thresholds = await this.analyticsDefaultsService.applyDefaultThresholds(
+      storeId,
+      userId,
+      historicalAverages || undefined, // Convert null to undefined
+    );
+
+    // Iniciar cálculo de métricas inmediatamente
+    await this.analyticsService.calculateAndSaveMetrics(storeId);
+
+    this.logger.log(
+      `✅ Configuración predeterminada aplicada: ${thresholds.length} umbrales creados`,
+    );
+
+    return {
+      message: 'Configuración predeterminada aplicada exitosamente',
+      thresholds_created: thresholds.length,
+      historical_data_used: !!historicalAverages,
+      thresholds,
+    };
   }
 }

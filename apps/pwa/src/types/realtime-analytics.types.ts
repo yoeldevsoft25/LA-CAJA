@@ -159,9 +159,28 @@ export interface WebSocketEvent {
   timestamp: string
 }
 
+// Analytics Defaults
+export interface AnalyticsDefaultsPreview {
+  totalAlerts: number
+  byPriority: {
+    critical: number
+    high: number
+    medium: number
+    low: number
+  }
+  metrics: string[]
+}
 
+export interface ApplyDefaultsResponse {
+  message: string
+  thresholds_created: number
+  historical_data_used: boolean
+  thresholds: AlertThreshold[]
+}
 
-
+export interface HasThresholdsResponse {
+  hasThresholds: boolean
+}
 
 
 

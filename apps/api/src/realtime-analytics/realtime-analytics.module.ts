@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RealTimeAnalyticsService } from './realtime-analytics.service';
 import { RealTimeAnalyticsController } from './realtime-analytics.controller';
 import { RealTimeAnalyticsGateway } from './realtime-analytics.gateway';
+import { AnalyticsDefaultsService } from './analytics-defaults.service';
 import { RealTimeMetric } from '../database/entities/real-time-metric.entity';
 import { AlertThreshold } from '../database/entities/alert-threshold.entity';
 import { RealTimeAlert } from '../database/entities/real-time-alert.entity';
@@ -34,7 +35,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
         if (!jwtSecret) {
           throw new Error(
             'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-              'En producción, esto es obligatorio por seguridad.',
+            'En producción, esto es obligatorio por seguridad.',
           );
         }
         return {
@@ -47,7 +48,15 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [RealTimeAnalyticsController],
-  providers: [RealTimeAnalyticsService, RealTimeAnalyticsGateway],
-  exports: [RealTimeAnalyticsService, RealTimeAnalyticsGateway],
+  providers: [
+    RealTimeAnalyticsService,
+    RealTimeAnalyticsGateway,
+    AnalyticsDefaultsService,
+  ],
+  exports: [
+    RealTimeAnalyticsService,
+    RealTimeAnalyticsGateway,
+    AnalyticsDefaultsService,
+  ],
 })
-export class RealTimeAnalyticsModule {}
+export class RealTimeAnalyticsModule { }

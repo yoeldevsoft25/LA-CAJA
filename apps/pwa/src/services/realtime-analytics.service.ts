@@ -9,6 +9,9 @@ import {
   SalesHeatmapResponse,
   ComparativeMetricsResponse,
   GetComparativeMetricsRequest,
+  AnalyticsDefaultsPreview,
+  ApplyDefaultsResponse,
+  HasThresholdsResponse,
 } from '@/types/realtime-analytics.types'
 import { createLogger } from '@/lib/logger'
 
@@ -21,13 +24,13 @@ export const realtimeAnalyticsService = {
   async getMetrics(metricTypes?: string[]): Promise<RealTimeMetricsResponse> {
     const startTime = performance.now()
 
-    // Backend expects singular 'metric_type' parameter, not plural 'metric_types'
-    // If no metric types specified, fetch all metrics
+    // Backend expects 'metric_name' for specific metrics like 'revenue_bs', 'sales_count'
+    // The metric_type parameter is for enum categories like 'revenue', 'sales', etc.
     const params: Record<string, string> = {}
     if (metricTypes && metricTypes.length > 0) {
       // If multiple types requested, use first one for now
       // TODO: Consider making multiple requests or updating backend to accept array
-      params.metric_type = metricTypes[0]
+      params.metric_name = metricTypes[0]
     }
 
     const response = await api.get<RealTimeMetricsResponse>(
@@ -170,5 +173,38 @@ export const realtimeAnalyticsService = {
     })
     return response.data
   },
-}
 
+  /**
+   * Obtiene preview de la configuración predeterminada
+   */
+  async getDefaultsPreview(): Promise<AnalyticsDefaultsPreview> {
+    const response = await api.get<AnalyticsDefaultsPreview>(
+      '/realtime-analytics/defaults/preview',
+    )
+    return response.data
+  },
+
+  /**
+   * Verifica si la tienda ya tiene umbrales configurados
+   */
+  async hasExistingThresholds(): Promise<HasThresholdsResponse> {
+    const response = await api.get<HasThresholdsResponse>(
+      '/realtime-analytics/defaults/has-thresholds',
+    )
+    return response.data
+  },
+
+  /**
+   * Aplica la configuración predeterminada de umbrales
+   */
+  async applyDefaultThresholds(): Promise<ApplyDefaultsResponse> {
+    const response = await api.post<ApplyDefaultsResponse>(
+      '/realtime-analytics/defaults/apply',
+    )
+    logger.info('Analytics defaults applied', {
+      thresholds_created: response.data.thresholds_created,
+      historical_data_used: response.data.historical_data_used,
+    })
+    return response.data
+  },
+}

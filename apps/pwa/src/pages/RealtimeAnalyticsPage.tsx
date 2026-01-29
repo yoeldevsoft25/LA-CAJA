@@ -1,25 +1,65 @@
+import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Activity, AlertTriangle, Calendar, BarChart3, Settings } from 'lucide-react'
+import { Activity, AlertTriangle, Calendar, BarChart3, Settings, Sparkles } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import RealtimeMetricsCard from '@/components/realtime/RealtimeMetricsCard'
 import AlertsPanel from '@/components/realtime/AlertsPanel'
 import SalesHeatmapChart from '@/components/realtime/SalesHeatmapChart'
 import ComparativeMetricsChart from '@/components/realtime/ComparativeMetricsChart'
 import ThresholdsManager from '@/components/realtime/ThresholdsManager'
+import { ApplyDefaultsModal } from '@/components/realtime/ApplyDefaultsModal'
+import { realtimeAnalyticsService } from '@/services/realtime-analytics.service'
 import { DollarSign, ShoppingCart, Package } from 'lucide-react'
 
 export default function RealtimeAnalyticsPage() {
+  const [isDefaultsModalOpen, setIsDefaultsModalOpen] = useState(false)
+  const [hasThresholds, setHasThresholds] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    checkThresholds()
+  }, [])
+
+  const checkThresholds = async () => {
+    try {
+      const result = await realtimeAnalyticsService.hasExistingThresholds()
+      setHasThresholds(result.hasThresholds)
+    } catch (error) {
+      console.error('Error checking thresholds:', error)
+    }
+  }
+
   return (
     <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
-          <Activity className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
-          Analytics en Tiempo Real
-        </h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Métricas, alertas y análisis en tiempo real
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+            <Activity className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
+            Analytics en Tiempo Real
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            Métricas, alertas y análisis en tiempo real
+          </p>
+        </div>
+
+        <Button
+          onClick={() => setIsDefaultsModalOpen(true)}
+          variant={hasThresholds === false ? "default" : "outline"}
+          className="w-full sm:w-auto"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          {hasThresholds === false ? "Configurar Alertas Inteligentes" : "Configuración Recomendada"}
+        </Button>
       </div>
+
+      <ApplyDefaultsModal
+        open={isDefaultsModalOpen}
+        onOpenChange={setIsDefaultsModalOpen}
+        onSuccess={() => {
+          checkThresholds()
+          // Opcionalmente recargar otras partes si es necesario
+        }}
+      />
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
