@@ -47,7 +47,7 @@ export default function TransfersPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isShipOpen, setIsShipOpen] = useState(false)
   const [isReceiveOpen, setIsReceiveOpen] = useState(false)
-  const [warehouseFilter, setWarehouseFilter] = useState<string>('all')
+  const [warehouseFilter] = useState<string>('all')
 
   // Obtener bodegas
   const { data: warehouses = [] } = useQuery({

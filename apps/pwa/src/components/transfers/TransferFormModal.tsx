@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -31,25 +30,19 @@ import {
 } from '@/components/ui/select'
 import { Warehouse } from '@/services/warehouses.service'
 import { productsService, Product } from '@/services/products.service'
-import { CreateTransferDto, CreateTransferItemDto } from '@/services/transfers.service'
-import { ArrowRight, Package, Truck, Check, X, Search, AlertCircle, MapPin, Calendar } from 'lucide-react'
+import { CreateTransferDto } from '@/services/transfers.service'
+import { ArrowRight, Package, Check, X, Search, AlertCircle, MapPin, Calendar } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
-// Initial Schema (Step 1: Route)
-const routeSchema = z.object({
+// Schemas
+const routeBaseSchema = z.object({
     from_warehouse_id: z.string().min(1, 'Selecciona origen'),
     to_warehouse_id: z.string().min(1, 'Selecciona destino'),
     priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
-}).refine(data => data.from_warehouse_id !== data.to_warehouse_id, {
-    message: "El destino no puede ser igual al origen",
-    path: ["to_warehouse_id"]
 })
 
-// Item Schema (Step 2: Items)
-const itemSchema = z.object({
+const itemBaseSchema = z.object({
     items: z.array(z.object({
         product_id: z.string(),
         variant_id: z.string().optional().nullable(),
@@ -59,14 +52,19 @@ const itemSchema = z.object({
     })).min(1, 'Agrega al menos un producto')
 })
 
-// Logistics Schema (Step 3: Details)
-const logisticsSchema = z.object({
+const logisticsBaseSchema = z.object({
     expected_arrival: z.string().optional(),
     note: z.string().optional(),
 })
 
-// Combine schemas for final submission
-const finalSchema = routeSchema.and(itemSchema).and(logisticsSchema)
+// Final schema with refinement
+const finalSchema = routeBaseSchema
+    .merge(itemBaseSchema)
+    .merge(logisticsBaseSchema)
+    .refine(data => data.from_warehouse_id !== data.to_warehouse_id, {
+        message: "El destino no puede ser igual al origen",
+        path: ["to_warehouse_id"]
+    })
 
 type FormValues = z.infer<typeof finalSchema>
 
@@ -89,7 +87,7 @@ export function TransferFormModal({
     const [productSearch, setProductSearch] = useState('')
 
     const form = useForm<FormValues>({
-        resolver: zodResolver(finalSchema),
+        resolver: zodResolver(finalSchema) as any,
         defaultValues: {
             from_warehouse_id: '',
             to_warehouse_id: '',

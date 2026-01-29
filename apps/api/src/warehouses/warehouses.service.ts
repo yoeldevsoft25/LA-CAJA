@@ -467,6 +467,7 @@ export class WarehousesService {
     storeId?: string,
     manager?: EntityManager,
   ): Promise<WarehouseStock> {
+    this.logger.debug(`updateStock called: warehouse=${warehouseId}, product=${productId}, variant=${variantId}, delta=${qtyDelta}`);
     const queryExecutor = manager || this.dataSource;
     // ⚡ OPTIMIZACIÓN CRÍTICA: UPDATE atómico directo sin query previa
     // Usar CASE para manejar variant_id NULL vs no-NULL eficientemente
@@ -552,6 +553,7 @@ export class WarehousesService {
       });
     }
 
+    this.logger.debug(`updateStock result: ${JSON.stringify(stockRecord)}`);
     return stockRecord;
   }
 
