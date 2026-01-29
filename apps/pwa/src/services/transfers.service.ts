@@ -76,6 +76,14 @@ export interface Transfer {
     full_name: string | null
   }
   items: TransferItem[]
+
+  // Logistics
+  driver_name?: string | null
+  vehicle_plate?: string | null
+  tracking_number?: string | null
+  shipping_cost?: number
+  priority: 'low' | 'normal' | 'high' | 'urgent'
+  expected_arrival?: string | null
 }
 
 /**
@@ -95,6 +103,8 @@ export interface CreateTransferDto {
   to_warehouse_id: string
   items: CreateTransferItemDto[]
   note?: string
+  priority?: 'low' | 'normal' | 'high' | 'urgent'
+  expected_arrival?: string
 }
 
 /**
@@ -107,6 +117,10 @@ export interface ShipTransferItemDto {
 export interface ShipTransferDto {
   items: ShipTransferItemDto[]
   note?: string
+  driver_name?: string
+  vehicle_plate?: string
+  tracking_number?: string
+  shipping_cost?: number
 }
 
 /**

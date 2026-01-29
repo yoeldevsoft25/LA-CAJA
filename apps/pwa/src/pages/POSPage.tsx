@@ -611,6 +611,7 @@ export default function POSPage() {
     price_list_id?: string | null // ID de la lista de precio
     promotion_id?: string | null // ID de la promoción
     warehouse_id?: string | null // ID de la bodega de donde se vende
+    generate_fiscal_invoice?: boolean // Si se debe generar factura fiscal
   }) => {
     if (items.length === 0) return
     setInvalidCartProductIds([])
@@ -696,6 +697,7 @@ export default function POSPage() {
       price_list_id: checkoutData.price_list_id || undefined,
       promotion_id: checkoutData.promotion_id || undefined,
       warehouse_id: checkoutData.warehouse_id || undefined,
+      generate_fiscal_invoice: checkoutData.generate_fiscal_invoice,
       // Datos para modo offline
       store_id: user?.store_id,
       user_id: user?.user_id,

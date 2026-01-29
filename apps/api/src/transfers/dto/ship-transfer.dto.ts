@@ -23,4 +23,20 @@ export class ShipTransferDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  driver_name?: string;
+
+  @IsOptional()
+  @IsString()
+  vehicle_plate?: string;
+
+  @IsOptional()
+  @IsString()
+  tracking_number?: string;
+
+  @IsOptional()
+  @Min(0)
+  shipping_cost?: number;
 }

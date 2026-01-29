@@ -19,6 +19,10 @@ export class CreateWarehouseDto {
 
   @IsOptional()
   @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
 
   @IsOptional()
@@ -26,8 +30,43 @@ export class CreateWarehouseDto {
   address?: string;
 
   @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  zip_code?: string;
+
+  @IsOptional()
+  @IsString()
+  manager_name?: string;
+
+  @IsOptional()
+  @IsString()
+  contact_phone?: string;
+
+  @IsOptional()
+  @IsString()
+  contact_email?: string;
+
+  @IsOptional()
+  capacity?: number;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
   @IsBoolean()
   is_default?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
 
   @IsOptional()
   @IsString()

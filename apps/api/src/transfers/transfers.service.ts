@@ -37,7 +37,7 @@ export class TransfersService {
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   /**
    * Genera un número único de transferencia
@@ -257,6 +257,9 @@ export class TransfersService {
     }
 
     return this.dataSource.transaction(async (manager) => {
+      // Usar repo de movimientos dentro de la transacción
+      const movementRepo = manager.getRepository('InventoryMovement');
+
       // Actualizar items y stock
       for (let i = 0; i < transfer.items.length; i++) {
         const item = transfer.items[i];
@@ -271,35 +274,77 @@ export class TransfersService {
         item.quantity_received = receivedDto.quantity_received;
         await manager.save(TransferItem, item);
 
-        // Liberar stock reservado en bodega origen
-        await this.warehousesService.releaseReservedStock(
+        // 1. Consumir stock reservado en origen (commit)
+        // Esto elimina permanentemente el stock DE LA RESERVA
+        await this.warehousesService.commitReservedStock(
           transfer.from_warehouse_id,
           item.product_id,
           item.variant_id,
-          item.quantity,
+          item.quantity, // Se consume lo que se reservó originalmente
         );
 
-        // Si se recibió menos de lo enviado, ajustar stock en origen
+        // 2. Si se recibió menos, devolver la diferencia al stock disponible en origen
         if (receivedDto.quantity_received < item.quantity_shipped) {
-          const difference =
-            item.quantity_shipped - receivedDto.quantity_received;
+          const difference = item.quantity_shipped - receivedDto.quantity_received;
           await this.warehousesService.updateStock(
             transfer.from_warehouse_id,
             item.product_id,
             item.variant_id,
-            difference, // Devolver diferencia a stock disponible
+            difference,
             storeId,
+            manager
           );
         }
 
-        // Agregar stock a bodega destino
+        // 3. Agregar stock a bodega destino
         await this.warehousesService.updateStock(
           transfer.to_warehouse_id,
           item.product_id,
           item.variant_id,
           receivedDto.quantity_received,
           storeId,
+          manager
         );
+
+        // 4. Registrar Movimiento de Salida (Transfer Out) - Origen
+        const movementOut = movementRepo.create({
+          id: randomUUID(),
+          store_id: storeId,
+          product_id: item.product_id,
+          movement_type: 'transfer_out',
+          qty_delta: -receivedDto.quantity_received,
+          unit_cost_bs: item.unit_cost_bs,
+          unit_cost_usd: item.unit_cost_usd,
+          warehouse_id: transfer.from_warehouse_id,
+          note: `Transferencia enviada #${transfer.transfer_number}`,
+          ref: { transfer_id: transfer.id },
+          happened_at: new Date(),
+          approved: true,
+          requested_by: userId,
+          approved_by: userId,
+          approved_at: new Date(),
+        });
+        await movementRepo.save(movementOut);
+
+        // 5. Registrar Movimiento de Entrada (Transfer In) - Destino
+        const movementIn = movementRepo.create({
+          id: randomUUID(),
+          store_id: storeId,
+          product_id: item.product_id,
+          movement_type: 'transfer_in',
+          qty_delta: receivedDto.quantity_received,
+          unit_cost_bs: item.unit_cost_bs,
+          unit_cost_usd: item.unit_cost_usd,
+          warehouse_id: transfer.to_warehouse_id,
+          note: `Transferencia recibida #${transfer.transfer_number}`,
+          ref: { transfer_id: transfer.id },
+          happened_at: new Date(),
+          approved: true,
+          requested_by: userId,
+          approved_by: userId,
+          approved_at: new Date(),
+        });
+        await movementRepo.save(movementIn);
       }
 
       // Actualizar transferencia
@@ -312,8 +357,7 @@ export class TransfersService {
 
       const savedTransfer = await manager.save(Transfer, transfer);
 
-      // Generar asiento contable automático (fuera de la transacción para evitar dependencias circulares)
-      // Usar setTimeout para ejecutar después de commit
+      // Generar asiento contable automático
       setImmediate(async () => {
         try {
           await this.accountingService.generateEntryFromTransfer(storeId, {

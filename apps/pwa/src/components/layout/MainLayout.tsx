@@ -74,6 +74,7 @@ import { KeyboardShortcutsHelp, useKeyboardShortcutsHelp } from '@/components/ui
 // import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { SkipLinks } from '@/components/ui/skip-links'
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge'
+import { CommandMenu } from './CommandMenu'
 
 type NavItem = {
   path: string
@@ -554,7 +555,7 @@ export default function MainLayout() {
                       className={cn(
                         "px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:no-underline group",
                         hasActiveItem
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-primary/5 text-primary shadow-sm"
                           : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                       )}
                     >
@@ -580,7 +581,7 @@ export default function MainLayout() {
                               className={cn(
                                 "relative w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ml-2",
                                 active
-                                  ? "text-primary bg-primary/5"
+                                  ? "bg-primary/10 text-primary"
                                   : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                               )}
                             >
@@ -638,10 +639,13 @@ export default function MainLayout() {
       {/* Skip Links for accessibility */}
       <SkipLinks />
 
+      {/* Command Menu (Ctrl/Cmd + K) */}
+      <CommandMenu />
+
       {/* Header */}
       {/* Header */}
       <header className={cn(
-        "sticky z-40 bg-background/60 backdrop-blur-md border-b border-white/10 shadow-sm supports-[backdrop-filter]:bg-background/60",
+        "sticky z-40 bg-background/80 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all duration-300",
         // Ajustar posición cuando el banner está visible (offline o reconexión)
         isBannerVisible ? "top-[48px]" : "top-0"
       )}>

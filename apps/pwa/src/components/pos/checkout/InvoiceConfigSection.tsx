@@ -9,6 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 
 interface InvoiceSeries {
     id: string
@@ -37,6 +38,8 @@ interface InvoiceConfigSectionProps {
     onSeriesChange: (id: string | null) => void
     onPriceListChange: (id: string | null) => void
     onWarehouseChange: (id: string | null) => void
+    generateFiscalInvoice: boolean
+    onGenerateFiscalInvoiceChange: (value: boolean) => void
     className?: string
 }
 
@@ -50,6 +53,8 @@ export default function InvoiceConfigSection({
     onSeriesChange,
     onPriceListChange,
     onWarehouseChange,
+    generateFiscalInvoice,
+    onGenerateFiscalInvoiceChange,
     className,
 }: InvoiceConfigSectionProps) {
     // Auto-select first active series when component mounts
@@ -138,7 +143,20 @@ export default function InvoiceConfigSection({
                         </Select>
                     </div>
                 )}
+
+                {/* Fiscal Invoice Toggle */}
+                <div className="flex items-center justify-between space-x-2 pt-2 border-t">
+                    <div className="space-y-0.5">
+                        <Label htmlFor="fiscal-invoice">Factura Fiscal</Label>
+                        <p className="text-[10px] text-muted-foreground">Generar documento fiscal</p>
+                    </div>
+                    <Switch
+                        id="fiscal-invoice"
+                        checked={generateFiscalInvoice}
+                        onCheckedChange={onGenerateFiscalInvoiceChange}
+                    />
+                </div>
             </CardContent>
-        </Card>
+        </Card >
     )
 }

@@ -241,7 +241,9 @@ export const debtsService = {
       }
     }
 
-    const response = await api.post<{ debt: Debt; payment: DebtPayment }>(`/debts/${debtId}/payments`, data)
+    // Excluir store_id y user_id del payload para la API (ya van en el token)
+    const { store_id, user_id, ...payload } = data
+    const response = await api.post<{ debt: Debt; payment: DebtPayment }>(`/debts/${debtId}/payments`, payload)
     return response.data
   },
 
@@ -268,9 +270,11 @@ export const debtsService = {
 
   // Pagar todas las deudas pendientes de un cliente
   async payAllDebts(customerId: string, data: CreateDebtPaymentDto): Promise<{ debts: Debt[]; payments: DebtPayment[] }> {
+    // Excluir store_id y user_id del payload para la API
+    const { store_id, user_id, ...payload } = data
     const response = await api.post<{ debts: Debt[]; payments: DebtPayment[] }>(
       `/debts/customer/${customerId}/pay-all`,
-      data
+      payload
     )
     return response.data
   },
@@ -326,7 +330,8 @@ export const debtsService = {
       } as Debt
     }
 
-    const response = await api.post<Debt>('/debts/legacy', data)
+    const { store_id, user_id, ...payload } = data
+    const response = await api.post<Debt>('/debts/legacy', payload)
     return response.data
   },
 }

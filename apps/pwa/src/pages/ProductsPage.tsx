@@ -452,31 +452,43 @@ export default function ProductsPage() {
 
       {/* KPI Cards: Minimalist Style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-6 flex flex-col justify-center">
+        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute right-0 top-0 h-32 w-32 bg-primary/5 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
+          <CardContent className="p-6 flex flex-col justify-center relative z-10">
             <div className="flex items-center justify-between space-x-2">
-              <span className="text-sm font-medium text-muted-foreground">Total Productos</span>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Total Productos</span>
+              <div className="p-2.5 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors shadow-sm">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-foreground">{total}</span>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-black tracking-tighter text-foreground">{total}</span>
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Registrados</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6 flex flex-col justify-center">
+        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute right-0 top-0 h-32 w-32 bg-orange-500/5 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
+          <CardContent className="p-6 flex flex-col justify-center relative z-10">
             <div className="flex items-center justify-between space-x-2">
-              <span className="text-sm font-medium text-muted-foreground">Alertas de Stock</span>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Alertas de Stock</span>
+              <div className="p-2.5 bg-orange-500/10 rounded-xl group-hover:bg-orange-500/20 transition-colors shadow-sm">
+                <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-foreground">{lowStockCount}</span>
-              {lowStockCount > 0 && (
-                <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                  críticos
-                </span>
-              )}
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-black tracking-tighter text-foreground">{lowStockCount}</span>
+              <span className={cn(
+                "text-xs font-bold px-2 py-0.5 rounded-lg uppercase tracking-widest",
+                lowStockCount > 0
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {lowStockCount > 0 ? 'Requieren Atención' : 'Todo en Orden'}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -525,7 +537,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filtros Flotantes */}
-      <Card className="mb-4 sm:mb-6 border-none shadow-sm bg-white/50 backdrop-blur-sm dark:bg-slate-900/50">
+      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/60 backdrop-blur-xl sticky top-0 z-20 transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-5 h-5 z-10" />
@@ -607,7 +619,7 @@ export default function ProductsPage() {
       </Card>
 
       {/* Lista de productos */}
-      <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">
+      <Card className="border-none premium-shadow overflow-hidden bg-background/50 backdrop-blur-sm ring-1 ring-border/50">
         <CardContent className="p-0">
           {isError ? (
             <div className="p-12 text-center">

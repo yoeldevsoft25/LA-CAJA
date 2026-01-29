@@ -50,4 +50,12 @@ export class CreateTransferDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+
+  @IsOptional()
+  @IsString()
+  expected_arrival?: string;
 }

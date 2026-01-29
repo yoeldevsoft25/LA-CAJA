@@ -100,6 +100,24 @@ export class Transfer {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  driver_name: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  vehicle_plate: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  tracking_number: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  shipping_cost: number;
+
+  @Column({ type: 'varchar', length: 20, default: 'normal' })
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+
+  @Column({ type: 'timestamptz', nullable: true })
+  expected_arrival: Date | null;
+
   @OneToMany(() => TransferItem, (item) => item.transfer)
   items: TransferItem[];
 }

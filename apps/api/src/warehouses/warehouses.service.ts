@@ -770,4 +770,28 @@ export class WarehousesService {
       [quantity, warehouseId, productId, variantId],
     );
   }
+  /**
+   * Confirma la salida de stock reservado (lo elimina permanentemente)
+   */
+  async commitReservedStock(
+    warehouseId: string,
+    productId: string,
+    variantId: string | null,
+    quantity: number,
+  ): Promise<void> {
+    const stock = await this.findStockRecord(warehouseId, productId, variantId);
+
+    if (!stock || stock.reserved < quantity) {
+      throw new BadRequestException('Stock reservado insuficiente para confirmar salida');
+    }
+
+    await this.dataSource.query(
+      `UPDATE warehouse_stock 
+       SET reserved = reserved - $1, updated_at = NOW() 
+       WHERE warehouse_id = $2 
+         AND product_id = $3 
+         AND (($4::uuid IS NULL AND variant_id IS NULL) OR variant_id = $4::uuid)`,
+      [quantity, warehouseId, productId, variantId],
+    );
+  }
 }

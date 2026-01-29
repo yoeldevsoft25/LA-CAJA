@@ -1,6 +1,16 @@
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Edit, Warehouse as WarehouseIcon, CheckCircle, XCircle, Package, AlertTriangle } from 'lucide-react'
+import {
+  Plus,
+  Edit,
+  Warehouse as WarehouseIcon,
+  Package,
+  AlertTriangle,
+  MapPin,
+  User,
+  Phone
+} from 'lucide-react'
 import {
   warehousesService,
   Warehouse,
@@ -11,14 +21,12 @@ import { inventoryService } from '@/services/inventory.service'
 import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -33,9 +41,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { WarehouseFormModal } from '@/components/warehouses/WarehouseFormModal'
+import { cn } from '@/lib/utils'
 
 export default function WarehousesPage() {
   const { user } = useAuth()
@@ -44,6 +52,8 @@ export default function WarehousesPage() {
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null)
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null)
   const [showStock, setShowStock] = useState(false)
+
+  // Delete states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | null>(null)
   const [stockCount, setStockCount] = useState<number>(0)
@@ -52,7 +62,7 @@ export default function WarehousesPage() {
   // Obtener bodegas
   const { data: warehouses = [], isLoading } = useQuery({
     queryKey: ['warehouses'],
-    queryFn: () => warehousesService.getAll(),
+    queryFn: () => warehousesService.getAll(true), // Include Inactive to show them
     enabled: !!user?.store_id,
   })
 
@@ -122,27 +132,33 @@ export default function WarehousesPage() {
     setShowStock(true)
   }
 
-  const handleCloseForm = () => {
-    setIsFormOpen(false)
-    setEditingWarehouse(null)
+  const handleSubmit = (data: CreateWarehouseDto | UpdateWarehouseDto) => {
+    if (editingWarehouse) {
+      updateMutation.mutate({ id: editingWarehouse.id, data })
+    } else {
+      createMutation.mutate(data as CreateWarehouseDto)
+    }
   }
 
-  const handleDelete = async (warehouse: Warehouse) => {
+  // --- DELETE LOGIC ---
+  const triggerDelete = async (warehouse: Warehouse) => {
+    // Close form if it was triggered from there
+    setIsFormOpen(false)
+
     setWarehouseToDelete(warehouse)
     setIsCheckingStock(true)
-    
+    setShowDeleteConfirm(true) // Show dialog immediately
+
     try {
-      // Verificar stock en la bodega antes de eliminar
+      // Check stock
       const stockStatus = await inventoryService.getStockStatus({ warehouse_id: warehouse.id })
       const totalStock = stockStatus.reduce((sum, item) => sum + Number(item.current_stock || 0), 0)
       setStockCount(totalStock)
     } catch {
-      // Si falla la verificación, asumir que puede tener stock
-      setStockCount(-1)
+      setStockCount(-1) // Error state
+    } finally {
+      setIsCheckingStock(false)
     }
-    
-    setIsCheckingStock(false)
-    setShowDeleteConfirm(true)
   }
 
   const confirmDelete = () => {
@@ -160,343 +176,267 @@ export default function WarehousesPage() {
     setStockCount(0)
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const data: CreateWarehouseDto | UpdateWarehouseDto = {
-      name: formData.get('name') as string,
-      code: formData.get('code') as string,
-      description: (formData.get('description') as string) || undefined,
-      address: (formData.get('address') as string) || undefined,
-      is_default: formData.get('is_default') === 'on',
-      note: (formData.get('note') as string) || undefined,
+  // --- HELPERS ---
+  const getTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      'STORE': 'Tienda',
+      'MAIN': 'Principal',
+      'SHOWROOM': 'Showroom',
+      'TRANSIT': 'Tránsito',
+      'DAMAGED': 'Merma'
     }
+    return types[type] || type
+  }
 
-    if (editingWarehouse) {
-      updateMutation.mutate({ id: editingWarehouse.id, data })
-    } else {
-      createMutation.mutate(data as CreateWarehouseDto)
+  const getTypeColor = (type: string) => {
+    const types: Record<string, string> = {
+      'STORE': 'bg-blue-100 text-blue-800 border-blue-200',
+      'MAIN': 'bg-purple-100 text-purple-800 border-purple-200',
+      'SHOWROOM': 'bg-pink-100 text-pink-800 border-pink-200',
+      'TRANSIT': 'bg-amber-100 text-amber-800 border-amber-200',
+      'DAMAGED': 'bg-red-100 text-red-800 border-red-200'
+    }
+    return types[type] || 'bg-gray-100 text-gray-800 border-gray-200'
+  }
+
+  const getStatusBadge = (status: string, isActive: boolean) => {
+    if (!isActive) return <Badge variant="secondary">Inactiva</Badge>
+
+    switch (status) {
+      case 'OPERATIONAL':
+        return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">Operativo</Badge>
+      case 'MAINTENANCE':
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100">Mantenimiento</Badge>
+      case 'CLOSED':
+        return <Badge variant="destructive">Cerrado</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
     }
   }
 
   return (
-    <div className="h-full max-w-7xl mx-auto space-y-6">
+    <div className="h-full max-w-7xl mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Bodegas</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Gestiona múltiples bodegas/almacenes y su inventario
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Gestión de Bodegas</h1>
+          <p className="text-muted-foreground mt-1">
+            Administra tus almacenes, sucursales y puntos de stock
           </p>
         </div>
-        <Button onClick={handleCreate} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">Nueva Bodega</span>
-          <span className="sm:hidden">Nueva</span>
+        <Button onClick={handleCreate} className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all">
+          <Plus className="w-4 h-4 mr-2" />
+          Nueva Bodega
         </Button>
       </div>
 
-      {/* Lista de bodegas */}
+      {/* Grid Content */}
       {isLoading ? (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-muted-foreground">Cargando...</p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="h-24 bg-muted/50" />
+              <CardContent className="h-32" />
+            </Card>
+          ))}
+        </div>
       ) : warehouses.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <WarehouseIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No hay bodegas creadas</p>
-            <Button onClick={handleCreate} className="mt-4">
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <div className="p-4 rounded-full bg-primary/10 mb-4">
+              <WarehouseIcon className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold">No hay bodegas registradas</h3>
+            <p className="text-muted-foreground mt-2 mb-6 max-w-sm">
+              Comienza creando tu primera bodega o almacén para gestionar tu inventario correctamente.
+            </p>
+            <Button onClick={handleCreate}>
               Crear primera bodega
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {warehouses.map((warehouse) => (
-            <Card key={warehouse.id} className="border border-border">
-              <CardHeader>
+            <Card key={warehouse.id} className="group hover:shadow-lg transition-all duration-300 border-border/60">
+              <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{warehouse.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">Código: {warehouse.code}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium border uppercase tracking-wider", getTypeColor(warehouse.type || 'STORE'))}>
+                        {getTypeLabel(warehouse.type || 'STORE')}
+                      </span>
+                      {warehouse.is_default && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium border bg-primary/10 text-primary border-primary/20">
+                          Principal
+                        </span>
+                      )}
+                    </div>
+                    <CardTitle className="text-xl font-bold leading-tight">{warehouse.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground font-mono">{warehouse.code}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(warehouse)}
-                      className="h-8 w-8"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                  <div className="flex flex-col items-end gap-2">
+                    {getStatusBadge(warehouse.status, warehouse.is_active)}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {warehouse.is_active ? (
-                      <Badge variant="default" className="bg-success">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Activa
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Inactiva
-                      </Badge>
-                    )}
-                    {warehouse.is_default && <Badge variant="outline">Por defecto</Badge>}
-                  </div>
-                  {warehouse.description && (
-                    <p className="text-sm text-muted-foreground">{warehouse.description}</p>
+
+              <CardContent className="pb-3 grid gap-4">
+                {/* Details Grid */}
+                <div className="space-y-2 text-sm">
+                  {warehouse.manager_name && (
+                    <div className="flex items-center text-muted-foreground">
+                      <User className="w-4 h-4 mr-2 opacity-70" />
+                      <span>{warehouse.manager_name}</span>
+                    </div>
                   )}
-                  {warehouse.address && (
-                    <p className="text-xs text-muted-foreground">📍 {warehouse.address}</p>
+                  {(warehouse.city || warehouse.address) && (
+                    <div className="flex items-start text-muted-foreground">
+                      <MapPin className="w-4 h-4 mr-2 opacity-70 mt-0.5" />
+                      <span className="line-clamp-2">
+                        {[warehouse.address, warehouse.city].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
                   )}
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewStock(warehouse)}
-                      className="flex-1"
-                    >
-                      <Package className="w-4 h-4 mr-2" />
-                      Ver Stock
-                    </Button>
-                  </div>
+                  {warehouse.contact_phone && (
+                    <div className="flex items-center text-muted-foreground">
+                      <Phone className="w-4 h-4 mr-2 opacity-70" />
+                      <span>{warehouse.contact_phone}</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Description if exists */}
+                {warehouse.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 border-l-2 pl-2 italic">
+                    {warehouse.description}
+                  </p>
+                )}
               </CardContent>
+
+              <CardFooter className="pt-3 border-t bg-muted/20 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 bg-background hover:bg-background/80"
+                  onClick={() => handleViewStock(warehouse)}
+                >
+                  <Package className="w-3.5 h-3.5 mr-2" />
+                  Ver Stock
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleEdit(warehouse)}
+                >
+                  <Edit className="w-3.5 h-3.5 mr-2" />
+                  Gestionar
+                </Button>
+              </CardFooter>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Modal de formulario */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              {editingWarehouse ? 'Editar Bodega' : 'Nueva Bodega'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingWarehouse
-                ? 'Modifica los datos de la bodega'
-                : 'Crea una nueva bodega/almacén para gestionar inventario'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
-              <div className="space-y-4 sm:space-y-5">
-              <div>
-                <Label htmlFor="name">Nombre *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  defaultValue={editingWarehouse?.name}
-                  required
-                  maxLength={100}
-                />
-              </div>
-              <div>
-                <Label htmlFor="code">Código *</Label>
-                <Input
-                  id="code"
-                  name="code"
-                  defaultValue={editingWarehouse?.code}
-                  required
-                  maxLength={50}
-                  placeholder="BODEGA1, ALMACEN_PRINCIPAL, etc."
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Código único para identificar la bodega
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="description">Descripción</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  defaultValue={editingWarehouse?.description || ''}
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Dirección</Label>
-                <Textarea
-                  id="address"
-                  name="address"
-                  defaultValue={editingWarehouse?.address || ''}
-                  rows={2}
-                  placeholder="Dirección física de la bodega"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_default"
-                  name="is_default"
-                  defaultChecked={editingWarehouse?.is_default}
-                  className="w-4 h-4"
-                />
-                <Label htmlFor="is_default" className="cursor-pointer">
-                  Marcar como bodega por defecto
-                </Label>
-              </div>
-              {editingWarehouse && (
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    name="is_active"
-                    defaultChecked={editingWarehouse?.is_active ?? true}
-                    className="w-4 h-4"
-                  />
-                  <Label htmlFor="is_active" className="cursor-pointer">
-                    Activa
-                  </Label>
-                </div>
-              )}
-              <div>
-                <Label htmlFor="note">Notas</Label>
-                <Textarea
-                  id="note"
-                  name="note"
-                  defaultValue={editingWarehouse?.note || ''}
-                  rows={2}
-                />
-              </div>
-            </div>
-            </div>
-            <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
-              <Button type="button" variant="outline" onClick={handleCloseForm}>
-                Cancelar
-              </Button>
-              {editingWarehouse && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => handleDelete(editingWarehouse)}
-                  disabled={deleteMutation.isPending}
-                >
-                  {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
-                </Button>
-              )}
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? 'Guardando...'
-                  : editingWarehouse
-                    ? 'Actualizar'
-                    : 'Crear'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Warehouse Form Modal (New Component) */}
+      <WarehouseFormModal
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        initialData={editingWarehouse}
+        onSubmit={handleSubmit}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        onDelete={triggerDelete}
+      />
 
-      {/* Modal de stock */}
+      {/* Stock Preview Modal */}
       <Dialog open={showStock} onOpenChange={setShowStock}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>
-              Stock - {selectedWarehouse?.name} ({selectedWarehouse?.code})
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-primary" />
+              Inventario: {selectedWarehouse?.name}
             </DialogTitle>
             <DialogDescription>
-              Inventario disponible y reservado en esta bodega
+              Vista rápida de existencias. Para ajustes detallados visita la sección de Inventario.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            {warehouseStock.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No hay productos en esta bodega
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {warehouseStock.map((stock) => (
-                  <Card key={stock.id} className="border border-border">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">
-                            {stock.product?.name || 'Producto'}
-                            {stock.variant && (
-                              <span className="text-muted-foreground ml-2">
-                                ({stock.variant.variant_type}: {stock.variant.variant_value})
-                              </span>
-                            )}
-                          </p>
-                          {stock.product?.sku && (
-                            <p className="text-xs text-muted-foreground">SKU: {stock.product.sku}</p>
+          <div className="border rounded-md">
+            <ScrollArea className="h-[50vh]">
+              {warehouseStock.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+                  <Package className="w-8 h-8 mb-2 opacity-20" />
+                  <p>Esta bodega no tiene existencias registradas</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {warehouseStock.map((stock) => (
+                    <div key={stock.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                      <div className="flex-1 min-w-0 mr-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium truncate">{stock.product?.name}</p>
+                          {stock.variant && (
+                            <Badge variant="secondary" className="text-[10px] h-5">
+                              {stock.variant.variant_type}: {stock.variant.variant_value}
+                            </Badge>
                           )}
                         </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-4">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Disponible</p>
-                              <p className="text-lg font-bold text-foreground">{stock.stock}</p>
-                            </div>
-                            {stock.reserved > 0 && (
-                              <div>
-                                <p className="text-xs text-muted-foreground">Reservado</p>
-                                <p className="text-lg font-bold text-warning">{stock.reserved}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          SKU: {stock.product?.sku || 'N/A'}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
+                      <div className="flex gap-6 text-right">
+                        <div>
+                          <p className="text-[10px] uppercase text-muted-foreground font-semibold">Disponible</p>
+                          <p className="text-lg font-bold font-mono">{stock.stock}</p>
+                        </div>
+                        {stock.reserved > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase text-muted-foreground font-semibold">Reservado</p>
+                            <p className="text-lg font-bold text-amber-600 font-mono">{stock.reserved}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+          <div className="bg-muted/40 -mx-6 -mb-6 p-4 border-t flex justify-end">
+            <Button variant="outline" onClick={() => setShowStock(false)}>Cerrar</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de confirmación de eliminación */}
+      {/* Delete Confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              {stockCount > 0 ? (
-                <>
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                  ¡Advertencia! Bodega con stock
-                </>
-              ) : (
-                <>Eliminar Bodega</>
-              )}
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Eliminar Bodega
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+            <AlertDialogDescription className="space-y-3 pt-2">
               {isCheckingStock ? (
-                <p>Verificando stock en la bodega...</p>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Verificando inventario...
+                </div>
               ) : stockCount > 0 ? (
-                <>
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      Esta bodega tiene <strong>{stockCount.toLocaleString()}</strong> unidades de productos.
-                      Eliminarla causará pérdida de información de inventario.
-                    </AlertDescription>
-                  </Alert>
-                  <p className="text-sm">
-                    Se recomienda transferir el stock a otra bodega antes de eliminar.
-                  </p>
-                </>
-              ) : stockCount === 0 ? (
-                <p>
-                  ¿Estás seguro de eliminar la bodega <strong>"{warehouseToDelete?.name}"</strong>?
-                  Esta acción no se puede deshacer.
-                </p>
+                <Alert variant="destructive" className="border-destructive/20 bg-destructive/10">
+                  <AlertDescription>
+                    <strong>¡Acción Peligrosa!</strong> <br />
+                    Esta bodega contiene <strong>{stockCount}</strong> unidades en inventario.
+                    Eliminarla provocará inconsistencias graves en el stock.
+                    <br /><br />
+                    Por favor, transfiere o ajusta el stock a 0 antes de continuar.
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <p>
-                  No se pudo verificar el stock. ¿Deseas continuar de todas formas?
+                  ¿Estás seguro que deseas eliminar permanentemente <strong>"{warehouseToDelete?.name}"</strong>?
+                  Esta acción no se puede deshacer.
                 </p>
               )}
             </AlertDialogDescription>
@@ -505,14 +445,10 @@ export default function WarehousesPage() {
             <AlertDialogCancel onClick={cancelDelete}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className={stockCount > 0 ? 'bg-red-600 hover:bg-red-700' : ''}
-              disabled={deleteMutation.isPending}
+              className={stockCount > 0 ? 'bg-destructive/80 hover:bg-destructive' : 'bg-destructive hover:bg-destructive/90'}
+              disabled={deleteMutation.isPending || stockCount > 0 || isCheckingStock}
             >
-              {deleteMutation.isPending
-                ? 'Eliminando...'
-                : stockCount > 0
-                ? 'Eliminar de todas formas'
-                : 'Eliminar'}
+              {deleteMutation.isPending ? 'Eliminando...' : 'Confirmar Eliminación'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

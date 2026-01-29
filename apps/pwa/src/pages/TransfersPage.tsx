@@ -7,24 +7,23 @@ import {
   XCircle,
   Clock,
   ArrowRight,
-  X,
+  Package,
+  Calendar,
 } from 'lucide-react'
 import {
   transfersService,
   Transfer,
   TransferStatus,
   CreateTransferDto,
-  CreateTransferItemDto,
   ShipTransferDto,
   ReceiveTransferDto,
 } from '@/services/transfers.service'
 import { warehousesService } from '@/services/warehouses.service'
-import { productsService, Product } from '@/services/products.service'
 import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -36,13 +35,9 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TransferFormModal } from '@/components/transfers/TransferFormModal'
+import { cn } from '@/lib/utils'
 
 export default function TransfersPage() {
   const { user } = useAuth()
@@ -52,13 +47,7 @@ export default function TransfersPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isShipOpen, setIsShipOpen] = useState(false)
   const [isReceiveOpen, setIsReceiveOpen] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<TransferStatus | 'all'>('all')
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all')
-
-  // Estados para crear transferencia
-  const [fromWarehouseId, setFromWarehouseId] = useState<string>('')
-  const [toWarehouseId, setToWarehouseId] = useState<string>('')
-  const [transferItems, setTransferItems] = useState<CreateTransferItemDto[]>([])
 
   // Obtener bodegas
   const { data: warehouses = [] } = useQuery({
@@ -67,24 +56,19 @@ export default function TransfersPage() {
     enabled: !!user?.store_id,
   })
 
-  // Obtener transferencias
-  const { data: transfers = [], isLoading } = useQuery({
-    queryKey: ['transfers', statusFilter, warehouseFilter],
+  const { data: allTransfers = [], isLoading } = useQuery({
+    queryKey: ['transfers', warehouseFilter],
     queryFn: () =>
       transfersService.getAll(
-        statusFilter !== 'all' ? statusFilter : undefined,
+        undefined, // Get all statuses
         warehouseFilter !== 'all' ? warehouseFilter : undefined
       ),
     enabled: !!user?.store_id,
   })
 
-  // Obtener productos para agregar items
-  const [productSearch, setProductSearch] = useState('')
-  const { data: productsData } = useQuery({
-    queryKey: ['products', 'search', productSearch],
-    queryFn: () => productsService.search({ q: productSearch, limit: 20 }),
-    enabled: productSearch.length >= 2,
-  })
+  // Filtrar en cliente para las pestañas
+  const activeTransfers = allTransfers.filter(t => ['pending', 'in_transit'].includes(t.status))
+  const historyTransfers = allTransfers.filter(t => ['completed', 'cancelled'].includes(t.status))
 
   // Mutación para crear transferencia
   const createMutation = useMutation({
@@ -94,7 +78,6 @@ export default function TransfersPage() {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] })
       toast.success('Transferencia creada exitosamente')
       setIsFormOpen(false)
-      resetForm()
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Error al crear la transferencia'
@@ -108,7 +91,6 @@ export default function TransfersPage() {
       transfersService.ship(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] })
-      queryClient.invalidateQueries({ queryKey: ['warehouses'] })
       toast.success('Transferencia marcada como enviada')
       setIsShipOpen(false)
       setSelectedTransfer(null)
@@ -126,7 +108,7 @@ export default function TransfersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] })
       queryClient.invalidateQueries({ queryKey: ['warehouses'] })
-      toast.success('Transferencia marcada como recibida')
+      toast.success('Transferencia recibida correctamente')
       setIsReceiveOpen(false)
       setSelectedTransfer(null)
     },
@@ -141,7 +123,6 @@ export default function TransfersPage() {
     mutationFn: (id: string) => transfersService.cancel(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfers'] })
-      queryClient.invalidateQueries({ queryKey: ['warehouses'] })
       toast.success('Transferencia cancelada')
       setIsDetailOpen(false)
       setSelectedTransfer(null)
@@ -152,14 +133,7 @@ export default function TransfersPage() {
     },
   })
 
-  const resetForm = () => {
-    setFromWarehouseId('')
-    setToWarehouseId('')
-    setTransferItems([])
-  }
-
   const handleCreate = () => {
-    resetForm()
     setIsFormOpen(true)
   }
 
@@ -188,69 +162,6 @@ export default function TransfersPage() {
     }
   }
 
-  const addTransferItem = (product: Product) => {
-    const existingItem = transferItems.find((item) => item.product_id === product.id)
-    if (existingItem) {
-      setTransferItems(
-        transferItems.map((item) =>
-          item.product_id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        )
-      )
-    } else {
-      setTransferItems([
-        ...transferItems,
-        {
-          product_id: product.id,
-          quantity: 1,
-          unit_cost_bs: Number(product.cost_bs),
-          unit_cost_usd: Number(product.cost_usd),
-        },
-      ])
-    }
-    setProductSearch('')
-  }
-
-  const removeTransferItem = (productId: string) => {
-    setTransferItems(transferItems.filter((item) => item.product_id !== productId))
-  }
-
-  const updateTransferItemQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeTransferItem(productId)
-    } else {
-      setTransferItems(
-        transferItems.map((item) =>
-          item.product_id === productId ? { ...item, quantity } : item
-        )
-      )
-    }
-  }
-
-  const handleSubmitTransfer = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!fromWarehouseId || !toWarehouseId) {
-      toast.error('Selecciona bodega origen y destino')
-      return
-    }
-    if (transferItems.length === 0) {
-      toast.error('Agrega al menos un producto')
-      return
-    }
-    if (fromWarehouseId === toWarehouseId) {
-      toast.error('La bodega origen y destino deben ser diferentes')
-      return
-    }
-
-    const data: CreateTransferDto = {
-      from_warehouse_id: fromWarehouseId,
-      to_warehouse_id: toWarehouseId,
-      items: transferItems,
-      note: (new FormData(e.currentTarget).get('note') as string) || undefined,
-    }
-
-    createMutation.mutate(data)
-  }
-
   const handleShipSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!selectedTransfer) return
@@ -263,6 +174,10 @@ export default function TransfersPage() {
     const data: ShipTransferDto = {
       items,
       note: (formData.get('note') as string) || undefined,
+      driver_name: (formData.get('driver_name') as string) || undefined,
+      vehicle_plate: (formData.get('vehicle_plate') as string) || undefined,
+      tracking_number: (formData.get('tracking_number') as string) || undefined,
+      shipping_cost: Number(formData.get('shipping_cost')) || undefined,
     }
 
     shipMutation.mutate({ id: selectedTransfer.id, data })
@@ -287,409 +202,220 @@ export default function TransfersPage() {
 
   const getStatusBadge = (status: TransferStatus) => {
     const statusConfig = {
-      pending: { label: 'Pendiente', variant: 'secondary' as const, icon: Clock },
-      in_transit: { label: 'En Tránsito', variant: 'default' as const, icon: Truck },
-      completed: { label: 'Completada', variant: 'default' as const, icon: CheckCircle },
-      cancelled: { label: 'Cancelada', variant: 'destructive' as const, icon: XCircle },
+      pending: { label: 'Pendiente', variant: 'secondary' as const, icon: Clock, className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
+      in_transit: { label: 'En Tránsito', variant: 'default' as const, icon: Truck, className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse" },
+      completed: { label: 'Completada', variant: 'default' as const, icon: CheckCircle, className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+      cancelled: { label: 'Cancelada', variant: 'destructive' as const, icon: XCircle, className: "" },
     }
     const config = statusConfig[status]
     const Icon = config.icon
     return (
-      <Badge variant={config.variant}>
+      <Badge variant={config.variant} className={config.className}>
         <Icon className="w-3 h-3 mr-1" />
         {config.label}
       </Badge>
     )
   }
 
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return <Badge variant="destructive" className="ml-2 text-[10px] px-1 py-0 h-5">URGENTE</Badge>
+      case 'high': return <Badge variant="destructive" className="ml-2 text-[10px] px-1 py-0 h-5 bg-orange-500 hover:bg-orange-600">ALTA</Badge>
+      default: return null
+    }
+  }
+
+  const TransferCard = ({ transfer }: { transfer: Transfer }) => (
+    <Card className="hover:border-primary/50 transition-colors">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center">
+              <CardTitle className="text-lg font-mono">
+                {transfer.transfer_number}
+              </CardTitle>
+              {getPriorityBadge(transfer.priority)}
+            </div>
+
+            <div className="flex items-center gap-2 mt-2">
+              {getStatusBadge(transfer.status)}
+              <span className="text-xs text-muted-foreground flex items-center">
+                <Calendar className="w-3 h-3 mr-1" />
+                {new Date(transfer.created_at).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-3">
+        <div className="flex items-center justify-between text-sm p-3 bg-muted/30 rounded-lg mb-3">
+          <div className="flex flex-col">
+            <span className="text-xs text-muted-foreground mb-1">Origen</span>
+            <span className="font-medium flex items-center">
+              <Package className="w-3 h-3 mr-1 text-muted-foreground" />
+              {transfer.from_warehouse?.name}
+            </span>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+          <div className="flex flex-col text-right">
+            <span className="text-xs text-muted-foreground mb-1">Destino</span>
+            <span className="font-medium flex items-center justify-end">
+              {transfer.to_warehouse?.name}
+              <Package className="w-3 h-3 ml-1 text-muted-foreground" />
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div>
+            {transfer.items.length} items
+          </div>
+          <div>
+            {transfer.expected_arrival && (
+              <span className="text-orange-600 dark:text-orange-400 font-medium">
+                Llegada: {new Date(transfer.expected_arrival).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="pt-0 flex justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={() => handleViewDetail(transfer)}>
+          Ver Detalles
+        </Button>
+        {transfer.status === 'pending' && (
+          <>
+            <Button variant="outline" size="sm" onClick={() => handleShip(transfer)}>
+              <Truck className="w-4 h-4 mr-2" />
+              Enviar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleCancel(transfer)}
+            >
+              <XCircle className="w-4 h-4" />
+            </Button>
+          </>
+        )}
+        {transfer.status === 'in_transit' && (
+          <Button variant="default" size="sm" onClick={() => handleReceive(transfer)}>
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Recibir
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  )
+
   return (
-    <div className="h-full max-w-7xl mx-auto space-y-6">
+    <div className="h-full max-w-7xl mx-auto space-y-6 p-2 sm:p-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Transferencias</h1>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Transferencias</h1>
           <p className="text-muted-foreground mt-1">
-            Gestiona transferencias de inventario entre bodegas
+            Movimientos de inventario entre bodegas
           </p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} className="shadow-lg hover:shadow-xl transition-all">
           <Plus className="w-4 h-4 mr-2" />
           Nueva Transferencia
         </Button>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Label>Estado</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pending">Pendiente</SelectItem>
-                  <SelectItem value="in_transit">En Tránsito</SelectItem>
-                  <SelectItem value="completed">Completada</SelectItem>
-                  <SelectItem value="cancelled">Cancelada</SelectItem>
-                </SelectContent>
-              </Select>
+      <Tabs defaultValue="active" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="active">Activas ({activeTransfers.length})</TabsTrigger>
+          <TabsTrigger value="history">Historial ({historyTransfers.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-4">
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">Cargando transferencias...</div>
+          ) : activeTransfers.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg bg-muted/10">
+              <Truck className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-medium">No hay transferencias activas</h3>
+              <p className="text-muted-foreground">Crea una nueva transferencia para comenzar.</p>
             </div>
-            <div className="flex-1">
-              <Label>Bodega</Label>
-              <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {warehouses.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Lista de transferencias */}
-      {isLoading ? (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-muted-foreground">Cargando...</p>
-          </CardContent>
-        </Card>
-      ) : transfers.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Truck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No hay transferencias</p>
-            <Button onClick={handleCreate} className="mt-4">
-              Crear primera transferencia
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {transfers.map((transfer) => (
-            <Card key={transfer.id} className="border border-border">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">
-                      {transfer.transfer_number}
-                    </CardTitle>
-                    <div className="flex items-center gap-4 mt-2">
-                      {getStatusBadge(transfer.status)}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{transfer.from_warehouse?.name}</span>
-                        <ArrowRight className="w-4 h-4" />
-                        <span>{transfer.to_warehouse?.name}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleViewDetail(transfer)}>
-                      Ver Detalles
-                    </Button>
-                    {transfer.status === 'pending' && (
-                      <>
-                        <Button variant="default" size="sm" onClick={() => handleShip(transfer)}>
-                          Enviar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleCancel(transfer)}
-                        >
-                          Cancelar
-                        </Button>
-                      </>
-                    )}
-                    {transfer.status === 'in_transit' && (
-                      <Button variant="default" size="sm" onClick={() => handleReceive(transfer)}>
-                        Recibir
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">
-                  <p>
-                    Solicitada: {new Date(transfer.requested_at).toLocaleString()}
-                    {transfer.requested_by_user && ` por ${transfer.requested_by_user.full_name}`}
-                  </p>
-                  {transfer.shipped_at && (
-                    <p>
-                      Enviada: {new Date(transfer.shipped_at).toLocaleString()}
-                      {transfer.shipped_by_user && ` por ${transfer.shipped_by_user.full_name}`}
-                    </p>
-                  )}
-                  {transfer.received_at && (
-                    <p>
-                      Recibida: {new Date(transfer.received_at).toLocaleString()}
-                      {transfer.received_by_user && ` por ${transfer.received_by_user.full_name}`}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Modal de crear transferencia */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-            <DialogTitle className="text-lg sm:text-xl">Nueva Transferencia</DialogTitle>
-            <DialogDescription>
-              Crea una nueva transferencia de inventario entre bodegas
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitTransfer} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
-              <div className="space-y-4 sm:space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="from_warehouse">Bodega Origen *</Label>
-                  <Select value={fromWarehouseId} onValueChange={setFromWarehouseId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona bodega origen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {warehouses
-                        .filter((w) => w.is_active)
-                        .map((w) => (
-                          <SelectItem key={w.id} value={w.id}>
-                            {w.name} ({w.code})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="to_warehouse">Bodega Destino *</Label>
-                  <Select value={toWarehouseId} onValueChange={setToWarehouseId} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona bodega destino" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {warehouses
-                        .filter((w) => w.is_active && w.id !== fromWarehouseId)
-                        .map((w) => (
-                          <SelectItem key={w.id} value={w.id}>
-                            {w.name} ({w.code})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label>Productos</Label>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      placeholder="Buscar producto..."
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                    />
-                    {productSearch.length >= 2 && productsData?.products && (
-                      <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {productsData.products.map((product) => (
-                          <button
-                            key={product.id}
-                            type="button"
-                            onClick={() => addTransferItem(product)}
-                            className="w-full text-left px-4 py-2 hover:bg-accent transition-colors"
-                          >
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              ${Number(product.price_usd).toFixed(2)} USD
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {transferItems.length > 0 && (
-                    <div className="space-y-2 mt-4">
-                      {transferItems.map((item) => {
-                        const product = productsData?.products.find((p) => p.id === item.product_id)
-                        return (
-                          <Card key={item.product_id} className="border border-border">
-                            <CardContent className="p-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="font-medium">{product?.name || 'Producto'}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Costo: ${Number(item.unit_cost_usd).toFixed(2)} USD
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    value={item.quantity}
-                                    onChange={(e) =>
-                                      updateTransferItemQuantity(
-                                        item.product_id,
-                                        parseInt(e.target.value) || 1
-                                      )
-                                    }
-                                    className="w-20"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeTransferItem(item.product_id)}
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="note">Notas</Label>
-                <Textarea id="note" name="note" rows={2} />
-              </div>
-            </div>
-            </div>
-            <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Creando...' : 'Crear Transferencia'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de detalles */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-            <DialogTitle className="text-lg sm:text-xl">
-              Transferencia {selectedTransfer?.transfer_number}
-            </DialogTitle>
-            <DialogDescription>Detalles de la transferencia</DialogDescription>
-          </DialogHeader>
-          {selectedTransfer && (
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
-              <div className="space-y-4 sm:space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Estado</Label>
-                  <div>{getStatusBadge(selectedTransfer.status)}</div>
-                </div>
-                <div>
-                  <Label>Bodegas</Label>
-                  <div className="flex items-center gap-2">
-                    <span>{selectedTransfer.from_warehouse?.name}</span>
-                    <ArrowRight className="w-4 h-4" />
-                    <span>{selectedTransfer.to_warehouse?.name}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label>Items</Label>
-                <div className="space-y-2 mt-2">
-                  {selectedTransfer.items.map((item) => (
-                    <Card key={item.id} className="border border-border">
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium">
-                              {item.product?.name || 'Producto'}
-                              {item.variant && (
-                                <span className="text-muted-foreground ml-2">
-                                  ({item.variant.variant_type}: {item.variant.variant_value})
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm">
-                            <div>
-                              <p className="text-muted-foreground">Solicitado</p>
-                              <p className="font-bold">{item.quantity}</p>
-                            </div>
-                            {item.quantity_shipped > 0 && (
-                              <div>
-                                <p className="text-muted-foreground">Enviado</p>
-                                <p className="font-bold">{item.quantity_shipped}</p>
-                              </div>
-                            )}
-                            {item.quantity_received > 0 && (
-                              <div>
-                                <p className="text-muted-foreground">Recibido</p>
-                                <p className="font-bold text-success">{item.quantity_received}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              {selectedTransfer.note && (
-                <div>
-                  <Label>Notas</Label>
-                  <p className="text-sm text-muted-foreground">{selectedTransfer.note}</p>
-                </div>
-              )}
-            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {activeTransfers.map(transfer => (
+                <TransferCard key={transfer.id} transfer={transfer} />
+              ))}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">Cargando historial...</div>
+          ) : historyTransfers.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg bg-muted/10">
+              <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-medium">Sin historial</h3>
+              <p className="text-muted-foreground">Las transferencias completadas o canceladas aparecerán aquí.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-80">
+              {historyTransfers.map(transfer => (
+                <TransferCard key={transfer.id} transfer={transfer} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* MODAL: Nueva Transferencia (Stepper) */}
+      <TransferFormModal
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        warehouses={warehouses}
+        onSubmit={(data) => createMutation.mutate(data)}
+        isSubmitting={createMutation.isPending}
+      />
 
       {/* Modal de enviar */}
       <Dialog open={isShipOpen} onOpenChange={setIsShipOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-            <DialogTitle className="text-lg sm:text-xl">Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
-              Indica las cantidades enviadas de cada producto
+              Completa los datos de envío y logística
             </DialogDescription>
           </DialogHeader>
           {selectedTransfer && (
-            <form onSubmit={handleShipSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
-                <div className="space-y-4 sm:space-y-5">
+            <form onSubmit={handleShipSubmit} className="space-y-4">
+              {/* Logistics Info */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+                <div className="space-y-2">
+                  <Label>Conductor</Label>
+                  <Input name="driver_name" placeholder="Nombre del chofer" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Placa / Vehículo</Label>
+                  <Input name="vehicle_plate" placeholder="ABC-123" />
+                </div>
+                <div className="space-y-2">
+                  <Label>No. Guía / Tracking</Label>
+                  <Input name="tracking_number" placeholder="Opcional" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Costo de Envío</Label>
+                  <Input name="shipping_cost" type="number" min="0" step="0.01" placeholder="0.00" />
+                </div>
+              </div>
+
+              <div className="max-h-[300px] overflow-y-auto space-y-4">
                 {selectedTransfer.items.map((item, index) => (
-                  <div key={item.id} className="space-y-2">
-                    <Label>
-                      {item.product?.name || 'Producto'}
-                      {item.variant && ` (${item.variant.variant_type}: ${item.variant.variant_value})`}
-                    </Label>
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm text-muted-foreground">
-                        Solicitado: {item.quantity}
-                      </div>
+                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm">{item.product?.name}</p>
+                      <p className="text-xs text-muted-foreground">Solicitado: {item.quantity}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs">Enviado:</Label>
                       <Input
                         type="number"
                         name={`shipped_${index}`}
@@ -697,23 +423,24 @@ export default function TransfersPage() {
                         max={item.quantity}
                         defaultValue={item.quantity}
                         required
-                        className="w-32"
+                        className="w-20 text-right"
                       />
                     </div>
                   </div>
                 ))}
-                <div>
-                  <Label htmlFor="ship_note">Notas</Label>
-                  <Textarea id="ship_note" name="note" rows={2} />
-                </div>
               </div>
+
+              <div className="space-y-2">
+                <Label>Notas de Salida</Label>
+                <Textarea name="note" placeholder="Observaciones sobre el despacho..." />
               </div>
-              <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
+
+              <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsShipOpen(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={shipMutation.isPending}>
-                  {shipMutation.isPending ? 'Enviando...' : 'Marcar como Enviada'}
+                  {shipMutation.isPending ? 'Enviando...' : 'Confirmar Envío'}
                 </Button>
               </DialogFooter>
             </form>
@@ -723,27 +450,24 @@ export default function TransfersPage() {
 
       {/* Modal de recibir */}
       <Dialog open={isReceiveOpen} onOpenChange={setIsReceiveOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-            <DialogTitle className="text-lg sm:text-xl">Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
-              Indica las cantidades recibidas de cada producto
+              Verifica y confirma las cantidades recibidas
             </DialogDescription>
           </DialogHeader>
           {selectedTransfer && (
-            <form onSubmit={handleReceiveSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-5">
-                <div className="space-y-4 sm:space-y-5">
+            <form onSubmit={handleReceiveSubmit} className="space-y-4">
+              <div className="max-h-[300px] overflow-y-auto space-y-4">
                 {selectedTransfer.items.map((item, index) => (
-                  <div key={item.id} className="space-y-2">
-                    <Label>
-                      {item.product?.name || 'Producto'}
-                      {item.variant && ` (${item.variant.variant_type}: ${item.variant.variant_value})`}
-                    </Label>
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm text-muted-foreground">
-                        Enviado: {item.quantity_shipped}
-                      </div>
+                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm">{item.product?.name}</p>
+                      <p className="text-xs text-muted-foreground">Enviado: {item.quantity_shipped}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs">Recibido:</Label>
                       <Input
                         type="number"
                         name={`received_${index}`}
@@ -751,30 +475,120 @@ export default function TransfersPage() {
                         max={item.quantity_shipped}
                         defaultValue={item.quantity_shipped}
                         required
-                        className="w-32"
+                        className="w-20 text-right"
                       />
                     </div>
                   </div>
                 ))}
-                <div>
-                  <Label htmlFor="receive_note">Notas</Label>
-                  <Textarea id="receive_note" name="note" rows={2} />
-                </div>
               </div>
+              <div className="space-y-2">
+                <Label>Notas de Recepción</Label>
+                <Textarea name="note" placeholder="Daños, faltantes o comentarios..." />
               </div>
-              <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
+              <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsReceiveOpen(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={receiveMutation.isPending}>
-                  {receiveMutation.isPending ? 'Recibiendo...' : 'Marcar como Recibida'}
+                  {receiveMutation.isPending ? 'Procesando...' : 'Confirmar Recepción'}
                 </Button>
               </DialogFooter>
             </form>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de detalles (Solo lectura) */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              Transferencia {selectedTransfer?.transfer_number}
+              {selectedTransfer && getStatusBadge(selectedTransfer.status)}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTransfer && (
+            <div className="space-y-6">
+              {/* Header Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/20 rounded-lg text-sm">
+                <div>
+                  <span className="text-xs text-muted-foreground block">Origen</span>
+                  <span className="font-medium">{selectedTransfer.from_warehouse?.name}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block">Destino</span>
+                  <span className="font-medium">{selectedTransfer.to_warehouse?.name}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block">Fecha Solicitud</span>
+                  <span className="font-medium">{new Date(selectedTransfer.created_at).toLocaleDateString()}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block">Prioridad</span>
+                  <span className="capitalize">{selectedTransfer.priority || 'Normal'}</span>
+                </div>
+              </div>
+
+              {/* Logistics Info if shipped */}
+              {(selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'completed') && (
+                <div className="border rounded-lg p-3 space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Truck className="w-4 h-4" />
+                    Datos de Logística
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-xs text-muted-foreground">Conductor:</span>
+                      <div>{selectedTransfer.driver_name || '-'}</div>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Placa:</span>
+                      <div>{selectedTransfer.vehicle_plate || '-'}</div>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Tracking:</span>
+                      <div>{selectedTransfer.tracking_number || '-'}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Items Table */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 text-xs font-medium grid grid-cols-12 gap-4">
+                  <div className="col-span-6">Producto</div>
+                  <div className="col-span-2 text-center">Solicitado</div>
+                  <div className="col-span-2 text-center">Enviado</div>
+                  <div className="col-span-2 text-center">Recibido</div>
+                </div>
+                <div className="divide-y max-h-[300px] overflow-y-auto">
+                  {selectedTransfer.items.map(item => (
+                    <div key={item.id} className="p-3 grid grid-cols-12 gap-4 text-sm items-center">
+                      <div className="col-span-6 font-medium">
+                        {item.product?.name}
+                      </div>
+                      <div className="col-span-2 text-center">{item.quantity}</div>
+                      <div className="col-span-2 text-center text-muted-foreground">{item.quantity_shipped}</div>
+                      <div className={cn("col-span-2 text-center font-bold",
+                        item.quantity_received === item.quantity_shipped ? "text-green-600" : "text-amber-600"
+                      )}>
+                        {item.quantity_received}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedTransfer.note && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded text-sm text-amber-900 dark:text-amber-100 italic">
+                  "{selectedTransfer.note}"
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

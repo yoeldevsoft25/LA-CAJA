@@ -4,6 +4,7 @@ import { Trash2, ShoppingCart } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CartItemRow } from './CartItemRow'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface CartListProps {
     items: CartItem[]
@@ -26,7 +27,12 @@ export function CartList({
             <ScrollArea className="h-full">
                 <div className={cn("flex flex-col", items.length === 0 && "h-full justify-center")}>
                     {items.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-4 text-center animate-in fade-in zoom-in duration-500 slide-in-from-bottom-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="flex flex-col items-center justify-center p-4 text-center h-full min-h-[300px]"
+                        >
                             <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-muted to-muted/30 rounded-full flex items-center justify-center mb-6 shadow-inner ring-1 ring-white/10 relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                                 <ShoppingCart className="w-10 h-10 sm:w-12 sm:h-12 opacity-40 group-hover:scale-110 transition-transform duration-300 group-hover:opacity-60 text-primary/50" />
@@ -35,34 +41,44 @@ export function CartList({
                             <p className="text-sm text-muted-foreground max-w-[220px] leading-relaxed">
                                 Escanea un producto o selecciónalo del catálogo para comenzar la venta
                             </p>
-                        </div>
+                        </motion.div>
                     ) : (
-                        items.map((item) => {
-                            const isInvalid = invalidCartProductIds.includes(item.id)
-                            return (
-                                <SwipeableItem
-                                    key={item.id}
-                                    onSwipeLeft={isMobile ? () => onRemoveItem(item.id) : undefined}
-                                    leftAction={isMobile ? (
-                                        <div className="flex items-center gap-2">
-                                            <Trash2 className="w-4 h-4" />
-                                            <span className="text-sm font-medium">Eliminar</span>
-                                        </div>
-                                    ) : undefined}
-                                    enabled={isMobile}
-                                    threshold={80}
-                                    className="mb-0"
-                                >
-                                    <CartItemRow
-                                        item={item}
-                                        isMobile={isMobile}
-                                        isInvalid={isInvalid}
-                                        onUpdateQty={onUpdateQty}
-                                        onRemoveItem={onRemoveItem}
-                                    />
-                                </SwipeableItem>
-                            )
-                        })
+                        <AnimatePresence initial={false}>
+                            {items.map((item) => {
+                                const isInvalid = invalidCartProductIds.includes(item.id)
+                                return (
+                                    <motion.div
+                                        key={item.id}
+                                        layout
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30, opacity: { duration: 0.2 } }}
+                                    >
+                                        <SwipeableItem
+                                            onSwipeLeft={isMobile ? () => onRemoveItem(item.id) : undefined}
+                                            leftAction={isMobile ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span className="text-sm font-medium">Eliminar</span>
+                                                </div>
+                                            ) : undefined}
+                                            enabled={isMobile}
+                                            threshold={80}
+                                            className="mb-0 border-b border-border/40"
+                                        >
+                                            <CartItemRow
+                                                item={item}
+                                                isMobile={isMobile}
+                                                isInvalid={isInvalid}
+                                                onUpdateQty={onUpdateQty}
+                                                onRemoveItem={onRemoveItem}
+                                            />
+                                        </SwipeableItem>
+                                    </motion.div>
+                                )
+                            })}
+                        </AnimatePresence>
                     )}
                 </div>
             </ScrollArea>

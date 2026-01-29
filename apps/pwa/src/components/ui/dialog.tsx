@@ -19,14 +19,14 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => {
   // Detectar mobile para optimizar animaciones
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
-  
+
   return (
-      <DialogPrimitive.Overlay
+    <DialogPrimitive.Overlay
       ref={ref}
       className={cn(
-        "fixed inset-0 z-[99] bg-black/80",
+        "fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm",
         // Animaciones más simples en mobile para mejor rendimiento
-        isMobile 
+        isMobile
           ? "data-[state=open]:opacity-100 data-[state=closed]:opacity-0 transition-opacity duration-150"
           : "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
@@ -44,7 +44,7 @@ const DialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => {
   // Detectar mobile para optimizar animaciones
   const [isMobile, setIsMobile] = React.useState(false)
-  
+
   React.useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 640)
@@ -53,17 +53,18 @@ const DialogContent = React.forwardRef<
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
-  
+
   return (
     <DialogPortal>
-      <DialogOverlay style={{ pointerEvents: 'none' }} />
+      <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
           // Clases base: solo aplicar si no hay clases personalizadas de posicionamiento
           !className?.includes('bottom-0') && !className?.includes('top-auto') && "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
-          // Tamaño y estilos base - z-index mucho mayor que overlay para estar por encima
-          "z-[100] pointer-events-auto [&>*]:pointer-events-auto [&_*]:pointer-events-auto w-[calc(100%-2rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
+          // Tamaño y estilos base - z-index igual que overlay (100) para que el orden del DOM determine el apilamiento (Content > Overlay)
+          // Cuando hay modales anidados: Overlay B (z-100) > Content A (z-100) por orden DOM
+          "z-[100] [&>*]:pointer-events-auto [&_*]:pointer-events-auto w-[calc(100%-2rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
           // Solo aplicar grid si no hay clases personalizadas
           !className?.includes('flex') && "grid",
           // Animaciones optimizadas para mobile
@@ -74,8 +75,8 @@ const DialogContent = React.forwardRef<
           className?.includes('bottom-0') && isMobile && "data-[state=open]:translate-y-0 data-[state=closed]:translate-y-full transition-transform duration-300 ease-out",
           className
         )}
-        style={{ 
-          willChange: isMobile ? 'opacity, transform' : undefined, 
+        style={{
+          willChange: isMobile ? 'opacity, transform' : undefined,
           pointerEvents: 'auto',
           zIndex: 100
         }}

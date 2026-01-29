@@ -1,5 +1,6 @@
 import { Barcode, Volume2, VolumeX } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 export type ScannerStatus = 'idle' | 'scanning' | 'success' | 'error'
 
@@ -42,23 +43,36 @@ export default function ScannerStatusBadge({
           </div>
         </div>
       </button>
-      <div
+      <motion.div
+        animate={scannerStatus === 'scanning' ? {
+          scale: [1, 1.05, 1],
+          opacity: [1, 0.7, 1],
+        } : {}}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
         className={cn(
-          'flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-300',
+          'flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-sm font-medium transition-all duration-300 relative overflow-hidden',
           scannerStatus === 'idle' && 'bg-muted/50 text-muted-foreground',
-          scannerStatus === 'scanning' && 'bg-primary/20 text-primary animate-pulse',
-          scannerStatus === 'success' && 'bg-green-500/20 text-green-600',
-          scannerStatus === 'error' && 'bg-destructive/20 text-destructive'
+          scannerStatus === 'scanning' && 'bg-primary/20 text-primary border border-primary/30',
+          scannerStatus === 'success' && 'bg-green-500/20 text-green-600 border border-green-500/30',
+          scannerStatus === 'error' && 'bg-destructive/20 text-destructive border border-destructive/30'
         )}
       >
-        <Barcode className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4', scannerStatus === 'scanning' && 'animate-pulse')} />
-        <span className="hidden sm:inline">
+        {scannerStatus === 'scanning' && (
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: "200%" }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent skew-x-12"
+          />
+        )}
+        <Barcode className={cn('w-3.5 h-3.5 sm:w-4 sm:h-4 relative z-10')} />
+        <span className="hidden sm:inline relative z-10">
           {scannerStatus === 'idle' && 'Scanner listo'}
           {scannerStatus === 'scanning' && 'Buscando...'}
           {scannerStatus === 'success' && 'Agregado'}
           {scannerStatus === 'error' && 'No encontrado'}
         </span>
-      </div>
+      </motion.div>
     </div>
   )
 }

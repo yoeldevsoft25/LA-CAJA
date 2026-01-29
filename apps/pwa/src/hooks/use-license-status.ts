@@ -17,7 +17,7 @@ interface LicenseStatus {
  * Valida cada 5-10 minutos y redirige si la licencia está bloqueada
  */
 export function useLicenseStatus() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, logout, setUser } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [lastCheck, setLastCheck] = useState<number>(Date.now())
@@ -65,7 +65,7 @@ export function useLicenseStatus() {
     if (!licenseStatus) return
 
     setLastCheck(Date.now())
-    
+
     // Verificar si la licencia está bloqueada
     if (licenseStatus.license_status === 'suspended' || licenseStatus.license_status === 'expired') {
       toast.error('Tu licencia ha sido suspendida o expirada. Serás redirigido.', {
@@ -78,12 +78,12 @@ export function useLicenseStatus() {
       return
     }
 
-    // Verificar si está por expirar
+    // Verificar si la licencia está por expirar
     if (licenseStatus.license_expires_at) {
       const expiresAt = new Date(licenseStatus.license_expires_at).getTime()
       const now = Date.now()
       const daysUntilExpiry = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))
-      
+
       if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
         toast(
           `Tu licencia expira en ${daysUntilExpiry} ${daysUntilExpiry === 1 ? 'día' : 'días'}. Renueva pronto.`,
@@ -94,7 +94,25 @@ export function useLicenseStatus() {
         )
       }
     }
-  }, [licenseStatus, logout, navigate])
+
+    // Sincronizar estado con el store de autenticación si hay cambios
+    // Esto resuelve el problema de persistencia del estado "suspended" en el JWT/Store
+    if (user && (
+      user.license_status !== licenseStatus.license_status ||
+      user.license_expires_at !== licenseStatus.license_expires_at
+    )) {
+      console.log('[LicenseStatus] Sincronizando estado de licencia en store:', licenseStatus)
+      // Usamos el setUser del store (que debemos extraer del hook useAuth)
+      // Nota: setUser ya está disponible en el scope si lo destructuramos arriba
+      // @ts-ignore - setUser se añadirá en el destructuring
+      setUser({
+        ...user,
+        license_status: licenseStatus.license_status,
+        license_expires_at: licenseStatus.license_expires_at,
+        license_plan: licenseStatus.license_plan
+      })
+    }
+  }, [licenseStatus, logout, navigate, user])
 
   // Escuchar cambios de licencia vía WebSocket
   useEffect(() => {
@@ -105,10 +123,10 @@ export function useLicenseStatus() {
     const handleLicenseChange = (event: CustomEvent) => {
       const newLicenseStatus = event.detail as LicenseStatus
       console.log('[LicenseStatus] Cambio de licencia recibido vía WebSocket:', newLicenseStatus)
-      
+
       // Invalidar cache para forzar re-fetch
       queryClient.invalidateQueries({ queryKey: ['license-status'] })
-      
+
       // Verificar si la licencia está bloqueada
       if (newLicenseStatus.license_status === 'suspended' || newLicenseStatus.license_status === 'expired') {
         toast.error('Tu licencia ha sido suspendida o expirada. Serás redirigido.', {

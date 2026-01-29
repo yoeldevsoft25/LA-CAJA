@@ -1,4 +1,5 @@
 import { Clock, Star } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface QuickProduct {
     product_id: string
@@ -34,9 +35,11 @@ export function QuickActions({
                     </h3>
                     <div className="flex flex-wrap gap-2">
                         {suggestedProducts.map((product) => (
-                            <button
+                            <motion.button
                                 key={product.id}
                                 onClick={() => onProductClick(product)}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 className="inline-flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary-foreground hover:text-primary px-3 py-1.5 rounded-full text-sm font-medium transition-colors border border-primary/20"
                             >
                                 {product.name}
@@ -45,7 +48,7 @@ export function QuickActions({
                                         {product.weight_unit || 'kg'}
                                     </span>
                                 )}
-                            </button>
+                            </motion.button>
                         ))}
                     </div>
                 </div>
@@ -60,13 +63,15 @@ export function QuickActions({
                     </h3>
                     <div className="flex flex-wrap gap-2">
                         {recentProducts.map((item) => (
-                            <button
+                            <motion.button
                                 key={`recent-${item.product_id}`}
                                 onClick={() => onRecentClick(item)} // Nota: en POSPage esto requerirá fetch si no tenemos el objeto completo
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
                                 className="inline-flex items-center gap-1.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full text-sm transition-colors border border-border/50"
                             >
                                 {item.name}
-                            </button>
+                            </motion.button>
                         ))}
                     </div>
                 </div>

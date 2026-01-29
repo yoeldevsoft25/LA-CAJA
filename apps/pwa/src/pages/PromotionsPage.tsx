@@ -16,7 +16,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -30,6 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 export default function PromotionsPage() {
   const { user } = useAuth()
@@ -176,95 +177,153 @@ export default function PromotionsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {promotions.map((promotion) => (
-            <Card key={promotion.id} className="border border-border">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{promotion.name}</CardTitle>
-                    {promotion.code && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Código: {promotion.code}
+        <motion.div
+          layout
+          className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+        >
+          <AnimatePresence mode="popLayout">
+            {promotions.map((promotion) => (
+              <motion.div
+                key={promotion.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                layout
+              >
+                <Card className="group relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-xl">
+                  {/* Decoración superior según tipo */}
+                  <div className={cn(
+                    "h-1.5 w-full",
+                    promotion.promotion_type === 'percentage' ? "bg-blue-500" :
+                      promotion.promotion_type === 'fixed_amount' ? "bg-emerald-500" :
+                        "bg-orange-500"
+                  )} />
+
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <CardTitle className="text-xl font-black tracking-tight group-hover:text-primary transition-colors">
+                          {promotion.name}
+                        </CardTitle>
+                        {promotion.code && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Código:</span>
+                            <Badge variant="secondary" className="font-mono text-xs py-0 px-2 rounded-md">
+                              {promotion.code}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={() => handleEdit(promotion)}
+                        className="h-9 w-9 rounded-full bg-muted/50 hover:bg-primary hover:text-white transition-all duration-300"
+                      >
+                        <Edit className="w-4.5 h-4.5" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-5">
+                    {/* Badge y Tipo */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={cn(
+                        "font-bold px-3 py-1 rounded-full border-none",
+                        promotion.is_active
+                          ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20"
+                          : "bg-slate-200 text-slate-500 dark:bg-slate-800"
+                      )}>
+                        {promotion.is_active ? <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> : <XCircle className="w-3.5 h-3.5 mr-1.5" />}
+                        {promotion.is_active ? 'Activa' : 'Pausada'}
+                      </Badge>
+                      <Badge variant="outline" className="border-2 font-semibold">
+                        {formatPromotionType(promotion.promotion_type)}
+                      </Badge>
+                    </div>
+
+                    {/* Descuento Principal */}
+                    <div className="p-4 bg-muted/40 rounded-2xl flex items-center justify-between border border-border/50">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-primary/10 rounded-xl">
+                          <Tag className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Ahorro</p>
+                          <p className="text-2xl font-black text-foreground leading-none mt-0.5">
+                            {formatDiscount(promotion)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {promotion.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed italic">
+                        "{promotion.description}"
                       </p>
                     )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(promotion)}
-                      className="h-8 w-8"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {promotion.is_active ? (
-                      <Badge variant="default" className="bg-success">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Activa
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Inactiva
-                      </Badge>
-                    )}
-                    <Badge variant="outline">
-                      {formatPromotionType(promotion.promotion_type)}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                    <Tag className="w-4 h-4" />
-                    Descuento: {formatDiscount(promotion)}
-                  </div>
-                  {promotion.description && (
-                    <p className="text-sm text-muted-foreground">{promotion.description}</p>
-                  )}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="w-3 h-3" />
-                    <span>
-                      {new Date(promotion.valid_from).toLocaleDateString()} -{' '}
-                      {new Date(promotion.valid_until).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {promotion.usage_limit && (
-                    <p className="text-xs text-muted-foreground">
-                      Usos: {promotion.usage_count} / {promotion.usage_limit}
-                    </p>
-                  )}
-                  {promotion.min_purchase_usd && (
-                    <p className="text-xs text-muted-foreground">
-                      Compra mínima: ${Number(promotion.min_purchase_usd).toFixed(2)} USD
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+
+                    {/* Footer Info */}
+                    <div className="pt-4 border-t border-dashed border-border flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between text-xs font-medium">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <span>Vigencia</span>
+                        </div>
+                        <span className="text-foreground">
+                          {new Date(promotion.valid_from).toLocaleDateString()} - {new Date(promotion.valid_until).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      {promotion.usage_limit && (
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            <span>Progreso de usos</span>
+                            <span>{promotion.usage_count || 0} / {promotion.usage_limit}</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min(100, ((promotion.usage_count || 0) / promotion.usage_limit) * 100)}%` }}
+                              className="h-full bg-primary"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
       )}
 
       {/* Modal de formulario */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPromotion ? 'Editar Promoción' : 'Nueva Promoción'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPromotion
-                ? 'Modifica los datos de la promoción'
-                : 'Crea una nueva promoción con descuentos y vigencia'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <ScrollArea className="max-h-[60vh] pr-4">
+        <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <div className="bg-primary/5 px-6 py-6 border-b">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-primary/10 rounded-2xl">
+                  <Tag className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-2xl font-black">
+                    {editingPromotion ? 'Ajustar Configuración' : 'Configurar Nueva Promo'}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs font-medium uppercase tracking-widest opacity-70">
+                    {editingPromotion
+                      ? 'Estás editando una campaña existente'
+                      : 'Define reglas de descuento y límites de uso'}
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+            <ScrollArea className="flex-1 px-8 py-6">
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name">Nombre *</Label>
@@ -418,8 +477,8 @@ export default function PromotionsPage() {
                       defaultValue={
                         editingPromotion?.valid_from
                           ? new Date(editingPromotion.valid_from)
-                              .toISOString()
-                              .slice(0, 16)
+                            .toISOString()
+                            .slice(0, 16)
                           : ''
                       }
                       required
@@ -434,8 +493,8 @@ export default function PromotionsPage() {
                       defaultValue={
                         editingPromotion?.valid_until
                           ? new Date(editingPromotion.valid_until)
-                              .toISOString()
-                              .slice(0, 16)
+                            .toISOString()
+                            .slice(0, 16)
                           : ''
                       }
                       required
@@ -489,18 +548,19 @@ export default function PromotionsPage() {
                 </div>
               </div>
             </ScrollArea>
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={handleCloseForm}>
-                Cancelar
+
+            <div className="p-6 bg-muted/30 border-t flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
+              <Button type="button" variant="ghost" onClick={handleCloseForm} className="font-bold uppercase tracking-widest text-xs">
+                Descartar Cambios
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto px-10 h-12 bg-primary text-white font-black rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
                 {createMutation.isPending
-                  ? 'Guardando...'
+                  ? 'PROCESANDO...'
                   : editingPromotion
-                    ? 'Actualizar'
-                    : 'Crear'}
+                    ? 'GUARDAR CAMBIOS'
+                    : 'LANZAR PROMOCIÓN'}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

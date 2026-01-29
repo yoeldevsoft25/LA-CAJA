@@ -56,8 +56,16 @@ export function SuccessOverlay({
                     {/* Spotlight de fondo sutil */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 0.6, scale: 1 }}
-                        className="absolute inset-0 bg-radial-gradient from-primary/20 to-transparent opacity-0 pointer-events-none"
+                        animate={{ opacity: 1, scale: 1.5 }}
+                        className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(var(--primary),0.15)_0,transparent_70%)] pointer-events-none"
+                    />
+
+                    {/* Radial Sweep Beam */}
+                    <motion.div
+                        initial={{ rotate: 0, opacity: 0 }}
+                        animate={{ rotate: 360, opacity: [0, 0.5, 0] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                        className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0,rgba(var(--primary),0.1)_20deg,transparent_40deg)] pointer-events-none"
                     />
 
                     <div className="relative flex flex-col items-center justify-center p-8 z-10 w-full max-w-sm mx-4 pointer-events-none">
@@ -99,21 +107,25 @@ export function SuccessOverlay({
                                 animate={{ scale: 1, rotate: 0 }}
                                 transition={{
                                     type: "spring",
-                                    stiffness: 200,
-                                    damping: 15,
+                                    stiffness: 260,
+                                    damping: 20,
                                     delay: 0.1
                                 }}
-                                className="relative flex items-center justify-center w-28 h-28 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-[0_10px_30px_-5px_rgba(var(--primary),0.4)] border-4 border-white"
+                                className="relative flex items-center justify-center w-28 h-28 rounded-full bg-primary shadow-[0_20px_40px_-5px_hsl(var(--primary)/0.4)] border-4 border-white overflow-hidden"
                             >
-                                {/* Brillo interno */}
-                                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/30 to-transparent opacity-60 pointer-events-none" />
+                                {/* Lens Flare Effect */}
+                                <motion.div
+                                    animate={{ x: [-100, 200] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                                    className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-45"
+                                />
 
                                 <motion.div
                                     initial={{ pathLength: 0, opacity: 0, scale: 0.5 }}
                                     animate={{ pathLength: 1, opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.4, delay: 0.35, ease: "backOut" }}
                                 >
-                                    <Check className="w-14 h-14 text-white drop-shadow-sm stroke-[4px]" />
+                                    <Check className="w-14 h-14 text-white drop-shadow-md stroke-[4px]" />
                                 </motion.div>
                             </motion.div>
                         </div>

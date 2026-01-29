@@ -6,7 +6,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "C:\\Users\\Yoel-PC\\Documents\\GitHub\\LA-CAJA"
+        "/Users/yoeldev/Documents/GitHub/LA-CAJA"
       ],
       "env": {}
     },
@@ -80,6 +80,42 @@
         "-e",
         "POSTGRES_URL=postgresql://postgres:2403@host.docker.internal:5432/la_caja",
         "ghcr.io/henkdz/postgresql-mcp-server:latest"
+      ],
+      "env": {}
+    },
+    "fetch": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "env": {}
+    },
+    "docker": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-docker"
+      ],
+      "env": {}
+    },
+    "puppeteer": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ],
+      "env": {}
+    },
+    "everything": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-everything"
       ],
       "env": {}
     }

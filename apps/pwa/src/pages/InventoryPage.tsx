@@ -290,47 +290,60 @@ export default function InventoryPage() {
 
       {/* KPI Cards: Minimalist Style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-6 flex flex-col justify-center">
+        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute right-0 top-0 h-24 w-24 bg-primary/5 rounded-full blur-2xl transform translate-x-8 -translate-y-8" />
+          <CardContent className="p-6 flex flex-col justify-center relative z-10">
             <div className="flex items-center justify-between space-x-2">
-              <span className="text-sm font-medium text-muted-foreground">Total Productos</span>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Total Productos</span>
+              <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                <Package className="h-4 w-4 text-primary" />
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-foreground">{total}</span>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-black tracking-tighter text-foreground">{total}</span>
+              <span className="text-xs font-medium text-muted-foreground">items</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6 flex flex-col justify-center">
+        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute right-0 top-0 h-24 w-24 bg-orange-500/5 rounded-full blur-2xl transform translate-x-8 -translate-y-8" />
+          <CardContent className="p-6 flex flex-col justify-center relative z-10">
             <div className="flex items-center justify-between space-x-2">
-              <span className="text-sm font-medium text-muted-foreground">Stock Bajo</span>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Stock Bajo</span>
+              <div className="p-2 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+                <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-foreground">
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-black tracking-tighter text-foreground">
                 {lowStockCount}
               </span>
-              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                productos
+              <span className="text-sm font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-md">
+                requieren atención
               </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6 flex flex-col justify-center">
+        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute right-0 top-0 h-24 w-24 bg-emerald-500/5 rounded-full blur-2xl transform translate-x-8 -translate-y-8" />
+          <CardContent className="p-6 flex flex-col justify-center relative z-10">
             <div className="flex items-center justify-between space-x-2">
-              <span className="text-sm font-medium text-muted-foreground">Salud de Stock</span>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Salud de Stock</span>
+              <div className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+                <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-foreground">
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-black tracking-tighter text-foreground">
                 {total > 0 ? Math.round(((total - lowStockCount) / total) * 100) : 0}%
               </span>
-              <span className="text-sm font-medium text-muted-foreground">
-                óptimo
+              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                inventario óptimo
               </span>
             </div>
           </CardContent>
@@ -411,7 +424,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Filtros */}
-      <Card className="mb-4 sm:mb-6 border-none shadow-sm bg-white/50 backdrop-blur-sm dark:bg-slate-900/50">
+      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/60 backdrop-blur-xl sticky top-0 z-20 transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
           {/* Búsqueda */}
           <div className="relative">
@@ -493,7 +506,7 @@ export default function InventoryPage() {
       </Card>
 
       {/* Lista de productos */}
-      <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">
+      <Card className="border-none premium-shadow overflow-hidden bg-background/50 backdrop-blur-sm ring-1 ring-border/50">
         <CardContent className="p-0">
           {isError ? (
             <div className="p-8 text-center">
@@ -583,7 +596,7 @@ export default function InventoryPage() {
 
                             <div className="flex-1 min-w-0 max-w-full">
                               <p
-                                className="font-semibold text-foreground text-sm sm:text-base break-words leading-tight"
+                                className="font-bold text-foreground text-sm sm:text-base break-words leading-tight group-hover:text-primary transition-colors"
                                 title={item.product_name}
                               >
                                 {item.product_name}

@@ -38,6 +38,7 @@ import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
 import { printService } from '@/services/print.service'
 import { SwipeableItem } from '@/components/ui/swipeable-item'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
+import { StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper'
 
 const paymentMethodLabels: Record<string, string> = {
   CASH_BS: 'Efectivo Bs',
@@ -728,7 +729,7 @@ export default function SalesPage() {
             <>
               {/* Vista de cards swipeables para móvil */}
               {isMobile ? (
-                <div className="space-y-2">
+                <StaggerContainer className="space-y-2">
                   {sales.map((sale: Sale) => {
                     const itemCount = sale.items.length
                     const isFIAO = sale.payment.method === 'FIAO'
@@ -738,105 +739,107 @@ export default function SalesPage() {
                     const isVoided = Boolean(sale.voided_at)
 
                     return (
-                      <SwipeableItem
-                        key={sale.id}
-                        onSwipeRight={() => handleViewDetail(sale)}
-                        rightAction={
-                          <div className="flex items-center gap-3 px-4">
-                            <Eye className="w-5 h-5" />
-                            <span className="font-medium">Ver Detalles</span>
-                          </div>
-                        }
-                        onSwipeLeft={() => handlePrint(sale)}
-                        leftAction={
-                          <div className="flex items-center gap-3 px-4">
-                            <Printer className="w-5 h-5" />
-                            <span className="font-medium">Imprimir</span>
-                          </div>
-                        }
-                        enabled={isMobile}
-                        threshold={80}
-                      >
-                        <Card
-                          className={cn(
-                            'transition-colors cursor-pointer',
-                            isVoided && 'bg-muted/40 border-muted',
-                            isPending && 'bg-orange-50 border-orange-200 border-l-4',
-                            isPaid && 'bg-green-50 border-green-200 border-l-4'
-                          )}
-                          onClick={() => handleViewDetail(sale)}
+                      <StaggerItem key={sale.id}>
+                        <SwipeableItem
+                          onSwipeRight={() => handleViewDetail(sale)}
+                          // ... rest of swipeable item props
+                          rightAction={
+                            <div className="flex items-center gap-3 px-4">
+                              <Eye className="w-5 h-5" />
+                              <span className="font-medium">Ver Detalles</span>
+                            </div>
+                          }
+                          onSwipeLeft={() => handlePrint(sale)}
+                          leftAction={
+                            <div className="flex items-center gap-3 px-4">
+                              <Printer className="w-5 h-5" />
+                              <span className="font-medium">Imprimir</span>
+                            </div>
+                          }
+                          enabled={isMobile}
+                          threshold={80}
                         >
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <p className="font-semibold text-foreground text-sm">
-                                    {format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}
-                                  </p>
-                                  {isVoided && (
-                                    <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
-                                      Anulada
-                                    </Badge>
+                          <Card
+                            className={cn(
+                              'transition-colors cursor-pointer',
+                              isVoided && 'bg-muted/40 border-muted',
+                              isPending && 'bg-orange-50 border-orange-200 border-l-4',
+                              isPaid && 'bg-green-50 border-green-200 border-l-4'
+                            )}
+                            onClick={() => handleViewDetail(sale)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <p className="font-semibold text-foreground text-sm">
+                                      {format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}
+                                    </p>
+                                    {isVoided && (
+                                      <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
+                                        Anulada
+                                      </Badge>
+                                    )}
+                                    {sale.id.startsWith('temp-') || sale.sync_status === 'pending' ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <CloudOff className="w-3.5 h-3.5 text-amber-500" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>Pendiente de sincronizar</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : (
+                                      <Cloud className="w-3.5 h-3.5 text-success/60" />
+                                    )}
+                                  </div>
+
+                                  {sale.invoice_full_number && (
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <Receipt className="w-3.5 h-3.5 text-primary" />
+                                      <p className="font-mono font-semibold text-primary text-xs">
+                                        {sale.invoice_full_number}
+                                      </p>
+                                    </div>
                                   )}
-                                  {sale.id.startsWith('temp-') || sale.sync_status === 'pending' ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <CloudOff className="w-3.5 h-3.5 text-amber-500" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>Pendiente de sincronizar</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    <Cloud className="w-3.5 h-3.5 text-success/60" />
+
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    {itemCount} producto{itemCount !== 1 ? 's' : ''}
+                                  </p>
+
+                                  {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
+                                    <p className="text-xs font-medium text-orange-600 mt-1">
+                                      Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs
+                                    </p>
                                   )}
                                 </div>
 
-                                {sale.invoice_full_number && (
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <Receipt className="w-3.5 h-3.5 text-primary" />
-                                    <p className="font-mono font-semibold text-primary text-xs">
-                                      {sale.invoice_full_number}
-                                    </p>
-                                  </div>
-                                )}
-
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  {itemCount} producto{itemCount !== 1 ? 's' : ''}
-                                </p>
-
-                                {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
-                                  <p className="text-xs font-medium text-orange-600 mt-1">
-                                    Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs
+                                <div className="text-right flex-shrink-0">
+                                  <p className="font-bold text-foreground text-base">
+                                    {Number(sale.totals.total_bs).toFixed(2)} Bs
                                   </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    ${Number(sale.totals.total_usd).toFixed(2)} USD
+                                  </p>
+                                  <Badge variant="secondary" className="mt-1 text-[10px]">
+                                    {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Desliza para acciones →</span>
+                                {sale.customer && (
+                                  <span className="truncate max-w-[150px]">{sale.customer.name}</span>
                                 )}
                               </div>
-
-                              <div className="text-right flex-shrink-0">
-                                <p className="font-bold text-foreground text-base">
-                                  {Number(sale.totals.total_bs).toFixed(2)} Bs
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  ${Number(sale.totals.total_usd).toFixed(2)} USD
-                                </p>
-                                <Badge variant="secondary" className="mt-1 text-[10px]">
-                                  {paymentMethodLabels[sale.payment.method] || sale.payment.method}
-                                </Badge>
-                              </div>
-                            </div>
-
-                            <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-                              <span>Desliza para acciones →</span>
-                              {sale.customer && (
-                                <span className="truncate max-w-[150px]">{sale.customer.name}</span>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </SwipeableItem>
+                            </CardContent>
+                          </Card>
+                        </SwipeableItem>
+                      </StaggerItem>
                     )
                   })}
-                </div>
+                </StaggerContainer>
               ) : (
                 /* Vista de tabla para desktop - Premium Grid */
                 <div className="rounded-xl overflow-x-auto border border-white/10 bg-background/50 backdrop-blur-md shadow-inner">

@@ -77,6 +77,7 @@ export interface CreateSaleRequest {
   price_list_id?: string | null // ID de la lista de precio a usar
   promotion_id?: string | null // ID de la promoción a aplicar
   warehouse_id?: string | null // ID de la bodega de donde se vende (opcional, usa bodega por defecto)
+  generate_fiscal_invoice?: boolean // Si se debe generar factura fiscal
   // Para modo offline
   store_id?: string
   user_id?: string

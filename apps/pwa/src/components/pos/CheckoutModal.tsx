@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { X, Loader2, ShoppingBag } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { CartItem } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
 import { calculateRoundedChange } from '@/utils/vzla-denominations'
@@ -456,6 +457,8 @@ export default function CheckoutModal({
               onSeriesChange={actions.setInvoiceSeries}
               onPriceListChange={actions.setPriceList}
               onWarehouseChange={actions.setWarehouse}
+              generateFiscalInvoice={state.invoice.generateFiscalInvoice}
+              onGenerateFiscalInvoiceChange={actions.setGenerateFiscalInvoice}
             />
 
             {/* Nota de venta */}
@@ -549,34 +552,42 @@ export default function CheckoutModal({
 
   return (
     <>
-      <div
-        className={cn(
-          "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-        onClick={onClose}
-      />
-      <div
-        className={cn(
-          "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[95vw] max-w-6xl transition-all",
-          isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0 pointer-events-none"
-        )}
-      >
-        <Card className="w-full max-h-[90vh] flex flex-col shadow-2xl">
-          <div className="p-4 lg:p-6 border-b flex items-center justify-between flex-shrink-0">
-            <h2 className="text-xl lg:text-2xl font-bold">Finalizar Venta</h2>
-            <Button
-              variant="ghost"
-              size="icon"
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99]"
               onClick={onClose}
-              className="h-8 w-8"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: "-45%", x: "-50%" }}
+              animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
+              exit={{ opacity: 0, scale: 0.95, y: "-45%" }}
+              transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
+              className="fixed left-1/2 top-1/2 z-[100] w-[95vw] max-w-6xl"
             >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          {modalContent}
-        </Card>
-      </div>
+              <Card className="w-full max-h-[90vh] flex flex-col shadow-2xl border-white/10 dark:bg-card/95 backdrop-blur-xl">
+                <div className="p-4 lg:p-6 border-b flex items-center justify-between flex-shrink-0">
+                  <h2 className="text-xl lg:text-2xl font-bold">Finalizar Venta</h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onClose}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {modalContent}
+              </Card>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       {serialSelectorItem && (
         <SerialSelector
           isOpen={!!serialSelectorItem}

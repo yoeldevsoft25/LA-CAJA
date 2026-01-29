@@ -8,10 +8,19 @@ export interface Warehouse {
   store_id: string
   name: string
   code: string
+  type: string
   description: string | null
   address: string | null
+  city: string | null
+  state: string | null
+  zip_code: string | null
+  manager_name: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  capacity: number
   is_default: boolean
   is_active: boolean
+  status: string
   note: string | null
   created_at: string
   updated_at: string
@@ -47,9 +56,18 @@ export interface WarehouseStock {
 export interface CreateWarehouseDto {
   name: string
   code: string
+  type?: string
   description?: string
   address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  manager_name?: string
+  contact_phone?: string
+  contact_email?: string
+  capacity?: number
   is_default?: boolean
+  status?: string
   note?: string
 }
 
@@ -59,10 +77,19 @@ export interface CreateWarehouseDto {
 export interface UpdateWarehouseDto {
   name?: string
   code?: string
+  type?: string
   description?: string
   address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  manager_name?: string
+  contact_phone?: string
+  contact_email?: string
+  capacity?: number
   is_default?: boolean
   is_active?: boolean
+  status?: string
   note?: string
 }
 

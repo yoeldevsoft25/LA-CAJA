@@ -17,8 +17,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { AlertTriangle, Undo2, Loader2 } from 'lucide-react'
+import { AlertTriangle, Undo2, Loader2, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface ReturnItemsModalProps {
   isOpen: boolean
@@ -76,11 +77,11 @@ export default function ReturnItemsModal({
           const discountBs = Number(saleItem.discount_bs) || 0
           const discountUsd = Number(saleItem.discount_usd) || 0
           const originalQty = Number(saleItem.qty)
-          
+
           // Precio unitario después de descuento
           const unitPriceAfterDiscountBs = (unitPriceBs * originalQty - discountBs) / originalQty
           const unitPriceAfterDiscountUsd = (unitPriceUsd * originalQty - discountUsd) / originalQty
-          
+
           totalBs += unitPriceAfterDiscountBs * state.qty
           totalUsd += unitPriceAfterDiscountUsd * state.qty
           itemCount++
@@ -155,175 +156,222 @@ export default function ReturnItemsModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Undo2 className="w-5 h-5 text-orange-500" />
-            Devolución Parcial
-          </DialogTitle>
-          <DialogDescription>
-            Selecciona los productos y cantidades a devolver de la venta #{sale.invoice_full_number || sale.id.slice(0, 8)}
-          </DialogDescription>
+        <DialogHeader className="border-b pb-4 px-6 -mx-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-950/40 rounded-xl">
+              <Undo2 className="w-6 h-6 text-orange-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold">Devolución de Venta</DialogTitle>
+              <DialogDescription className="text-sm">
+                Selecciona los productos a devolver de la venta <span className="font-mono text-primary">#{sale.invoice_full_number || sale.id.slice(0, 8)}</span>
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
-          {/* Header de selección */}
-          <div className="flex items-center justify-between mb-3 px-1">
+        <div className="mt-4 flex flex-col min-h-0 flex-1 overflow-hidden">
+          {/* Barra de herramientas */}
+          <div className="flex items-center justify-between mb-4">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleSelectAll}
-              className="text-xs"
+              className="text-xs font-semibold h-8 border-dashed hover:border-orange-500 hover:text-orange-600 transition-colors"
             >
+              <Package className="w-3.5 h-3.5 mr-2" />
               {Object.values(returnItems).every((item) => item.selected)
                 ? 'Deseleccionar todo'
-                : 'Seleccionar todo'}
+                : 'Marcar todo'}
             </Button>
-            <Badge variant="outline">
-              {totals.itemCount} item{totals.itemCount !== 1 ? 's' : ''} seleccionado{totals.itemCount !== 1 ? 's' : ''}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium">Items seleccionados:</span>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 font-bold border-none">
+                {totals.itemCount}
+              </Badge>
+            </div>
           </div>
 
-          {/* Lista de items */}
-          <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-3">
-              {sale.items.map((item) => {
-                const state = returnItems[item.id]
-                if (!state) return null
+          <ScrollArea className="flex-1 pr-4 -mr-4">
+            <div className="space-y-4 pb-4">
+              <AnimatePresence mode="popLayout">
+                {sale.items.map((item) => {
+                  const state = returnItems[item.id]
+                  if (!state) return null
 
-                return (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      'border rounded-lg p-3 transition-colors',
-                      state.selected
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-muted-foreground/50'
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={state.selected}
-                        onCheckedChange={(checked: boolean) =>
-                          handleSelectItem(item.id, checked)
-                        }
-                        className="mt-1"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="font-medium text-sm line-clamp-1">
-                              {item.product?.name || 'Producto sin nombre'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Precio: {formatCurrency(
-                                (Number(item.unit_price_bs) * Number(item.qty) - Number(item.discount_bs || 0)) / Number(item.qty),
-                                'BS'
-                              )}/u
-                            </p>
-                          </div>
-                          <Badge variant="secondary" className="text-xs flex-shrink-0">
-                            x{Number(item.qty)}
-                          </Badge>
+                  return (
+                    <motion.div
+                      layout
+                      key={item.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className={cn(
+                        'group relative border-2 rounded-xl p-4 transition-all duration-200',
+                        state.selected
+                          ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 ring-4 ring-orange-500/10'
+                          : 'border-border bg-card hover:border-muted-foreground/30'
+                      )}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex flex-col items-center pt-1">
+                          <Checkbox
+                            checked={state.selected}
+                            onCheckedChange={(checked: boolean) =>
+                              handleSelectItem(item.id, checked)
+                            }
+                            className="w-5 h-5 border-2 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 transition-colors"
+                          />
                         </div>
 
-                        {state.selected && (
-                          <div className="mt-3 grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs text-muted-foreground">
-                                Cantidad a devolver
-                              </Label>
-                              <Input
-                                type="number"
-                                min={0}
-                                max={state.maxQty}
-                                step={item.is_weight_product ? 0.001 : 1}
-                                value={state.qty}
-                                onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                className="h-8 mt-1"
-                              />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <p className="font-bold text-base leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors">
+                                {item.product?.name || 'Producto sin nombre'}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono px-1.5 py-0.5 bg-muted rounded">
+                                  SKU: {item.product?.sku || 'N/A'}
+                                </span>
+                                <Badge variant="outline" className="text-[10px] h-4 tracking-widest uppercase opacity-70">
+                                  ORIGINAL: x{Number(item.qty)}
+                                </Badge>
+                              </div>
                             </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">
-                                Subtotal devolución
-                              </Label>
-                              <p className="h-8 flex items-center text-sm font-semibold text-orange-600">
+
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground font-medium uppercase tracking-tighter">Precio Unit.</p>
+                              <p className="text-sm font-bold text-foreground">
                                 {formatCurrency(
-                                  ((Number(item.unit_price_bs) * Number(item.qty) - Number(item.discount_bs || 0)) / Number(item.qty)) * state.qty,
+                                  (Number(item.unit_price_bs) * Number(item.qty) - Number(item.discount_bs || 0)) / Number(item.qty),
                                   'BS'
                                 )}
                               </p>
                             </div>
                           </div>
-                        )}
+
+                          {state.selected && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              className="mt-4 pt-4 border-t border-dashed border-orange-200 dark:border-orange-800"
+                            >
+                              <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                    Cant. Devolver
+                                  </Label>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={state.maxQty}
+                                      step={item.is_weight_product ? 0.001 : 1}
+                                      value={state.qty}
+                                      onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                                      className="h-10 text-lg font-mono text-center bg-background border-2 focus-visible:ring-orange-500"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2 text-right">
+                                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                    Subtotal Dev.
+                                  </Label>
+                                  <div className="h-10 flex items-center justify-end">
+                                    <p className="text-xl font-black text-orange-600 tracking-tighter">
+                                      {formatCurrency(
+                                        ((Number(item.unit_price_bs) * Number(item.qty) - Number(item.discount_bs || 0)) / Number(item.qty)) * state.qty,
+                                        'BS'
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
+                    </motion.div>
+                  )
+                })}
+              </AnimatePresence>
             </div>
           </ScrollArea>
 
-          {/* Razón de devolución */}
-          <div className="mt-4">
-            <Label htmlFor="return-reason" className="text-sm">
-              Razón de devolución (opcional)
-            </Label>
-            <Textarea
-              id="return-reason"
-              placeholder="Ej: Producto defectuoso, cliente cambió de opinión..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="mt-1.5 h-20 resize-none"
-            />
-          </div>
-
-          {/* Resumen */}
-          {totals.itemCount > 0 && (
-            <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                    Total a devolver
-                  </p>
-                  <p className="text-lg font-bold text-orange-600">
-                    {formatCurrency(totals.totalBs, 'BS')}
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
-                      ({formatCurrency(totals.totalUsd, 'USD')})
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    El stock será restaurado automáticamente al inventario.
-                  </p>
-                </div>
-              </div>
+          {/* Razón de devolución y Resumen */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t bg-muted/30 -mx-6 px-6">
+            <div className="space-y-2">
+              <Label htmlFor="return-reason" className="text-xs font-bold uppercase text-muted-foreground">
+                Explicación del Motivo
+              </Label>
+              <Textarea
+                id="return-reason"
+                placeholder="Ej: Producto defectuoso, el cliente decidió cambiarlo o revertir la compra..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="bg-background min-h-[100px] border-2 focus-visible:ring-orange-500 resize-none text-sm p-3"
+              />
             </div>
-          )}
+
+            <div className="flex flex-col justify-end">
+              <AnimatePresence>
+                {totals.itemCount > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-5 bg-orange-600 text-white rounded-2xl shadow-xl shadow-orange-600/20 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                      <Undo2 className="w-20 h-20 rotate-12" />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle className="w-4 h-4 text-orange-200" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-orange-100">Cálculo de Devolución</span>
+                      </div>
+                      <p className="text-3xl font-black tracking-tighter leading-none">
+                        {formatCurrency(totals.totalBs, 'BS')}
+                      </p>
+                      <p className="text-orange-200 text-sm font-medium mt-1">
+                        Equivalente: {formatCurrency(totals.totalUsd, 'USD')}
+                      </p>
+                      <div className="mt-4 pt-4 border-t border-white/20">
+                        <p className="text-[10px] text-white/70 italic leading-tight">
+                          * Los productos volverán automáticamente al inventario tras confirmar.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
+        <DialogFooter className="mt-6 pt-6 border-t px-0 flex items-center justify-between sm:justify-between w-full">
+          <Button variant="outline" onClick={onClose} className="px-6 font-semibold uppercase tracking-widest text-xs hover:bg-muted transition-all">
+            Abandonar
           </Button>
           <Button
             onClick={() => returnMutation.mutate()}
             disabled={!canSubmit || returnMutation.isPending}
-            className="bg-orange-600 hover:bg-orange-700"
+            className="px-8 h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
           >
             {returnMutation.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Procesando...
-              </>
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Procesando...</span>
+              </div>
             ) : (
-              <>
-                <Undo2 className="w-4 h-4 mr-2" />
-                Procesar Devolución
-              </>
+              <div className="flex items-center gap-2">
+                <Undo2 className="w-5 h-5" />
+                <span>CONFIRMAR DEVOLUCIÓN</span>
+              </div>
             )}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </DialogContent >
+    </Dialog >
   )
 }
