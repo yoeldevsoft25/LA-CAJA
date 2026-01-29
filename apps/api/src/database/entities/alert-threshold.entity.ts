@@ -54,7 +54,7 @@ export class AlertThreshold {
 
   @Column({
     type: 'varchar',
-    length: 10,
+    length: 20,
     default: 'less_than',
   })
   comparison_operator: ComparisonOperator;

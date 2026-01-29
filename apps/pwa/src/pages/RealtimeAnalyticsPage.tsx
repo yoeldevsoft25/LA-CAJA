@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Activity, AlertTriangle, Calendar, BarChart3, Settings, Sparkles } from 'lucide-react'
+import { Activity, AlertTriangle, Calendar, BarChart3, Settings, Sparkles, DollarSign, ShoppingCart, Package, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import RealtimeMetricsCard from '@/components/realtime/RealtimeMetricsCard'
 import AlertsPanel from '@/components/realtime/AlertsPanel'
@@ -9,11 +9,14 @@ import ComparativeMetricsChart from '@/components/realtime/ComparativeMetricsCha
 import ThresholdsManager from '@/components/realtime/ThresholdsManager'
 import { ApplyDefaultsModal } from '@/components/realtime/ApplyDefaultsModal'
 import { realtimeAnalyticsService } from '@/services/realtime-analytics.service'
-import { DollarSign, ShoppingCart, Package } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import toast from '@/lib/toast'
 
 export default function RealtimeAnalyticsPage() {
   const [isDefaultsModalOpen, setIsDefaultsModalOpen] = useState(false)
   const [hasThresholds, setHasThresholds] = useState<boolean | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     checkThresholds()
@@ -25,6 +28,19 @@ export default function RealtimeAnalyticsPage() {
       setHasThresholds(result.hasThresholds)
     } catch (error) {
       console.error('Error checking thresholds:', error)
+    }
+  }
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await realtimeAnalyticsService.calculateMetrics()
+      await queryClient.invalidateQueries({ queryKey: ['realtime-metrics'] })
+      toast.success('Métricas recalculadas con éxito')
+    } catch (error) {
+      toast.error('Error al recalcular métricas')
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -42,14 +58,26 @@ export default function RealtimeAnalyticsPage() {
           </p>
         </div>
 
-        <Button
-          onClick={() => setIsDefaultsModalOpen(true)}
-          variant={hasThresholds === false ? "default" : "outline"}
-          className="w-full sm:w-auto"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          {hasThresholds === false ? "Configurar Alertas Inteligentes" : "Configuración Recomendada"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Recalcular
+          </Button>
+
+          <Button
+            onClick={() => setIsDefaultsModalOpen(true)}
+            variant={hasThresholds === false ? "default" : "outline"}
+            className="w-full sm:w-auto"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            {hasThresholds === false ? "Configurar Alertas Inteligentes" : "Configuración Recomendada"}
+          </Button>
+        </div>
       </div>
 
       <ApplyDefaultsModal
@@ -57,26 +85,26 @@ export default function RealtimeAnalyticsPage() {
         onOpenChange={setIsDefaultsModalOpen}
         onSuccess={() => {
           checkThresholds()
-          // Opcionalmente recargar otras partes si es necesario
+          queryClient.invalidateQueries({ queryKey: ['realtime-metrics'] })
         }}
       />
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <RealtimeMetricsCard
-          metricType="revenue_bs"
+          metricType="daily_revenue_bs"
           title="Ingresos Hoy (Bs)"
           formatValue={(value) => `Bs. ${Number(value).toFixed(2)}`}
           icon={<DollarSign className="w-4 h-4" />}
         />
         <RealtimeMetricsCard
-          metricType="revenue_usd"
+          metricType="daily_revenue_usd"
           title="Ingresos Hoy (USD)"
           formatValue={(value) => `$${Number(value).toFixed(2)}`}
           icon={<DollarSign className="w-4 h-4" />}
         />
         <RealtimeMetricsCard
-          metricType="sales_count"
+          metricType="daily_sales_count"
           title="Ventas Hoy"
           icon={<ShoppingCart className="w-4 h-4" />}
         />
@@ -125,19 +153,19 @@ export default function RealtimeAnalyticsPage() {
               formatValue={(value) => `$${Number(value).toFixed(2)}`}
             />
             <RealtimeMetricsCard
-              metricType="products_sold"
+              metricType="products_sold_count"
               title="Productos Vendidos"
             />
             <RealtimeMetricsCard
-              metricType="pending_orders"
+              metricType="pending_orders_count"
               title="Órdenes Pendientes"
             />
             <RealtimeMetricsCard
-              metricType="active_customers"
+              metricType="active_customers_count"
               title="Clientes Activos"
             />
             <RealtimeMetricsCard
-              metricType="debt_total_bs"
+              metricType="total_debt_bs"
               title="Deuda Total (Bs)"
               formatValue={(value) => `Bs. ${Number(value).toFixed(2)}`}
             />
@@ -163,4 +191,3 @@ export default function RealtimeAnalyticsPage() {
     </div>
   )
 }
-

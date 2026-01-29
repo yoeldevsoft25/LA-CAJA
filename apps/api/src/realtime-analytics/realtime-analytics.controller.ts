@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -107,6 +108,17 @@ export class RealTimeAnalyticsController {
   }
 
   /**
+   * Eliminar todos los umbrales de la tienda
+   */
+  @Delete('thresholds')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('owner')
+  async deleteAllThresholds(@Request() req: any) {
+    const storeId = req.user.store_id;
+    await this.analyticsService.deleteAllThresholds(storeId);
+  }
+
+  /**
    * Verificar umbrales y generar alertas
    */
   @Post('thresholds/check')
@@ -164,6 +176,17 @@ export class RealTimeAnalyticsController {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     return this.analyticsService.markAlertRead(storeId, alertId, userId);
+  }
+
+  /**
+   * Eliminar todas las alertas de la tienda
+   */
+  @Delete('alerts')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('owner')
+  async deleteAllAlerts(@Request() req: any) {
+    const storeId = req.user.store_id;
+    await this.analyticsService.deleteAllAlerts(storeId);
   }
 
   /**
@@ -233,47 +256,55 @@ export class RealTimeAnalyticsController {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
 
-    this.logger.log(
-      `Aplicando configuración predeterminada para tienda ${storeId}`,
-    );
+    try {
+      this.logger.log(
+        `Aplicando configuración predeterminada para tienda ${storeId}`,
+      );
 
-    // Verificar si ya tiene umbrales
-    const hasExisting =
-      await this.analyticsDefaultsService.hasExistingThresholds(storeId);
+      // Verificar si ya tiene umbrales
+      const hasExisting =
+        await this.analyticsDefaultsService.hasExistingThresholds(storeId);
 
-    if (hasExisting) {
-      this.logger.warn(
-        `Tienda ${storeId} ya tiene umbrales configurados. Aplicando defaults igualmente.`,
+      if (hasExisting) {
+        this.logger.warn(
+          `Tienda ${storeId} ya tiene umbrales configurados. Aplicando defaults igualmente.`,
+        );
+      }
+
+      // Calcular promedios históricos si existen ventas
+      const historicalAverages =
+        await this.analyticsDefaultsService.calculateHistoricalAverages(
+          storeId,
+        );
+
+      // Aplicar configuración predeterminada
+      const thresholds = await this.analyticsDefaultsService.applyDefaultThresholds(
+        storeId,
+        userId,
+        historicalAverages || undefined, // Convert null to undefined
+      );
+
+      // Iniciar cálculo de métricas inmediatamente
+      await this.analyticsService.calculateAndSaveMetrics(storeId);
+
+      this.logger.log(
+        `✅ Configuración predeterminada aplicada: ${thresholds.length} umbrales creados`,
+      );
+
+      return {
+        message: 'Configuración predeterminada aplicada exitosamente',
+        thresholds_created: thresholds.length,
+        historical_data_used: !!historicalAverages,
+        thresholds,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error aplicando defaults para tienda ${storeId}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new InternalServerErrorException(
+        `Error aplicando configuración: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-
-    // Calcular promedios históricos si existen ventas
-    const historicalAverages =
-      await this.analyticsDefaultsService.calculateHistoricalAverages(
-        storeId,
-        // Inyectamos el repositorio de ventas desde el servicio principal
-        this.analyticsService['saleRepository'],
-      );
-
-    // Aplicar configuración predeterminada
-    const thresholds = await this.analyticsDefaultsService.applyDefaultThresholds(
-      storeId,
-      userId,
-      historicalAverages || undefined, // Convert null to undefined
-    );
-
-    // Iniciar cálculo de métricas inmediatamente
-    await this.analyticsService.calculateAndSaveMetrics(storeId);
-
-    this.logger.log(
-      `✅ Configuración predeterminada aplicada: ${thresholds.length} umbrales creados`,
-    );
-
-    return {
-      message: 'Configuración predeterminada aplicada exitosamente',
-      thresholds_created: thresholds.length,
-      historical_data_used: !!historicalAverages,
-      thresholds,
-    };
   }
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { readFileSync } from 'fs';
 import { AppController } from './app.controller';
@@ -76,6 +77,7 @@ import { BullModule } from '@nestjs/bullmq';
       ignoreEnvFile: false, // Intentar leer .env si existe
       // En producción (Render), las variables vienen de process.env automáticamente
     }),
+    ScheduleModule.forRoot(),
     // ⚡ CRÍTICO: Conexión Redis compartida globalmente para BullMQ
     // Esto evita crear múltiples conexiones Redis (cada una consume un cliente)
     // El plan gratuito de Redis Cloud tiene límite de ~10-30 conexiones
@@ -137,7 +139,7 @@ import { BullModule } from '@nestjs/bullmq';
         const isProduction =
           configService.get<string>('NODE_ENV') === 'production';
         const isDevelopment = !isProduction;
-        
+
         // Detectar si es un servicio cloud que usa certificados autofirmados
         const isCloudDatabase =
           url.hostname.includes('supabase.co') ||
@@ -147,7 +149,7 @@ import { BullModule } from '@nestjs/bullmq';
           url.hostname.includes('azure') ||
           url.hostname.includes('gcp') ||
           configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'false';
-        
+
         // Configuración SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
         // En produccion, SIEMPRE rechazar certificados no autorizados
         // En desarrollo, se puede usar DB_SSL_REJECT_UNAUTHORIZED=true para forzar verificacion
@@ -178,11 +180,11 @@ import { BullModule } from '@nestjs/bullmq';
           : sslCaFile
             ? readFileSync(sslCaFile, 'utf8')
             : undefined;
-        
+
         // Timeouts configurables: más largos en desarrollo local (útil para VPN)
         const connectionTimeoutEnv = configService.get<number>('DB_CONNECTION_TIMEOUT');
         const connectionTimeout = connectionTimeoutEnv || (isDevelopment ? 30000 : 10000); // 30s en dev, 10s en prod
-        
+
         // Pool configurable: más conservador en desarrollo local
         const poolMax = configService.get<number>('DB_POOL_MAX') || (isDevelopment ? 5 : 20);
         const poolMin = configService.get<number>('DB_POOL_MIN') || (isDevelopment ? 1 : 2);
@@ -220,9 +222,9 @@ import { BullModule } from '@nestjs/bullmq';
           // NOTA: Supabase pooler requiere SSL siempre, incluso en desarrollo
           ssl: isCloudDatabase || isProduction
             ? {
-                rejectUnauthorized: sslRejectUnauthorized,
-                ...(sslCa ? { ca: sslCa } : {}),
-              }
+              rejectUnauthorized: sslRejectUnauthorized,
+              ...(sslCa ? { ca: sslCa } : {}),
+            }
             : false,
         };
       },
@@ -308,4 +310,4 @@ import { BullModule } from '@nestjs/bullmq';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

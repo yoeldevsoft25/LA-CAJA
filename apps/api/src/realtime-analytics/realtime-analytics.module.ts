@@ -12,9 +12,18 @@ import { ComparativeMetric } from '../database/entities/comparative-metric.entit
 import { Sale } from '../database/entities/sale.entity';
 import { Product } from '../database/entities/product.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
+import { Store } from '../database/entities/store.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { Debt } from '../database/entities/debt.entity';
+import { ProductLot } from '../database/entities/product-lot.entity';
+import { PurchaseOrder } from '../database/entities/purchase-order.entity';
+import { Shift } from '../database/entities/shift.entity';
+import { SaleItem } from '../database/entities/sale-item.entity';
+import { Customer } from '../database/entities/customer.entity';
+
 
 @Module({
   imports: [
@@ -27,6 +36,13 @@ import { NotificationsModule } from '../notifications/notifications.module';
       Sale,
       Product,
       InventoryMovement,
+      Store,
+      Debt,
+      ProductLot,
+      PurchaseOrder,
+      Shift,
+      SaleItem,
+      Customer,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

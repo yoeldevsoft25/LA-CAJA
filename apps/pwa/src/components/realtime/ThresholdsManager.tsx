@@ -58,6 +58,12 @@ const alertTypeLabels: Record<AlertType, string> = {
   inventory_anomaly: 'Anomalía de Inventario',
   payment_issue: 'Problema de Pago',
   system_error: 'Error del Sistema',
+  sale_anomaly: 'Anomalía en Ventas',
+  revenue_spike: 'Aumento de Ingresos',
+  inventory_high: 'Exceso de Inventario',
+  debt_overdue: 'Deuda Vencida',
+  product_expiring: 'Producto por Vencer',
+  custom: 'Personalizada',
 }
 
 const operatorLabels: Record<ComparisonOperator, string> = {
@@ -67,6 +73,31 @@ const operatorLabels: Record<ComparisonOperator, string> = {
   lte: 'Menor o igual que (<=)',
   eq: 'Igual a (=)',
   neq: 'Diferente de (!=)',
+  less_than: 'Menor que (<)',
+  greater_than: 'Mayor que (>)',
+  equals: 'Igual a (=)',
+  not_equals: 'Diferente de (!=)',
+}
+
+const metricNameLabels: Record<string, string> = {
+  out_of_stock_count: 'Productos sin Stock',
+  daily_revenue_bs: 'Ingresos Diarios (Bs)',
+  daily_revenue_usd: 'Ingresos Diarios (USD)',
+  overdue_debt_bs: 'Deuda Vencida (Bs)',
+  expired_products_count: 'Productos Vencidos',
+  low_stock_count: 'Stock Bajo',
+  cash_on_hand_bs: 'Efectivo en Caja',
+  daily_sales_count: 'Volumen de Ventas',
+  expiring_soon_count: 'Próximos a Vencer',
+  customers_overdue_count: 'Clientes en Mora',
+  total_debt_bs: 'Deuda Total (Bs)',
+  inventory_value_bs: 'Valor Inventario',
+  avg_ticket_bs: 'Ticket Promedio (Bs)',
+  avg_ticket_usd: 'Ticket Promedio (USD)',
+  pending_orders_count: 'Órdenes de Compra',
+  active_sessions_count: 'Sesiones Abiertas',
+  active_customers_count: 'Clientes Activos',
+  products_sold_count: 'Productos Vendidos',
 }
 
 export default function ThresholdsManager() {
@@ -118,6 +149,48 @@ export default function ThresholdsManager() {
     },
   })
 
+  const deleteAllMutation = useMutation({
+    mutationFn: () => realtimeAnalyticsService.deleteAllThresholds(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alert-thresholds'] })
+      toast.success('Todos los umbrales han sido eliminados')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al eliminar los umbrales')
+    },
+  })
+
+  const deleteAlertsMutation = useMutation({
+    mutationFn: () => realtimeAnalyticsService.deleteAllAlerts(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['realtime-alerts'] }) // Re-feth alerts if they are on the page
+      toast.success('Historial de alertas eliminado')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al eliminar el historial')
+    },
+  })
+
+  const handleDeleteAll = () => {
+    if (
+      !confirm(
+        '¿Está seguro de que desea eliminar TODOS los umbrales? Esta acción no se puede deshacer.'
+      )
+    )
+      return
+    deleteAllMutation.mutate()
+  }
+
+  const handleDeleteHistory = () => {
+    if (
+      !confirm(
+        '¿Está seguro de que desea eliminar TODO el historial de alertas? Esta acción no se puede deshacer.'
+      )
+    )
+      return
+    deleteAlertsMutation.mutate()
+  }
+
   const handleDelete = (id: string) => {
     if (!confirm('¿Está seguro de eliminar este umbral?')) return
     deleteMutation.mutate(id)
@@ -134,15 +207,38 @@ export default function ThresholdsManager() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5" />
               Gestión de Umbrales de Alertas
             </CardTitle>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Crear Umbral
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeleteHistory}
+                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                disabled={deleteAlertsMutation.isPending}
+              >
+                Limpiar Historial Alertas
+              </Button>
+              {thresholds.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteAll}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={deleteAllMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Eliminar Todos los Umbrales
+                </Button>
+              )}
+              <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Crear Umbral
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -182,9 +278,11 @@ export default function ThresholdsManager() {
                     return (
                       <TableRow key={threshold.id}>
                         <TableCell className="font-medium">
-                          {alertTypeLabels[threshold.alert_type]}
+                          {alertTypeLabels[threshold.alert_type] || threshold.alert_type}
                         </TableCell>
-                        <TableCell>{threshold.metric_name}</TableCell>
+                        <TableCell>
+                          {metricNameLabels[threshold.metric_name] || threshold.metric_name}
+                        </TableCell>
                         <TableCell>
                           {operatorLabels[threshold.comparison_operator]}
                         </TableCell>

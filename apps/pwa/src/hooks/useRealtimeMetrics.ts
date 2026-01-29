@@ -29,7 +29,7 @@ export function useRealtimeMetrics(metricTypes?: MetricType[]) {
   const handleMetricUpdate = useCallback(
     (metric: RealTimeMetric) => {
       setMetrics((prev) => {
-        const index = prev.findIndex((m) => m.metric_type === metric.metric_type)
+        const index = prev.findIndex((m) => m.metric_name === metric.metric_name)
         if (index >= 0) {
           const updated = [...prev]
           updated[index] = metric
@@ -42,7 +42,7 @@ export function useRealtimeMetrics(metricTypes?: MetricType[]) {
       queryClient.setQueryData(['realtime-metrics', metricTypes], (old: any) => {
         if (!old) return { metrics: [metric], calculated_at: new Date().toISOString() }
         const index = old.metrics.findIndex(
-          (m: RealTimeMetric) => m.metric_type === metric.metric_type,
+          (m: RealTimeMetric) => m.metric_name === metric.metric_name,
         )
         if (index >= 0) {
           const updated = { ...old }
@@ -67,7 +67,7 @@ export function useRealtimeMetrics(metricTypes?: MetricType[]) {
     const checkConnection = setInterval(() => {
       const connected = realtimeWebSocketService.connected
       setIsConnected(connected)
-      
+
       // Suscribirse cuando se conecte
       if (connected) {
         realtimeWebSocketService.subscribeToMetrics(metricTypes)

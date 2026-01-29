@@ -19,6 +19,7 @@ import {
   CreatePaymentMethodConfigDto,
   PaymentMethod,
 } from '../payments/dto/create-payment-method-config.dto';
+import { AnalyticsDefaultsService } from '../realtime-analytics/analytics-defaults.service';
 
 export type BusinessType = 'retail' | 'services' | 'restaurant' | 'general';
 
@@ -50,7 +51,8 @@ export class SetupService {
     private chartOfAccountsService: ChartOfAccountsService,
     private fiscalConfigsService: FiscalConfigsService,
     private paymentMethodConfigsService: PaymentMethodConfigsService,
-  ) {}
+    private analyticsDefaultsService: AnalyticsDefaultsService,
+  ) { }
 
   /**
    * Configuración automática completa para una nueva tienda
@@ -142,6 +144,16 @@ export class SetupService {
         this.logger.error(`Error configurando métodos de pago: ${error}`);
         stepsFailed.push('payment_methods');
         details.payment_methods_configured = false;
+      }
+
+      // 7. Configurar Analíticas Predeterminadas
+      try {
+        await this.analyticsDefaultsService.applyDefaultThresholds(storeId, userId);
+        details.analytics_defaults_configured = true;
+      } catch (error) {
+        this.logger.error(`Error configurando analíticas: ${error}`);
+        // No marcamos como fallido el setup global si falla esto, es opcional/mejora
+        details.analytics_defaults_configured = false;
       }
 
       return {
@@ -289,10 +301,10 @@ export class SetupService {
       method: PaymentMethod;
       sortOrder: number;
     }> = [
-      { method: 'CASH_BS' as PaymentMethod, sortOrder: 20 },
-      { method: 'CASH_USD' as PaymentMethod, sortOrder: 10 },
-      { method: 'PAGO_MOVIL' as PaymentMethod, sortOrder: 30 },
-    ];
+        { method: 'CASH_BS' as PaymentMethod, sortOrder: 20 },
+        { method: 'CASH_USD' as PaymentMethod, sortOrder: 10 },
+        { method: 'PAGO_MOVIL' as PaymentMethod, sortOrder: 30 },
+      ];
 
     for (const { method, sortOrder } of defaultMethods) {
       const existing = await this.paymentMethodConfigsService.getConfig(

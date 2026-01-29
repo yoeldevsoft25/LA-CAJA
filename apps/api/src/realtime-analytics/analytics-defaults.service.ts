@@ -19,6 +19,8 @@ interface DefaultThreshold {
     business_value: string;
 }
 
+import { Sale } from '../database/entities/sale.entity';
+
 @Injectable()
 export class AnalyticsDefaultsService {
     private readonly logger = new Logger(AnalyticsDefaultsService.name);
@@ -26,6 +28,8 @@ export class AnalyticsDefaultsService {
     constructor(
         @InjectRepository(AlertThreshold)
         private thresholdRepository: Repository<AlertThreshold>,
+        @InjectRepository(Sale)
+        private saleRepository: Repository<Sale>,
     ) { }
 
     /**
@@ -52,8 +56,17 @@ export class AnalyticsDefaultsService {
                 threshold_value: 50, // 50% del promedio histórico
                 comparison_operator: 'less_than',
                 severity: 'critical',
-                description: 'Caída severa de ingresos diarios',
+                description: 'Caída severa de ingresos diarios (Bs)',
                 business_value: 'Detectar problemas graves en ventas inmediatamente',
+            },
+            {
+                alert_type: 'revenue_drop',
+                metric_name: 'daily_revenue_usd',
+                threshold_value: 50, // 50% del promedio
+                comparison_operator: 'less_than',
+                severity: 'critical',
+                description: 'Caída severa de ingresos diarios (USD)',
+                business_value: 'Proteger ingresos en moneda dura',
             },
             {
                 alert_type: 'debt_overdue',
@@ -61,7 +74,7 @@ export class AnalyticsDefaultsService {
                 threshold_value: 10000,
                 comparison_operator: 'greater_than',
                 severity: 'critical',
-                description: 'Deuda vencida superior a 10,000 Bs',
+                description: 'Deuda vencida crítica superada',
                 business_value: 'Proteger flujo de caja y reducir riesgo crediticio',
             },
             {
@@ -83,8 +96,17 @@ export class AnalyticsDefaultsService {
                 threshold_value: 5,
                 comparison_operator: 'greater_than',
                 severity: 'high',
-                description: 'Más de 5 productos con stock bajo',
+                description: 'Agotamiento próximo de múltiples productos',
                 business_value: 'Planificar reabastecimiento antes de quedarse sin stock',
+            },
+            {
+                alert_type: 'custom',
+                metric_name: 'cash_on_hand_bs',
+                threshold_value: 50000,
+                comparison_operator: 'greater_than',
+                severity: 'high',
+                description: 'Exceso de efectivo en caja (Riesgo)',
+                business_value: 'Sugerir depósito o resguardo de efectivo por seguridad',
             },
             {
                 alert_type: 'sale_anomaly',
@@ -92,7 +114,7 @@ export class AnalyticsDefaultsService {
                 threshold_value: 70, // 70% del promedio
                 comparison_operator: 'less_than',
                 severity: 'high',
-                description: 'Caída significativa en cantidad de ventas',
+                description: 'Baja inusual en volumen de transacciones',
                 business_value: 'Identificar problemas en estrategia comercial',
             },
             {
@@ -101,7 +123,7 @@ export class AnalyticsDefaultsService {
                 threshold_value: 10,
                 comparison_operator: 'greater_than',
                 severity: 'high',
-                description: 'Más de 10 productos próximos a vencer (30 días)',
+                description: 'Productos próximos a vencer (30 días)',
                 business_value: 'Promocionar productos antes de pérdida total',
             },
             {
@@ -110,8 +132,17 @@ export class AnalyticsDefaultsService {
                 threshold_value: 5,
                 comparison_operator: 'greater_than',
                 severity: 'high',
-                description: 'Más de 5 clientes con deudas vencidas',
+                description: 'Múltiples clientes en mora',
                 business_value: 'Iniciar procesos de cobranza oportunamente',
+            },
+            {
+                alert_type: 'debt_overdue',
+                metric_name: 'total_debt_bs',
+                threshold_value: 50000,
+                comparison_operator: 'greater_than',
+                severity: 'high',
+                description: 'Exposición crediticia total elevada',
+                business_value: 'Monitorear el riesgo total de la cartera de clientes',
             },
 
             // ==========================================
@@ -123,7 +154,7 @@ export class AnalyticsDefaultsService {
                 threshold_value: 200000,
                 comparison_operator: 'greater_than',
                 severity: 'medium',
-                description: 'Valor de inventario superior a 200,000 Bs',
+                description: 'Capital inmovilizado en inventario alto',
                 business_value: 'Optimizar capital inmovilizado en inventario',
             },
             {
@@ -132,8 +163,17 @@ export class AnalyticsDefaultsService {
                 threshold_value: 80, // 80% del promedio
                 comparison_operator: 'less_than',
                 severity: 'medium',
-                description: 'Ticket promedio bajo',
-                business_value: 'Implementar estrategias de upselling y cross-selling',
+                description: 'Ticket promedio en Bs por debajo de lo usual',
+                business_value: 'Implementar estrategias de upselling',
+            },
+            {
+                alert_type: 'sale_anomaly',
+                metric_name: 'avg_ticket_usd',
+                threshold_value: 80, // 80% del promedio
+                comparison_operator: 'less_than',
+                severity: 'medium',
+                description: 'Ticket promedio en USD por debajo de lo usual',
+                business_value: 'Monitorear valor real de compra por cliente',
             },
             {
                 alert_type: 'custom',
@@ -141,8 +181,17 @@ export class AnalyticsDefaultsService {
                 threshold_value: 10,
                 comparison_operator: 'greater_than',
                 severity: 'medium',
-                description: 'Más de 10 órdenes de compra pendientes',
+                description: 'Acumulación de órdenes de compra',
                 business_value: 'Coordinar mejor con proveedores',
+            },
+            {
+                alert_type: 'custom',
+                metric_name: 'active_sessions_count',
+                threshold_value: 5,
+                comparison_operator: 'greater_than',
+                severity: 'medium',
+                description: 'Exceso de sesiones de caja abiertas',
+                business_value: 'Verificar eficiencia operativa en puntos de venta',
             },
 
             // ==========================================
@@ -154,8 +203,17 @@ export class AnalyticsDefaultsService {
                 threshold_value: 150, // 150% del promedio
                 comparison_operator: 'greater_than',
                 severity: 'low',
-                description: 'Pico inusual de ingresos (positivo)',
+                description: 'Pico de ingresos en Bs detectado',
                 business_value: 'Identificar y replicar acciones exitosas',
+            },
+            {
+                alert_type: 'revenue_spike',
+                metric_name: 'daily_revenue_usd',
+                threshold_value: 150, // 150% del promedio
+                comparison_operator: 'greater_than',
+                severity: 'low',
+                description: 'Pico de ingresos en USD detectado',
+                business_value: 'Analizar ventas de alto valor',
             },
             {
                 alert_type: 'custom',
@@ -163,8 +221,26 @@ export class AnalyticsDefaultsService {
                 threshold_value: 120, // 120% del promedio
                 comparison_operator: 'greater_than',
                 severity: 'low',
-                description: 'Alto tráfico de clientes activos',
+                description: 'Fidelización: Alto tráfico de clientes activos',
                 business_value: 'Reconocer rendimiento excepcional del equipo',
+            },
+            {
+                alert_type: 'custom',
+                metric_name: 'products_sold_count',
+                threshold_value: 500,
+                comparison_operator: 'greater_than',
+                severity: 'low',
+                description: 'Volumen excepcional de productos vendidos',
+                business_value: 'Monitorear velocidad de rotación del inventario',
+            },
+            {
+                alert_type: 'custom',
+                metric_name: 'active_sessions_count',
+                threshold_value: 0,
+                comparison_operator: 'equals',
+                severity: 'low',
+                description: 'Sin sesiones activas al iniciar jornada',
+                business_value: 'Recordatorio operativo para apertura de cajas',
             },
         ];
     }
@@ -250,7 +326,6 @@ export class AnalyticsDefaultsService {
      */
     async calculateHistoricalAverages(
         storeId: string,
-        salesRepository: any, // Repository<Sale>
     ): Promise<{
         avgDailyRevenue: number;
         avgDailySales: number;
@@ -261,7 +336,7 @@ export class AnalyticsDefaultsService {
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-            const sales = await salesRepository
+            const sales = await this.saleRepository
                 .createQueryBuilder('sale')
                 .where('sale.store_id = :storeId', { storeId })
                 .andWhere('sale.sold_at >= :startDate', { startDate: thirtyDaysAgo })

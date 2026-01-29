@@ -24,7 +24,7 @@ export default function RealtimeMetricsCard({
 }: RealtimeMetricsCardProps) {
   const { metrics, isLoading, isConnected } = useRealtimeMetrics([metricType])
 
-  const metric = metrics.find((m) => m.metric_type === metricType)
+  const metric = metrics.find((m) => m.metric_name === metricType)
 
   if (isLoading) {
     return (
@@ -40,8 +40,9 @@ export default function RealtimeMetricsCard({
   if (!metric) {
     return (
       <Card>
-        <CardContent className="p-4 sm:p-6">
-          <p className="text-sm text-muted-foreground">No hay datos disponibles</p>
+        <CardContent className="p-4 sm:p-6 text-center">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-xs text-muted-foreground mt-2 italic">Sin datos registrados</p>
         </CardContent>
       </Card>
     )
@@ -72,7 +73,7 @@ export default function RealtimeMetricsCard({
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
             <p className="text-2xl sm:text-3xl font-bold">
-              {formatValue(metric.value)}
+              {formatValue(metric.metric_value)}
             </p>
             {metric.previous_value !== undefined && (
               <Badge
@@ -81,8 +82,8 @@ export default function RealtimeMetricsCard({
                   isPositive
                     ? 'bg-green-100 text-green-800'
                     : isNegative
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-gray-100 text-gray-800'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
                 }
               >
                 {isPositive ? (
@@ -103,7 +104,7 @@ export default function RealtimeMetricsCard({
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            Actualizado: {new Date(metric.calculated_at).toLocaleTimeString()}
+            Actualizado: {new Date(metric.created_at).toLocaleTimeString()}
           </p>
         </div>
       </CardContent>

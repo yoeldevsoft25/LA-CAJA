@@ -98,10 +98,24 @@ export const realtimeAnalyticsService = {
   },
 
   /**
+   * Elimina todos los umbrales de la tienda
+   */
+  async deleteAllThresholds(): Promise<void> {
+    await api.delete('/realtime-analytics/thresholds')
+  },
+
+  /**
    * Verifica umbrales manualmente
    */
   async checkThresholds(): Promise<void> {
     await api.post('/realtime-analytics/thresholds/check')
+  },
+
+  /**
+   * Elimina todas las alertas de la tienda
+   */
+  async deleteAllAlerts(): Promise<void> {
+    await api.delete('/realtime-analytics/alerts')
   },
 
   /**

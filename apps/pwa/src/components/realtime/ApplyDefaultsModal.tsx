@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -31,18 +31,32 @@ export function ApplyDefaultsModal({
     const [success, setSuccess] = useState(false)
     const [thresholdsCreated, setThresholdsCreated] = useState(0)
 
-    // Cargar preview cuando se abre el modal
-    const handleOpen = async (isOpen: boolean) => {
-        onOpenChange(isOpen)
+    const [isLoadingPreview, setIsLoadingPreview] = useState(false)
 
-        if (isOpen && !preview && !success) {
-            try {
-                const data = await realtimeAnalyticsService.getDefaultsPreview()
-                setPreview(data)
-            } catch (err) {
-                setError('Error al cargar la configuración predeterminada')
-                console.error(err)
-            }
+    useEffect(() => {
+        if (open && !preview && !success && !isLoadingPreview) {
+            loadPreview()
+        }
+    }, [open, preview, success])
+
+    const loadPreview = async () => {
+        setIsLoadingPreview(true)
+        try {
+            const data = await realtimeAnalyticsService.getDefaultsPreview()
+            setPreview(data)
+        } catch (err) {
+            setError('Error al cargar la configuración predeterminada')
+            console.error(err)
+        } finally {
+            setIsLoadingPreview(false)
+        }
+    }
+
+    // Wrapper para onOpenChange para limpiar estado al cerrar si es necesario
+    const handleOpenChange = (isOpen: boolean) => {
+        onOpenChange(isOpen)
+        if (!isOpen) {
+            // Optional: reset state here or rely on handleClose
         }
     }
 
@@ -109,7 +123,7 @@ export function ApplyDefaultsModal({
     }
 
     return (
-        <Dialog open={open} onOpenChange={handleOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -222,9 +236,11 @@ export function ApplyDefaultsModal({
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            </div>
+                            !error && (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            )
                         )}
                     </>
                 )}

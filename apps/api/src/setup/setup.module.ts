@@ -10,6 +10,7 @@ import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
 import { AccountingModule } from '../accounting/accounting.module';
 import { FiscalConfigsModule } from '../fiscal-configs/fiscal-configs.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { RealTimeAnalyticsModule } from '../realtime-analytics/realtime-analytics.module';
 
 @Module({
   imports: [
@@ -23,9 +24,10 @@ import { PaymentsModule } from '../payments/payments.module';
     AccountingModule,
     FiscalConfigsModule,
     PaymentsModule,
+    RealTimeAnalyticsModule,
   ],
   controllers: [SetupController],
   providers: [SetupService],
   exports: [SetupService],
 })
-export class SetupModule {}
+export class SetupModule { }

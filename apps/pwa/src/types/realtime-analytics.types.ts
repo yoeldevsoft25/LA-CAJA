@@ -1,16 +1,23 @@
 // Tipos de métricas
 export type MetricType =
-  | 'revenue_bs'
-  | 'revenue_usd'
-  | 'sales_count'
+  | 'daily_revenue_bs'
+  | 'daily_revenue_usd'
+  | 'daily_sales_count'
   | 'avg_ticket_bs'
   | 'avg_ticket_usd'
-  | 'products_sold'
+  | 'products_sold_count'
   | 'low_stock_count'
-  | 'pending_orders'
-  | 'active_customers'
-  | 'debt_total_bs'
-  | 'debt_total_usd'
+  | 'out_of_stock_count'
+  | 'inventory_value_bs'
+  | 'expiring_soon_count'
+  | 'expired_products_count'
+  | 'active_customers_count'
+  | 'total_debt_bs'
+  | 'overdue_debt_bs'
+  | 'customers_overdue_count'
+  | 'active_sessions_count'
+  | 'pending_orders_count'
+  | 'cash_on_hand_bs'
 
 // Tipos de alertas
 export type AlertType =
@@ -20,6 +27,12 @@ export type AlertType =
   | 'inventory_anomaly'
   | 'payment_issue'
   | 'system_error'
+  | 'sale_anomaly'
+  | 'revenue_spike'
+  | 'inventory_high'
+  | 'debt_overdue'
+  | 'product_expiring'
+  | 'custom'
 
 export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical'
 
@@ -27,11 +40,14 @@ export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical'
 export interface RealTimeMetric {
   id: string
   store_id: string
-  metric_type: MetricType
-  value: number
+  metric_type: string
+  metric_name: MetricType
+  metric_value: number
   previous_value?: number
   change_percentage?: number
-  calculated_at: string
+  period_start: string
+  period_end: string
+  created_at: string
   metadata?: Record<string, any>
 }
 
@@ -41,7 +57,7 @@ export interface RealTimeMetricsResponse {
 }
 
 // Umbrales de alerta
-export type ComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'neq'
+export type ComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'neq' | 'less_than' | 'greater_than' | 'equals' | 'not_equals'
 
 export interface AlertThreshold {
   id: string
