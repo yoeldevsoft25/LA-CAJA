@@ -116,12 +116,12 @@ export default function SalesHeatmapChart() {
               </div>
 
               {/* Filas por día */}
-              <div className="space-y-1">
+              <div className="space-y-1.5 min-w-[600px] md:min-w-0">
                 {dates.map((dateKey) => {
                   const dayData = heatmapData.get(dateKey)!
                   return (
-                    <div key={dateKey} className="flex items-center gap-1">
-                      <div className="w-24 flex-shrink-0 text-xs text-muted-foreground">
+                    <div key={dateKey} className="flex items-center gap-1 sm:gap-1.5">
+                      <div className="w-16 sm:w-24 flex-shrink-0 text-[10px] sm:text-xs font-medium text-muted-foreground">
                         {format(new Date(dateKey), 'dd/MM')}
                       </div>
                       {hours.map((hour) => {
@@ -134,17 +134,16 @@ export default function SalesHeatmapChart() {
                         return (
                           <div
                             key={hour}
-                            className={`flex-1 h-8 rounded ${getColorIntensity(value)} hover:opacity-80 transition-opacity cursor-pointer relative group`}
+                            className={`flex-1 h-6 sm:h-8 rounded-[2px] sm:rounded ${getColorIntensity(value)} hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer relative group`}
                             title={
                               item
                                 ? `${item.sales_count} ventas - ${formatCurrency(item.revenue_bs, 'BS')}`
                                 : 'Sin ventas'
                             }
                           >
-                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                              {item
-                                ? `${item.sales_count} ventas - ${formatCurrency(item.revenue_bs, 'BS')}`
-                                : 'Sin ventas'}
+                            <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border shadow-lg text-[10px] sm:text-xs p-2 rounded-md whitespace-nowrap z-50 pointer-events-none">
+                              <p className="font-bold">{item ? `${item.sales_count} ventas` : 'Sin ventas'}</p>
+                              {item && <p className="text-primary">{formatCurrency(item.revenue_bs, 'BS')}</p>}
                             </div>
                           </div>
                         )

@@ -1,6 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Activity, AlertTriangle, Calendar, BarChart3, Settings, Sparkles, DollarSign, ShoppingCart, Package, RefreshCw } from 'lucide-react'
+import {
+  Activity,
+  AlertTriangle,
+  Calendar,
+  BarChart3,
+  Settings,
+  Sparkles,
+  DollarSign,
+  ShoppingCart,
+  Package,
+  RefreshCw,
+  TrendingDown,
+  Users,
+  Clock,
+  Wallet,
+  History,
+  Store,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import RealtimeMetricsCard from '@/components/realtime/RealtimeMetricsCard'
 import AlertsPanel from '@/components/realtime/AlertsPanel'
@@ -36,12 +53,25 @@ export default function RealtimeAnalyticsPage() {
     try {
       await realtimeAnalyticsService.calculateMetrics()
       await queryClient.invalidateQueries({ queryKey: ['realtime-metrics'] })
+      await queryClient.invalidateQueries({ queryKey: ['realtime-alerts'] })
       toast.success('Métricas recalculadas con éxito')
     } catch (error) {
       toast.error('Error al recalcular métricas')
     } finally {
       setIsRefreshing(false)
     }
+  }
+
+  const formatBs = (value: number) => `Bs. ${Number(value).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const formatUSD = (value: number) => `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const formatInt = (value: number) => Number(value).toLocaleString('es-VE', { maximumFractionDigits: 0 })
+  const formatQty = (value: number) => {
+    const num = Number(value)
+    // Si tiene decimales significativos, mostrar hasta 3 (para kg/peso)
+    if (num % 1 !== 0) {
+      return num.toLocaleString('es-VE', { minimumFractionDigits: 1, maximumFractionDigits: 3 })
+    }
+    return num.toLocaleString('es-VE', { maximumFractionDigits: 0 })
   }
 
   return (
@@ -54,7 +84,7 @@ export default function RealtimeAnalyticsPage() {
             Analytics en Tiempo Real
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Métricas, alertas y análisis en tiempo real
+            Gestione su negocio con datos precisos y alertas automáticas.
           </p>
         </div>
 
@@ -63,7 +93,7 @@ export default function RealtimeAnalyticsPage() {
             variant="outline"
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="w-full sm:w-auto"
+            className="flex-1 sm:flex-initial"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Recalcular
@@ -72,10 +102,10 @@ export default function RealtimeAnalyticsPage() {
           <Button
             onClick={() => setIsDefaultsModalOpen(true)}
             variant={hasThresholds === false ? "default" : "outline"}
-            className="w-full sm:w-auto"
+            className="flex-1 sm:flex-initial"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            {hasThresholds === false ? "Configurar Alertas Inteligentes" : "Configuración Recomendada"}
+            {hasThresholds === false ? "Configurar IA" : "Ajustes de Alertas"}
           </Button>
         </div>
       </div>
@@ -89,91 +119,186 @@ export default function RealtimeAnalyticsPage() {
         }}
       />
 
-      {/* Métricas principales */}
+      {/* Métricas principales (KPIs de Alto Impacto) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <RealtimeMetricsCard
           metricType="daily_revenue_bs"
           title="Ingresos Hoy (Bs)"
-          formatValue={(value) => `Bs. ${Number(value).toFixed(2)}`}
+          formatValue={formatBs}
           icon={<DollarSign className="w-4 h-4" />}
         />
         <RealtimeMetricsCard
           metricType="daily_revenue_usd"
           title="Ingresos Hoy (USD)"
-          formatValue={(value) => `$${Number(value).toFixed(2)}`}
+          formatValue={formatUSD}
           icon={<DollarSign className="w-4 h-4" />}
         />
         <RealtimeMetricsCard
           metricType="daily_sales_count"
           title="Ventas Hoy"
+          formatValue={formatInt}
           icon={<ShoppingCart className="w-4 h-4" />}
         />
         <RealtimeMetricsCard
           metricType="low_stock_count"
-          title="Stock Bajo"
+          title="Alertas de Stock"
+          formatValue={formatInt}
           icon={<Package className="w-4 h-4" />}
         />
       </div>
 
-      {/* Tabs para diferentes vistas */}
-      <Tabs defaultValue="metrics" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="metrics">
-            <Activity className="w-4 h-4 mr-2" />
-            Métricas
-          </TabsTrigger>
-          <TabsTrigger value="alerts">
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Alertas
-          </TabsTrigger>
-          <TabsTrigger value="heatmap">
-            <Calendar className="w-4 h-4 mr-2" />
-            Heatmap
-          </TabsTrigger>
-          <TabsTrigger value="comparative">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Comparativas
-          </TabsTrigger>
-          <TabsTrigger value="thresholds">
-            <Settings className="w-4 h-4 mr-2" />
-            Umbrales
-          </TabsTrigger>
-        </TabsList>
+      {/* Tabs para diferentes vistas con scroll móvil */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <div className="overflow-x-auto pb-2 -mx-3 sm:mx-0 px-3 sm:px-0">
+          <TabsList className="w-full justify-start md:justify-center p-1 bg-muted/50 h-auto">
+            <TabsTrigger value="overview" className="py-2.5 px-4">
+              <Activity className="w-4 h-4 mr-2" />
+              Vista General
+            </TabsTrigger>
+            <TabsTrigger value="alerts" className="py-2.5 px-4">
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Alertas
+            </TabsTrigger>
+            <TabsTrigger value="heatmap" className="py-2.5 px-4">
+              <Calendar className="w-4 h-4 mr-2" />
+              Horarios Pico
+            </TabsTrigger>
+            <TabsTrigger value="comparative" className="py-2.5 px-4 md:hidden lg:flex">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Tendencias
+            </TabsTrigger>
+            <TabsTrigger value="thresholds" className="py-2.5 px-4">
+              <Settings className="w-4 h-4 mr-2" />
+              Configuración
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="metrics" className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <RealtimeMetricsCard
-              metricType="avg_ticket_bs"
-              title="Ticket Promedio (Bs)"
-              formatValue={(value) => `Bs. ${Number(value).toFixed(2)}`}
-            />
-            <RealtimeMetricsCard
-              metricType="avg_ticket_usd"
-              title="Ticket Promedio (USD)"
-              formatValue={(value) => `$${Number(value).toFixed(2)}`}
-            />
-            <RealtimeMetricsCard
-              metricType="products_sold_count"
-              title="Productos Vendidos"
-            />
-            <RealtimeMetricsCard
-              metricType="pending_orders_count"
-              title="Órdenes Pendientes"
-            />
-            <RealtimeMetricsCard
-              metricType="active_customers_count"
-              title="Clientes Activos"
-            />
-            <RealtimeMetricsCard
-              metricType="total_debt_bs"
-              title="Deuda Total (Bs)"
-              formatValue={(value) => `Bs. ${Number(value).toFixed(2)}`}
-            />
+        <TabsContent value="overview" className="space-y-8">
+          {/* Sección: Inventario Crítico */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold flex items-center gap-2 px-1">
+              <Package className="w-5 h-5 text-orange-600" />
+              Inventario y Disponibilidad
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <RealtimeMetricsCard
+                metricType="out_of_stock_count"
+                title="Sin Stock (Crítico)"
+                formatValue={formatInt}
+                icon={<AlertTriangle className="w-4 h-4 text-red-600" />}
+              />
+              <RealtimeMetricsCard
+                metricType="low_stock_count"
+                title="Stock por Agotarse"
+                formatValue={formatInt}
+                icon={<Package className="w-4 h-4 text-orange-600" />}
+              />
+              <RealtimeMetricsCard
+                metricType="expired_products_count"
+                title="Productos Vencidos"
+                formatValue={formatInt}
+                icon={<TrendingDown className="w-4 h-4 text-red-600" />}
+              />
+              <RealtimeMetricsCard
+                metricType="expiring_soon_count"
+                title="Por Vencer (30d)"
+                formatValue={formatInt}
+                icon={<Clock className="w-4 h-4 text-yellow-600" />}
+              />
+            </div>
+          </div>
+
+          {/* Sección: Cobranzas y Riesgo */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold flex items-center gap-2 px-1">
+              <Wallet className="w-5 h-5 text-blue-600" />
+              Cobranzas y Riesgo Crediticio
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <RealtimeMetricsCard
+                metricType="overdue_debt_bs"
+                title="Deuda Vencida (Bs)"
+                formatValue={formatBs}
+                icon={<AlertTriangle className="w-4 h-4 text-red-600" />}
+              />
+              <RealtimeMetricsCard
+                metricType="total_debt_bs"
+                title="Deuda Total"
+                formatValue={formatBs}
+              />
+              <RealtimeMetricsCard
+                metricType="customers_overdue_count"
+                title="Clientes en Mora"
+                formatValue={formatInt}
+                icon={<Users className="w-4 h-4" />}
+              />
+            </div>
+          </div>
+
+          {/* Sección: Operaciones y Caja */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold flex items-center gap-2 px-1">
+              <Store className="w-5 h-5 text-green-600" />
+              Operaciones Diarias
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <RealtimeMetricsCard
+                metricType="cash_on_hand_bs"
+                title="Efectivo en Caja"
+                formatValue={formatBs}
+              />
+              <RealtimeMetricsCard
+                metricType="active_customers_count"
+                title="Clientes Activos"
+                formatValue={formatInt}
+              />
+              <RealtimeMetricsCard
+                metricType="active_sessions_count"
+                title="Cajas Abiertas"
+                formatValue={formatInt}
+              />
+              <RealtimeMetricsCard
+                metricType="pending_orders_count"
+                title="Órdenes Pendientes"
+                formatValue={formatInt}
+              />
+            </div>
+          </div>
+
+          {/* Sección: Rendimiento de Ventas */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-bold flex items-center gap-2 px-1">
+              <History className="w-5 h-5 text-indigo-600" />
+              Calidad de Ventas
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <RealtimeMetricsCard
+                metricType="products_sold_count"
+                title="Productos Vendidos"
+                formatValue={formatQty}
+              />
+              <RealtimeMetricsCard
+                metricType="avg_ticket_bs"
+                title="Ticket Prom. (Bs)"
+                formatValue={formatBs}
+              />
+              <RealtimeMetricsCard
+                metricType="avg_ticket_usd"
+                title="Ticket Prom. (USD)"
+                formatValue={formatUSD}
+              />
+              <RealtimeMetricsCard
+                metricType="inventory_value_bs"
+                title="Valor de Inventario"
+                formatValue={formatBs}
+              />
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="alerts">
-          <AlertsPanel limit={20} showFilters={true} />
+          <AlertsPanel limit={50} showFilters={true} />
         </TabsContent>
 
         <TabsContent value="heatmap">

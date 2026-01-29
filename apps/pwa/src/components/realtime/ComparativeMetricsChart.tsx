@@ -16,18 +16,17 @@ import {
   ComparisonPeriod,
 } from '@/types/realtime-analytics.types'
 
-const metricLabels: Record<MetricType, string> = {
-  revenue_bs: 'Ingresos (Bs)',
-  revenue_usd: 'Ingresos (USD)',
-  sales_count: 'Cantidad de Ventas',
+const metricLabels: Record<string, string> = {
+  daily_revenue_bs: 'Ingresos (Bs)',
+  daily_revenue_usd: 'Ingresos (USD)',
+  daily_sales_count: 'Cantidad de Ventas',
   avg_ticket_bs: 'Ticket Promedio (Bs)',
   avg_ticket_usd: 'Ticket Promedio (USD)',
-  products_sold: 'Productos Vendidos',
-  low_stock_count: 'Productos con Stock Bajo',
-  pending_orders: 'Órdenes Pendientes',
-  active_customers: 'Clientes Activos',
-  debt_total_bs: 'Deuda Total (Bs)',
-  debt_total_usd: 'Deuda Total (USD)',
+  products_sold_count: 'Productos Vendidos',
+  low_stock_count: 'Stock Bajo',
+  pending_orders_count: 'Órdenes Pendientes',
+  active_customers_count: 'Clientes Activos',
+  total_debt_bs: 'Deuda Total (Bs)',
 }
 
 const periodLabels: Record<ComparisonPeriod, string> = {
@@ -38,7 +37,7 @@ const periodLabels: Record<ComparisonPeriod, string> = {
 }
 
 export default function ComparativeMetricsChart() {
-  const [metricType, setMetricType] = useState<MetricType>('revenue_bs')
+  const [metricType, setMetricType] = useState<MetricType>('daily_revenue_bs')
   const [period, setPeriod] = useState<ComparisonPeriod>('day')
 
   const { data, isLoading, error } = useComparativeMetrics(metricType, period)
@@ -108,7 +107,7 @@ export default function ComparativeMetricsChart() {
         ) : (
           <div className="space-y-6">
             {/* Comparación visual */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-4 border rounded-lg">
                 <p className="text-sm text-muted-foreground mb-2">Período Actual</p>
                 <p className="text-2xl font-bold">
@@ -159,13 +158,12 @@ export default function ComparativeMetricsChart() {
                       <Minus className="w-5 h-5 text-gray-600" />
                     )}
                     <p
-                      className={`text-2xl font-bold ${
-                        selectedMetric.trend === 'up'
-                          ? 'text-green-600'
-                          : selectedMetric.trend === 'down'
+                      className={`text-2xl font-bold ${selectedMetric.trend === 'up'
+                        ? 'text-green-600'
+                        : selectedMetric.trend === 'down'
                           ? 'text-red-600'
                           : 'text-gray-600'
-                      }`}
+                        }`}
                     >
                       {selectedMetric.change_percentage >= 0 ? '+' : ''}
                       {selectedMetric.change_percentage.toFixed(2)}%
@@ -178,15 +176,15 @@ export default function ComparativeMetricsChart() {
                     selectedMetric.trend === 'up'
                       ? 'bg-green-100 text-green-800'
                       : selectedMetric.trend === 'down'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-800'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
                   }
                 >
                   {selectedMetric.trend === 'up'
                     ? 'Aumento'
                     : selectedMetric.trend === 'down'
-                    ? 'Disminución'
-                    : 'Estable'}
+                      ? 'Disminución'
+                      : 'Estable'}
                 </Badge>
               </div>
             </div>
@@ -199,15 +197,14 @@ export default function ComparativeMetricsChart() {
                   <div
                     className="w-full bg-blue-600 rounded-t transition-all hover:opacity-80"
                     style={{
-                      height: `${
-                        (selectedMetric.current_period.value /
-                          Math.max(
-                            selectedMetric.current_period.value,
-                            selectedMetric.previous_period.value,
-                            1,
-                          )) *
+                      height: `${(selectedMetric.current_period.value /
+                        Math.max(
+                          selectedMetric.current_period.value,
+                          selectedMetric.previous_period.value,
+                          1,
+                        )) *
                         100
-                      }%`,
+                        }%`,
                     }}
                     title={`Actual: ${selectedMetric.current_period.value.toFixed(2)}`}
                   />
@@ -217,15 +214,14 @@ export default function ComparativeMetricsChart() {
                   <div
                     className="w-full bg-gray-400 rounded-t transition-all hover:opacity-80"
                     style={{
-                      height: `${
-                        (selectedMetric.previous_period.value /
-                          Math.max(
-                            selectedMetric.current_period.value,
-                            selectedMetric.previous_period.value,
-                            1,
-                          )) *
+                      height: `${(selectedMetric.previous_period.value /
+                        Math.max(
+                          selectedMetric.current_period.value,
+                          selectedMetric.previous_period.value,
+                          1,
+                        )) *
                         100
-                      }%`,
+                        }%`,
                     }}
                     title={`Anterior: ${selectedMetric.previous_period.value.toFixed(2)}`}
                   />

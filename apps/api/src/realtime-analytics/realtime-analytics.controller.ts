@@ -48,7 +48,11 @@ export class RealTimeAnalyticsController {
   @Get('metrics')
   async getMetrics(@Request() req: any, @Query() dto: GetMetricsDto) {
     const storeId = req.user.store_id;
-    return this.analyticsService.getMetrics(storeId, dto);
+    const metrics = await this.analyticsService.getMetrics(storeId, dto);
+    return {
+      metrics,
+      calculated_at: new Date().toISOString(),
+    };
   }
 
   /**

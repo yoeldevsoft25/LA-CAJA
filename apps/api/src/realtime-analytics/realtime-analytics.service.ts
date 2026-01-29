@@ -143,6 +143,7 @@ export class RealTimeAnalyticsService {
     await this.calculateInventoryMetrics(storeId);
     await this.calculateCustomerDebtMetrics(storeId);
     await this.calculateDailyAggregates(storeId);
+    await this.checkThresholds(storeId);
   }
 
   async calculateSalesMetrics(storeId: string): Promise<void> {
@@ -181,8 +182,39 @@ export class RealTimeAnalyticsService {
     metricsToSave.push(this.createMetric(storeId, 'sales', 'avg_ticket_usd', todayAvgUsd, yesterdayAvgUsd, 'day', today, now));
     metricsToSave.push(this.createMetric(storeId, 'sales', 'daily_sales_count', filteredTodaySales.length, filteredYesterdaySales.length, 'day', today, now));
 
-    const todayProducts = filteredTodaySales.reduce((sum, s) => sum + s.items.reduce((iSum, item) => iSum + Number(item.qty), 0), 0);
-    metricsToSave.push(this.createMetric(storeId, 'sales', 'products_sold_count', todayProducts, null, 'day', today, now));
+    let todayUnits = 0;
+    let todayWeight = 0;
+    let weightItemsCount = 0;
+    filteredTodaySales.forEach(s => {
+      s.items.forEach(item => {
+        if (item.is_weight_product) {
+          todayWeight += Number(item.qty);
+          weightItemsCount += 1;
+        } else {
+          todayUnits += Number(item.qty);
+        }
+      });
+    });
+
+    // El total de productos vendidos es: unidades de productos normales + cantidad de items por peso
+    const totalProducts = todayUnits + weightItemsCount;
+
+    metricsToSave.push(this.createMetric(
+      storeId,
+      'sales',
+      'products_sold_count',
+      totalProducts,
+      null,
+      'day',
+      today,
+      now,
+      {
+        units: todayUnits,
+        weight: todayWeight,
+        weight_items: weightItemsCount,
+        has_weight_products: todayWeight > 0,
+      }
+    ));
 
     await this.metricRepository.save(metricsToSave);
   }
@@ -273,11 +305,30 @@ export class RealTimeAnalyticsService {
     await this.metricRepository.save(metricsToSave);
   }
 
-  private createMetric(storeId: string, type: MetricType, name: string, value: number, prevValue: number | null, period: PeriodType, start: Date, end: Date): RealTimeMetric {
+  private createMetric(
+    storeId: string,
+    type: MetricType,
+    name: string,
+    value: number,
+    prevValue: number | null,
+    period: PeriodType,
+    start: Date,
+    end: Date,
+    metadata?: Record<string, any>,
+  ): RealTimeMetric {
     const change = prevValue && prevValue > 0 ? ((value - prevValue) / prevValue) * 100 : null;
     return this.metricRepository.create({
-      id: randomUUID(), store_id: storeId, metric_type: type, metric_name: name, metric_value: value,
-      previous_value: prevValue, change_percentage: change, period_type: period, period_start: start, period_end: end
+      id: randomUUID(),
+      store_id: storeId,
+      metric_type: type,
+      metric_name: name,
+      metric_value: value,
+      previous_value: prevValue,
+      change_percentage: change,
+      period_type: period,
+      period_start: start,
+      period_end: end,
+      metadata: metadata || null,
     });
   }
 

@@ -207,34 +207,34 @@ export default function ThresholdsManager() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Gestión de Umbrales de Alertas
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Settings className="w-5 h-5 text-primary" />
+              Gestión de Umbrales
             </CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDeleteHistory}
-                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                className="text-orange-600 border-orange-100 hover:bg-orange-50 h-9"
                 disabled={deleteAlertsMutation.isPending}
               >
-                Limpiar Historial Alertas
+                Limpiar Historial
               </Button>
               {thresholds.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDeleteAll}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="text-red-600 border-red-100 hover:bg-red-50 h-9"
                   disabled={deleteAllMutation.isPending}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Eliminar Todos los Umbrales
+                  Vaciar Umbrales
                 </Button>
               )}
-              <Button onClick={() => setIsCreateModalOpen(true)} size="sm">
+              <Button onClick={() => setIsCreateModalOpen(true)} size="sm" className="h-9 shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Crear Umbral
               </Button>
@@ -259,69 +259,140 @@ export default function ThresholdsManager() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Métrica</TableHead>
-                    <TableHead>Operador</TableHead>
-                    <TableHead>Umbral</TableHead>
-                    <TableHead>Severidad</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {thresholds.map((threshold) => {
-                    const severity = formatAlertSeverity(threshold.severity)
-                    return (
-                      <TableRow key={threshold.id}>
-                        <TableCell className="font-medium">
-                          {alertTypeLabels[threshold.alert_type] || threshold.alert_type}
-                        </TableCell>
-                        <TableCell>
-                          {metricNameLabels[threshold.metric_name] || threshold.metric_name}
-                        </TableCell>
-                        <TableCell>
-                          {operatorLabels[threshold.comparison_operator]}
-                        </TableCell>
-                        <TableCell>{threshold.threshold_value}</TableCell>
-                        <TableCell>
-                          <Badge className={severity.bgColor} variant="secondary">
-                            {severity.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
+            <div className="space-y-4">
+              {/* Vista de Tabla para Tablet/Desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Métrica</TableHead>
+                      <TableHead>Operador</TableHead>
+                      <TableHead>Umbral</TableHead>
+                      <TableHead>Severidad</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {thresholds.map((threshold) => {
+                      const severity = formatAlertSeverity(threshold.severity)
+                      return (
+                        <TableRow key={threshold.id}>
+                          <TableCell className="font-medium">
+                            {alertTypeLabels[threshold.alert_type] || threshold.alert_type}
+                          </TableCell>
+                          <TableCell>
+                            {metricNameLabels[threshold.metric_name] || threshold.metric_name}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">
+                            {operatorLabels[threshold.comparison_operator]}
+                          </TableCell>
+                          <TableCell className="font-bold">{threshold.threshold_value}</TableCell>
+                          <TableCell>
+                            <Badge className={severity.bgColor} variant="secondary">
+                              {severity.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={threshold.is_active}
+                              onCheckedChange={() => handleToggleActive(threshold)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setEditingThreshold(threshold)}
+                                className="h-8 w-8"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(threshold.id)}
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Vista de Tarjetas para Mobile */}
+              <div className="md:hidden space-y-3">
+                {thresholds.map((threshold) => {
+                  const severity = formatAlertSeverity(threshold.severity)
+                  return (
+                    <div key={threshold.id} className="p-4 border rounded-xl space-y-3 bg-card shadow-sm">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            {alertTypeLabels[threshold.alert_type] || threshold.alert_type}
+                          </p>
+                          <h4 className="font-bold text-base leading-tight">
+                            {metricNameLabels[threshold.metric_name] || threshold.metric_name}
+                          </h4>
+                        </div>
+                        <Badge className={`${severity.bgColor} px-2 py-0.5`} variant="secondary">
+                          {severity.label}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2 border-y border-dashed">
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Condición:</span>{' '}
+                          <span className="font-medium">{operatorLabels[threshold.comparison_operator]}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Valor:</span>{' '}
+                          <span className="font-bold text-primary">{threshold.threshold_value}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-2">
                           <Switch
                             checked={threshold.is_active}
                             onCheckedChange={() => handleToggleActive(threshold)}
+                            id={`active-${threshold.id}`}
                           />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setEditingThreshold(threshold)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(threshold.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                          <Label htmlFor={`active-${threshold.id}`} className="text-xs">
+                            {threshold.is_active ? 'Activo' : 'Inactivo'}
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingThreshold(threshold)}
+                            className="h-8 px-3"
+                          >
+                            <Edit className="w-3.5 h-3.5 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(threshold.id)}
+                            className="h-8 px-3 text-red-600 border-red-100 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </CardContent>

@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MetricType } from '@/types/realtime-analytics.types'
-import { TrendingUp, TrendingDown, Minus, Wifi, WifiOff } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Wifi, WifiOff, AlertCircle } from 'lucide-react'
+import { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts'
 
 interface RealtimeMetricsCardProps {
   metricType: MetricType
@@ -23,8 +24,11 @@ export default function RealtimeMetricsCard({
   icon,
 }: RealtimeMetricsCardProps) {
   const { metrics, isLoading, isConnected } = useRealtimeMetrics([metricType])
+  const { alerts } = useRealtimeAlerts({ is_read: false })
 
   const metric = metrics.find((m) => m.metric_name === metricType)
+  const metricAlerts = alerts.filter((a) => a.metric_name === metricType)
+  const hasAlert = metricAlerts.length > 0
 
   if (isLoading) {
     return (
@@ -48,7 +52,7 @@ export default function RealtimeMetricsCard({
     )
   }
 
-  const changePercentage = metric.change_percentage || 0
+  const changePercentage = Number(metric.change_percentage || 0)
   const isPositive = changePercentage > 0
   const isNegative = changePercentage < 0
 
@@ -60,7 +64,12 @@ export default function RealtimeMetricsCard({
             {icon}
             {title}
           </CardTitle>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            {hasAlert && (
+              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center rounded-full animate-pulse">
+                <AlertCircle className="w-3.5 h-3.5" />
+              </Badge>
+            )}
             {isConnected ? (
               <Wifi className="w-4 h-4 text-green-600" />
             ) : (
@@ -71,11 +80,11 @@ export default function RealtimeMetricsCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <div className="flex items-baseline gap-2">
-            <p className="text-2xl sm:text-3xl font-bold">
-              {formatValue(metric.metric_value)}
+          <div className="flex items-center gap-2 flex-wrap min-h-[2.5rem]">
+            <p className={`text-xl sm:text-2xl font-bold tracking-tight ${hasAlert ? 'text-red-600' : ''}`}>
+              {formatValue(Number(metric.metric_value))}
             </p>
-            {metric.previous_value !== undefined && (
+            {metric.previous_value !== null && metric.previous_value !== undefined && (
               <Badge
                 variant="secondary"
                 className={
@@ -98,13 +107,50 @@ export default function RealtimeMetricsCard({
               </Badge>
             )}
           </div>
-          {metric.previous_value !== undefined && (
+
+          {/* Breakdown detallado para productos vendidos (Unidades vs Peso) */}
+          {metric.metric_name === 'products_sold_count' && metric.metadata && (
+            <div className="flex items-center gap-4 pt-3 mt-3 border-t border-dashed border-muted-foreground/20">
+              {Number(metric.metadata.units || 0) > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter">Unid.</span>
+                  <span className="text-xs sm:text-sm font-bold text-foreground">
+                    {Number(metric.metadata.units).toLocaleString('es-VE')}
+                  </span>
+                </div>
+              )}
+              {Number(metric.metadata.units || 0) > 0 && Number(metric.metadata.weight || 0) > 0 && (
+                <div className="h-6 w-px bg-muted-foreground/20" />
+              )}
+              {Number(metric.metadata.weight || 0) > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter">Ventas (Peso)</span>
+                  <span className="text-xs sm:text-sm font-bold text-foreground">
+                    {Number(metric.metadata.weight_items || 0).toLocaleString('es-VE')}
+                  </span>
+                </div>
+              )}
+              {Number(metric.metadata.weight || 0) > 0 && (
+                <div className="h-6 w-px bg-muted-foreground/20" />
+              )}
+              {Number(metric.metadata.weight || 0) > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-tighter">Peso Total</span>
+                  <span className="text-xs sm:text-sm font-bold text-foreground">
+                    {Number(metric.metadata.weight).toLocaleString('es-VE', { minimumFractionDigits: 3 })} Kg
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {metric.previous_value !== null && metric.previous_value !== undefined && (
             <p className="text-xs text-muted-foreground">
-              Anterior: {formatValue(metric.previous_value)}
+              Anterior: {formatValue(Number(metric.previous_value))}
             </p>
           )}
           <p className="text-xs text-muted-foreground">
-            Actualizado: {new Date(metric.created_at).toLocaleTimeString()}
+            Actualizado: {new Date(metric.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
       </CardContent>
