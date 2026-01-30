@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
+import { QueuesModule } from '../queues/queues.module';
 import { SyncController } from './sync.controller';
 import { SyncService } from './sync.service';
 import { VectorClockService } from './vector-clock.service';
@@ -17,11 +18,7 @@ import { DiscountsModule } from '../discounts/discounts.module';
     TypeOrmModule.forFeature([Event, Product, CashSession]),
     ProjectionsModule,
     DiscountsModule,
-    // ⚡ OPTIMIZACIÓN: Usar conexión Redis compartida de AppModule
-    // Solo registrar la cola, NO crear nueva conexión
-    BullModule.registerQueue({
-      name: 'sales-projections',
-    }),
+    QueuesModule,
   ],
   controllers: [SyncController],
   providers: [
@@ -37,4 +34,4 @@ import { DiscountsModule } from '../discounts/discounts.module';
     ConflictResolutionService,
   ],
 })
-export class SyncModule {}
+export class SyncModule { }

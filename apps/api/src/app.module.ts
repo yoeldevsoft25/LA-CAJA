@@ -92,7 +92,7 @@ import { BullModule } from '@nestjs/bullmq';
           connectionOpts = {
             url: redisUrl,
             maxRetriesPerRequest: null,
-            enableOfflineQueue: false,
+            enableOfflineQueue: true, // Enable offline queue for reliability
           };
         } else {
           connectionOpts = {
@@ -100,7 +100,7 @@ import { BullModule } from '@nestjs/bullmq';
             port: configService.get<number>('REDIS_PORT') || 6379,
             password: configService.get<string>('REDIS_PASSWORD'),
             maxRetriesPerRequest: null,
-            enableOfflineQueue: false,
+            enableOfflineQueue: true, // Enable offline queue for reliability
           };
         }
 

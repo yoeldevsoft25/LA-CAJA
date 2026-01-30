@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
+import { QueuesModule } from '../queues/queues.module';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
 import { Sale } from '../database/entities/sale.entity';
@@ -64,14 +65,7 @@ import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processin
     SystemConfigModule,
     SecurityModule,
     ProjectionsModule,
-    // ⚡ OPTIMIZACIÓN: Usar conexión Redis compartida de AppModule
-    // Solo registrar las colas, NO crear nueva conexión
-    BullModule.registerQueue({
-      name: 'sales-projections',
-    }),
-    BullModule.registerQueue({
-      name: 'sales-post-processing',
-    }),
+    QueuesModule,
   ],
   controllers: [SalesController],
   providers: [
@@ -81,4 +75,4 @@ import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processin
   ],
   exports: [SalesService],
 })
-export class SalesModule {}
+export class SalesModule { }

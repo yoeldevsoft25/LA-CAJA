@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
+import { QueuesModule } from '../queues/queues.module';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
@@ -68,7 +69,7 @@ import { MLNotificationsController } from './ml-notifications.controller';
         if (!jwtSecret) {
           throw new Error(
             'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-              'En producción, esto es obligatorio por seguridad.',
+            'En producción, esto es obligatorio por seguridad.',
           );
         }
         return {
@@ -78,11 +79,7 @@ import { MLNotificationsController } from './ml-notifications.controller';
       },
       inject: [ConfigService],
     }),
-    // ⚡ OPTIMIZACIÓN: Usar conexión Redis compartida de AppModule
-    // Solo registrar la cola, NO crear nueva conexión
-    BullModule.registerQueue({
-      name: 'notifications',
-    }),
+    QueuesModule,
     // Schedule module para cron jobs
     ScheduleModule.forRoot(),
   ],
@@ -111,4 +108,4 @@ import { MLNotificationsController } from './ml-notifications.controller';
     EmailService,
   ],
 })
-export class NotificationsModule {}
+export class NotificationsModule { }

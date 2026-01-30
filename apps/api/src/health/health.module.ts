@@ -6,13 +6,12 @@ import { BullMQHealthIndicator } from './indicators/bullmq-health.indicator';
 import { ExternalApisHealthIndicator } from './indicators/external-apis-health.indicator';
 import { WebSocketHealthIndicator } from './indicators/websocket-health.indicator';
 import { BullModule } from '@nestjs/bullmq';
+import { QueuesModule } from '../queues/queues.module';
 
 @Module({
   imports: [
     TerminusModule,
-    BullModule.registerQueue({
-      name: 'notifications',
-    }),
+    QueuesModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -28,4 +27,4 @@ import { BullModule } from '@nestjs/bullmq';
     WebSocketHealthIndicator,
   ],
 })
-export class HealthModule {}
+export class HealthModule { }
