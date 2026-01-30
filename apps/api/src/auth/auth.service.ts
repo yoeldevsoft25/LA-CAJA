@@ -451,9 +451,17 @@ export class AuthService {
         trial_days_remaining: trialDaysRemaining,
       };
     } catch (error) {
-      // Rollback en caso de error
-      await queryRunner.rollbackTransaction();
-      this.logger.error('Error en registro, rollback ejecutado:', error);
+      // Log error ORIGINAL antes de intentar rollback
+      this.logger.error('Error durante el proceso de registro:', error);
+
+      // Rollback solo si la transacción está activa
+      if (queryRunner.isTransactionActive) {
+        try {
+          await queryRunner.rollbackTransaction();
+        } catch (rollbackError) {
+          this.logger.error('Error al hacer rollback (ignorado):', rollbackError);
+        }
+      }
       throw error;
     } finally {
       // Liberar query runner
