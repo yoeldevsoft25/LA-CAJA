@@ -654,11 +654,11 @@ export default function MainLayout() {
           <div className="hidden lg:flex items-center gap-3">
             <img
               src="/favicon.svg"
-              alt="LA CAJA Logo"
+              alt="Velox POS Logo"
               className="w-10 h-10 rounded-lg"
             />
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">LA CAJA</h2>
+              <h2 className="text-lg font-semibold tracking-tight">Velox POS</h2>
               <p className="text-xs text-muted-foreground">Sistema POS</p>
             </div>
           </div>
@@ -691,7 +691,7 @@ export default function MainLayout() {
                 if (activeItem?.label === 'Punto de Venta') {
                   return 'POS'
                 }
-                return activeItem?.label || 'LA CAJA'
+                return activeItem?.label || 'Velox POS'
               })()}
             </h1>
           </div>

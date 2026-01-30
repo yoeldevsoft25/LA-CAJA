@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "LA CAJA",
+    "productName": "Velox POS",
     "version": "1.0.0"
   },
   "tauri": {
@@ -19,7 +19,10 @@
       },
       "fs": {
         "all": true,
-        "scope": ["$APPDATA/**", "$DOCUMENT/**"]
+        "scope": [
+          "$APPDATA/**",
+          "$DOCUMENT/**"
+        ]
       },
       "path": {
         "all": true
@@ -45,7 +48,7 @@
         "label": "main",
         "fullscreen": false,
         "resizable": true,
-        "title": "LA CAJA",
+        "title": "Velox POS",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -60,5 +63,3 @@
     ]
   }
 }
-
-

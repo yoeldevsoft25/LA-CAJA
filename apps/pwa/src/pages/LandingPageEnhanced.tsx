@@ -198,13 +198,13 @@ export default function LandingPageEnhanced() {
               whileHover={{ scale: 1.05 }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
-              <img 
-                src="/favicon.svg" 
-                alt="LA CAJA Logo" 
+              <img
+                src="/favicon.svg"
+                alt="Velox POS Logo"
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20 hover:border-slate-600/70 transition-all duration-300 flex-shrink-0"
               />
               <span className="text-lg sm:text-xl font-black text-white whitespace-nowrap">
-                LA CAJA
+                Velox POS
               </span>
             </motion.div>
 
@@ -520,7 +520,7 @@ export default function LandingPageEnhanced() {
               </span>
             </h2>
             <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-              La realidad venezolana requiere soluciones únicas. LA CAJA fue diseñado específicamente
+              La realidad venezolana requiere soluciones únicas. Velox POS fue diseñado específicamente
               para estos retos.
             </p>
           </div>
@@ -657,14 +657,14 @@ export default function LandingPageEnhanced() {
 
 function TerminalAnimation() {
   const lines = [
-    { text: '$ la-caja status', delay: 0, type: 'command' as const },
+    { text: '$ velox-pos status', delay: 0, type: 'command' as const },
     { text: '✓ Sistema: Online', delay: 0.5, type: 'success' as const },
     { text: '✓ Base de datos: Conectada', delay: 1, type: 'success' as const },
     { text: '✓ Modo: Offline-First Activo', delay: 1.5, type: 'success' as const },
     { text: '✓ Cola de sync: 0 eventos pendientes', delay: 2, type: 'success' as const },
     { text: '✓ Última sincronización: Hace 2 segundos', delay: 2.5, type: 'success' as const },
     { text: '', delay: 3, type: 'empty' as const },
-    { text: '$ la-caja sell --offline', delay: 3.5, type: 'command' as const },
+    { text: '$ velox-pos sell --offline', delay: 3.5, type: 'command' as const },
     { text: '⚡ Venta procesada localmente en 15ms', delay: 4, type: 'info' as const },
     { text: '⚡ Evento guardado en cola', delay: 4.5, type: 'info' as const },
     { text: '✓ Sincronización programada', delay: 5, type: 'success' as const },
@@ -750,8 +750,8 @@ function FeaturesSection() {
   const featuresRef = useRef(null)
   const isMobile = useMobileDetection()
   // En mobile, usar amount más bajo y margin más grande para activar antes
-  const isInView = useInView(featuresRef, { 
-    once: true, 
+  const isInView = useInView(featuresRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.2,
     margin: isMobile ? '-150px' : '0px'
   })
@@ -991,8 +991,8 @@ function SeniatShowcaseSection() {
   const sectionRef = useRef(null)
   const isMobile = useMobileDetection()
   // En mobile, activar más temprano con amount más bajo
-  const isInView = useInView(sectionRef, { 
-    once: true, 
+  const isInView = useInView(sectionRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.3,
     margin: isMobile ? '-150px' : '0px'
   })
@@ -1269,8 +1269,8 @@ function ComparisonSection() {
   const sectionRef = useRef(null)
   const isMobile = useMobileDetection()
   // En mobile, activar más temprano con amount más bajo
-  const isInView = useInView(sectionRef, { 
-    once: true, 
+  const isInView = useInView(sectionRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.3,
     margin: isMobile ? '-150px' : '0px'
   })
@@ -1282,19 +1282,19 @@ function ComparisonSection() {
     valerypos: boolean | 'partial'
     otros: boolean | 'partial'
   }> = [
-    { name: 'Offline-first real', laCaja: true, a2pos: false, valerypos: false, otros: false },
-    { name: 'Facturación SENIAT', laCaja: true, a2pos: true, valerypos: true, otros: 'partial' },
-    { name: 'Dual Bs/USD nativo', laCaja: true, a2pos: false, valerypos: false, otros: 'partial' },
-    { name: 'Contabilidad integrada', laCaja: true, a2pos: true, valerypos: true, otros: false },
-    { name: 'IA/ML predictivo', laCaja: true, a2pos: false, valerypos: false, otros: false },
-    { name: 'Multi-plataforma (PWA/Desktop/Android)', laCaja: true, a2pos: false, valerypos: false, otros: false },
-    { name: 'Split payments (6 métodos)', laCaja: true, a2pos: 'partial', valerypos: 'partial', otros: false },
-    { name: '24 bancos venezolanos', laCaja: true, a2pos: false, valerypos: false, otros: 'partial' },
-    { name: 'Inventario multi-bodega', laCaja: true, a2pos: true, valerypos: true, otros: 'partial' },
-    { name: 'Analytics tiempo real', laCaja: true, a2pos: true, valerypos: true, otros: 'partial' },
-    { name: 'Plan gratuito ilimitado', laCaja: true, a2pos: false, valerypos: false, otros: false },
-    { name: 'Setup en 5 minutos', laCaja: true, a2pos: false, valerypos: false, otros: 'partial' },
-  ]
+      { name: 'Offline-first real', laCaja: true, a2pos: false, valerypos: false, otros: false },
+      { name: 'Facturación SENIAT', laCaja: true, a2pos: true, valerypos: true, otros: 'partial' },
+      { name: 'Dual Bs/USD nativo', laCaja: true, a2pos: false, valerypos: false, otros: 'partial' },
+      { name: 'Contabilidad integrada', laCaja: true, a2pos: true, valerypos: true, otros: false },
+      { name: 'IA/ML predictivo', laCaja: true, a2pos: false, valerypos: false, otros: false },
+      { name: 'Multi-plataforma (PWA/Desktop/Android)', laCaja: true, a2pos: false, valerypos: false, otros: false },
+      { name: 'Split payments (6 métodos)', laCaja: true, a2pos: 'partial', valerypos: 'partial', otros: false },
+      { name: '24 bancos venezolanos', laCaja: true, a2pos: false, valerypos: false, otros: 'partial' },
+      { name: 'Inventario multi-bodega', laCaja: true, a2pos: true, valerypos: true, otros: 'partial' },
+      { name: 'Analytics tiempo real', laCaja: true, a2pos: true, valerypos: true, otros: 'partial' },
+      { name: 'Plan gratuito ilimitado', laCaja: true, a2pos: false, valerypos: false, otros: false },
+      { name: 'Setup en 5 minutos', laCaja: true, a2pos: false, valerypos: false, otros: 'partial' },
+    ]
 
   const renderIcon = (status: boolean | 'partial') => {
     if (status === true) return <Check className="w-5 h-5 text-emerald-400" />
@@ -1317,7 +1317,7 @@ function ComparisonSection() {
           <h2 className="text-4xl sm:text-5xl font-black">
             <span className="text-white">¿Por qué</span>{' '}
             <span className="bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              LA CAJA?
+              Velox POS?
             </span>
           </h2>
           <p className="text-xl text-slate-400 max-w-2xl mx-auto">
@@ -1335,57 +1335,57 @@ function ComparisonSection() {
             <Card className="bg-slate-800/50 border-slate-700">
               <CardContent className="p-0">
                 <table className="w-full min-w-[600px]">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left p-4 text-slate-400 font-medium">Característica</th>
-                    <th className="p-4 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <img 
-                          src="/favicon.svg" 
-                          alt="LA CAJA Logo" 
-                          className="w-10 h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20"
-                        />
-                        <span className="text-white font-bold">LA CAJA</span>
-                      </div>
-                    </th>
-                    <th className="p-4 text-center text-slate-400">A2 POS</th>
-                    <th className="p-4 text-center text-slate-400">ValeryPOS</th>
-                    <th className="p-4 text-center text-slate-400">Otros POS VE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {features.map((feature, index) => (
-                    <motion.tr
-                      key={feature.name}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={isInView ? { opacity: 1, x: 0 } : { opacity: isMobile ? 1 : 0, x: isMobile ? 0 : -20 }}
-                      transition={{ duration: isMobile ? 0.2 : 0.4, delay: isMobile ? 0 : 0.1 * index }}
-                      className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors"
-                    >
-                      <td className="p-4 text-slate-300 align-middle">{feature.name}</td>
-                      <td className="p-4 text-center bg-blue-500/5 align-middle">
-                        <div className="flex items-center justify-center">
-                          {renderIcon(feature.laCaja)}
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left p-4 text-slate-400 font-medium">Característica</th>
+                      <th className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <img
+                            src="/favicon.svg"
+                            alt="Velox POS Logo"
+                            className="w-10 h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20"
+                          />
+                          <span className="text-white font-bold">Velox POS</span>
                         </div>
-                      </td>
-                      <td className="p-4 text-center align-middle">
-                        <div className="flex items-center justify-center">
-                          {renderIcon(feature.a2pos)}
-                        </div>
-                      </td>
-                      <td className="p-4 text-center align-middle">
-                        <div className="flex items-center justify-center">
-                          {renderIcon(feature.valerypos)}
-                        </div>
-                      </td>
-                      <td className="p-4 text-center align-middle">
-                        <div className="flex items-center justify-center">
-                          {renderIcon(feature.otros)}
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
+                      </th>
+                      <th className="p-4 text-center text-slate-400">A2 POS</th>
+                      <th className="p-4 text-center text-slate-400">ValeryPOS</th>
+                      <th className="p-4 text-center text-slate-400">Otros POS VE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {features.map((feature, index) => (
+                      <motion.tr
+                        key={feature.name}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={isInView ? { opacity: 1, x: 0 } : { opacity: isMobile ? 1 : 0, x: isMobile ? 0 : -20 }}
+                        transition={{ duration: isMobile ? 0.2 : 0.4, delay: isMobile ? 0 : 0.1 * index }}
+                        className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors"
+                      >
+                        <td className="p-4 text-slate-300 align-middle">{feature.name}</td>
+                        <td className="p-4 text-center bg-blue-500/5 align-middle">
+                          <div className="flex items-center justify-center">
+                            {renderIcon(feature.laCaja)}
+                          </div>
+                        </td>
+                        <td className="p-4 text-center align-middle">
+                          <div className="flex items-center justify-center">
+                            {renderIcon(feature.a2pos)}
+                          </div>
+                        </td>
+                        <td className="p-4 text-center align-middle">
+                          <div className="flex items-center justify-center">
+                            {renderIcon(feature.valerypos)}
+                          </div>
+                        </td>
+                        <td className="p-4 text-center align-middle">
+                          <div className="flex items-center justify-center">
+                            {renderIcon(feature.otros)}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
                 </table>
               </CardContent>
             </Card>
@@ -1419,8 +1419,8 @@ function StatsSection() {
   const sectionRef = useRef(null)
   const isMobile = useMobileDetection()
   // En mobile, activar más temprano con amount más bajo
-  const isInView = useInView(sectionRef, { 
-    once: true, 
+  const isInView = useInView(sectionRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.3,
     margin: isMobile ? '-150px' : '0px'
   })
@@ -1476,8 +1476,8 @@ function PricingSection() {
   const sectionRef = useRef(null)
   const isMobile = useMobileDetection()
   // En mobile, activar más temprano con amount más bajo
-  const isInView = useInView(sectionRef, { 
-    once: true, 
+  const isInView = useInView(sectionRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.3,
     margin: isMobile ? '-150px' : '0px'
   })
@@ -1609,8 +1609,8 @@ function PricingSection() {
             onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
             className={cn(
               "relative flex items-center w-12 h-6 sm:w-14 sm:h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900",
-              billingCycle === 'annual' 
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30' 
+              billingCycle === 'annual'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30'
                 : 'bg-slate-700 hover:bg-slate-600 border border-slate-600'
             )}
             aria-label="Toggle billing cycle"
@@ -1779,12 +1779,12 @@ function TestimonialsSection() {
   // En mobile, activar más temprano con amount más bajo
   // Forzar render inicial en mobile para evitar problemas de carga
   const [forceRender, setForceRender] = useState(isMobile)
-  const isInView = useInView(sectionRef, { 
-    once: true, 
+  const isInView = useInView(sectionRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.3,
     margin: isMobile ? '-150px' : '0px'
   })
-  
+
   // En mobile, forzar render después de un pequeño delay si no se activó isInView
   useEffect(() => {
     if (isMobile && !forceRender) {
@@ -1792,7 +1792,7 @@ function TestimonialsSection() {
       return () => clearTimeout(timer)
     }
   }, [isMobile, forceRender])
-  
+
   // Usar forceRender en mobile si isInView no se ha activado
   const shouldAnimate = isMobile ? (forceRender || isInView) : isInView
 
@@ -1851,13 +1851,13 @@ function TestimonialsSection() {
 
         <div className="grid md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                transition={{ duration: isMobile ? 0.3 : 0.5, delay: isMobile ? 0 : index * 0.1 }}
-              >
-                <Card className="bg-slate-800/50 border-slate-700 hover:border-amber-500/30 transition-all duration-300 h-full group">
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ duration: isMobile ? 0.3 : 0.5, delay: isMobile ? 0 : index * 0.1 }}
+            >
+              <Card className="bg-slate-800/50 border-slate-700 hover:border-amber-500/30 transition-all duration-300 h-full group">
                 <CardHeader>
                   {/* Quote icon */}
                   <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-amber-500/20 transition-colors">
@@ -1926,8 +1926,8 @@ function FAQSection() {
   const sectionRef = useRef(null)
   const isMobile = useMobileDetection()
   // En mobile, activar más temprano con amount más bajo
-  const isInView = useInView(sectionRef, { 
-    once: true, 
+  const isInView = useInView(sectionRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.3,
     margin: isMobile ? '-150px' : '0px'
   })
@@ -2056,8 +2056,8 @@ function FAQSection() {
           className="mt-12 text-center"
         >
           <p className="text-slate-400 mb-4">¿No encontraste tu respuesta?</p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="border-2 border-slate-500 bg-slate-800/50 text-slate-100 hover:bg-slate-700/70 hover:text-white hover:border-slate-400 rounded-lg px-6 py-3 font-medium hover:shadow-lg hover:shadow-slate-500/30 transition-all duration-300 group"
           >
             <Mail className="mr-2 w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
@@ -2076,8 +2076,8 @@ function FinalCTASection() {
   const sectionRef = useRef(null)
   const isMobile = useMobileDetection()
   // En mobile, activar más temprano con amount más bajo
-  const isInView = useInView(sectionRef, { 
-    once: true, 
+  const isInView = useInView(sectionRef, {
+    once: true,
     amount: isMobile ? 0.05 : 0.3,
     margin: isMobile ? '-150px' : '0px'
   })
@@ -2226,9 +2226,9 @@ function Footer() {
           {/* Brand column */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img 
-                src="/favicon.svg" 
-                alt="LA CAJA Logo" 
+              <img
+                src="/favicon.svg"
+                alt="LA CAJA Logo"
                 className="w-10 h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20"
               />
               <span className="text-xl font-black text-white">

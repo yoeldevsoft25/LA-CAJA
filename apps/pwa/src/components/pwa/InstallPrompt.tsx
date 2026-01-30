@@ -65,7 +65,7 @@ export default function InstallPrompt({ className, variant = 'banner' }: Install
           {/* Contenido */}
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-foreground text-sm">
-              Instalar LA CAJA
+              Instalar Velox POS
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               {isIOS

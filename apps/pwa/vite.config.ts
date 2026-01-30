@@ -182,8 +182,8 @@ export default defineConfig(({ mode }) => ({
         // runtimeCaching is now in src/sw.ts
       },
       manifest: {
-        name: 'LA CAJA',
-        short_name: 'LA CAJA',
+        name: 'Velox POS',
+        short_name: 'Velox POS',
         description: 'Sistema POS Offline-First',
         theme_color: '#ffffff',
         background_color: '#ffffff',

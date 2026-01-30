@@ -97,8 +97,8 @@ export default function LoginPage() {
       }
 
       try {
-        await prefetchAllData({ 
-          storeId: response.store_id, 
+        await prefetchAllData({
+          storeId: response.store_id,
           queryClient,
           userRole: response.role,
         })
@@ -164,7 +164,7 @@ export default function LoginPage() {
               />
               <img
                 src="/favicon.svg"
-                alt="LA CAJA Logo"
+                alt="Velox POS Logo"
                 className="relative w-20 h-20 rounded-2xl shadow-xl"
                 style={{
                   boxShadow: colors.shadows.lg,
