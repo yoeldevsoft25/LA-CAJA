@@ -107,17 +107,26 @@ import { BullModule } from '@nestjs/bullmq';
         // Esto reduce drásticamente el número de conexiones (ahorra 2 conexiones por cola)
         const Redis = require('ioredis');
 
+        // Habilitar offline queue para mayor resiliencia ante desconexiones temporales
+        // BullMQ requiere maxRetriesPerRequest: null
+        const clientOptions = redisUrl
+          ? {
+            maxRetriesPerRequest: null,
+            enableOfflineQueue: true,
+          }
+          : { ...connectionOpts, maxRetriesPerRequest: null, enableOfflineQueue: true };
+
         // Cliente compartido para publicar trabajos (puede ser usado por todas las colas)
         const sharedClient = redisUrl
-          ? new Redis(redisUrl, { maxRetriesPerRequest: null, enableOfflineQueue: false })
-          : new Redis(connectionOpts);
+          ? new Redis(redisUrl, clientOptions)
+          : new Redis(connectionOpts.port, connectionOpts.host, clientOptions);
 
         // Cliente compartido para suscripciones (puede ser usado por todas las colas)
         const sharedSubscriber = sharedClient.duplicate();
 
         // Manejo de errores en conexiones compartidas
-        sharedClient.on('error', (err: any) => console.error('Redis Shared Client Error:', err));
-        sharedSubscriber.on('error', (err: any) => console.error('Redis Shared Subscriber Error:', err));
+        sharedClient.on('error', (err: any) => console.error('Redis Shared Client Error:', err.message));
+        sharedSubscriber.on('error', (err: any) => console.error('Redis Shared Subscriber Error:', err.message));
 
         // Poner un límite máximo de listeners para evitar advertencias
         sharedClient.setMaxListeners(100);
@@ -136,7 +145,12 @@ import { BullModule } from '@nestjs/bullmq';
               case 'bclient':
                 // bclient (blocking client) NO puede ser compartido entre workers
                 // porque usa comandos bloqueantes como BRPOP
-                return sharedClient.duplicate();
+                const bclient = sharedClient.duplicate();
+                // Importante: Manejar errores en bclient para evitar crashes
+                bclient.on('error', (err: any) => {
+                  console.error('Redis BClient Error:', err.message);
+                });
+                return bclient;
               default:
                 return sharedClient.duplicate();
             }
