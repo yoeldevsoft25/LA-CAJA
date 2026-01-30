@@ -557,33 +557,125 @@ export class AuthService {
         storeId: profile.id, // Usar userId como storeId temporal
         to: profile.email,
         toName: profile.full_name || 'Usuario',
-        subject: 'Verifica tu email - LA-CAJA',
+        subject: 'Verifica tu email - Velox POS',
         htmlBody: `
           <!DOCTYPE html>
-          <html>
+          <html lang="es">
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Verifica tu email - LA-CAJA</title>
+            <title>Verifica tu email - Velox POS</title>
+            <!--[if mso]>
+            <noscript>
+            <xml>
+              <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+              </o:OfficeDocumentSettings>
+            </xml>
+            </noscript>
+            <![endif]-->
+            <style>
+              body { margin: 0; padding: 0; min-width: 100%; width: 100% !important; height: 100% !important; }
+              body, table, td, div, p, a { -webkit-font-smoothing: antialiased; text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; line-height: 100%; }
+              table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; border-spacing: 0; }
+              img { border: 0; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+              #outlook a { padding: 0; }
+              .ReadMsgBody { width: 100%; } .ExternalClass { width: 100%; }
+              .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+              @media all and (min-width: 560px) {
+                .container { max-width: 600px !important; margin: 0 auto !important; width: 100% !important; }
+              }
+            </style>
           </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #0d81ce 0%, #0a5d9c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0;">Verifica tu email</h1>
-            </div>
-            <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-              <p>Hola <strong>${profile.full_name || 'Usuario'}</strong>,</p>
-              <p>Haz clic en el siguiente botón para verificar tu dirección de email:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${verificationUrl}" style="background: #0d81ce; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verificar Email</a>
-              </div>
-              <p style="font-size: 12px; color: #666;">O copia y pega este enlace en tu navegador:</p>
-              <p style="font-size: 12px; color: #666; word-break: break-all;">${verificationUrl}</p>
-              <p style="font-size: 12px; color: #999; margin-top: 30px;">Este enlace expirará en 24 horas.</p>
-            </div>
+          <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+            
+            <!-- Main Wrapper -->
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f1f5f9;">
+              <tr>
+                <td align="center" style="padding: 40px 0;">
+                  
+                  <!-- Logo -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px;">
+                    <tr>
+                      <td align="center" style="padding-bottom: 24px;">
+                        <h2 style="margin: 0; color: #0f172a; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">VELOX POS</h2>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Card -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); overflow: hidden;">
+                    
+                    <!-- Header Accent -->
+                    <tr>
+                      <td height="6" style="background: linear-gradient(90deg, #10b981 0%, #34d399 100%);"></td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                      <td style="padding: 40px 48px;">
+                        
+                        <!-- Headline -->
+                        <h1 style="margin: 0 0 24px 0; color: #1e293b; font-size: 28px; font-weight: 700; line-height: 1.25; text-align: center;">Verifica tu email</h1>
+                        
+                        <!-- Main Text -->
+                        <p style="margin: 0 0 24px 0; color: #475569; font-size: 16px; line-height: 1.6;">Hola <strong>${profile.full_name || 'Usuario'}</strong>,</p>
+                        
+                        <p style="margin: 0 0 24px 0; color: #475569; font-size: 16px; line-height: 1.6;">
+                          Gracias por registrarte en Velox POS. Para garantizar la seguridad de tu cuenta y acceder a todas las funcionalidades, por favor verifica tu dirección de correo electrónico.
+                        </p>
+
+                        <!-- CTA Button -->
+                        <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation">
+                          <tr>
+                            <td align="center">
+                              <a href="${verificationUrl}" target="_blank" style="display: inline-block; padding: 16px 36px; background-color: #10b981; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2); transition: background-color 0.2s;">
+                                Verificar mi email
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Expiry Note -->
+                        <p style="margin: 32px 0 0 0; color: #94a3b8; font-size: 14px; text-align: center; line-height: 1.5;">
+                          Este enlace expirará en 24 horas por razones de seguridad.
+                        </p>
+                        
+                        <!-- Alternative Link -->
+                         <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                          <p style="margin: 0 0 8px 0; color: #64748b; font-size: 12px;">¿El botón no funciona? Copia y pega este enlace en tu navegador:</p>
+                          <p style="margin: 0; color: #10b981; font-size: 12px; word-break: break-all; line-height: 1.4;">
+                            <a href="${verificationUrl}" style="color: #10b981; text-decoration: none;">${verificationUrl}</a>
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Footer -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px;">
+                    <tr>
+                      <td align="center" style="padding: 32px 0;">
+                        <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 14px; font-weight: 500;">Velox POS</p>
+                        <p style="margin: 0 0 16px 0; color: #cbd5e1; font-size: 12px;">Optimizando tu negocio, venta a venta.</p>
+                        
+                        <p style="margin: 0; color: #cbd5e1; font-size: 12px;">
+                          © ${new Date().getFullYear()} Velox POS. Todos los derechos reservados.
+                        </p>
+                        <p style="margin: 8px 0 0 0; color: #cbd5e1; font-size: 12px;">
+                          La Paz, Bolivia
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                </td>
+              </tr>
+            </table>
           </body>
           </html>
         `,
-        textBody: `Verifica tu email - LA-CAJA\n\nHola ${profile.full_name || 'Usuario'},\n\nHaz clic en el siguiente enlace para verificar tu dirección de email:\n${verificationUrl}\n\nEste enlace expirará en 24 horas.`,
+        textBody: `Verifica tu email - Velox POS\n\nHola ${profile.full_name || 'Usuario'},\n\nGracias por registrarte en Velox POS. Para completar tu registro, verifica tu dirección de email visitando:\n${verificationUrl}\n\nEste enlace expirará en 24 horas.`,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1309,35 +1401,132 @@ export class AuthService {
         storeId: dto.store_id,
         to: profile.email,
         toName: profile.full_name || 'Usuario',
-        subject: 'Recuperación de PIN - LA-CAJA',
+        subject: 'Recuperación de PIN - Velox POS',
         htmlBody: `
           <!DOCTYPE html>
-          <html>
+          <html lang="es">
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Recuperación de PIN - LA-CAJA</title>
+            <title>Recuperación de PIN - Velox POS</title>
+            <!--[if mso]>
+            <noscript>
+            <xml>
+              <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+              </o:OfficeDocumentSettings>
+            </xml>
+            </noscript>
+            <![endif]-->
+            <style>
+              body { margin: 0; padding: 0; min-width: 100%; width: 100% !important; height: 100% !important; }
+              body, table, td, div, p, a { -webkit-font-smoothing: antialiased; text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; line-height: 100%; }
+              table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; border-spacing: 0; }
+              img { border: 0; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+              #outlook a { padding: 0; }
+              .ReadMsgBody { width: 100%; } .ExternalClass { width: 100%; }
+              .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+              @media all and (min-width: 560px) {
+                .container { max-width: 600px !important; margin: 0 auto !important; width: 100% !important; }
+              }
+            </style>
           </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #0d81ce 0%, #0a5d9c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0;">Recuperación de PIN</h1>
-            </div>
-            <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-              <p>Hola <strong>${profile.full_name || 'Usuario'}</strong>,</p>
-              <p>Recibimos una solicitud para recuperar tu PIN de acceso a LA-CAJA.</p>
-              <p>Haz clic en el siguiente botón para restablecer tu PIN:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${resetUrl}" style="background: #0d81ce; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Restablecer PIN</a>
-              </div>
-              <p style="font-size: 12px; color: #666;">O copia y pega este enlace en tu navegador:</p>
-              <p style="font-size: 12px; color: #666; word-break: break-all;">${resetUrl}</p>
-              <p style="font-size: 12px; color: #999; margin-top: 30px;">Este enlace expirará en 1 hora.</p>
-              <p style="font-size: 12px; color: #ff0000; margin-top: 20px; font-weight: bold;">Si no solicitaste este cambio, ignora este email. Tu PIN no será modificado.</p>
-            </div>
+          <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+            
+            <!-- Main Wrapper -->
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f1f5f9;">
+              <tr>
+                <td align="center" style="padding: 40px 0;">
+                  
+                  <!-- Logo -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px;">
+                    <tr>
+                      <td align="center" style="padding-bottom: 24px;">
+                        <h2 style="margin: 0; color: #0f172a; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">VELOX POS</h2>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Card -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); overflow: hidden;">
+                    
+                    <!-- Header Accent -->
+                    <tr>
+                      <td height="6" style="background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);"></td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                      <td style="padding: 40px 48px;">
+                        
+                        <!-- Headline -->
+                        <h1 style="margin: 0 0 24px 0; color: #1e293b; font-size: 28px; font-weight: 700; line-height: 1.25; text-align: center;">Recuperación de PIN</h1>
+                        
+                        <!-- Main Text -->
+                        <p style="margin: 0 0 24px 0; color: #475569; font-size: 16px; line-height: 1.6;">Hola <strong>${profile.full_name || 'Usuario'}</strong>,</p>
+                        
+                        <p style="margin: 0 0 24px 0; color: #475569; font-size: 16px; line-height: 1.6;">
+                          Hemos recibido una solicitud para restablecer tu PIN de acceso a Velox POS. Si fuiste tú, puedes continuar haciendo clic en el botón de abajo.
+                        </p>
+
+                        <!-- CTA Button -->
+                        <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation">
+                          <tr>
+                            <td align="center">
+                              <a href="${resetUrl}" target="_blank" style="display: inline-block; padding: 16px 36px; background-color: #ef4444; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2); transition: background-color 0.2s;">
+                                Restablecer mi PIN
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Expiry Note -->
+                        <p style="margin: 32px 0 0 0; color: #94a3b8; font-size: 14px; text-align: center; line-height: 1.5;">
+                          Este enlace expirará en 1 hora por razones de seguridad.
+                        </p>
+                        
+                        <!-- Security Warning -->
+                        <div style="margin-top: 24px; padding: 16px; background-color: #fff1f2; border-radius: 8px; border: 1px solid #fecdd3;">
+                          <p style="margin: 0; color: #be123c; font-size: 13px; line-height: 1.5; font-weight: 500;">
+                            ⚠️ Si no solicitaste este cambio, por favor ignora este correo. Tu PIN actual permanecerá seguro y sin cambios.
+                          </p>
+                        </div>
+
+                        <!-- Alternative Link -->
+                         <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                          <p style="margin: 0 0 8px 0; color: #64748b; font-size: 12px;">¿El botón no funciona? Copia y pega este enlace en tu navegador:</p>
+                          <p style="margin: 0; color: #ef4444; font-size: 12px; word-break: break-all; line-height: 1.4;">
+                            <a href="${resetUrl}" style="color: #ef4444; text-decoration: none;">${resetUrl}</a>
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Footer -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px;">
+                    <tr>
+                      <td align="center" style="padding: 32px 0;">
+                        <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 14px; font-weight: 500;">Velox POS</p>
+                        <p style="margin: 0 0 16px 0; color: #cbd5e1; font-size: 12px;">Seguridad y eficiencia para tu negocio.</p>
+                        
+                        <p style="margin: 0; color: #cbd5e1; font-size: 12px;">
+                          © ${new Date().getFullYear()} Velox POS. Todos los derechos reservados.
+                        </p>
+                        <p style="margin: 8px 0 0 0; color: #cbd5e1; font-size: 12px;">
+                          La Paz, Bolivia
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                </td>
+              </tr>
+            </table>
           </body>
           </html>
         `,
-        textBody: `Recuperación de PIN - LA-CAJA\n\nHola ${profile.full_name || 'Usuario'},\n\nRecibimos una solicitud para recuperar tu PIN de acceso a LA-CAJA.\n\nHaz clic en el siguiente enlace para restablecer tu PIN:\n${resetUrl}\n\nEste enlace expirará en 1 hora.\n\nSi no solicitaste este cambio, ignora este email. Tu PIN no será modificado.`,
+        textBody: `Recuperación de PIN - Velox POS\n\nHola ${profile.full_name || 'Usuario'},\n\nHemos recibido una solicitud para restablecer tu PIN de acceso a Velox POS.\n\nHaz clic en el siguiente enlace para restablecer tu PIN:\n${resetUrl}\n\nEste enlace expirará en 1 hora.\n\nSi no solicitaste este cambio, ignora este email. Tu PIN no será modificado.`,
       });
 
       this.logger.log(`Email de recuperación de PIN enviado a: ${profile.email}`);
