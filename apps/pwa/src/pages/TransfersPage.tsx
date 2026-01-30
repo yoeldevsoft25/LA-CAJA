@@ -188,7 +188,8 @@ export default function TransfersPage() {
     if (!selectedTransfer) return
 
     const formData = new FormData(e.currentTarget)
-    const items: ReceiveTransferDto['items'] = selectedTransfer.items.map((_, index) => ({
+    const items: ReceiveTransferDto['items'] = selectedTransfer.items.map((item, index) => ({
+      product_id: item.product_id,
       quantity_received: parseInt(formData.get(`received_${index}`) as string) || 0,
     }))
 

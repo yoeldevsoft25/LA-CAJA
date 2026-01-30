@@ -127,6 +127,7 @@ export interface ShipTransferDto {
  * DTO para recibir una transferencia
  */
 export interface ReceiveTransferItemDto {
+  product_id: string
   quantity_received: number
 }
 

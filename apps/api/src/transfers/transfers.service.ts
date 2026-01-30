@@ -247,13 +247,19 @@ export class TransfersService {
       const movementRepo = manager.getRepository('InventoryMovement');
 
       // Actualizar items y stock
-      for (let i = 0; i < transfer.items.length; i++) {
-        const item = transfer.items[i];
-        const receivedDto = dto.items[i];
+      // Actualizar items y stock
+      for (const item of transfer.items) {
+        const receivedDto = dto.items.find((i) => i.product_id === item.product_id);
+
+        if (!receivedDto) {
+          throw new BadRequestException(
+            `Falta información de recepción para el producto ${item.product_id}`,
+          );
+        }
 
         if (receivedDto.quantity_received > item.quantity_shipped) {
           throw new BadRequestException(
-            `La cantidad recibida no puede ser mayor a la enviada para el item ${i + 1}`,
+            `La cantidad recibida no puede ser mayor a la enviada para el item, producto: ${item.product_id}`,
           );
         }
 
