@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="veloxGradient" x1="64" y1="64" x2="448" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#00D4FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Simbolo V estilizado -->
+  <!-- Parte izquierda (Blanco) -->
+  <path d="M166.3 147.9C149.2 178.5 140 216.2 140 256C140 375.3 236.7 472 356 472C375.6 472 394.6 469.7 412.7 465.4L256 308.7L166.3 147.9Z" fill="white"/>
+
+  <!-- Parte derecha (Cyan Electrico) -->
+  <path d="M412.7 465.4C448.3 438.8 472 395 472 346C472 316.3 463.3 288.7 448.2 265.1L256 308.7L412.7 465.4Z" fill="#00D4FF"/>
+
+  <!-- Corte central (Negativo) -->
+  <path d="M256 308.7L166.3 147.9C191.9 133.5 222.1 124 256 124C287.3 124 316.5 131.9 342.1 145.7L256 308.7Z" fill="#00D4FF"/>
+</svg>
