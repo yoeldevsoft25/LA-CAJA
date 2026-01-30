@@ -162,6 +162,7 @@ async function bootstrap() {
       .addTag('reports', 'Reportes y análisis')
       .addTag('backup', 'Respaldo de datos')
       .addServer('http://localhost:3000', 'Servidor de desarrollo')
+      .addServer('https://la-caja-8i4h.onrender.com', 'Servidor de Producción (Render)')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
