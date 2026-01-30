@@ -85,28 +85,69 @@ import { BullModule } from '@nestjs/bullmq';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const redisUrl = configService.get<string>('REDIS_URL');
+        let connectionOpts: any = {};
 
         if (redisUrl) {
-          return {
-            connection: {
-              url: redisUrl,
-              maxRetriesPerRequest: null, // Requerido para BullMQ
-              // ⚡ OPTIMIZACIÓN: Limitar conexiones para evitar "max number of clients reached"
-              lazyConnect: false,
-              // Pool de conexiones compartido
-              enableOfflineQueue: false, // No acumular comandos cuando está offline
-            },
+          connectionOpts = {
+            url: redisUrl,
+            maxRetriesPerRequest: null,
+            enableOfflineQueue: false,
           };
-        }
-
-        // Fallback a configuración por componentes (desarrollo local)
-        return {
-          connection: {
+        } else {
+          connectionOpts = {
             host: configService.get<string>('REDIS_HOST') || 'localhost',
             port: configService.get<number>('REDIS_PORT') || 6379,
             password: configService.get<string>('REDIS_PASSWORD'),
             maxRetriesPerRequest: null,
             enableOfflineQueue: false,
+          };
+        }
+
+        // ⚡ OPTIMIZACIÓN: Crear instancias compartidas para clientes y suscriptores
+        // Esto reduce drásticamente el número de conexiones (ahorra 2 conexiones por cola)
+        const Redis = require('ioredis');
+
+        // Cliente compartido para publicar trabajos (puede ser usado por todas las colas)
+        const sharedClient = redisUrl
+          ? new Redis(redisUrl, { maxRetriesPerRequest: null, enableOfflineQueue: false })
+          : new Redis(connectionOpts);
+
+        // Cliente compartido para suscripciones (puede ser usado por todas las colas)
+        const sharedSubscriber = sharedClient.duplicate();
+
+        // Manejo de errores en conexiones compartidas
+        sharedClient.on('error', (err: any) => console.error('Redis Shared Client Error:', err));
+        sharedSubscriber.on('error', (err: any) => console.error('Redis Shared Subscriber Error:', err));
+
+        // Poner un límite máximo de listeners para evitar advertencias
+        sharedClient.setMaxListeners(100);
+        sharedSubscriber.setMaxListeners(100);
+
+        return {
+          // Usar la fábrica createClient para reutilizar conexiones
+          createClient: (type) => {
+            switch (type) {
+              case 'client':
+                return sharedClient;
+              case 'subscriber':
+                return sharedSubscriber;
+              case 'bclient':
+                // bclient (blocking client) NO puede ser compartido entre workers
+                // porque usa comandos bloqueantes como BRPOP
+                return sharedClient.duplicate();
+              default:
+                return sharedClient.duplicate();
+            }
+          },
+          // Opciones por defecto para jobs
+          defaultJobOptions: {
+            removeOnComplete: 100, // Mantener solo los últimos 100 trabajos completados
+            removeOnFail: 200,     // Mantener los últimos 200 fallidos para debugging
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000,
+            },
           },
         };
       },
