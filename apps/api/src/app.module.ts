@@ -124,6 +124,8 @@ import { BullModule } from '@nestjs/bullmq';
         sharedSubscriber.setMaxListeners(100);
 
         return {
+          // Dummy connection para satisfacer el tipo QueueOptions
+          connection: connectionOpts,
           // Usar la fábrica createClient para reutilizar conexiones
           createClient: (type) => {
             switch (type) {
