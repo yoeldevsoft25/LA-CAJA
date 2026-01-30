@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { readFileSync } from 'fs';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DbRepairService } from './database/repair-db.service';
 import { SyncModule } from './sync/sync.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
@@ -255,7 +256,7 @@ import { BullModule } from '@nestjs/bullmq';
           database: url.pathname.slice(1), // Remover el '/' inicial
           // Usar array centralizado de entidades para reducir serialización
           entities: ALL_ENTITIES,
-          synchronize: true, // ⚠️ AUTO-FIX: Habilitado para crear tablas faltantes en Render
+          synchronize: false, // Usamos migraciones SQL manuales
           logging: configService.get<string>('NODE_ENV') === 'development',
           // Configuración robusta del pool de conexiones para Render/Cloud
           extra: {
@@ -339,6 +340,7 @@ import { BullModule } from '@nestjs/bullmq';
   controllers: [AppController, AdminController],
   providers: [
     AppService,
+    DbRepairService, // ⚠️ Auto-Fix Service
     LicenseWatcherService,
     AdminApiGuard, // ✅ Guard administrativo con auditoría
     // Aplicar rate limiting globalmente
