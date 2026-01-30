@@ -59,7 +59,7 @@ export class AuthService {
     private configService: ConfigService,
     private emailService: EmailService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;
@@ -296,41 +296,135 @@ export class AuthService {
           storeId: savedStore.id,
           to: dto.owner_email,
           toName: dto.owner_name,
-          subject: 'Bienvenido a LA-CAJA - Verifica tu email',
-        htmlBody: `
+          subject: 'Bienvenido a Velox POS - Verifica tu email',
+          htmlBody: `
           <!DOCTYPE html>
-          <html>
+          <html lang="es">
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Bienvenido a LA-CAJA</title>
+            <title>Bienvenido a Velox POS</title>
+            <!--[if mso]>
+            <noscript>
+            <xml>
+              <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+              </o:OfficeDocumentSettings>
+            </xml>
+            </noscript>
+            <![endif]-->
+            <style>
+              body { margin: 0; padding: 0; min-width: 100%; width: 100% !important; height: 100% !important; }
+              body, table, td, div, p, a { -webkit-font-smoothing: antialiased; text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; line-height: 100%; }
+              table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; border-spacing: 0; }
+              img { border: 0; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+              #outlook a { padding: 0; }
+              .ReadMsgBody { width: 100%; } .ExternalClass { width: 100%; }
+              .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
+              @media all and (min-width: 560px) {
+                .container { max-width: 600px !important; margin: 0 auto !important; width: 100% !important; }
+              }
+            </style>
           </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #0d81ce 0%, #0a5d9c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0;">¡Bienvenido a LA-CAJA!</h1>
-            </div>
-            <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-              <p>Hola <strong>${dto.owner_name}</strong>,</p>
-              <p>Gracias por registrarte en LA-CAJA. Tu tienda <strong>${dto.store_name}</strong> ha sido creada exitosamente.</p>
-              <p>Para completar tu registro, por favor verifica tu dirección de email haciendo clic en el siguiente botón:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${verificationUrl}" style="background: #0d81ce; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verificar Email</a>
-              </div>
-              <p style="font-size: 12px; color: #666;">O copia y pega este enlace en tu navegador:</p>
-              <p style="font-size: 12px; color: #666; word-break: break-all;">${verificationUrl}</p>
-              <p style="font-size: 12px; color: #999; margin-top: 30px;">Este enlace expirará en 24 horas.</p>
-              <p style="font-size: 12px; color: #999;">Si no creaste esta cuenta, puedes ignorar este email.</p>
-            </div>
+          <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+            
+            <!-- Main Wrapper -->
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #f1f5f9;">
+              <tr>
+                <td align="center" style="padding: 40px 0;">
+                  
+                  <!-- Logo -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px;">
+                    <tr>
+                      <td align="center" style="padding-bottom: 24px;">
+                        <h2 style="margin: 0; color: #0f172a; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">VELOX POS</h2>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Card -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); overflow: hidden;">
+                    
+                    <!-- Header Accent -->
+                    <tr>
+                      <td height="6" style="background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);"></td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                      <td style="padding: 40px 48px;">
+                        
+                        <!-- Headline -->
+                        <h1 style="margin: 0 0 24px 0; color: #1e293b; font-size: 28px; font-weight: 700; line-height: 1.25; text-align: center;">¡Bienvenido a Velox POS!</h1>
+                        
+                        <!-- Welcome Text -->
+                        <p style="margin: 0 0 24px 0; color: #475569; font-size: 16px; line-height: 1.6;">Hola <strong>${dto.owner_name}</strong>,</p>
+                        
+                        <p style="margin: 0 0 24px 0; color: #475569; font-size: 16px; line-height: 1.6;">
+                          Estamos encantados de tenerte a bordo. Tu tienda <strong style="color: #0f172a;">${dto.store_name}</strong> ha sido creada exitosamente y ya está lista para empezar a operar.
+                        </p>
+                        
+                        <p style="margin: 0 0 32px 0; color: #475569; font-size: 16px; line-height: 1.6;">
+                          Para garantizar la seguridad de tu cuenta y liberar todas las funcionalidades, por favor verifica tu dirección de correo electrónico haciendo clic en el botón de abajo.
+                        </p>
+
+                        <!-- CTA Button -->
+                        <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation">
+                          <tr>
+                            <td align="center">
+                              <a href="${verificationUrl}" target="_blank" style="display: inline-block; padding: 16px 36px; background-color: #2563eb; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); transition: background-color 0.2s;">
+                                Verificar mi cuenta
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+
+                        <!-- Expiry Note -->
+                        <p style="margin: 32px 0 0 0; color: #94a3b8; font-size: 14px; text-align: center; line-height: 1.5;">
+                          Este enlace de verificación expirará en 24 horas por razones de seguridad.
+                        </p>
+
+                        <!-- Alternative Link -->
+                         <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                          <p style="margin: 0 0 8px 0; color: #64748b; font-size: 12px;">¿El botón no funciona? Copia y pega este enlace en tu navegador:</p>
+                          <p style="margin: 0; color: #2563eb; font-size: 12px; word-break: break-all; line-height: 1.4;">
+                            <a href="${verificationUrl}" style="color: #2563eb; text-decoration: none;">${verificationUrl}</a>
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Footer -->
+                  <table class="container" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 600px;">
+                    <tr>
+                      <td align="center" style="padding: 32px 0;">
+                        <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 14px; font-weight: 500;">Velox POS</p>
+                        <p style="margin: 0 0 16px 0; color: #cbd5e1; font-size: 12px;">Optimizando tu negocio, venta a venta.</p>
+                        
+                        <p style="margin: 0; color: #cbd5e1; font-size: 12px;">
+                          © ${new Date().getFullYear()} Velox POS. Todos los derechos reservados.
+                        </p>
+                        <p style="margin: 8px 0 0 0; color: #cbd5e1; font-size: 12px;">
+                          La Paz, Bolivia
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                </td>
+              </tr>
+            </table>
           </body>
           </html>
         `,
-        textBody: `Bienvenido a LA-CAJA\n\nHola ${dto.owner_name},\n\nGracias por registrarte en LA-CAJA. Tu tienda ${dto.store_name} ha sido creada exitosamente.\n\nPara completar tu registro, verifica tu dirección de email visitando:\n${verificationUrl}\n\nEste enlace expirará en 24 horas.\n\nSi no creaste esta cuenta, puedes ignorar este email.`,
-      });
-    } catch (error) {
+          textBody: `Bienvenido a Velox POS\n\nHola ${dto.owner_name},\n\nGracias por registrarte en Velox POS. Tu tienda ${dto.store_name} ha sido creada exitosamente.\n\nPara completar tu registro, verifica tu dirección de email visitando:\n${verificationUrl}\n\nEste enlace expirará en 24 horas.\n\nSi no creaste esta cuenta, puedes ignorar este email.`,
+        });
+      } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const errorStack = error instanceof Error ? error.stack : undefined;
         this.logger.error(`❌ Error enviando email de verificación a ${dto.owner_email}: ${errorMessage}`, errorStack);
-        
+
         // Log detalle del error para debugging
         if (error instanceof Error) {
           this.logger.error(`   Error details: ${error.constructor.name}`, {
@@ -495,7 +589,7 @@ export class AuthService {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`❌ Error reenviando email de verificación a ${profile.email}: ${errorMessage}`, errorStack);
-      
+
       // Log detalle del error para debugging
       if (error instanceof Error) {
         this.logger.error(`   Error details: ${error.constructor.name}`, {
@@ -503,7 +597,7 @@ export class AuthService {
           name: error.name,
         });
       }
-      
+
       throw new BadRequestException(`Error al enviar email de verificación: ${errorMessage}`);
     }
   }
@@ -1083,7 +1177,7 @@ export class AuthService {
         where: { store_id: storeId },
         relations: ['profile'],
       });
-      
+
       this.logger.warn('[AuthService] validateUser - Usuario no encontrado:', {
         userId,
         storeId,
@@ -1110,7 +1204,7 @@ export class AuthService {
         },
       });
     }
-    
+
     return member;
   }
 
@@ -1326,7 +1420,7 @@ export class AuthService {
       userId,
     ];
     const fingerprintString = components.join('|');
-    
+
     // Hashear para crear un fingerprint único pero no reversible
     return createHash('sha256').update(fingerprintString).digest('hex');
   }
