@@ -36,7 +36,7 @@ export class Sale {
   @Column({ type: 'numeric', precision: 18, scale: 6, default: 0 })
   exchange_rate: number;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar', length: 20, nullable: true })
   currency: 'BS' | 'USD' | 'MIXED';
 
   @Column({ type: 'jsonb' })
