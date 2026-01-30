@@ -61,7 +61,7 @@ import { ObservabilityModule } from './observability/observability.module';
 // Nota: LicenseWatcherService necesita NotificationsGateway, que está en NotificationsModule
 // Importar todas las entidades desde el índice centralizado
 // Esto reduce el tamaño del objeto serializado y mejora el rendimiento del bootstrap
-import { ALL_ENTITIES, Store, StoreMember, Profile } from './database/entities';
+import { ALL_ENTITIES, Store, StoreMember, Profile, LicenseUsage } from './database/entities';
 import { LicenseInterceptor } from './auth/interceptors/license.interceptor';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { DatabaseErrorInterceptor } from './common/interceptors/database-error.interceptor';
@@ -288,7 +288,7 @@ import { BullModule } from '@nestjs/bullmq';
       },
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Store, StoreMember, Profile]),
+    TypeOrmModule.forFeature([Store, StoreMember, Profile, LicenseUsage]),
     SyncModule,
     AuthModule,
     ProductsModule,
