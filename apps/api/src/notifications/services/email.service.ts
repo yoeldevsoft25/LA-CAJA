@@ -275,6 +275,11 @@ export class EmailService {
         });
 
         processed++;
+
+        // ⚡ RATE LIMITING: Esperar 1.1 segundos entre envíos para respetar límite de Resend (2 req/s)
+        // Esto previene errores 429 durante el procesamiento de lotes
+        await new Promise(resolve => setTimeout(resolve, 1100));
+
       } catch (error) {
         this.logger.error(`Failed to process email ${email.id}:`, error);
 
@@ -288,6 +293,9 @@ export class EmailService {
 
         email.error_message = error instanceof Error ? error.message : 'Unknown error';
         await this.emailQueueRepository.save(email);
+
+        // Si fallamos por Rate Limit, esperar un poco más antes de seguir
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
