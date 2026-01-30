@@ -93,7 +93,16 @@ export default function RegisterPage() {
     },
     onError: (error: any) => {
       console.error('[Register] Error en registro:', error)
-      toast.error(error.response?.data?.message || error.message || 'Error al registrar')
+
+      const errorMessage = error.response?.data?.message
+
+      if (Array.isArray(errorMessage)) {
+        // Si es un array (errores de validación), mostrar cada uno
+        errorMessage.forEach(msg => toast.error(msg))
+      } else {
+        // Mensaje único
+        toast.error(errorMessage || error.message || 'Error al registrar')
+      }
     },
   })
 
