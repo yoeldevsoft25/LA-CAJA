@@ -95,6 +95,18 @@ export class InventoryController {
     return items;
   }
 
+  @Get('stock/health')
+  @Roles('owner')
+  async getInventoryHealth(@Request() req: any) {
+    const storeId = req.user.store_id;
+    const discrepancies = await this.inventoryService.verifyInventoryConsistency(storeId);
+    return {
+      ok: discrepancies.length === 0,
+      count: discrepancies.length,
+      discrepancies,
+    };
+  }
+
   @Get('stock/low')
   async getLowStock(@Request() req: any) {
     const storeId = req.user.store_id;

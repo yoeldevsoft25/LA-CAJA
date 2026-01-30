@@ -745,7 +745,7 @@ export class InventoryService {
         FROM inventory_movements im
         INNER JOIN warehouses w ON w.id = im.warehouse_id
         WHERE im.warehouse_id IS NOT NULL
-          AND im.movement_type IN ('received', 'adjust', 'sold', 'sale')
+          AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
           AND w.store_id = $1
         GROUP BY im.warehouse_id, im.product_id, im.variant_id
       )
@@ -766,7 +766,7 @@ export class InventoryService {
         FROM inventory_movements im
         INNER JOIN warehouses w ON w.id = im.warehouse_id
         WHERE im.warehouse_id IS NOT NULL
-          AND im.movement_type IN ('received', 'adjust', 'sold', 'sale')
+          AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
           AND w.store_id = $1
         GROUP BY im.warehouse_id, im.product_id, im.variant_id
       )
@@ -893,5 +893,53 @@ export class InventoryService {
 
     this.logger.log(`Live Inventory Reconcile: Procesados ${dto.items.length} items, Generados ${adjustments.length} ajustes.`);
     return { reconciled: dto.items.length, adjustments };
+  }
+  /**
+   * Verifica la consistencia entre movimientos históricos y el stock actual.
+   * Retorna una lista de discrepancias encontradas.
+   * Ideal para auditar la salud del inventario sin modificar datos.
+   */
+  async verifyInventoryConsistency(storeId: string): Promise<any[]> {
+    const query = `
+      WITH expected AS (
+        SELECT
+          im.warehouse_id,
+          im.product_id,
+          im.variant_id,
+          SUM(im.qty_delta) AS expected_stock
+        FROM inventory_movements im
+        INNER JOIN warehouses w ON w.id = im.warehouse_id
+        WHERE im.warehouse_id IS NOT NULL
+          AND w.store_id = $1
+          AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
+        GROUP BY im.warehouse_id, im.product_id, im.variant_id
+      ),
+      actual AS (
+         SELECT 
+           ws.warehouse_id, ws.product_id, ws.variant_id, ws.stock 
+         FROM warehouse_stock ws
+         INNER JOIN warehouses w ON w.id = ws.warehouse_id
+         WHERE w.store_id = $1
+      )
+      SELECT 
+         w.name as warehouse_name,
+         p.name as product_name,
+         COALESCE(e.warehouse_id, a.warehouse_id) as warehouse_id,
+         COALESCE(e.product_id, a.product_id) as product_id,
+         COALESCE(e.variant_id, a.variant_id) as variant_id,
+         COALESCE(e.expected_stock, 0) as expected_stock, 
+         COALESCE(a.stock, 0) as actual_stock,
+         (COALESCE(e.expected_stock, 0) - COALESCE(a.stock, 0)) as diff
+      FROM expected e
+      FULL OUTER JOIN actual a ON 
+         a.warehouse_id = e.warehouse_id AND 
+         a.product_id = e.product_id AND 
+         ((a.variant_id IS NULL AND e.variant_id IS NULL) OR a.variant_id = e.variant_id)
+      LEFT JOIN products p ON p.id = COALESCE(e.product_id, a.product_id)
+      LEFT JOIN warehouses w ON w.id = COALESCE(e.warehouse_id, a.warehouse_id)
+      WHERE ABS(COALESCE(e.expected_stock, 0) - COALESCE(a.stock, 0)) > 0.001
+    `;
+
+    return this.dataSource.query(query, [storeId]);
   }
 }

@@ -154,6 +154,7 @@ export default function StockReceivedModal({
   // Si se pasa un producto específico, agregarlo automáticamente
   useEffect(() => {
     if (!isOpen || !product) return
+    if (products.length === 0) return
 
     setProductItems((current) => {
       if (current.length > 0) return current

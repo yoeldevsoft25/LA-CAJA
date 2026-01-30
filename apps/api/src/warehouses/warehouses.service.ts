@@ -350,18 +350,34 @@ export class WarehousesService {
     warehouseId: string,
     productId: string,
     variantId: string | null,
+    manager?: EntityManager,
+    lock = false,
   ): Promise<WarehouseStock | null> {
+    const queryExecutor = manager ?? this.dataSource;
+    const lockClause = lock ? 'FOR UPDATE' : '';
     // Intentar obtener con id primero (si existe)
     try {
-      const result = await this.dataSource.query(
-        `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
-         FROM warehouse_stock
-         WHERE warehouse_id = $1
-           AND product_id = $2
-           AND (($3::uuid IS NULL AND variant_id IS NULL) OR variant_id = $3::uuid)
-         LIMIT 1`,
-        [warehouseId, productId, variantId],
-      );
+      const result = variantId === null
+        ? await queryExecutor.query(
+          `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
+           FROM warehouse_stock
+           WHERE warehouse_id = $1
+             AND product_id = $2
+             AND variant_id IS NULL
+           ${lockClause}
+           LIMIT 1`,
+          [warehouseId, productId],
+        )
+        : await queryExecutor.query(
+          `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
+           FROM warehouse_stock
+           WHERE warehouse_id = $1
+             AND product_id = $2
+             AND variant_id = $3
+           ${lockClause}
+           LIMIT 1`,
+          [warehouseId, productId, variantId],
+        );
       if (!result[0]) {
         return null;
       }
@@ -373,15 +389,27 @@ export class WarehousesService {
     } catch (error: any) {
       // Si falla porque no existe la columna id, intentar sin ella
       if (error.message?.includes('column "id"') || error.message?.includes('does not exist')) {
-        const result = await this.dataSource.query(
-          `SELECT warehouse_id, product_id, variant_id, stock, reserved, updated_at
-           FROM warehouse_stock
-           WHERE warehouse_id = $1
-             AND product_id = $2
-             AND (($3::uuid IS NULL AND variant_id IS NULL) OR variant_id = $3::uuid)
-           LIMIT 1`,
-          [warehouseId, productId, variantId],
-        );
+        const result = variantId === null
+          ? await queryExecutor.query(
+            `SELECT warehouse_id, product_id, variant_id, stock, reserved, updated_at
+             FROM warehouse_stock
+             WHERE warehouse_id = $1
+               AND product_id = $2
+               AND variant_id IS NULL
+             ${lockClause}
+             LIMIT 1`,
+            [warehouseId, productId],
+          )
+          : await queryExecutor.query(
+            `SELECT warehouse_id, product_id, variant_id, stock, reserved, updated_at
+             FROM warehouse_stock
+             WHERE warehouse_id = $1
+               AND product_id = $2
+               AND variant_id = $3
+             ${lockClause}
+             LIMIT 1`,
+            [warehouseId, productId, variantId],
+          );
         if (!result[0]) {
           return null;
         }
@@ -714,15 +742,23 @@ export class WarehousesService {
     variantId: string | null,
     quantity: number,
     storeId?: string,
+    manager?: EntityManager,
   ): Promise<void> {
-    const stock = await this.findStockRecord(warehouseId, productId, variantId);
+    const stock = await this.findStockRecord(
+      warehouseId,
+      productId,
+      variantId,
+      manager,
+      true,
+    );
 
     if (!stock || stock.stock < quantity) {
       throw new BadRequestException('Stock insuficiente para reservar');
     }
 
     const previousStock = Number(stock.stock) || 0;
-    await this.dataSource.query(
+    const queryExecutor = manager ?? this.dataSource;
+    await queryExecutor.query(
       `UPDATE warehouse_stock 
        SET stock = stock - $1, reserved = reserved + $1, updated_at = NOW() 
        WHERE warehouse_id = $2 
@@ -756,14 +792,22 @@ export class WarehousesService {
     productId: string,
     variantId: string | null,
     quantity: number,
+    manager?: EntityManager,
   ): Promise<void> {
-    const stock = await this.findStockRecord(warehouseId, productId, variantId);
+    const stock = await this.findStockRecord(
+      warehouseId,
+      productId,
+      variantId,
+      manager,
+      true,
+    );
 
     if (!stock || stock.reserved < quantity) {
       throw new BadRequestException('Stock reservado insuficiente');
     }
 
-    await this.dataSource.query(
+    const queryExecutor = manager ?? this.dataSource;
+    await queryExecutor.query(
       `UPDATE warehouse_stock 
        SET stock = stock + $1, reserved = reserved - $1, updated_at = NOW() 
        WHERE warehouse_id = $2 
@@ -780,14 +824,22 @@ export class WarehousesService {
     productId: string,
     variantId: string | null,
     quantity: number,
+    manager?: EntityManager,
   ): Promise<void> {
-    const stock = await this.findStockRecord(warehouseId, productId, variantId);
+    const stock = await this.findStockRecord(
+      warehouseId,
+      productId,
+      variantId,
+      manager,
+      true,
+    );
 
     if (!stock || stock.reserved < quantity) {
       throw new BadRequestException('Stock reservado insuficiente para confirmar salida');
     }
 
-    await this.dataSource.query(
+    const queryExecutor = manager ?? this.dataSource;
+    await queryExecutor.query(
       `UPDATE warehouse_stock 
        SET reserved = reserved - $1, updated_at = NOW() 
        WHERE warehouse_id = $2 

@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { Check } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { cn } from "@/lib/utils"
 
 interface SuccessOverlayProps {
@@ -40,6 +40,15 @@ export function SuccessOverlay({
             return () => clearTimeout(timer)
         }
     }, [isOpen, onAnimationComplete])
+
+    const displayMessage = useMemo(() => {
+        if (!message) return 'PROCESADO'
+        if (message.includes('OFFLINE')) return 'ALMACENADO OFFLINE'
+        if (message.includes('#')) return message.split('#')[1]?.split(' ')[0] || 'PROCESADO'
+        return 'PROCESADO'
+    }, [message])
+
+    const isOffline = message?.includes('OFFLINE')
 
     return (
         <AnimatePresence>
@@ -130,12 +139,13 @@ export function SuccessOverlay({
                             </motion.div>
                         </div>
 
-                        {/* Tarjeta Glassmorphism Blanca */}
                         <motion.div
                             initial={{ y: 20, opacity: 0, scale: 0.95 }}
                             animate={{ y: 0, opacity: 1, scale: 1 }}
                             transition={{ delay: 0.5, type: "spring", stiffness: 150 }}
                             className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md border border-white/60 p-6 w-full text-center shadow-xl shadow-slate-200/50 pointer-events-auto"
+                            role="status"
+                            aria-live="polite"
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
 
@@ -146,16 +156,16 @@ export function SuccessOverlay({
                             <div className="flex items-center justify-center gap-2 mt-2">
                                 <span className={cn(
                                     "px-3 py-1 rounded-full text-sm font-bold tracking-wider shadow-sm border",
-                                    message?.includes('OFFLINE')
+                                    isOffline
                                         ? "bg-amber-50 border-amber-100 text-amber-700"
                                         : "bg-primary/10 border-primary/20 text-primary"
                                 )}>
-                                    {message?.includes('OFFLINE') ? 'ALMACENADO OFFLINE' : (message?.includes('#') ? message.split('#')[1].split(' ')[0] : 'PROCESADO')}
+                                    {displayMessage}
                                 </span>
                             </div>
 
                             <p className="mt-4 text-sm text-slate-500 font-medium leading-relaxed">
-                                {message?.includes('OFFLINE')
+                                {isOffline
                                     ? 'La venta se ha guardado localmente y se sincronizará cuando retorne la conexión.'
                                     : 'La transacción ha sido registrada correctamente en el sistema.'}
                             </p>

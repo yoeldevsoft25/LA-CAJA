@@ -182,8 +182,9 @@ export default function InventoryPage() {
       setSelectedProduct(null)
       setResetNote('')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Error al vaciar el stock')
+    onError: (error: unknown) => {
+      const apiError = error as { response?: { data?: { message?: string } } }
+      toast.error(apiError.response?.data?.message || 'Error al vaciar el stock')
     },
   })
 
@@ -196,8 +197,9 @@ export default function InventoryPage() {
       setResetNote('')
       setResetConfirmText('')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Error al vaciar el inventario')
+    onError: (error: unknown) => {
+      const apiError = error as { response?: { data?: { message?: string } } }
+      toast.error(apiError.response?.data?.message || 'Error al vaciar el inventario')
     },
   })
 
@@ -207,8 +209,9 @@ export default function InventoryPage() {
       toast.success(data.message)
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Error al reconciliar stock')
+    onError: (error: unknown) => {
+      const apiError = error as { response?: { data?: { message?: string } } }
+      toast.error(apiError.response?.data?.message || 'Error al reconciliar stock')
     },
   })
 

@@ -9,7 +9,6 @@ import { Repository, DataSource } from 'typeorm';
 import { Transfer, TransferStatus } from '../database/entities/transfer.entity';
 import { TransferItem } from '../database/entities/transfer-item.entity';
 import { Warehouse } from '../database/entities/warehouse.entity';
-import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { Product } from '../database/entities/product.entity';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { ShipTransferDto } from './dto/ship-transfer.dto';
@@ -32,8 +31,6 @@ export class TransfersService {
     private transferItemRepository: Repository<TransferItem>,
     @InjectRepository(Warehouse)
     private warehouseRepository: Repository<Warehouse>,
-    @InjectRepository(Product)
-    private productRepository: Repository<Product>,
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
     private dataSource: DataSource,
@@ -81,91 +78,80 @@ export class TransfersService {
       throw new NotFoundException('Bodega destino no encontrada');
     }
 
-    // Validar items y stock disponible
-    for (const item of dto.items) {
-      const product = await this.productRepository.findOne({
-        where: { id: item.product_id, store_id: storeId },
-      });
-
-      if (!product) {
-        throw new NotFoundException(
-          `Producto ${item.product_id} no encontrado`,
-        );
-      }
-
-      // Verificar stock disponible en bodega origen
-      const stock = await this.warehousesService.getStock(
-        storeId,
-        dto.from_warehouse_id,
-        item.product_id,
-      );
-
-      const availableStock = stock.find(
-        (s) =>
-          s.product_id === item.product_id &&
-          (s.variant_id === item.variant_id ||
-            (!s.variant_id && !item.variant_id)),
-      );
-
-      if (!availableStock || availableStock.stock < item.quantity) {
-        throw new BadRequestException(
-          `Stock insuficiente para el producto ${product.name}`,
-        );
-      }
-    }
-
-    // Crear transferencia
     const transferNumber = await this.generateTransferNumber(storeId);
-    const transfer = this.transferRepository.create({
-      id: randomUUID(),
-      store_id: storeId,
-      transfer_number: transferNumber,
-      from_warehouse_id: dto.from_warehouse_id,
-      to_warehouse_id: dto.to_warehouse_id,
-      status: 'pending',
-      requested_by: userId,
-      requested_at: new Date(),
-      note: dto.note || null,
-    });
+    return this.dataSource.transaction(async (manager) => {
+      const transferRepo = manager.getRepository(Transfer);
+      const transferItemRepo = manager.getRepository(TransferItem);
+      const productRepo = manager.getRepository(Product);
 
-    const savedTransfer = await this.transferRepository.save(transfer);
-
-    // Crear items y reservar stock
-    const items: TransferItem[] = [];
-    for (const itemDto of dto.items) {
-      const product = await this.productRepository.findOne({
-        where: { id: itemDto.product_id },
-        select: ['cost_bs', 'cost_usd'],
-      });
-
-      const item = this.transferItemRepository.create({
+      // Crear transferencia
+      const transfer = transferRepo.create({
         id: randomUUID(),
-        transfer_id: savedTransfer.id,
-        product_id: itemDto.product_id,
-        variant_id: itemDto.variant_id || null,
-        quantity: itemDto.quantity,
-        quantity_shipped: 0,
-        quantity_received: 0,
-        unit_cost_bs: itemDto.unit_cost_bs ?? product?.cost_bs ?? 0,
-        unit_cost_usd: itemDto.unit_cost_usd ?? product?.cost_usd ?? 0,
-        note: itemDto.note || null,
+        store_id: storeId,
+        transfer_number: transferNumber,
+        from_warehouse_id: dto.from_warehouse_id,
+        to_warehouse_id: dto.to_warehouse_id,
+        status: 'pending',
+        requested_by: userId,
+        requested_at: new Date(),
+        note: dto.note || null,
       });
 
-      const savedItem = await this.transferItemRepository.save(item);
-      items.push(savedItem);
+      const savedTransfer = await transferRepo.save(transfer);
 
-      // Reservar stock en bodega origen
-      await this.warehousesService.reserveStock(
-        dto.from_warehouse_id,
-        itemDto.product_id,
-        itemDto.variant_id || null,
-        itemDto.quantity,
-        storeId,
-      );
-    }
+      // Crear items y reservar stock
+      const items: TransferItem[] = [];
+      for (const itemDto of dto.items) {
+        const product = await productRepo.findOne({
+          where: { id: itemDto.product_id, store_id: storeId },
+          select: ['id', 'name', 'cost_bs', 'cost_usd'],
+        });
 
-    savedTransfer.items = items;
-    return savedTransfer;
+        if (!product) {
+          throw new NotFoundException(
+            `Producto ${itemDto.product_id} no encontrado`,
+          );
+        }
+
+        // Reservar stock en bodega origen con bloqueo transaccional
+        try {
+          await this.warehousesService.reserveStock(
+            dto.from_warehouse_id,
+            itemDto.product_id,
+            itemDto.variant_id || null,
+            itemDto.quantity,
+            storeId,
+            manager,
+          );
+        } catch (error) {
+          if (error instanceof BadRequestException) {
+            throw new BadRequestException(
+              `Stock insuficiente para el producto ${product.name}`,
+            );
+          }
+          throw error;
+        }
+
+        const item = transferItemRepo.create({
+          id: randomUUID(),
+          transfer_id: savedTransfer.id,
+          product_id: itemDto.product_id,
+          variant_id: itemDto.variant_id || null,
+          quantity: itemDto.quantity,
+          quantity_shipped: 0,
+          quantity_received: 0,
+          unit_cost_bs: itemDto.unit_cost_bs ?? product.cost_bs ?? 0,
+          unit_cost_usd: itemDto.unit_cost_usd ?? product.cost_usd ?? 0,
+          note: itemDto.note || null,
+        });
+
+        const savedItem = await transferItemRepo.save(item);
+        items.push(savedItem);
+      }
+
+      savedTransfer.items = items;
+      return savedTransfer;
+    });
   }
 
   /**
@@ -274,16 +260,31 @@ export class TransfersService {
         item.quantity_received = receivedDto.quantity_received;
         await manager.save(TransferItem, item);
 
-        // 1. Consumir stock reservado en origen (commit)
-        // Esto elimina permanentemente el stock DE LA RESERVA
+        const shippedQty = Number(item.quantity_shipped || 0);
+        const reservedQty = Number(item.quantity || 0);
+
+        // 1. Consumir stock reservado en origen (commit) solo por lo enviado
         await this.warehousesService.commitReservedStock(
           transfer.from_warehouse_id,
           item.product_id,
           item.variant_id,
-          item.quantity, // Se consume lo que se reservó originalmente
+          shippedQty,
+          manager,
         );
 
-        // 2. Si se recibió menos, devolver la diferencia al stock disponible en origen
+        // 2. Si se reservó más de lo enviado, liberar la diferencia
+        if (reservedQty > shippedQty) {
+          const unshipped = reservedQty - shippedQty;
+          await this.warehousesService.releaseReservedStock(
+            transfer.from_warehouse_id,
+            item.product_id,
+            item.variant_id,
+            unshipped,
+            manager,
+          );
+        }
+
+        // 3. Si se recibió menos, devolver la diferencia al stock disponible en origen
         if (receivedDto.quantity_received < item.quantity_shipped) {
           const difference = item.quantity_shipped - receivedDto.quantity_received;
           await this.warehousesService.updateStock(
@@ -296,7 +297,7 @@ export class TransfersService {
           );
         }
 
-        // 3. Agregar stock a bodega destino
+        // 4. Agregar stock a bodega destino
         await this.warehousesService.updateStock(
           transfer.to_warehouse_id,
           item.product_id,
@@ -306,7 +307,7 @@ export class TransfersService {
           manager
         );
 
-        // 4. Registrar Movimiento de Salida (Transfer Out) - Origen
+        // 5. Registrar Movimiento de Salida (Transfer Out) - Origen
         const movementOut = movementRepo.create({
           id: randomUUID(),
           store_id: storeId,
@@ -326,7 +327,7 @@ export class TransfersService {
         });
         await movementRepo.save(movementOut);
 
-        // 5. Registrar Movimiento de Entrada (Transfer In) - Destino
+        // 6. Registrar Movimiento de Entrada (Transfer In) - Destino
         const movementIn = movementRepo.create({
           id: randomUUID(),
           store_id: storeId,
@@ -416,6 +417,7 @@ export class TransfersService {
           item.product_id,
           item.variant_id,
           item.quantity,
+          manager,
         );
       }
 

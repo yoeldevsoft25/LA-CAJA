@@ -3,9 +3,11 @@ import { toast } from 'sonner'
 import { productsService } from '@/services/products.service'
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 
+import { Product } from '@/services/products.service'
+
 interface UsePOSScannerProps {
     storeId?: string
-    onProductFound: (product: any) => Promise<void>
+    onProductFound: (product: Product) => Promise<void>
 }
 
 export function usePOSScanner({ storeId, onProductFound }: UsePOSScannerProps) {

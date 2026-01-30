@@ -12,6 +12,7 @@ import { inventoryService } from '@/services/inventory.service'
 import toast from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth.store'
+import { Product } from '@/services/products.service'
 
 interface CountItem {
     product_id: string
@@ -19,7 +20,7 @@ interface CountItem {
     qty: number
     started_at: string // Timestamp of first scan
     last_scanned_at: string
-    barcode?: string
+    barcode?: string | null
 }
 
 export default function InventoryCountPage() {
@@ -58,14 +59,14 @@ export default function InventoryCountPage() {
     // Hook de Scanner
     usePOSScanner({
         storeId,
-        onProductFound: async (product) => {
+        onProductFound: async (product: Product) => {
             if (showConfirm || isSubmitting) return
             addProductCount(product)
             toast.success(`Leído: ${product.name}`)
         }
     })
 
-    const addProductCount = (product: any) => {
+    const addProductCount = (product: Product) => {
         setCounts(prev => {
             const existing = prev[product.id]
             const now = new Date().toISOString()

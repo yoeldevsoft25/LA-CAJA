@@ -1678,34 +1678,37 @@ export class SalesService {
 
       for (const item of items) {
         // Verificar si este item tiene lote asignado
-        // Si tiene lote, el movimiento ya se creó en la lógica FIFO
-        if (!item.lot_id) {
-          const movement = manager.create(InventoryMovement, {
-            id: randomUUID(),
-            store_id: storeId,
+        // Aunque tenga lote (ya manejado en LotMovement), DEBEMOS crear InventoryMovement
+        // y actualizar warehouse_stock para mantener la consistencia del stock agregado
+        const movement = manager.create(InventoryMovement, {
+          id: randomUUID(),
+          store_id: storeId,
+          product_id: item.product_id,
+          variant_id: item.variant_id || null,
+          movement_type: 'sold',
+          qty_delta: -item.qty, // Negativo para descontar
+          unit_cost_bs: 0,
+          unit_cost_usd: 0,
+          warehouse_id: warehouseId,
+          note: `Venta ${saleId}`,
+          ref: {
+            sale_id: saleId,
+            warehouse_id: warehouseId,
+            lot_id: item.lot_id || undefined
+          },
+          happened_at: soldAt,
+          approved: true, // Las ventas se aprueban automáticamente
+        });
+
+        movementsToCreate.push(movement);
+
+        // Acumular actualizaciones de stock para batch
+        if (warehouseId) {
+          stockUpdates.push({
             product_id: item.product_id,
             variant_id: item.variant_id || null,
-            movement_type: 'sold',
             qty_delta: -item.qty, // Negativo para descontar
-            unit_cost_bs: 0,
-            unit_cost_usd: 0,
-            warehouse_id: warehouseId,
-            note: `Venta ${saleId}`,
-            ref: { sale_id: saleId, warehouse_id: warehouseId },
-            happened_at: soldAt,
-            approved: true, // Las ventas se aprueban automáticamente
           });
-
-          movementsToCreate.push(movement);
-
-          // Acumular actualizaciones de stock para batch
-          if (warehouseId) {
-            stockUpdates.push({
-              product_id: item.product_id,
-              variant_id: item.variant_id || null,
-              qty_delta: -item.qty, // Negativo para descontar
-            });
-          }
         }
       }
 
@@ -2181,7 +2184,6 @@ export class SalesService {
             });
             await manager.save(LotMovement, lotMovement);
           }
-          continue;
         }
 
         const key = `${item.product_id}:${item.variant_id || 'null'}`;
@@ -2503,6 +2505,7 @@ export class SalesService {
             saleItem.variant_id || null,
             returnQty,
             storeId,
+            manager,
           );
         }
 
