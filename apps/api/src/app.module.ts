@@ -62,7 +62,7 @@ import { ObservabilityModule } from './observability/observability.module';
 // Importar todas las entidades desde el índice centralizado
 // Esto reduce el tamaño del objeto serializado y mejora el rendimiento del bootstrap
 import { ALL_ENTITIES, Store, StoreMember, Profile } from './database/entities';
-import { LicenseGuard } from './auth/guards/license.guard';
+import { LicenseInterceptor } from './auth/interceptors/license.interceptor';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { DatabaseErrorInterceptor } from './common/interceptors/database-error.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -348,10 +348,6 @@ import { BullModule } from '@nestjs/bullmq';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: LicenseGuard,
-    },
     // RolesGuard removido de guards globales - debe ejecutarse DESPUÉS de JwtAuthGuard
     // Se aplica explícitamente en controladores que lo requieren: @UseGuards(JwtAuthGuard, RolesGuard)
     // Interceptor global para manejar errores de base de datos
@@ -362,6 +358,10 @@ import { BullModule } from '@nestjs/bullmq';
     {
       provide: APP_INTERCEPTOR,
       useClass: StoreIdValidationInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LicenseInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

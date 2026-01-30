@@ -19,6 +19,7 @@ import { InventoryMovement } from '../database/entities/inventory-movement.entit
 import { ProductLot } from '../database/entities/product-lot.entity';
 import { Product } from '../database/entities/product.entity';
 import { AccountingPeriod } from '../database/entities/accounting-period.entity';
+import { LicensesModule } from '../licenses/licenses.module';
 
 @Module({
   imports: [
@@ -39,11 +40,12 @@ import { AccountingPeriod } from '../database/entities/accounting-period.entity'
       Product,
       AccountingPeriod,
     ]),
+    LicensesModule,
   ],
   controllers: [AccountingController],
   providers: [ChartOfAccountsService, AccountingService, AccountingExportService],
   exports: [ChartOfAccountsService, AccountingService, AccountingExportService],
 })
-export class AccountingModule {}
+export class AccountingModule { }
 
 

@@ -59,9 +59,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
+    // Normalizar shape de req.user para evitar inconsistencias entre módulos
     return {
       sub: payload.sub,
+      user_id: payload.sub,
+      id: payload.sub,
       store_id: payload.store_id,
+      storeId: payload.store_id,
       role: member.role, // Usar rol de la base de datos (actualizado)
     };
   }

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -15,6 +16,8 @@ import { randomUUID } from 'crypto';
  */
 @Injectable()
 export class InvoiceSeriesService {
+  private readonly logger = new Logger(InvoiceSeriesService.name);
+
   constructor(
     @InjectRepository(InvoiceSeries)
     private seriesRepository: Repository<InvoiceSeries>,
@@ -133,6 +136,7 @@ export class InvoiceSeriesService {
     invoice_number: string;
     invoice_full_number: string;
   }> {
+    const debug = process.env.NODE_ENV === 'development';
     // ⚡ OPTIMIZACIÓN: Usar UPDATE atómico en lugar de transacción con lock
     // Esto es 100-1000x más rápido que FOR UPDATE porque no bloquea la fila
     if (seriesId) {
@@ -151,17 +155,23 @@ export class InvoiceSeriesService {
 
       // ⚡ FIX: result[0] es el array de filas, result[0][0] es el primer objeto
       const series = result[0][0] as InvoiceSeries;
-      console.log('[INVOICE DEBUG IF] Result structure:', JSON.stringify(result, null, 2));
-      console.log('[INVOICE DEBUG IF] Extracted series:', JSON.stringify(series, null, 2));
+      if (debug) {
+        this.logger.debug(`[INVOICE] Result structure: ${JSON.stringify(result, null, 2)}`);
+        this.logger.debug(`[INVOICE] Extracted series: ${JSON.stringify(series, null, 2)}`);
+      }
       const currentNumber = Number(series.current_number) || Number(series.start_number) || 1;
-      console.log('[INVOICE DEBUG IF] Calculated currentNumber:', currentNumber);
+      if (debug) {
+        this.logger.debug(`[INVOICE] Calculated currentNumber: ${currentNumber}`);
+      }
       if (isNaN(currentNumber) || currentNumber <= 0) {
         throw new BadRequestException(
           `Número de factura inválido: current_number=${series.current_number}, start_number=${series.start_number}`,
         );
       }
       const invoiceNumber = currentNumber.toString().padStart(6, '0');
-      console.log('[INVOICE DEBUG] Final invoiceNumber:', invoiceNumber);
+      if (debug) {
+        this.logger.debug(`[INVOICE] Final invoiceNumber: ${invoiceNumber}`);
+      }
 
       // ⚡ FIX CRÍTICO: Validar que series_code existe y no es undefined/null
       const seriesCode = series.series_code || 'FAC';
@@ -169,7 +179,11 @@ export class InvoiceSeriesService {
       const invoiceFullNumber = prefix
         ? `${prefix}-${seriesCode}-${invoiceNumber}`
         : `${seriesCode}-${invoiceNumber}`;
-      console.log('[INVOICE DEBUG] Full number:', invoiceFullNumber, '(prefix:', prefix, 'seriesCode:', seriesCode, 'invoiceNumber:', invoiceNumber, ')');
+      if (debug) {
+        this.logger.debug(
+          `[INVOICE] Full number: ${invoiceFullNumber} (prefix: ${prefix}, seriesCode: ${seriesCode}, invoiceNumber: ${invoiceNumber})`,
+        );
+      }
 
       return {
         series,
@@ -192,7 +206,9 @@ export class InvoiceSeriesService {
          RETURNING id, store_id, series_code, name, prefix, current_number, start_number, is_active, note, created_at, updated_at`,
         [storeId],
       );
-      console.log('[INVOICE DEBUG ELSE] Result structure:', JSON.stringify(result, null, 2));
+      if (debug) {
+        this.logger.debug(`[INVOICE] Result structure: ${JSON.stringify(result, null, 2)}`);
+      }
       if (!result || !result[0] || result[0].length === 0) {
         throw new NotFoundException(
           'No hay series de factura activas configuradas',
@@ -201,17 +217,23 @@ export class InvoiceSeriesService {
 
       // ⚡ FIX: result[0] es el array de filas, result[0][0] es el primer objeto
       const series = result[0][0] as InvoiceSeries;
-      console.log('[INVOICE DEBUG ELSE] Extracted series:', JSON.stringify(series, null, 2));
+      if (debug) {
+        this.logger.debug(`[INVOICE] Extracted series: ${JSON.stringify(series, null, 2)}`);
+      }
       // Use explicit null check to allow 0 as valid value
       const currentNumber = series.current_number != null ? Number(series.current_number) : (series.start_number || 1);
-      console.log('[INVOICE DEBUG ELSE] Calculated currentNumber:', currentNumber);
+      if (debug) {
+        this.logger.debug(`[INVOICE] Calculated currentNumber: ${currentNumber}`);
+      }
       if (isNaN(currentNumber) || currentNumber <= 0) {
         throw new BadRequestException(
           `Número de factura inválido: current_number=${series.current_number}, start_number=${series.start_number}`,
         );
       }
       const invoiceNumber = currentNumber.toString().padStart(6, '0');
-      console.log('[INVOICE DEBUG ELSE] Final invoiceNumber:', invoiceNumber);
+      if (debug) {
+        this.logger.debug(`[INVOICE] Final invoiceNumber: ${invoiceNumber}`);
+      }
 
       // ⚡ FIX CRÍTICO: Validar que series_code existe y no es undefined/null
       const seriesCode = series.series_code || 'FAC';
@@ -219,7 +241,11 @@ export class InvoiceSeriesService {
       const invoiceFullNumber = prefix
         ? `${prefix}-${seriesCode}-${invoiceNumber}`
         : `${seriesCode}-${invoiceNumber}`;
-      console.log('[INVOICE DEBUG ELSE] Full number:', invoiceFullNumber, '(prefix:', prefix, 'seriesCode:', seriesCode, 'invoiceNumber:', invoiceNumber, ')');
+      if (debug) {
+        this.logger.debug(
+          `[INVOICE] Full number: ${invoiceFullNumber} (prefix: ${prefix}, seriesCode: ${seriesCode}, invoiceNumber: ${invoiceNumber})`,
+        );
+      }
 
       return {
         series,

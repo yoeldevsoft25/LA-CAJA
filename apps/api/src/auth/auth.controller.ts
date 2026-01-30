@@ -27,6 +27,7 @@ import { RefreshTokenDto, RefreshTokenResponseDto } from './dto/refresh-token.dt
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginRateLimitGuard } from './guards/login-rate-limit.guard';
 import { SecurityAuditService } from '../security/security-audit.service';
+import { AdminApiGuard } from '../admin/admin-api.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -37,12 +38,46 @@ export class AuthController {
     private readonly securityAudit: SecurityAuditService,
   ) {}
 
+  /**
+   * Lista pública de tiendas (solo id y nombre) para flujo de login
+   */
+  @Get('stores/public')
+  async getPublicStores(): Promise<Array<{ id: string; name: string }>> {
+    const stores = await this.authService.getStores();
+    return stores.map((store) => ({ id: store.id, name: store.name }));
+  }
+
+  /**
+   * Lista completa de tiendas (solo autenticado)
+   */
   @Get('stores')
-  async getStores(): Promise<Array<{ id: string; name: string }>> {
+  @UseGuards(JwtAuthGuard)
+  async getStores(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      license_status: string;
+      license_expires_at: Date | null;
+    }>
+  > {
     return this.authService.getStores();
   }
 
+  /**
+   * Lista pública de cajeros para login (solo datos mínimos)
+   */
+  @Get('stores/:storeId/cashiers/public')
+  async getPublicCashiers(
+    @Request() req: any,
+    @Param('storeId') storeId: string,
+  ): Promise<
+    Array<{ user_id: string; full_name: string | null; role: string }>
+  > {
+    return this.authService.getCashiers(storeId);
+  }
+
   @Get('stores/:storeId/cashiers')
+  @UseGuards(JwtAuthGuard)
   async getCashiers(
     @Request() req: any,
     @Param('storeId') storeId: string,
@@ -83,6 +118,7 @@ export class AuthController {
   }
 
   @Post('stores')
+  @UseGuards(AdminApiGuard)
   @HttpCode(HttpStatus.CREATED)
   async createStore(
     @Body() dto: CreateStoreDto,
