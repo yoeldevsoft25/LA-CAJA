@@ -162,7 +162,6 @@ export default function LoginPage() {
             color="rgba(255, 255, 255, 0.2)"
             minSize={2}
             maxSize={4}
-            speed={0.5}
             className="absolute inset-0"
           />
         </div>
