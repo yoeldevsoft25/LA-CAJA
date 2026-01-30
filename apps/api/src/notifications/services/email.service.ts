@@ -134,8 +134,25 @@ export class EmailService {
       await this.emailQueueRepository.save(queueEntry);
 
       // Enviar con Resend
-      const fromAddress = `${queueEntry.from_name} <${queueEntry.from_email}>`;
+
+      // ⚡ FIX: Asegurar que siempre usamos el dominio verificado
+      // Si el email en cola tiene un dominio antiguo/no verificado, lo sobrescribimos con la configuración actual
+      let finalFromEmail = queueEntry.from_email;
+      let finalFromName = queueEntry.from_name;
+
+      // Si tenemos configuración válida, la priorizamos para evitar errores "Domain not verified"
+      if (this.defaultFrom && !this.defaultFrom.includes('resend.dev')) {
+        finalFromEmail = this.defaultFrom;
+        finalFromName = this.defaultFromName || finalFromName;
+      }
+
+      const fromAddress = `${finalFromName} <${finalFromEmail}>`;
       this.logger.log(`📤 Attempting to send email via Resend: ${options.to} from ${fromAddress}`);
+
+      // Log extra si hubo override
+      if (finalFromEmail !== queueEntry.from_email) {
+        this.logger.log(`   (Overridden stale FROM: ${queueEntry.from_email} -> ${finalFromEmail})`);
+      }
 
       const result = await this.resend!.emails.send({
         from: fromAddress,
