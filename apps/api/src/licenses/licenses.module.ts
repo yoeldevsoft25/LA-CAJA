@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LicensesController } from './licenses.controller';
+import { AdminLicensePaymentsController } from './admin-license-payments.controller';
 import { LicensePaymentsService } from './license-payments.service';
 import { LicenseVerificationService } from './license-verification.service';
 import { LicenseBankIntegrationService } from './license-bank-integration.service';
@@ -43,7 +44,7 @@ import { QuotaGuard } from './guards/quota.guard';
       }),
     }),
   ],
-  controllers: [LicensesController],
+  controllers: [LicensesController, AdminLicensePaymentsController],
   providers: [
     LicensePaymentsService,
     LicenseVerificationService,
