@@ -115,9 +115,9 @@ export function AuthLayout({
                   }}
                 />
                 <img
-                  src="/favicon.svg"
-                  alt="LA CAJA Logo"
-                  className="relative w-20 h-20 rounded-2xl border-2 border-slate-200/50 shadow-xl"
+                  src="/logo-velox.svg"
+                  alt="Velox POS Logo"
+                  className="relative w-20 h-20 rounded-2xl border-2 border-slate-200/50 shadow-xl object-contain p-2"
                 />
               </div>
             </motion.div>
@@ -129,7 +129,7 @@ export function AuthLayout({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              LA CAJA
+              Velox POS
             </motion.h1>
 
             <motion.p
@@ -160,7 +160,7 @@ export function AuthLayout({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          <p>&copy; {new Date().getFullYear()} LA CAJA. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Velox POS. Todos los derechos reservados.</p>
         </motion.footer>
       </div>
     </div>

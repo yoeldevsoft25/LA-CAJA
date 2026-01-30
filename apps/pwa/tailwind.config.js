@@ -31,17 +31,17 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					'50': '#f0fdff',
-					'100': '#cff8ff',
-					'200': '#a0f0ff',
-					'300': '#5ce4ff',
-					'400': '#00d4ff', // Base Velox Brand
-					'500': '#00b0e5',
-					'600': '#008bbd',
-					'700': '#006f9a',
-					'800': '#005d80',
-					'900': '#004c6a',
-					'950': '#00334a',
+					'50': '#f0f7fe',
+					'100': '#e0effd',
+					'200': '#bae0fb',
+					'300': '#7cc8f8',
+					'400': '#38acf1',
+					'500': '#0C81CF',
+					'600': '#0967a9',
+					'700': '#085289',
+					'800': '#0a4671',
+					'900': '#0e3b5e',
+					'950': '#09263f',
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
@@ -206,11 +206,11 @@ export default {
 				'pulse-glow': {
 					'0%, 100%': {
 						opacity: '1',
-						boxShadow: '0 0 20px rgba(0, 212, 255, 0.4)'
+						boxShadow: '0 0 20px rgba(13, 129, 206, 0.4)'
 					},
 					'50%': {
 						opacity: '0.8',
-						boxShadow: '0 0 40px rgba(0, 212, 255, 0.6)'
+						boxShadow: '0 0 40px rgba(13, 129, 206, 0.6)'
 					}
 				},
 				float: {

@@ -238,7 +238,7 @@ const FiscalInvoicePrintView = forwardRef<HTMLDivElement, FiscalInvoicePrintView
             electrónica.
           </p>
           <p className="text-xs text-gray-600 mt-1">
-            Generado por Sistema POS LA CAJA
+            Generado por Sistema Velox POS
           </p>
         </div>
 

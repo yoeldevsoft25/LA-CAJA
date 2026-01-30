@@ -71,7 +71,7 @@ export default function SelectDebtsForWhatsAppModal({
     customerName: customer.name,
     totalAmount: totalSelectedUsd,
     currency: 'USD', // Por defecto USD
-    storeName: 'LA CAJA' // Nombre hardcoded por ahora, idealmente vendría de config
+    storeName: 'Velox POS' // Nombre hardcoded por ahora, idealmente vendría de config
   })
 
   // Decodificar para vista previa (quitar %0A)

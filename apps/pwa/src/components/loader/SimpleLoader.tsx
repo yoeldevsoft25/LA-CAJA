@@ -223,9 +223,9 @@ export default function SimpleLoader({
                     {/* Logo container - sin fondo para integrar con el círculo */}
                     <div className="relative flex items-center justify-center w-20 h-20 rounded-full overflow-hidden bg-white">
                       <img
-                        src="/favicon.svg"
-                        alt="LA CAJA"
-                        className="w-full h-full object-cover drop-shadow-lg"
+                        src="/logo-velox.svg"
+                        alt="Velox POS"
+                        className="w-full h-full object-contain drop-shadow-lg"
                       />
                     </div>
                   </div>
@@ -238,7 +238,7 @@ export default function SimpleLoader({
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    LA CAJA
+                    Velox POS
                   </motion.h2>
 
                   {/* Texto de carga */}

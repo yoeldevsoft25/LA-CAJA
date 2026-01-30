@@ -154,21 +154,11 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center mb-6">
-            <div className="relative">
-              {/* Glow ring - sin animación flotante */}
-              <div
-                className="absolute -inset-3 rounded-3xl opacity-60"
-                style={{
-                  background: `radial-gradient(circle, ${colors.brand.primaryLight} 0%, transparent 70%)`,
-                }}
-              />
+            <div className="relative mb-4">
               <img
-                src="/favicon.svg"
-                alt="Velox POS Logo"
-                className="relative w-20 h-20 rounded-2xl shadow-xl"
-                style={{
-                  boxShadow: colors.shadows.lg,
-                }}
+                src="/login-image.svg"
+                alt="Velox POS"
+                className="relative h-24 mx-auto object-contain"
               />
             </div>
           </div>

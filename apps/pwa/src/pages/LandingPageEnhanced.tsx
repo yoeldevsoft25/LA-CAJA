@@ -199,7 +199,7 @@ export default function LandingPageEnhanced() {
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               <img
-                src="/favicon.svg"
+                src="/logo-velox-white.svg"
                 alt="Velox POS Logo"
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20 hover:border-slate-600/70 transition-all duration-300 flex-shrink-0"
               />
@@ -614,7 +614,7 @@ export default function LandingPageEnhanced() {
       <SeniatShowcaseSection />
 
       {/* ========================================
-          6. COMPARISON TABLE - LA CAJA VS COMPETITORS
+          6. COMPARISON TABLE - VELOX POS VS COMPETITORS
       ======================================== */}
       <ComparisonSection />
 
@@ -1341,7 +1341,7 @@ function ComparisonSection() {
                       <th className="p-4 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <img
-                            src="/favicon.svg"
+                            src="/logo-velox.svg"
                             alt="Velox POS Logo"
                             className="w-10 h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20"
                           />
@@ -1802,7 +1802,7 @@ function TestimonialsSection() {
       role: 'Dueña de Bodega La Esquina',
       location: 'Caracas',
       rating: 5,
-      quote: 'Antes perdía ventas cada vez que se iba el internet. Con LA CAJA trabajo 100% offline y todo se sincroniza automático cuando vuelve la conexión. En 3 meses recuperé la inversión.',
+      quote: 'Antes perdía ventas cada vez que se iba el internet. Con Velox POS trabajo 100% offline y todo se sincroniza automático cuando vuelve la conexión. En 3 meses recuperé la inversión.',
       avatar: '👩‍💼',
       highlight: 'Recuperó inversión en 3 meses',
     },
@@ -1907,7 +1907,7 @@ function TestimonialsSection() {
           <Card className="bg-gradient-to-r from-emerald-900/20 to-blue-900/20 border-emerald-500/30 inline-block">
             <CardContent className="p-6">
               <p className="text-lg text-slate-300">
-                <span className="font-bold text-emerald-400">500+ negocios</span> confían en LA CAJA
+                <span className="font-bold text-emerald-400">500+ negocios</span> confían en Velox POS
                 para gestionar más de{' '}
                 <span className="font-bold text-blue-400">10,000 ventas diarias</span>
               </p>
@@ -1936,7 +1936,7 @@ function FAQSection() {
   const faqs = [
     {
       question: '¿Realmente funciona 100% offline?',
-      answer: 'Sí. LA CAJA usa arquitectura offline-first con event sourcing. Todas las operaciones (ventas, inventario, reportes) funcionan sin internet. Cuando vuelve la conexión, todo se sincroniza automáticamente sin pérdida de datos.',
+      answer: 'Sí. Velox POS usa arquitectura offline-first con event sourcing. Todas las operaciones (ventas, inventario, reportes) funcionan sin internet. Cuando vuelve la conexión, todo se sincroniza automáticamente sin pérdida de datos.',
     },
     {
       question: '¿Cómo funciona la facturación fiscal SENIAT?',
@@ -1944,7 +1944,7 @@ function FAQSection() {
     },
     {
       question: '¿Qué plataformas soporta?',
-      answer: 'LA CAJA funciona en 3 plataformas: PWA (navegador), Desktop (Windows/Mac/Linux con Electron) y Android nativo. Compras una licencia y usas en todos tus dispositivos.',
+      answer: 'Velox POS funciona en 3 plataformas: PWA (navegador), Desktop (Windows/Mac/Linux con Electron) y Android nativo. Compras una licencia y usas en todos tus dispositivos.',
     },
     {
       question: '¿Puedo manejar múltiples tiendas?',
@@ -1952,7 +1952,7 @@ function FAQSection() {
     },
     {
       question: '¿Cómo funciona el sistema dual Bs/USD?',
-      answer: 'LA CAJA obtiene la tasa BCV automáticamente cada día. Todos los productos se guardan en USD y se convierten a Bs en tiempo real. Soporta 6 métodos de pago y 24 bancos venezolanos.',
+      answer: 'Velox POS obtiene la tasa BCV automáticamente cada día. Todos los productos se guardan en USD y se convierten a Bs en tiempo real. Soporta 6 métodos de pago y 24 bancos venezolanos.',
     },
     {
       question: '¿Qué hace la IA/ML predictivo?',
@@ -1986,7 +1986,7 @@ function FAQSection() {
             </span>
           </h2>
           <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-            Aquí están las respuestas a las preguntas más comunes sobre LA CAJA.
+            Aquí están las respuestas a las preguntas más comunes sobre Velox POS.
           </p>
         </motion.div>
 
@@ -2118,7 +2118,7 @@ function FinalCTASection() {
                 </h2>
                 <p className="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
                   Únete a los <span className="font-bold text-white">500+ negocios</span> que ya están
-                  vendiendo sin límites con LA CAJA
+                  vendiendo sin límites con Velox POS
                 </p>
               </div>
 
@@ -2227,12 +2227,12 @@ function Footer() {
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <img
-                src="/favicon.svg"
-                alt="LA CAJA Logo"
+                src="/logo-velox-white.svg"
+                alt="Velox POS Logo"
                 className="w-10 h-10 rounded-lg border-2 border-slate-700/50 shadow-lg shadow-blue-500/20"
               />
               <span className="text-xl font-black text-white">
-                LA CAJA
+                Velox POS
               </span>
             </div>
             <p className="text-slate-400 text-sm mb-4">
@@ -2329,7 +2329,7 @@ function Footer() {
         {/* Bottom bar */}
         <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-slate-500 text-sm">
-            © {currentYear} LA CAJA. Todos los derechos reservados.
+            © {currentYear} Velox POS. Todos los derechos reservados.
           </p>
           <div className="flex items-center gap-6 text-sm">
             <a href="#" className="text-slate-500 hover:text-white transition-colors">

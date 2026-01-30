@@ -23,7 +23,7 @@ const formatNumber = (num: number) => {
 }
 
 const DashboardPrintView = forwardRef<HTMLDivElement, DashboardPrintViewProps>(
-  ({ kpis, trends, dateRange, storeName = 'LA CAJA POS' }, ref) => {
+  ({ kpis, trends, dateRange, storeName = 'Velox POS' }, ref) => {
     const now = new Date()
     const reportDate = format(now, "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es })
 
