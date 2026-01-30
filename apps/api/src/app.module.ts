@@ -255,7 +255,7 @@ import { BullModule } from '@nestjs/bullmq';
           database: url.pathname.slice(1), // Remover el '/' inicial
           // Usar array centralizado de entidades para reducir serialización
           entities: ALL_ENTITIES,
-          synchronize: false, // Usamos migraciones SQL manuales
+          synchronize: true, // ⚠️ AUTO-FIX: Habilitado para crear tablas faltantes en Render
           logging: configService.get<string>('NODE_ENV') === 'development',
           // Configuración robusta del pool de conexiones para Render/Cloud
           extra: {
