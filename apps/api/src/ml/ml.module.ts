@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { LicensesModule } from '../licenses/licenses.module';
 import { MLController } from './ml.controller';
 import { MLService } from './ml.service';
 import { DemandPrediction } from '../database/entities/demand-prediction.entity';
@@ -40,4 +41,4 @@ import { MLCacheService } from './cache/ml-cache.service';
   ],
   exports: [MLService],
 })
-export class MLModule {}
+export class MLModule { }
