@@ -10,6 +10,7 @@ export interface AuthUser {
   license_status?: string
   license_expires_at?: string | null
   license_plan?: string | null
+  license_features?: string[]
 }
 
 interface AuthState {

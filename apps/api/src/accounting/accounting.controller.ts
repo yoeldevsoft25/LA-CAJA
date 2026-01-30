@@ -14,6 +14,7 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
+import { CheckLicense, RequiresFeature } from '../licenses/decorators/license.decorator';
 import { FastifyReply } from 'fastify';
 import * as fs from 'fs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -41,6 +42,8 @@ import { randomUUID } from 'crypto';
 
 @Controller('accounting')
 @UseGuards(JwtAuthGuard)
+@CheckLicense()
+@RequiresFeature('accounting')
 @Roles('owner')
 export class AccountingController {
   constructor(
@@ -49,7 +52,7 @@ export class AccountingController {
     private readonly exportService: AccountingExportService,
     @InjectRepository(AccountingAccountMapping)
     private mappingRepository: Repository<AccountingAccountMapping>,
-  ) {}
+  ) { }
 
   /**
    * Plan de Cuentas

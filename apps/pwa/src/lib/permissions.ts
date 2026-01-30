@@ -12,7 +12,21 @@ const CASHIER_ALLOWED_ROUTES = [
   '/app/fiscal-invoices',
 ]
 
-export const isRouteAllowed = (path: string, role: Role) => {
+export const isRouteAllowed = (path: string, role: Role, features: string[] = []) => {
+  // Rutas protegidas por características de licencia
+  const FEATURE_ROUTES: Record<string, string> = {
+    '/app/accounting': 'accounting',
+    '/app/ml': 'ml',
+    '/app/fiscal-config': 'fiscal',
+    '/app/fiscal-invoices': 'fiscal',
+  }
+
+  for (const [route, feature] of Object.entries(FEATURE_ROUTES)) {
+    if (path === route || path.startsWith(`${route}/`)) {
+      if (!features.includes(feature)) return false
+    }
+  }
+
   if (role === 'owner') return true
   return CASHIER_ALLOWED_ROUTES.some(
     (allowed) => path === allowed || path.startsWith(`${allowed}/`)

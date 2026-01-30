@@ -7,6 +7,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { CheckLicense, RequiresFeature } from '../licenses/decorators/license.decorator';
 import { FiscalConfigsService } from './fiscal-configs.service';
 import { CreateFiscalConfigDto } from './dto/create-fiscal-config.dto';
 import { UpdateFiscalConfigDto } from './dto/update-fiscal-config.dto';
@@ -15,8 +16,10 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('fiscal-configs')
 @UseGuards(JwtAuthGuard)
+@CheckLicense()
+@RequiresFeature('fiscal_printing')
 export class FiscalConfigsController {
-  constructor(private readonly fiscalConfigsService: FiscalConfigsService) {}
+  constructor(private readonly fiscalConfigsService: FiscalConfigsService) { }
 
   @Post()
   @Roles('owner')

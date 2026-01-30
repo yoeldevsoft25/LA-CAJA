@@ -12,6 +12,7 @@ import { ProjectionsModule } from '../projections/projections.module';
 import { Product } from '../database/entities/product.entity';
 import { CashSession } from '../database/entities/cash-session.entity';
 import { DiscountsModule } from '../discounts/discounts.module';
+import { LicensesModule } from '../licenses/licenses.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { DiscountsModule } from '../discounts/discounts.module';
     ProjectionsModule,
     DiscountsModule,
     QueuesModule,
+    LicensesModule,
   ],
   controllers: [SyncController],
   providers: [

@@ -20,6 +20,7 @@ import { CRDTService } from './crdt.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
 import * as crypto from 'crypto';
 import { DiscountRulesService } from '../discounts/discount-rules.service';
+import { UsageService } from '../licenses/usage.service';
 
 interface SyncEventActor {
   user_id: string;
@@ -120,6 +121,7 @@ export class SyncService {
     private crdtService: CRDTService,
     private conflictService: ConflictResolutionService,
     private discountRulesService: DiscountRulesService,
+    private usageService: UsageService,
     @InjectQueue('sales-projections')
     private salesProjectionQueue: Queue,
   ) { }
@@ -282,6 +284,13 @@ export class SyncService {
         });
 
         eventsToSave.push(eventEntity);
+
+        // Incrementar cuotas según el tipo de evento
+        if (event.type === 'ProductCreated') {
+          await this.usageService.increment(dto.store_id, 'products');
+        } else if (event.type === 'SaleCreated') {
+          await this.usageService.increment(dto.store_id, 'invoices_per_month');
+        }
 
         accepted.push({
           event_id: event.event_id,

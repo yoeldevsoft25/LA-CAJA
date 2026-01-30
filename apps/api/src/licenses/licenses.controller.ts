@@ -14,6 +14,7 @@ import {
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
+import { LicenseService } from './license-core.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminApiGuard } from '../admin/admin-api.guard';
 import { LicensePaymentsService } from './license-payments.service';
@@ -33,7 +34,25 @@ export class LicensesController {
   constructor(
     private readonly paymentsService: LicensePaymentsService,
     private readonly verificationService: LicenseVerificationService,
-  ) {}
+    private readonly licenseService: LicenseService,
+  ) { }
+
+  /**
+   * GET /licenses/status
+   * Obtener el estado actual de la licencia y el token offline
+   */
+  @Get('status')
+  @UseGuards(JwtAuthGuard)
+  async getStatus(@Request() req: any) {
+    const storeId = req.user.store_id;
+    const status = await this.licenseService.getLicenseStatus(storeId);
+    const token = await this.licenseService.issueOfflineToken(storeId);
+
+    return {
+      ...status,
+      token,
+    };
+  }
 
   // ============================================
   // ENDPOINTS PÚBLICOS (requieren autenticación JWT)

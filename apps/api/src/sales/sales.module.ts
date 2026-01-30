@@ -32,6 +32,7 @@ import { ConfigModule as SystemConfigModule } from '../config/config.module';
 import { forwardRef } from '@nestjs/common';
 import { SecurityModule } from '../security/security.module';
 import { ProjectionsModule } from '../projections/projections.module';
+import { LicensesModule } from '../licenses/licenses.module';
 import { SalesProjectionQueueProcessor } from './queues/sales-projection.queue';
 import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processing.queue';
 
@@ -66,6 +67,7 @@ import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processin
     SecurityModule,
     ProjectionsModule,
     QueuesModule,
+    LicensesModule,
   ],
   controllers: [SalesController],
   providers: [

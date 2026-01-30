@@ -17,6 +17,7 @@ import { Repository } from 'typeorm';
 import { Store } from '../database/entities/store.entity';
 import { StoreMember } from '../database/entities/store-member.entity';
 import { Profile } from '../database/entities/profile.entity';
+import { LicenseUsage } from '../database/entities/license-usage.entity';
 import { AdminApiGuard } from './admin-api.guard';
 import { CreateTrialDto, UpdateLicenseDto } from './dto/update-license.dto';
 import { AdminCreateUserDto } from './dto/admin-user.dto';
@@ -34,7 +35,9 @@ export class AdminController {
     private readonly memberRepo: Repository<StoreMember>,
     @InjectRepository(Profile)
     private readonly profileRepo: Repository<Profile>,
-  ) {}
+    @InjectRepository(LicenseUsage)
+    private readonly usageRepo: Repository<LicenseUsage>,
+  ) { }
 
   @Get('stores')
   async listStores(
@@ -63,7 +66,9 @@ export class AdminController {
     }
 
     const stores = await qb.getMany();
+    const storeIds = stores.map((s) => s.id);
 
+    // Fetch members
     const members = await this.memberRepo
       .createQueryBuilder('m')
       .leftJoin(Profile, 'p', 'p.id = m.user_id')
@@ -73,6 +78,9 @@ export class AdminController {
         'm.role as role',
         'p.full_name as full_name',
       ])
+      .where('m.store_id IN (:...storeIds)', {
+        storeIds: storeIds.length > 0 ? storeIds : ['00000000-0000-0000-0000-000000000000']
+      })
       .getRawMany();
 
     const membersByStore: Record<
@@ -89,6 +97,21 @@ export class AdminController {
       });
     }
 
+    // Fetch usage
+    const usages = await this.usageRepo
+      .createQueryBuilder('u')
+      .select(['u.store_id', 'u.metric', 'u.used'])
+      .where('u.store_id IN (:...storeIds)', {
+        storeIds: storeIds.length > 0 ? storeIds : ['00000000-0000-0000-0000-000000000000']
+      })
+      .getMany();
+
+    const usageByStore: Record<string, Record<string, number>> = {};
+    for (const u of usages) {
+      if (!usageByStore[u.store_id]) usageByStore[u.store_id] = {};
+      usageByStore[u.store_id][u.metric] = u.used;
+    }
+
     return stores.map((s) => ({
       id: s.id,
       name: s.name,
@@ -100,6 +123,7 @@ export class AdminController {
       created_at: s.created_at,
       member_count: membersByStore[s.id]?.length ?? 0,
       members: membersByStore[s.id] ?? [],
+      usage: usageByStore[s.id] ?? {},
     }));
   }
 

@@ -13,6 +13,7 @@ import { ChangePriceDto } from './dto/change-price.dto';
 import { BulkPriceChangeDto } from './dto/bulk-price-change.dto';
 import { SearchProductsDto } from './dto/search-products.dto';
 import { ExchangeService } from '../exchange/exchange.service';
+import { UsageService } from '../licenses/usage.service';
 import { randomUUID } from 'crypto';
 import { PricingCalculator, WeightUnit, normalizeBarcode } from '@la-caja/domain';
 
@@ -26,6 +27,7 @@ export class ProductsService {
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
     private exchangeService: ExchangeService,
+    private usageService: UsageService,
   ) { }
 
   private async ensureBarcodeUnique(
@@ -196,7 +198,9 @@ export class ProductsService {
       scale_department: isWeightProduct ? dto.scale_department ?? null : null,
     });
 
-    return this.productRepository.save(product);
+    const savedProduct = await this.productRepository.save(product);
+    await this.usageService.increment(storeId, 'products');
+    return savedProduct;
   }
 
   async findAll(

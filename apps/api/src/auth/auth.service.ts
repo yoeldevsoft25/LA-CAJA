@@ -29,6 +29,7 @@ import { Verify2FADto } from './dto/verify-2fa.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RefreshTokenResponseDto } from './dto/refresh-token.dto';
 import { EmailService } from '../notifications/services/email.service';
+import { UsageService } from '../licenses/usage.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as speakeasy from 'speakeasy';
@@ -58,6 +59,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
+    private usageService: UsageService,
     private dataSource: DataSource,
   ) { }
 
@@ -274,6 +276,9 @@ export class AuthService {
         expires_at: tokenExpiresAt,
       });
       await queryRunner.manager.save(EmailVerificationToken, emailToken);
+
+      // Incrementar uso de usuarios (Owner + Cashier = 2)
+      await this.usageService.increment(savedStore.id, 'users', 2);
 
       // Commit de la transacción
       await queryRunner.commitTransaction();

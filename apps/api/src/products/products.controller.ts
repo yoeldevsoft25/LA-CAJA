@@ -21,14 +21,17 @@ import { SearchProductsDto } from './dto/search-products.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RequiresQuota, CheckLicense } from '../licenses/decorators/license.decorator';
 
 @Controller('products')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) { }
 
   @Post()
   @Roles('owner')
+  @CheckLicense()
+  @RequiresQuota('products')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateProductDto, @Request() req: any) {
     const storeId = req.user.store_id;

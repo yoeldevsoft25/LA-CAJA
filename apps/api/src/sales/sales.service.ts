@@ -55,6 +55,7 @@ import { ConfigValidationService } from '../config/config-validation.service';
 import { SaleReturn } from '../database/entities/sale-return.entity';
 import { SaleReturnItem } from '../database/entities/sale-return-item.entity';
 import { SecurityAuditService } from '../security/security-audit.service';
+import { UsageService } from '../licenses/usage.service';
 
 @Injectable()
 export class SalesService {
@@ -950,6 +951,7 @@ export class SalesService {
     private accountingService: AccountingService,
     private configValidationService: ConfigValidationService,
     private securityAuditService: SecurityAuditService,
+    private usageService: UsageService,
     @InjectQueue('sales-post-processing')
     private salesPostProcessingQueue: Queue,
   ) { }
@@ -1871,6 +1873,8 @@ export class SalesService {
         `[SALE_CREATE] ⚠️ Venta tardó ${duration}ms (objetivo: <500ms) - Store: ${storeId}`,
       );
     }
+
+    await this.usageService.increment(storeId, 'invoices_per_month');
 
     return saleWithDebt;
   }

@@ -136,6 +136,9 @@ export {
   VerificationMethod,
   VerificationStatus,
 } from './license-payment-verification.entity';
+export { SubscriptionPlan } from './license-plan.entity';
+export { StoreLicense, LicenseStatus, SubscriptionPeriod } from './store-license.entity';
+export { LicenseUsage } from './license-usage.entity';
 
 // Export all entities as an array for TypeORM configuration
 import { Store } from './store.entity';
@@ -230,6 +233,9 @@ import { LicensePaymentDocument } from './license-payment-document.entity';
 import { LicensePaymentVerification } from './license-payment-verification.entity';
 import { QRCode } from './qr-code.entity';
 import { Reservation } from './reservation.entity';
+import { SubscriptionPlan } from './license-plan.entity';
+import { StoreLicense } from './store-license.entity';
+import { LicenseUsage } from './license-usage.entity';
 
 /**
  * Array con todas las entidades de TypeORM para configuración centralizada
@@ -329,4 +335,7 @@ export const ALL_ENTITIES = [
   LicensePayment,
   LicensePaymentDocument,
   LicensePaymentVerification,
+  SubscriptionPlan,
+  StoreLicense,
+  LicenseUsage,
 ];

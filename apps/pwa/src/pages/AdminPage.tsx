@@ -304,6 +304,7 @@ export default function AdminPage() {
                 <SelectContent className="bg-slate-900 text-slate-100 border-slate-800">
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="freemium">🆓 Freemium</SelectItem>
+                  <SelectItem value="emprendedor">🚀 Emprendedor</SelectItem>
                   <SelectItem value="basico">💼 Básico</SelectItem>
                   <SelectItem value="profesional">🚀 Profesional</SelectItem>
                   <SelectItem value="empresarial">🏢 Empresarial</SelectItem>
@@ -433,6 +434,7 @@ export default function AdminPage() {
                         <th className="px-3 py-2 text-left font-medium">Tienda</th>
                         <th className="px-3 py-2 text-left font-medium">Estado</th>
                         <th className="px-3 py-2 text-left font-medium">Plan</th>
+                        <th className="px-3 py-2 text-left font-medium">Uso Real</th>
                         <th className="px-3 py-2 text-left font-medium">Expira</th>
                         <th className="px-3 py-2 text-left font-medium">Usuarios</th>
                         <th className="px-3 py-2 text-left font-medium">Gracia</th>
@@ -448,11 +450,13 @@ export default function AdminPage() {
                             <div className="text-[11px] text-slate-400">{store.id}</div>
                           </td>
                           <td className="px-3 py-3">{statusBadge(store)}</td>
+
                           <td className="px-3 py-3">
                             {(() => {
                               const plan = store.license_plan || 'sin-plan'
                               const planLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
                                 'freemium': { label: '🆓 Freemium', variant: 'outline' },
+                                'emprendedor': { label: '🚀 Emprendedor', variant: 'secondary' },
                                 'basico': { label: '💼 Básico', variant: 'secondary' },
                                 'profesional': { label: '🚀 Profesional', variant: 'default' },
                                 'empresarial': { label: '🏢 Empresarial', variant: 'default' },
@@ -465,6 +469,18 @@ export default function AdminPage() {
                                 </Badge>
                               )
                             })()}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex flex-col gap-1 w-32">
+                              <div className="text-xs text-slate-400 flex justify-between">
+                                <span>Prod</span>
+                                <span className="text-slate-200">{store.usage?.products || 0}</span>
+                              </div>
+                              <div className="text-xs text-slate-400 flex justify-between">
+                                <span>Fact</span>
+                                <span className="text-slate-200">{store.usage?.invoices_per_month || 0}</span>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-3 py-3">
                             <div className="text-slate-100">{formatDate(store.license_expires_at)}</div>
@@ -739,16 +755,18 @@ export default function AdminPage() {
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-800 text-slate-100">
                   <SelectItem value="freemium">🆓 Freemium - GRATIS</SelectItem>
+                  <SelectItem value="emprendedor">🚀 Emprendedor - $9/mes</SelectItem>
                   <SelectItem value="basico">💼 Básico - $29/mes</SelectItem>
-                  <SelectItem value="profesional">🚀 Profesional - $79/mes</SelectItem>
-                  <SelectItem value="empresarial">🏢 Empresarial - $199/mes</SelectItem>
+                  <SelectItem value="profesional">🚀 Profesional - $49/mes</SelectItem>
+                  <SelectItem value="empresarial">🏢 Empresarial - $99/mes</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-500">
                 {newPlan === 'freemium' && 'Gratis para siempre - Ideal para empezar'}
+                {newPlan === 'emprendedor' && '$9/mes - Para emprendedores que inician'}
                 {newPlan === 'basico' && '$29/mes - Perfecto para pequeños negocios'}
-                {newPlan === 'profesional' && '$79/mes - Para negocios en crecimiento'}
-                {newPlan === 'empresarial' && '$199/mes - Solución completa empresarial'}
+                {newPlan === 'profesional' && '$49/mes - Para negocios en crecimiento'}
+                {newPlan === 'empresarial' && '$99/mes - Solución completa empresarial'}
               </p>
             </div>
 

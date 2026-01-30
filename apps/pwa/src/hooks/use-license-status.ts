@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/stores/auth.store'
-import { api } from '@/lib/api'
 import toast from '@/lib/toast'
 import { useNavigate } from 'react-router-dom'
 
 interface LicenseStatus {
-  license_status: string
-  license_expires_at: string | null
-  license_plan: string | null
-  license_grace_days: number
+  plan: string
+  status: string
+  expires_at: string | null
+  features: string[]
+  limits: Record<string, number>
+  usage: Record<string, number>
+  token: string
 }
+
+import { licenseService } from '@/services/license.service'
 
 /**
  * Hook para validar el estado de la licencia periódicamente
@@ -29,23 +33,22 @@ export function useLicenseStatus() {
       if (!user?.store_id) {
         throw new Error('No hay store_id')
       }
-      // Usar endpoint de stores para obtener estado de licencia
-      const response = await api.get(`/auth/stores`)
-      const stores = response.data as Array<{
-        id: string
-        name: string
-        license_status?: string
-        license_expires_at?: string | null
-      }>
-      const store = stores.find((s) => s.id === user.store_id)
-      if (!store) {
-        throw new Error('Tienda no encontrada')
-      }
-      return {
-        license_status: store.license_status || 'active',
-        license_expires_at: store.license_expires_at || null,
-        license_plan: null,
-        license_grace_days: 3,
+
+      try {
+        return await licenseService.getStatus()
+      } catch (error) {
+        // Si hay error (ej. offline), intentar obtener estado offline
+        const offlineStatus = licenseService.getOfflineStatus()
+        if (offlineStatus) {
+          console.warn('[LicenseStatus] Usando estado de licencia offline (JWT local)')
+          return offlineStatus as LicenseStatus
+        }
+
+        // Si no hay nada, usar el estado local persistido si existe
+        const localStatus = licenseService.getLocalStatus()
+        if (localStatus) return localStatus
+
+        throw error
       }
     },
     enabled: !!user?.store_id,
@@ -67,7 +70,7 @@ export function useLicenseStatus() {
     setLastCheck(Date.now())
 
     // Verificar si la licencia está bloqueada
-    if (licenseStatus.license_status === 'suspended' || licenseStatus.license_status === 'expired') {
+    if (licenseStatus.status === 'suspended' || licenseStatus.status === 'expired') {
       toast.error('Tu licencia ha sido suspendida o expirada. Serás redirigido.', {
         duration: 5000,
       })
@@ -79,8 +82,8 @@ export function useLicenseStatus() {
     }
 
     // Verificar si la licencia está por expirar
-    if (licenseStatus.license_expires_at) {
-      const expiresAt = new Date(licenseStatus.license_expires_at).getTime()
+    if (licenseStatus.expires_at) {
+      const expiresAt = new Date(licenseStatus.expires_at).getTime()
       const now = Date.now()
       const daysUntilExpiry = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))
 
@@ -96,23 +99,21 @@ export function useLicenseStatus() {
     }
 
     // Sincronizar estado con el store de autenticación si hay cambios
-    // Esto resuelve el problema de persistencia del estado "suspended" en el JWT/Store
     if (user && (
-      user.license_status !== licenseStatus.license_status ||
-      user.license_expires_at !== licenseStatus.license_expires_at
+      user.license_status !== licenseStatus.status ||
+      user.license_expires_at !== licenseStatus.expires_at ||
+      user.license_plan !== licenseStatus.plan
     )) {
       console.log('[LicenseStatus] Sincronizando estado de licencia en store:', licenseStatus)
-      // Usamos el setUser del store (que debemos extraer del hook useAuth)
-      // Nota: setUser ya está disponible en el scope si lo destructuramos arriba
-      // @ts-ignore - setUser se añadirá en el destructuring
       setUser({
         ...user,
-        license_status: licenseStatus.license_status,
-        license_expires_at: licenseStatus.license_expires_at,
-        license_plan: licenseStatus.license_plan
+        license_status: licenseStatus.status,
+        license_expires_at: licenseStatus.expires_at,
+        license_plan: licenseStatus.plan,
+        license_features: licenseStatus.features,
       })
     }
-  }, [licenseStatus, logout, navigate, user])
+  }, [licenseStatus, logout, navigate, user, setUser])
 
   // Escuchar cambios de licencia vía WebSocket
   useEffect(() => {
@@ -128,7 +129,7 @@ export function useLicenseStatus() {
       queryClient.invalidateQueries({ queryKey: ['license-status'] })
 
       // Verificar si la licencia está bloqueada
-      if (newLicenseStatus.license_status === 'suspended' || newLicenseStatus.license_status === 'expired') {
+      if (newLicenseStatus.status === 'suspended' || newLicenseStatus.status === 'expired') {
         toast.error('Tu licencia ha sido suspendida o expirada. Serás redirigido.', {
           duration: 5000,
         })

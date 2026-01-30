@@ -18,12 +18,14 @@ import { PinRecoveryToken } from '../database/entities/pin-recovery-token.entity
 import { TwoFactorAuth } from '../database/entities/two-factor-auth.entity';
 import { SecurityModule } from '../security/security.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { LicensesModule } from '../licenses/licenses.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Store, Profile, StoreMember, RefreshToken, EmailVerificationToken, PinRecoveryToken, TwoFactorAuth]),
     NotificationsModule,
     SecurityModule, // ✅ Módulo de seguridad para auditoría
+    LicensesModule, // ✅ Control de licencias y cuotas
     ScheduleModule, // ✅ Para cron jobs de limpieza de tokens
     PassportModule,
     JwtModule.registerAsync({
@@ -33,7 +35,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
         if (!jwtSecret) {
           throw new Error(
             'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-              'En producción, esto es obligatorio por seguridad.',
+            'En producción, esto es obligatorio por seguridad.',
           );
         }
 
@@ -53,4 +55,4 @@ import { NotificationsModule } from '../notifications/notifications.module';
   providers: [AuthService, JwtStrategy, LoginRateLimitGuard, TokenCleanupService],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

@@ -75,6 +75,8 @@ import { KeyboardShortcutsHelp, useKeyboardShortcutsHelp } from '@/components/ui
 import { SkipLinks } from '@/components/ui/skip-links'
 import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge'
 import { CommandMenu } from './CommandMenu'
+import { QuotaBanner } from '@/components/license/QuotaTracker'
+import { UpgradeModal } from '@/components/license/UpgradeModal'
 
 type NavItem = {
   path: string
@@ -222,15 +224,24 @@ export default function MainLayout() {
   // Modal de ayuda de atajos de teclado
   const { isOpen: isShortcutsHelpOpen, setIsOpen: setShortcutsHelpOpen } = useKeyboardShortcutsHelp()
   const userRole = (user?.role || 'cashier') as Role
+  const userFeatures = user?.license_features || []
+
+  const [isUpgradeModalOpen, setUpgradeModalOpen] = useState(false)
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('')
+
+  const openUpgradeModal = (feature?: string) => {
+    setUpgradeFeatureName(feature || '')
+    setUpgradeModalOpen(true)
+  }
 
   const filteredNavSections = useMemo(() => {
     return navSections
       .map((section) => ({
         ...section,
-        items: section.items.filter((item) => isRouteAllowed(item.path, userRole)),
+        items: section.items.filter((item) => isRouteAllowed(item.path, userRole, userFeatures)),
       }))
       .filter((section) => section.items.length > 0)
-  }, [userRole])
+  }, [userRole, userFeatures])
 
   // Licencia (solo lectura)
   const licenseStatus = user?.license_status || 'active'
@@ -260,7 +271,7 @@ export default function MainLayout() {
   // Prefetch inteligente cuando el usuario navega entre páginas
   useEffect(() => {
     if (!user?.store_id) return
-    if (!isRouteAllowed(location.pathname, userRole)) return
+    if (!isRouteAllowed(location.pathname, userRole, userFeatures)) return
 
     const pathToPage: Record<
       string,
@@ -639,6 +650,8 @@ export default function MainLayout() {
       {/* Skip Links for accessibility */}
       <SkipLinks />
 
+      <QuotaBanner onUpgrade={() => openUpgradeModal()} />
+
       {/* Command Menu (Ctrl/Cmd + K) */}
       <CommandMenu />
 
@@ -926,6 +939,12 @@ export default function MainLayout() {
       <KeyboardShortcutsHelp
         isOpen={isShortcutsHelpOpen}
         onOpenChange={setShortcutsHelpOpen}
+      />
+
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        featureName={upgradeFeatureName}
       />
     </div>
   )

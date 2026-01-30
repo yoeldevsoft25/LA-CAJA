@@ -3,7 +3,7 @@ import axios from 'axios'
 function getApiUrl(): string {
   // 1. Si hay una variable de entorno, usarla (prioridad más alta)
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
-  
+
   // 2. Si estamos en localhost o preview local, usar localhost
   if (
     window.location.hostname === 'localhost' ||
@@ -13,22 +13,22 @@ function getApiUrl(): string {
   ) {
     return 'http://localhost:3000'
   }
-  
+
   // 3. En producción, intentar detectar automáticamente la URL del API
   if (import.meta.env.PROD) {
     const hostname = window.location.hostname
-    
+
     // Si estamos en Netlify (la-caja.netlify.app), usar el backend de Render
     if (hostname.includes('netlify.app')) {
       return 'https://la-caja-8i4h.onrender.com'
     }
-    
+
     // Por defecto, usar el mismo protocolo y hostname con puerto 3000
     const protocol = window.location.protocol
     const port = protocol === 'https:' ? '' : ':3000'
     return `${protocol}//${hostname}${port}`
   }
-  
+
   // 4. En desarrollo, si estamos accediendo desde la red, usar la misma IP para el API
   const hostname = window.location.hostname
   return `http://${hostname}:3000`
@@ -62,6 +62,7 @@ export interface AdminStore {
   created_at: string
   member_count: number
   members: { user_id: string; role: string; full_name: string | null }[]
+  usage: Record<string, number>
 }
 
 export interface AdminMember {
