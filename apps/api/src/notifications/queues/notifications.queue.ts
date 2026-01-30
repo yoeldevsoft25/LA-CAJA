@@ -21,10 +21,10 @@ export interface DailyDigestJob {
  * Procesa trabajos asíncronos de ML insights, emails, y digests
  */
 @Processor('notifications', {
-  concurrency: 5,
+  concurrency: 1, // Procesar uno a uno para evitar Rate Limits de Resend
   limiter: {
-    max: 10,
-    duration: 1000, // 10 jobs por segundo máximo
+    max: 1, // 1 job por segundo máximo (Resend permite 2/seg, mejor ser conservador)
+    duration: 1000,
   },
 })
 export class NotificationsQueueProcessor extends WorkerHost {

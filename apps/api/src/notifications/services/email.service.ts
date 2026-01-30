@@ -53,6 +53,16 @@ export class EmailService {
   ) {
     const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
 
+    // DEBUG LOGS
+    console.log('--- EMAIL SERVICE DEBUG ---');
+    console.log('RESEND_API_KEY present:', !!resendApiKey);
+    if (resendApiKey) {
+      console.log('RESEND_API_KEY value (first 5 chars):', resendApiKey.substring(0, 5));
+      console.log('Is Default/Placeholder?', resendApiKey === 're_123456789_YOUR_RESEND_API_KEY_HERE');
+    }
+    console.log('EMAIL_FROM:', this.configService.get<string>('EMAIL_FROM'));
+    console.log('---------------------------');
+
     if (resendApiKey && resendApiKey !== 're_123456789_YOUR_RESEND_API_KEY_HERE') {
       try {
         this.resend = new Resend(resendApiKey);
