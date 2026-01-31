@@ -77,6 +77,7 @@ import { SyncStatusBadge } from '@/components/sync/SyncStatusBadge'
 import { CommandMenu } from './CommandMenu'
 import { QuotaBanner } from '@/components/license/QuotaTracker'
 import { UpgradeModal } from '@/components/license/UpgradeModal'
+import { licenseService } from '@/services/license.service'
 
 type NavItem = {
   path: string
@@ -224,7 +225,11 @@ export default function MainLayout() {
   // Modal de ayuda de atajos de teclado
   const { isOpen: isShortcutsHelpOpen, setIsOpen: setShortcutsHelpOpen } = useKeyboardShortcutsHelp()
   const userRole = (user?.role || 'cashier') as Role
-  const userFeatures = user?.license_features || []
+  const localLicense = licenseService.getLocalStatus()
+  const userFeatures =
+    user?.license_features && user.license_features.length > 0
+      ? user.license_features
+      : (localLicense?.features || [])
 
   const [isUpgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [upgradeFeatureName, setUpgradeFeatureName] = useState('')

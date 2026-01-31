@@ -99,10 +99,20 @@ export function useLicenseStatus() {
     }
 
     // Sincronizar estado con el store de autenticación si hay cambios
+    const featuresChanged = (() => {
+      const current = user?.license_features || []
+      const next = licenseStatus.features || []
+      if (current.length !== next.length) return true
+      const currentSorted = [...current].sort()
+      const nextSorted = [...next].sort()
+      return currentSorted.some((feature, index) => feature !== nextSorted[index])
+    })()
+
     if (user && (
       user.license_status !== licenseStatus.status ||
       user.license_expires_at !== licenseStatus.expires_at ||
-      user.license_plan !== licenseStatus.plan
+      user.license_plan !== licenseStatus.plan ||
+      featuresChanged
     )) {
       console.log('[LicenseStatus] Sincronizando estado de licencia en store:', licenseStatus)
       setUser({
