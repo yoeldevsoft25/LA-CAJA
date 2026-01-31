@@ -9,6 +9,7 @@
 
 /* Reducir animaciones en mobile para mejor rendimiento */
 @media (max-width: 768px) {
+
   /* Acelerar animaciones para que sean más suaves */
   * {
     animation-duration: 0.2s !important;
@@ -29,10 +30,10 @@
     will-change: auto !important;
   }
 
-  /* Optimizar scroll en Android */
-  * {
+  /* Optimizar scroll - Solo en el root y contenedores que realmente lo tengan */
+  html,
+  body {
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
   }
 
   /* Permitir scroll vertical desde cualquier área */
@@ -60,6 +61,7 @@
 
 /* Detectar preferencia de movimiento reducido */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -106,6 +108,7 @@ body {
    ======================================== */
 
 @media (max-width: 768px) {
+
   /* Asegurar tamaño mínimo táctil recomendado (44x44px) */
   button,
   .button,

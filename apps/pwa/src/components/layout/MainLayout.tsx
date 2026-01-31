@@ -975,7 +975,10 @@ export default function MainLayout() {
         {/* Main Content */}
         <main
           id="main-content"
-          className="flex-1 overflow-x-hidden overflow-y-auto touch-pan-y overscroll-contain"
+          className={cn(
+            "flex-1 overflow-x-hidden touch-pan-y overscroll-contain min-h-0",
+            location.pathname.includes('/pos') ? "overflow-hidden" : "overflow-y-auto"
+          )}
           data-pull-to-refresh
           role="main"
           aria-label="Contenido principal"

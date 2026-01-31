@@ -262,7 +262,7 @@ export function SwipeableItem({
   }, [enabled, onSwipeLeft, onSwipeRight, requireHandle, shouldReduceMotion, threshold, x])
 
   return (
-    <div ref={containerRef} className={cn('relative overflow-hidden', className)}>
+    <div ref={containerRef} className={cn('relative overflow-hidden overscroll-auto', className)}>
       {/* Acciones de fondo */}
       {(leftAction || rightAction) && (
         <div className="absolute inset-0 flex">

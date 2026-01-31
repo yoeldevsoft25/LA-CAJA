@@ -899,25 +899,27 @@ export default function POSPage() {
               </div>
             </div>
           )}
-          <POSCart
-            items={items}
-            cartSummaries={cartSummaries}
-            activeCartId={activeCartId}
-            total={total}
-            totalDiscountUsd={totalDiscountUsd}
-            hasOpenCash={hasOpenCash}
-            isMobile={isMobile}
-            isTabletLandscape={isTabletLandscape}
-            invalidCartProductIds={invalidCartProductIds}
-            shouldPrint={shouldPrint}
-            setShouldPrint={setShouldPrint}
-            onSwitchCart={handleSwitchCart}
-            onCheckout={() => setShowCheckout(true)}
-            onUpdateQty={handleUpdateQty}
-            onRemoveItem={removeItem}
-            onClearCart={clear}
-            exchangeRate={exchangeRate}
-          />
+          <div className="flex-1 min-h-0">
+            <POSCart
+              items={items}
+              cartSummaries={cartSummaries}
+              activeCartId={activeCartId}
+              total={total}
+              totalDiscountUsd={totalDiscountUsd}
+              hasOpenCash={hasOpenCash}
+              isMobile={isMobile}
+              isTabletLandscape={isTabletLandscape}
+              invalidCartProductIds={invalidCartProductIds}
+              shouldPrint={shouldPrint}
+              setShouldPrint={setShouldPrint}
+              onSwitchCart={handleSwitchCart}
+              onCheckout={() => setShowCheckout(true)}
+              onUpdateQty={handleUpdateQty}
+              onRemoveItem={removeItem}
+              onClearCart={clear}
+              exchangeRate={exchangeRate}
+            />
+          </div>
         </div>
       </div>
 

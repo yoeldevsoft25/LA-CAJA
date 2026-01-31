@@ -180,7 +180,7 @@ export default function LandingPageEnhanced() {
   )
 
   return (
-    <div className="min-h-screen bg-[#fbfaf8] text-slate-900 overflow-hidden">
+    <div className="min-h-[100dvh] bg-[#fbfaf8] text-slate-900 overflow-x-hidden touch-pan-y">
       {/* Background texture */}
       <div className="fixed inset-0 pointer-events-none">
         <motion.div

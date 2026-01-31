@@ -69,7 +69,8 @@ export default function POSCart({
     return (
         <div className={cn("h-full min-h-0 flex flex-col", !isTabletLandscape && "lg:col-span-1")}>
             <Card className={cn(
-                "bg-card/30 rounded-2xl border-2 border-border shadow-md flex flex-col overflow-hidden h-full min-h-0"
+                "bg-card/30 rounded-2xl border-2 border-border shadow-md overflow-hidden h-full min-h-0",
+                "grid grid-rows-[auto_auto_minmax(0,1fr)_auto]"
             )}>
                 {/* Tabs de Carrito */}
                 <CartTabs
