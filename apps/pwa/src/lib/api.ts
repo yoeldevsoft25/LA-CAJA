@@ -106,16 +106,14 @@ const probePrimaryApi = async () => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
   try {
-    const response = await fetch(`${PRIMARY_API_URL}/health`, {
+    await fetch(`${PRIMARY_API_URL}/health`, {
       method: 'GET',
       cache: 'no-store',
+      mode: 'no-cors',
       signal: controller.signal,
     });
-    if (response.ok) {
-      setApiBaseUrl(PRIMARY_API_URL);
-    } else {
-      setApiBaseUrl(FALLBACK_API_URL);
-    }
+    // Si no falla la red, asumimos que el host primario está disponible
+    setApiBaseUrl(PRIMARY_API_URL);
   } catch {
     setApiBaseUrl(FALLBACK_API_URL);
   } finally {

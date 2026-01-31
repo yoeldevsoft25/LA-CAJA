@@ -55,12 +55,12 @@ export interface RegisterResponse {
 export const authService = {
   async getStores(): Promise<Store[]> {
     const response = await api.get<Store[]>('/auth/stores/public')
-    return response.data
+    return Array.isArray(response.data) ? response.data : []
   },
 
   async getCashiers(storeId: string): Promise<Cashier[]> {
     const response = await api.get<Cashier[]>(`/auth/stores/${storeId}/cashiers/public`)
-    return response.data
+    return Array.isArray(response.data) ? response.data : []
   },
 
   async login(data: LoginRequest): Promise<LoginResponse> {
