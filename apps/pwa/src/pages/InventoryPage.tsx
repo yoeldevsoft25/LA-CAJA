@@ -806,6 +806,7 @@ export default function InventoryPage() {
         isOpen={isMovementsModalOpen}
         onClose={handleCloseModals}
         product={selectedProduct}
+        warehouseId={warehouseFilter !== 'all' ? warehouseFilter : undefined}
       />
 
       {/* Modal de confirmación para vaciar stock de un producto */}

@@ -74,6 +74,7 @@ export interface MovementsResponse {
 
 export interface MovementsParams {
   product_id?: string
+  warehouse_id?: string
   limit?: number
   offset?: number
   include_pending?: boolean
@@ -141,6 +142,7 @@ export const inventoryService = {
   async getMovements(params: MovementsParams = {}): Promise<MovementsResponse> {
     const {
       product_id,
+      warehouse_id,
       limit = 50,
       offset = 0,
       include_pending,
@@ -150,6 +152,9 @@ export const inventoryService = {
     const queryParams: Record<string, any> = { limit, offset }
     if (product_id) {
       queryParams.product_id = product_id
+    }
+    if (warehouse_id) {
+      queryParams.warehouse_id = warehouse_id
     }
     if (include_pending !== undefined) {
       queryParams.include_pending = include_pending

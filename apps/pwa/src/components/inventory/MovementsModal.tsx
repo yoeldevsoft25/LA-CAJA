@@ -16,6 +16,7 @@ interface MovementsModalProps {
   isOpen: boolean
   onClose: () => void
   product: StockStatus | null
+  warehouseId?: string
 }
 
 const movementTypeLabels = {
@@ -23,6 +24,8 @@ const movementTypeLabels = {
   adjust: 'Ajuste',
   sold: 'Venta',
   sale: 'Venta',
+  transfer_in: 'Traslado (Entrada)',
+  transfer_out: 'Traslado (Salida)',
 }
 
 const movementTypeIcons = {
@@ -30,6 +33,8 @@ const movementTypeIcons = {
   adjust: TrendingDown,
   sold: ShoppingCart,
   sale: ShoppingCart,
+  transfer_in: TrendingUp,
+  transfer_out: TrendingDown,
 }
 
 const movementTypeColors = {
@@ -37,12 +42,15 @@ const movementTypeColors = {
   adjust: 'text-primary bg-primary/10',
   sold: 'text-info bg-info/10',
   sale: 'text-info bg-info/10',
+  transfer_in: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
+  transfer_out: 'text-orange-600 bg-orange-50 dark:bg-orange-900/20',
 }
 
 export default function MovementsModal({
   isOpen,
   onClose,
   product,
+  warehouseId,
 }: MovementsModalProps) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -61,6 +69,7 @@ export default function MovementsModal({
       'inventory',
       'movements',
       product?.product_id || 'all',
+      warehouseId || 'all',
       startDate,
       endDate,
       currentPage,
@@ -68,6 +77,7 @@ export default function MovementsModal({
     queryFn: () =>
       inventoryService.getMovements({
         product_id: product?.product_id || undefined,
+        warehouse_id: warehouseId,
         limit: pageSize,
         offset,
         start_date: startDate || undefined,
@@ -168,7 +178,7 @@ export default function MovementsModal({
                               {movement.product_name}
                             </h4>
                           )}
-                          
+
                           <div className="flex items-center space-x-2 mb-2 flex-wrap">
                             <Badge variant="secondary" className={typeColor}>
                               {typeLabel}
@@ -196,31 +206,31 @@ export default function MovementsModal({
                           {movement.movement_type === 'received' &&
                             (Number(movement.unit_cost_bs) > 0 ||
                               Number(movement.unit_cost_usd) > 0) && (() => {
-                              const uUsd = Number(movement.unit_cost_usd)
-                              const uBs = Number(movement.unit_cost_bs)
-                              const qty = Math.abs(movement.qty_delta)
-                              const sinUsd = uUsd === 0 && uBs > 0
-                              return (
-                                <Card className="mt-2 bg-info/5 border-info/50">
-                                  <CardContent className="p-2">
-                                    <div className="text-xs sm:text-sm space-y-1">
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-muted-foreground">Costo unitario:</span>
-                                        <span className="font-semibold text-foreground">
-                                          {sinUsd ? '—' : `$${uUsd.toFixed(2)} USD`} / Bs. {uBs.toFixed(2)}
-                                        </span>
+                                const uUsd = Number(movement.unit_cost_usd)
+                                const uBs = Number(movement.unit_cost_bs)
+                                const qty = Math.abs(movement.qty_delta)
+                                const sinUsd = uUsd === 0 && uBs > 0
+                                return (
+                                  <Card className="mt-2 bg-info/5 border-info/50">
+                                    <CardContent className="p-2">
+                                      <div className="text-xs sm:text-sm space-y-1">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-muted-foreground">Costo unitario:</span>
+                                          <span className="font-semibold text-foreground">
+                                            {sinUsd ? '—' : `$${uUsd.toFixed(2)} USD`} / Bs. {uBs.toFixed(2)}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-t border-info/50 pt-1">
+                                          <span className="text-foreground font-medium">Costo total:</span>
+                                          <span className="font-bold text-info">
+                                            {sinUsd ? '—' : `$${(uUsd * qty).toFixed(2)} USD`} / Bs. {(uBs * qty).toFixed(2)}
+                                          </span>
+                                        </div>
                                       </div>
-                                      <div className="flex justify-between items-center border-t border-info/50 pt-1">
-                                        <span className="text-foreground font-medium">Costo total:</span>
-                                        <span className="font-bold text-info">
-                                          {sinUsd ? '—' : `$${(uUsd * qty).toFixed(2)} USD`} / Bs. {(uBs * qty).toFixed(2)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              )
-                            })()}
+                                    </CardContent>
+                                  </Card>
+                                )
+                              })()}
 
                           {movement.ref && (
                             <div className="mt-2 text-xs text-muted-foreground space-y-1">
@@ -250,8 +260,8 @@ export default function MovementsModal({
                   </Card>
                 )
               })}
-              </div>
-            )}
+            </div>
+          )}
         </div>
 
         {/* Footer con paginación */}
@@ -287,7 +297,7 @@ export default function MovementsModal({
               </div>
             </div>
           )}
-          
+
           <Button onClick={onClose} variant="outline" className="w-full">
             Cerrar
           </Button>

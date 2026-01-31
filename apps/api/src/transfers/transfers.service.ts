@@ -441,12 +441,22 @@ export class TransfersService {
     status?: TransferStatus,
     warehouseId?: string,
   ): Promise<Transfer[]> {
-    const where: any = { store_id: storeId };
-    if (status) {
-      where.status = status;
-    }
+    const where: any[] = [];
+
+    // Si hay warehouseId, buscar como origen O destino
     if (warehouseId) {
-      where.from_warehouse_id = warehouseId;
+      where.push({ store_id: storeId, from_warehouse_id: warehouseId });
+      where.push({ store_id: storeId, to_warehouse_id: warehouseId });
+    } else {
+      // Si no, solo filtrar por tienda
+      where.push({ store_id: storeId });
+    }
+
+    // Aplicar filtro de estado a todas las condiciones OR
+    if (status) {
+      where.forEach((condition) => {
+        condition.status = status;
+      });
     }
 
     return this.transferRepository.find({

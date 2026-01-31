@@ -119,6 +119,7 @@ export class InventoryController {
     @Query('limit') limit: string,
     @Query('offset') offset: string,
     @Query('include_pending') includePending: string,
+    @Query('warehouse_id') warehouseId: string,
     @Request() req: any,
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
@@ -134,6 +135,7 @@ export class InventoryController {
       includePending ? includePending === 'true' : true,
       start,
       end,
+      warehouseId,
     );
   }
 

@@ -507,6 +507,7 @@ export class InventoryService {
     includePending: boolean = true,
     startDate?: Date,
     endDate?: Date,
+    warehouseId?: string,
   ): Promise<{ movements: any[]; total: number }> {
     const query = this.movementRepository
       .createQueryBuilder('movement')
@@ -516,6 +517,10 @@ export class InventoryService {
 
     if (productId) {
       query.andWhere('movement.product_id = :productId', { productId });
+    }
+
+    if (warehouseId) {
+      query.andWhere('movement.warehouse_id = :warehouseId', { warehouseId });
     }
 
     if (!includePending) {
