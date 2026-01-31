@@ -975,7 +975,8 @@ export default function MainLayout() {
         {/* Main Content */}
         <main
           id="main-content"
-          className="flex-1 overflow-x-hidden overflow-y-auto"
+          className="flex-1 overflow-x-hidden overflow-y-auto touch-pan-y overscroll-contain"
+          data-pull-to-refresh
           role="main"
           aria-label="Contenido principal"
         >

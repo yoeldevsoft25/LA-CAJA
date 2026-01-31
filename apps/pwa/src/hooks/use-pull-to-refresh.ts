@@ -34,9 +34,26 @@ export function usePullToRefresh({
   const isDragging = useRef<boolean>(false)
   const touchTarget = useRef<EventTarget | null>(null)
   const scrollContainer = useRef<HTMLElement | null>(null)
+  const listenersActive = useRef(false)
 
   useEffect(() => {
     if (!enabled) return
+
+    const addListeners = () => {
+      if (listenersActive.current) return
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd, { passive: true })
+      document.addEventListener('touchcancel', handleTouchCancel, { passive: true })
+      listenersActive.current = true
+    }
+
+    const removeListeners = () => {
+      if (!listenersActive.current) return
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('touchcancel', handleTouchCancel)
+      listenersActive.current = false
+    }
 
     const handleTouchStart = (e: TouchEvent) => {
       // Solo activar si estamos en la parte superior de la página y no hay otros elementos bloqueando
@@ -53,6 +70,7 @@ export function usePullToRefresh({
       isDragging.current = false
       touchTarget.current = e.target
       scrollContainer.current = container
+      addListeners()
     }
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -120,12 +138,17 @@ export function usePullToRefresh({
       }
     }
 
+    const handleTouchCancel = () => {
+      reset()
+    }
+
     const reset = () => {
       startY.current = 0
       currentY.current = 0
       isDragging.current = false
       touchTarget.current = null
       scrollContainer.current = null
+      removeListeners()
       setState({
         isPulling: false,
         isRefreshing: false,
@@ -135,13 +158,10 @@ export function usePullToRefresh({
 
     // Agregar event listeners
     document.addEventListener('touchstart', handleTouchStart, { passive: true })
-    document.addEventListener('touchmove', handleTouchMove, { passive: false })
-    document.addEventListener('touchend', handleTouchEnd, { passive: true })
 
     return () => {
       document.removeEventListener('touchstart', handleTouchStart)
-      document.removeEventListener('touchmove', handleTouchMove)
-      document.removeEventListener('touchend', handleTouchEnd)
+      removeListeners()
     }
   }, [enabled, onRefresh, threshold, resistance])
 

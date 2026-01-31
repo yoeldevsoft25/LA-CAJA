@@ -786,7 +786,7 @@ export default function POSPage() {
 
 
   return (
-    <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4">
+    <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4" data-pull-to-refresh>
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
       <div className={cn(
         "grid gap-3 sm:gap-4 flex-1 min-h-0",
