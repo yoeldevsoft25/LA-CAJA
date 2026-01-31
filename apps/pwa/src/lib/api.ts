@@ -93,6 +93,7 @@ export const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': '1',
   },
   timeout: 30000, // Timeout de 30 segundos (aumentado para importaciones largas)
 });
@@ -119,6 +120,9 @@ const probePrimaryApi = async () => {
       method: 'GET',
       cache: 'no-store',
       mode: 'no-cors',
+      headers: {
+        'ngrok-skip-browser-warning': '1',
+      },
       signal: controller.signal,
     });
     // Si no falla la red, asumimos que el host primario está disponible
