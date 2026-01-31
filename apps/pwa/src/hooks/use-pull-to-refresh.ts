@@ -33,16 +33,17 @@ export function usePullToRefresh({
   const currentY = useRef<number>(0)
   const isDragging = useRef<boolean>(false)
   const touchTarget = useRef<EventTarget | null>(null)
+  const scrollContainer = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!enabled) return
 
     const handleTouchStart = (e: TouchEvent) => {
       // Solo activar si estamos en la parte superior de la página y no hay otros elementos bloqueando
-      if (window.scrollY !== 0) return
-      if (e.target !== document.body && !(e.target as Element).closest('.scrollable-content')) {
-        return
-      }
+      const target = e.target as Element | null
+      const container = target?.closest('[data-pull-to-refresh]') as HTMLElement | null
+      if (!container) return
+      if (container.scrollTop !== 0) return
 
       const touch = e.touches[0]
       if (!touch) return
@@ -51,10 +52,11 @@ export function usePullToRefresh({
       currentY.current = touch.clientY
       isDragging.current = false
       touchTarget.current = e.target
+      scrollContainer.current = container
     }
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (startY.current === 0) return
+      if (startY.current === 0 || !scrollContainer.current) return
 
       const touch = e.touches[0]
       if (!touch) return
@@ -63,7 +65,7 @@ export function usePullToRefresh({
       const deltaY = currentY.current - startY.current
 
       // Solo activar pull-to-refresh si el usuario arrastra hacia abajo desde la parte superior
-      if (deltaY > 0 && window.scrollY === 0) {
+      if (deltaY > 0 && scrollContainer.current.scrollTop === 0) {
         // Prevenir scroll normal mientras arrastramos
         if (deltaY > 10) {
           e.preventDefault()
@@ -78,7 +80,7 @@ export function usePullToRefresh({
           isPulling: true,
           pullDistance: distance,
         }))
-      } else if (deltaY < 0 || window.scrollY > 0) {
+      } else if (deltaY < 0 || scrollContainer.current.scrollTop > 0) {
         // Si el usuario arrastra hacia arriba o la página ya tiene scroll, resetear
         reset()
       }
@@ -123,6 +125,7 @@ export function usePullToRefresh({
       currentY.current = 0
       isDragging.current = false
       touchTarget.current = null
+      scrollContainer.current = null
       setState({
         isPulling: false,
         isRefreshing: false,

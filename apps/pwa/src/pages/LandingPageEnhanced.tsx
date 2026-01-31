@@ -314,9 +314,6 @@ export default function LandingPageEnhanced() {
               <Card className="rounded-3xl border border-white/70 bg-[#f7fbff] shadow-[0_18px_40px_rgba(15,23,42,0.08)] -translate-x-4">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-[#0C81CF]/10 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-[#0C81CF]" />
-                    </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-900">Facturación fiscal</p>
                       <p className="text-xs text-slate-500">Series y control por tienda</p>

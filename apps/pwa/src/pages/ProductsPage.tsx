@@ -478,7 +478,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="h-full max-w-7xl mx-auto">
+    <div className="h-full max-w-7xl mx-auto" data-pull-to-refresh>
       <PullToRefreshIndicator
         isPulling={pullToRefresh.isPulling}
         isRefreshing={pullToRefresh.isRefreshing}
