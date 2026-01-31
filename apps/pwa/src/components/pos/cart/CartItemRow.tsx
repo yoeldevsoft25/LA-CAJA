@@ -33,13 +33,14 @@ export function CartItemRow({
         <div
             className={cn(
                 "group p-3 border-b border-border/40 hover:bg-muted/30 relative transition-all",
+                isMobile && "pr-12",
                 isInvalid && "bg-destructive/5"
             )}
         >
             {isMobile && (
                 <div
                     data-swipe-handle
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-6 rounded-md border border-border/50 bg-background/80 flex items-center justify-center text-muted-foreground/70"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-5 rounded-md border border-border/50 bg-background/90 flex items-center justify-center text-muted-foreground/70 shadow-sm"
                     aria-label="Deslizar para eliminar"
                 >
                     <GripVertical className="w-4 h-4" />

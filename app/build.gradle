@@ -22,10 +22,10 @@ plugins {
 
 def twaManifest = [
     applicationId: 'com.lacaja.app',
-    hostName: 'la-caja.netlify.app', // The domain being opened in the TWA.
+    hostName: 'veloxpos.app', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
-    name: 'LA CAJA', // The application name.
-    launcherName: 'LA CAJA', // The name shown on the Android Launcher.
+    name: 'Velox POS', // The application name.
+    launcherName: 'Velox POS', // The name shown on the Android Launcher.
     themeColor: '#FFFFFF', // The color used for the status bar.
     themeColorDark: '#000000', // The color used for the dark status bar.
     navigationColor: '#000000', // The color used for the navigation bar.
@@ -76,12 +76,12 @@ android {
             // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
             // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
             // the TWA, as it will probably give a better user experience for non-mobile devices.
-            resValue "string", "webManifestUrl", 'https://la-caja.netlify.app/manifest.webmanifest'
+            resValue "string", "webManifestUrl", 'https://veloxpos.app/manifest.webmanifest'
         
 
         
             // This is used by Meta Quest.
-            resValue "string", "fullScopeUrl", 'https://la-caja.netlify.app/'
+            resValue "string", "fullScopeUrl", 'https://veloxpos.app/'
         
 
         

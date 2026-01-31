@@ -4,6 +4,10 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('API');
 
+const PRIMARY_API_URL = 'https://denver-unbrooded-miley.ngrok-free.dev';
+const FALLBACK_API_URL = 'https://la-caja-8i4h.onrender.com';
+const API_BASE_STORAGE_KEY = 'velox_api_base';
+
 /**
  * Decodifica un token JWT sin verificar la firma (solo para extraer datos)
  * Los tokens JWT tienen formato: header.payload.signature
@@ -49,9 +53,15 @@ function getApiUrl(): string {
   if (import.meta.env.PROD) {
     const hostname = window.location.hostname;
     
+    // Usar última URL válida si existe (para failover automático)
+    const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
+    if (storedBase) {
+      return storedBase;
+    }
+
     // Si estamos en Netlify (la-caja.netlify.app), usar el backend de Render
     if (hostname.includes('netlify.app')) {
-      return 'https://la-caja-8i4h.onrender.com';
+      return FALLBACK_API_URL;
     }
     
     // Si estamos en otro dominio, intentar inferir el API URL
@@ -77,6 +87,49 @@ export const api = axios.create({
   },
   timeout: 30000, // Timeout de 30 segundos (aumentado para importaciones largas)
 });
+
+const setApiBaseUrl = (nextBaseUrl: string) => {
+  api.defaults.baseURL = nextBaseUrl;
+  localStorage.setItem(API_BASE_STORAGE_KEY, nextBaseUrl);
+};
+
+const isLocalEnv = () =>
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.port === '4173' ||
+  window.location.port === '5173';
+
+const probePrimaryApi = async () => {
+  if (!import.meta.env.PROD || isLocalEnv()) return;
+  if (!PRIMARY_API_URL) return;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1500);
+  try {
+    const response = await fetch(`${PRIMARY_API_URL}/health`, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (response.ok) {
+      setApiBaseUrl(PRIMARY_API_URL);
+    } else {
+      setApiBaseUrl(FALLBACK_API_URL);
+    }
+  } catch {
+    setApiBaseUrl(FALLBACK_API_URL);
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+void probePrimaryApi();
+
+if (import.meta.env.PROD && !isLocalEnv()) {
+  setInterval(() => {
+    void probePrimaryApi();
+  }, 60 * 60 * 1000);
+}
 
 // Interceptor para agregar token JWT y bloquear peticiones offline
 api.interceptors.request.use(
@@ -163,6 +216,13 @@ api.interceptors.response.use(
     }
 
     const originalRequest = error.config;
+
+    if (!error.response && api.defaults.baseURL === PRIMARY_API_URL && !originalRequest?._apiFailoverRetry) {
+      originalRequest._apiFailoverRetry = true;
+      setApiBaseUrl(FALLBACK_API_URL);
+      originalRequest.baseURL = FALLBACK_API_URL;
+      return api(originalRequest);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       // ✅ OFFLINE-FIRST: Marcar error como no-retriable para React Query
