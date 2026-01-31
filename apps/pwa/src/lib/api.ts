@@ -39,6 +39,15 @@ function getApiUrl(): string {
     return import.meta.env.VITE_API_URL;
   }
 
+  // 1.1 Si hay primary/fallback definidos, usar el último guardado o el primary
+  if (import.meta.env.PROD && (PRIMARY_API_URL || FALLBACK_API_URL)) {
+    const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
+    if (storedBase && storedBase !== window.location.origin) {
+      return storedBase;
+    }
+    return PRIMARY_API_URL || FALLBACK_API_URL;
+  }
+
   // 2. Si estamos en localhost o preview local, usar localhost
   if (
     window.location.hostname === 'localhost' ||
