@@ -4,8 +4,8 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('API');
 
-const PRIMARY_API_URL = 'https://denver-unbrooded-miley.ngrok-free.dev';
-const FALLBACK_API_URL = 'https://la-caja-8i4h.onrender.com';
+const PRIMARY_API_URL = import.meta.env.VITE_PRIMARY_API_URL as string | undefined;
+const FALLBACK_API_URL = import.meta.env.VITE_FALLBACK_API_URL as string | undefined;
 const API_BASE_STORAGE_KEY = 'velox_api_base';
 
 /**
@@ -101,7 +101,7 @@ const isLocalEnv = () =>
 
 const probePrimaryApi = async () => {
   if (!import.meta.env.PROD || isLocalEnv()) return;
-  if (!PRIMARY_API_URL) return;
+  if (!PRIMARY_API_URL || !FALLBACK_API_URL) return;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
@@ -125,7 +125,7 @@ const probePrimaryApi = async () => {
 
 void probePrimaryApi();
 
-if (import.meta.env.PROD && !isLocalEnv()) {
+if (import.meta.env.PROD && !isLocalEnv() && PRIMARY_API_URL && FALLBACK_API_URL) {
   const PROBE_INTERVAL_MS = 2 * 60 * 1000;
 
   setInterval(() => {
@@ -229,7 +229,7 @@ api.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    if (!error.response && api.defaults.baseURL === PRIMARY_API_URL && !originalRequest?._apiFailoverRetry) {
+    if (!error.response && PRIMARY_API_URL && FALLBACK_API_URL && api.defaults.baseURL === PRIMARY_API_URL && !originalRequest?._apiFailoverRetry) {
       originalRequest._apiFailoverRetry = true;
       setApiBaseUrl(FALLBACK_API_URL);
       originalRequest.baseURL = FALLBACK_API_URL;

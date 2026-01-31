@@ -891,7 +891,8 @@ class SyncServiceClass {
         }
       });
 
-      const { events, last_server_time } = response.data;
+      const events = response.data?.events ?? [];
+      const last_server_time = response.data?.last_server_time ?? lastCheckpoint;
 
       if (events.length > 0) {
         this.logger.info(`Recibidos ${events.length} eventos nuevos del servidor`);

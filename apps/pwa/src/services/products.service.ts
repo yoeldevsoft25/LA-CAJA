@@ -192,11 +192,15 @@ export const productsService = {
 
       const response = await api.get<ProductSearchResponse>('/products', { params: backendParams })
 
-      if (storeId && response.data.products.length > 0) {
-        await productsCacheService.cacheProducts(response.data.products, storeId).catch(() => { });
+      const responseProducts = response.data?.products ?? [];
+      if (storeId && responseProducts.length > 0) {
+        await productsCacheService.cacheProducts(responseProducts, storeId).catch(() => { });
       }
 
-      return response.data
+      return {
+        products: responseProducts,
+        total: response.data?.total ?? responseProducts.length,
+      }
     } catch (error: unknown) {
       const axiosError = error as { message?: string };
       if (cachedData) {

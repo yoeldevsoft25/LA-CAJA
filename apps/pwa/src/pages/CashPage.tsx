@@ -7,7 +7,7 @@ import OpenCashModal from '@/components/cash/OpenCashModal'
 import CloseCashModal from '@/components/cash/CloseCashModal'
 import CashSessionsList from '@/components/cash/CashSessionsList'
 import CashMovementsSummary from '@/components/payments/CashMovementsSummary'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -161,7 +161,13 @@ export default function CashPage() {
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <AlertTitle className="text-green-900">Sesión Activa</AlertTitle>
                 <AlertDescription className="text-green-700">
-                  La caja está abierta desde el {format(new Date(currentSession.opened_at), 'dd/MM/yyyy HH:mm')}
+                  {(() => {
+                    const openedAt = currentSession?.opened_at ? new Date(currentSession.opened_at) : null
+                    if (!openedAt || !isValid(openedAt)) {
+                      return 'La caja está abierta'
+                    }
+                    return `La caja está abierta desde el ${format(openedAt, 'dd/MM/yyyy HH:mm')}`
+                  })()}
                 </AlertDescription>
               </Alert>
 
@@ -175,7 +181,10 @@ export default function CashPage() {
                     <span className="text-xs text-muted-foreground">Apertura:</span>
                   </div>
                   <span className="text-xs font-medium text-foreground">
-                    {format(new Date(currentSession.opened_at), 'dd/MM HH:mm')}
+                    {(() => {
+                      const openedAt = currentSession?.opened_at ? new Date(currentSession.opened_at) : null
+                      return openedAt && isValid(openedAt) ? format(openedAt, 'dd/MM HH:mm') : '--'
+                    })()}
                   </span>
                 </div>
                 
