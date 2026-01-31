@@ -67,7 +67,7 @@ export default function POSCart({
     }, [onClearCart])
 
     return (
-        <div className={cn("h-full", !isTabletLandscape && "lg:col-span-1")}>
+        <div className={cn("h-full min-h-0 flex flex-col", !isTabletLandscape && "lg:col-span-1")}>
             <Card className={cn(
                 "bg-card/30 rounded-2xl border-2 border-border shadow-md flex flex-col overflow-hidden h-full min-h-0"
             )}>

@@ -25,8 +25,8 @@ export function CartList({
 }: CartListProps) {
 
     return (
-        <div className="flex-1 min-h-0 relative">
-            <ScrollArea className="h-full">
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+            <ScrollArea className="h-full min-h-0">
                 <div className={cn("flex flex-col", items.length === 0 && "h-full justify-center")}>
                     {items.length === 0 ? (
                         <motion.div
@@ -51,11 +51,10 @@ export function CartList({
                                 return (
                                     <motion.div
                                         key={item.id}
-                                        layout
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: "auto" }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ type: "spring", stiffness: 500, damping: 30, opacity: { duration: 0.2 } }}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
                                     >
                                         <SwipeableItem
                                             onSwipeLeft={isMobile ? () => onRemoveItem(item.id) : undefined}

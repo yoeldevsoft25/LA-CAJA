@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { motion, PanInfo, useMotionValue, useTransform, animate } from 'framer-motion'
+import { motion, PanInfo, useMotionValue, useTransform, animate, useDragControls } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 
@@ -32,6 +32,9 @@ export function SwipeableItem({
   const [_swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
   const x = useMotionValue(0)
   const { shouldReduceMotion } = useReducedMotion()
+  const dragControls = useDragControls()
+  const startPoint = React.useRef<{ x: number; y: number } | null>(null)
+  const hasDirectionLock = React.useRef(false)
 
   // Transformaciones para el contenido y las acciones
   const contentX = useTransform(x, (value) => {
@@ -116,6 +119,33 @@ export function SwipeableItem({
     }
   }, [enabled, x, shouldReduceMotion])
 
+  const handlePointerDown = (event: React.PointerEvent) => {
+    if (!enabled) return
+    startPoint.current = { x: event.clientX, y: event.clientY }
+    hasDirectionLock.current = false
+  }
+
+  const handlePointerMove = (event: React.PointerEvent) => {
+    if (!enabled || !startPoint.current || hasDirectionLock.current) return
+    const dx = event.clientX - startPoint.current.x
+    const dy = event.clientY - startPoint.current.y
+    const absX = Math.abs(dx)
+    const absY = Math.abs(dy)
+
+    // Solo iniciar swipe si el gesto es claramente horizontal
+    if (absX > 8 && absX > absY + 4) {
+      hasDirectionLock.current = true
+      dragControls.start(event)
+    } else if (absY > 8 && absY > absX + 4) {
+      hasDirectionLock.current = true
+    }
+  }
+
+  const handlePointerUp = () => {
+    startPoint.current = null
+    hasDirectionLock.current = false
+  }
+
   return (
     <div className={cn('relative overflow-hidden', className)}>
       {/* Acciones de fondo */}
@@ -143,6 +173,9 @@ export function SwipeableItem({
       {/* Contenido principal */}
       <motion.div
         drag={enabled ? 'x' : false}
+        dragControls={dragControls}
+        dragListener={false}
+        dragDirectionLock
         dragConstraints={{ left: -threshold * 2, right: threshold * 2 }}
         dragElastic={0.2}
         onDragStart={handleDragStart}
@@ -150,11 +183,15 @@ export function SwipeableItem({
         onDragEnd={handleDragEnd}
         style={{ x: contentX }}
         className={cn(
-          'relative bg-background',
+          'relative bg-background touch-pan-y',
           isDragging && 'cursor-grabbing',
           !enabled && 'cursor-default'
         )}
         whileTap={enabled && !shouldReduceMotion ? { scale: 0.98 } : undefined}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         {children}
       </motion.div>
