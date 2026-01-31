@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Search, ShoppingCart, Sparkles } from 'lucide-react'
+import { Search, ShoppingCart, Sparkles, Filter, ChevronRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { type PublicTableInfo, type PublicMenuResponse, type PublicProduct, publicMenuService } from '@/services/public-menu.service'
 import { notificationsWebSocketService } from '@/services/notifications-websocket.service'
@@ -11,9 +11,9 @@ import OrderProgressBar, { type OrderProgressData } from './OrderProgressBar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { motion, AnimatePresence } from 'framer-motion'
 import toast from '@/lib/toast'
 
 interface MenuViewerProps {
@@ -46,19 +46,17 @@ export default function MenuViewer({
     queryKey: ['current-order', qrCode],
     queryFn: () => publicMenuService.getCurrentOrder(qrCode),
     enabled: !!qrCode && (orderCreated || cartItems.length === 0),
-    refetchInterval: 3000, // Actualizar cada 3 segundos
+    refetchInterval: 3000,
     staleTime: 1000,
   })
 
-  // Escuchar actualizaciones en tiempo real de la orden
+  // Escuchar actualizaciones en tiempo real
   useEffect(() => {
     if (!qrCode) return
 
     const handleOrderUpdate = (...args: unknown[]) => {
       const data = args[0] as { order: any; timestamp: number }
       const { order } = data
-
-      // Si la orden pertenece a esta mesa, refrescar
       if (order?.table_id === tableId) {
         refetchOrder()
         if (order.status === 'closed') {
@@ -70,15 +68,11 @@ export default function MenuViewer({
     const handleKitchenUpdate = (...args: unknown[]) => {
       const data = args[0] as { order: any; timestamp: number }
       const { order } = data
-
-      // Si la orden pertenece a esta mesa, refrescar
       if (order?.table_id === tableId) {
         refetchOrder()
       }
     }
 
-    // Conectar WebSocket si no está conectado (necesitamos store_id, pero en público no lo tenemos)
-    // Por ahora solo escuchamos si ya está conectado
     if (notificationsWebSocketService.isConnected()) {
       notificationsWebSocketService.on('order:update', handleOrderUpdate)
       notificationsWebSocketService.on('kitchen:order_update', handleKitchenUpdate)
@@ -105,12 +99,12 @@ export default function MenuViewer({
     }
   }, [currentOrderData])
 
-  // Extraer todas las categorías
+  // Categorías
   const categories = useMemo(() => {
     return menu.categories.map((cat) => cat.name)
   }, [menu])
 
-  // Obtener productos destacados para el banner (primeros productos de las categorías principales)
+  // Productos destacados
   const featuredProducts = useMemo(() => {
     const products: PublicProduct[] = []
     menu.categories.forEach((category) => {
@@ -122,27 +116,20 @@ export default function MenuViewer({
     return products.slice(0, 4)
   }, [menu])
 
-  // Filtrar productos según búsqueda, categoría y filtros
+  // Filtrado
   const filteredCategories = useMemo(() => {
     return menu.categories
       .map((category) => ({
         ...category,
         products: category.products.filter((product) => {
-          // Filtro de búsqueda
           const matchesSearch =
             searchQuery === '' ||
             product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-
-          // Filtro de categoría
           const matchesCategory =
             selectedCategory === null || category.name === selectedCategory
-
-          // Filtro de disponibilidad
           const matchesAvailability =
-            filter === 'all' ||
-            (filter === 'available' && product.is_available)
-
+            filter === 'all' || (filter === 'available' && product.is_available)
           return matchesSearch && matchesCategory && matchesAvailability
         }),
       }))
@@ -155,7 +142,6 @@ export default function MenuViewer({
 
   const handleAddToCart = (product: PublicProduct) => {
     if (!product.is_available) return
-
     setCartItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
       if (existing) {
@@ -167,7 +153,7 @@ export default function MenuViewer({
       }
       return [...prev, { product, quantity: 1 }]
     })
-    setShowCart(true)
+    if (!showCart) toast.success('Producto agregado al carrito')
   }
 
   const handleRemoveFromCart = (productId: string) => {
@@ -187,103 +173,125 @@ export default function MenuViewer({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-      {/* Header optimizado para móvil */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 border-b border-border/50 shadow-lg">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <div className="bg-primary/10 rounded-full p-1.5 sm:p-2 shrink-0">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+    <div className="min-h-screen bg-background selection:bg-primary/20">
+      {/* Header Premium */}
+      <header className="sticky top-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/40">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Sparkles className="size-5 text-primary" />
               </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground truncate">
+              <div>
+                <h1 className="text-lg font-heading font-black tracking-tight leading-none">
                   Mesa {tableInfo.table_number}
                 </h1>
-                {tableInfo.name && (
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                    {tableInfo.name}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground font-medium">
+                  {tableInfo.name || 'Velox POS Menu'}
+                </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="default"
-              className="relative bg-background hover:bg-primary/10 active:bg-primary/20 border-2 transition-all shrink-0 touch-manipulation min-h-[44px] min-w-[44px] sm:min-w-auto"
-              onClick={() => setShowCart(!showCart)}
-            >
-              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
-              <span className="hidden sm:inline">Mi Pedido</span>
-              {totalCartItems > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1.5 -right-1.5 h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center p-0 text-xs font-bold shadow-lg"
-                >
-                  {totalCartItems}
-                </Badge>
-              )}
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center px-3 py-1.5 rounded-full bg-muted/50 border border-border/50">
+                <div className="size-2 rounded-full bg-emerald-500 animate-pulse mr-2" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Online</span>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden relative"
+                onClick={() => setShowCart(true)}
+              >
+                <ShoppingCart className="size-5" />
+                {totalCartItems > 0 && (
+                  <Badge className="absolute -top-1 -right-1 size-5 flex items-center justify-center p-0 text-[10px] font-bold">
+                    {totalCartItems}
+                  </Badge>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Barra de progreso de la orden (si existe) */}
-      {orderProgress && currentOrderData?.has_order && (
-        <div className="bg-background/95 backdrop-blur-sm border-b border-border/50 shadow-sm">
-          <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 max-w-7xl">
-            <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border-primary/20 shadow-lg">
-              <div className="p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-foreground">
-                      Estado de tu Pedido
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Orden {currentOrderData.order?.order_number}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="bg-primary/10 border-primary/30">
-                    {currentOrderData.order?.status === 'open' ? 'En Preparación' : currentOrderData.order?.status}
-                  </Badge>
-                </div>
-                <OrderProgressBar progress={orderProgress} compact={false} />
+      <main className="container mx-auto px-4 pb-24 sm:pb-32 pt-6">
+        <div className="flex gap-8">
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Search & Filters */}
+            <div className="flex flex-col gap-4 mb-8">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="¿Qué te apetece hoy?"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-14 pl-12 pr-4 text-base rounded-2xl border-none bg-muted/50 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all font-medium"
+                />
               </div>
-            </Card>
-          </div>
-        </div>
-      )}
 
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl w-full overflow-x-hidden">
-        <div className="flex gap-4 sm:gap-6 w-full">
-          {/* Contenido principal */}
-          <div className={cn('flex-1 transition-all duration-300 min-w-0', showCart && 'lg:mr-80')}>
-            {/* Barra de búsqueda optimizada para móvil */}
-            <div className="mb-4 sm:mb-6">
-              <div className="relative max-w-xl mx-auto">
-                <div className="absolute inset-0 bg-primary/5 rounded-lg sm:rounded-xl blur-sm" />
-                <div className="relative">
-                  <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground z-10" />
-                  <Input
-                    placeholder="Buscar productos..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 sm:pl-12 pr-4 py-3 sm:py-4 text-sm sm:text-base border-2 border-border/50 focus:border-primary shadow-lg bg-background/80 backdrop-blur-sm transition-all duration-300 active:shadow-xl touch-manipulation"
-                  />
-                </div>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                <Button
+                  variant={filter === 'all' ? 'default' : 'secondary'}
+                  size="sm"
+                  className="rounded-full font-bold px-6"
+                  onClick={() => setFilter('all')}
+                >
+                  <Filter className="size-3.5 mr-2" />
+                  Todos
+                </Button>
+                <Button
+                  variant={filter === 'available' ? 'default' : 'secondary'}
+                  size="sm"
+                  className="rounded-full font-bold px-6"
+                  onClick={() => setFilter('available')}
+                >
+                  Disponibles
+                </Button>
               </div>
             </div>
 
-            {/* Banner Hero con productos destacados */}
-            {featuredProducts.length > 0 && searchQuery === '' && selectedCategory === null && (
-              <HeroBanner
-                products={featuredProducts}
-                onAddToCart={handleAddToCart}
-              />
+            {/* Progress Card */}
+            {orderProgress && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-8"
+              >
+                <Card className="overflow-hidden border-primary/20 bg-primary/5 shadow-xl shadow-primary/5 rounded-3xl">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="size-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                          <ShoppingCart className="size-4 text-primary" />
+                        </div>
+                        <h3 className="font-heading font-bold">Tu Pedido Actual</h3>
+                      </div>
+                      <Badge className="rounded-full bg-primary/20 text-primary hover:bg-primary/20 border-none font-bold">
+                        {currentOrderData?.order?.status === 'open' ? 'Preparando' : currentOrderData?.order?.status}
+                      </Badge>
+                    </div>
+                    <OrderProgressBar progress={orderProgress} compact={true} />
+                  </div>
+                </Card>
+              </motion.div>
             )}
 
-            {/* Categorías horizontales scrollables */}
-            <div className="mb-4 sm:mb-6 -mx-3 sm:mx-0">
+            {/* Hero Items */}
+            {featuredProducts.length > 0 && !searchQuery && !selectedCategory && (
+              <div className="mb-10">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-heading font-black tracking-tight">Recomendados</h2>
+                  <Sparkles className="size-5 text-primary" />
+                </div>
+                <HeroBanner products={featuredProducts} onAddToCart={handleAddToCart} />
+              </div>
+            )}
+
+            {/* Category Navigation (Sticky) */}
+            <div className="sticky top-[72px] z-40 -mx-4 px-4 py-3 bg-background/80 backdrop-blur-md border-b border-border/40 mb-8 overflow-x-auto scrollbar-none">
               <CategoryTabs
                 categories={categories}
                 selectedCategory={selectedCategory}
@@ -291,93 +299,51 @@ export default function MenuViewer({
               />
             </div>
 
-            {/* Filtro de disponibilidad optimizado para móvil */}
-            {filteredCategories.length > 0 && (
-              <div className="mb-4 sm:mb-6 flex justify-center">
-                <div className="inline-flex gap-1.5 sm:gap-2 bg-muted/50 rounded-full p-1">
-                  <Button
-                    variant={filter === 'all' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilter('all')}
-                    className="rounded-full text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 touch-manipulation min-h-[36px]"
+            {/* Products Grid */}
+            <div className="space-y-12">
+              <AnimatePresence mode="popLayout">
+                {filteredCategories.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-20 text-center"
                   >
-                    Todos
-                  </Button>
-                  <Button
-                    variant={filter === 'available' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilter('available')}
-                    className="rounded-full text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 touch-manipulation min-h-[36px]"
-                  >
-                    Disponibles
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Grid de productos optimizado para móvil */}
-            <ScrollArea className="h-[calc(100vh-320px)] sm:h-[calc(100vh-400px)] md:h-[calc(100vh-450px)] w-full">
-              {filteredCategories.length === 0 ? (
-                <div className="text-center py-12 sm:py-16">
-                  <div className="bg-muted/50 rounded-full p-4 sm:p-6 w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 flex items-center justify-center">
-                    <Search className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground" />
-                  </div>
-                  <p className="text-base sm:text-lg font-semibold text-foreground mb-2">
-                    No se encontraron productos
-                  </p>
-                  <p className="text-sm sm:text-base text-muted-foreground px-4">
-                    Intenta con otros filtros o términos de búsqueda
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-10 sm:space-y-12 md:space-y-16 pb-6 sm:pb-8 w-full">
-                  {filteredCategories.map((category, categoryIndex) => (
-                    <div
-                      key={category.name}
-                      id={`category-${category.name}`}
-                      className="w-full animate-in fade-in slide-in-from-bottom-8"
-                      style={{
-                        animationDelay: `${categoryIndex * 100}ms`,
-                        animationFillMode: 'both',
-                      }}
-                    >
-                      {/* Header de categoría optimizado para móvil */}
-                      <div className="relative mb-5 sm:mb-8">
-                        <div className="flex items-center gap-3 sm:gap-4 w-full">
-                          <div className="h-1 sm:h-1.5 w-10 sm:w-16 bg-gradient-to-r from-primary to-primary/50 rounded-full shrink-0 shadow-lg shadow-primary/30" />
-                          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground truncate bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                            {category.name}
-                          </h2>
-                          <div className="flex-1 h-1 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent rounded-full min-w-0" />
-                          <Badge
-                            variant="secondary"
-                            className="text-xs sm:text-sm shrink-0 px-2 sm:px-3 py-0.5 sm:py-1 bg-primary/10 border border-primary/20 text-primary font-bold backdrop-blur-sm"
-                          >
-                            {category.products.length}
-                          </Badge>
-                        </div>
+                    <div className="size-20 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <Search className="size-10 text-muted-foreground/40" />
+                    </div>
+                    <h3 className="text-lg font-bold">No encontramos nada</h3>
+                    <p className="text-muted-foreground">Prueba con otros términos de búsqueda</p>
+                  </motion.div>
+                ) : (
+                  filteredCategories.map((category) => (
+                    <section key={category.name} className="scroll-mt-40">
+                      <div className="flex items-center gap-4 mb-6">
+                        <h2 className="text-xl font-heading font-black tracking-tight">{category.name}</h2>
+                        <div className="flex-1 h-px bg-border/40" />
+                        <Badge variant="outline" className="rounded-full border-border/40 font-bold">
+                          {category.products.length}
+                        </Badge>
                       </div>
-                      {/* Grid responsive: 1 col en móvil pequeño, 2 en móvil, 3 en tablet, 4 en desktop */}
-                      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6 w-full">
-                        {category.products.map((product, productIndex) => (
+                      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                        {category.products.map((product, idx) => (
                           <ProductCard
                             key={product.id}
                             product={product}
                             onAddToCart={() => handleAddToCart(product)}
-                            index={productIndex}
+                            index={idx}
                           />
                         ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+                    </section>
+                  ))
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/* Carrito lateral (desktop) */}
-          {showCart && (
-            <div className="hidden lg:block fixed right-0 top-0 h-screen w-80 bg-background border-l shadow-2xl z-40">
+          {/* Sidebar Cart (Desktop) */}
+          <aside className="hidden lg:block w-96 sticky top-24 h-[calc(100vh-120px)]">
+            <Card className="h-full rounded-3xl shadow-xl border-border/40 overflow-hidden">
               <OrderCart
                 items={cartItems}
                 onRemove={handleRemoveFromCart}
@@ -390,24 +356,61 @@ export default function MenuViewer({
                   setTimeout(() => refetchOrder(), 1000)
                 }}
               />
-            </div>
-          )}
+            </Card>
+          </aside>
         </div>
-      </div>
+      </main>
 
-      {/* Carrito móvil (bottom sheet) - Altura aumentada para mostrar más productos */}
-      {showCart && (
-        <div className="lg:hidden fixed inset-x-0 bottom-0 bg-background border-t shadow-2xl z-50 rounded-t-2xl flex flex-col" style={{ height: '700px', maxHeight: '85vh' }}>
-          <OrderCart
-            items={cartItems}
-            onRemove={handleRemoveFromCart}
-            onUpdateQuantity={handleUpdateQuantity}
-            onClose={() => setShowCart(false)}
-            tableId={tableId}
-            qrCode={qrCode}
-          />
-        </div>
-      )}
+      {/* Floating Action Button (FAB) Mobile */}
+      <AnimatePresence>
+        {totalCartItems > 0 && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0, opacity: 0, y: 20 }}
+            className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md"
+          >
+            <Button
+              onClick={() => setShowCart(true)}
+              className="w-full h-16 rounded-2xl shadow-2xl shadow-primary/40 bg-primary hover:bg-primary text-white flex items-center justify-between px-6 font-bold text-lg group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="size-8 rounded-lg bg-white/20 flex items-center justify-center">
+                  <ShoppingCart className="size-5" />
+                </div>
+                <span>Ver mi pedido</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-white text-primary rounded-full size-7 flex items-center justify-center p-0 font-black">
+                  {totalCartItems}
+                </Badge>
+                <ChevronRight className="size-5 transition-transform group-active:translate-x-1" />
+              </div>
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Cart Drawer */}
+      <Drawer open={showCart} onOpenChange={setShowCart}>
+        <DrawerContent className="max-h-[92vh]">
+          <div className="flex-1 overflow-y-auto px-4 pb-8">
+            <OrderCart
+              items={cartItems}
+              onRemove={handleRemoveFromCart}
+              onUpdateQuantity={handleUpdateQuantity}
+              onClose={() => setShowCart(false)}
+              tableId={tableId}
+              qrCode={qrCode}
+              onOrderCreated={() => {
+                setOrderCreated(true)
+                setShowCart(false)
+                refetchOrder()
+              }}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }

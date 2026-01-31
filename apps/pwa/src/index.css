@@ -395,6 +395,24 @@
     background-size: 24px 24px;
   }
 
+  /* Magic UI - Shining Gradient */
+  @keyframes shining-gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .bg-shining-gradient {
+    background-size: 300% 300%;
+    animation: shining-gradient var(--duration) ease infinite;
+  }
+
   /* Layout refinements */
   .main-content-area {
     @apply transition-all duration-300 ease-in-out;

@@ -17,8 +17,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { AuthLayout } from '@/layouts'
-import { GlassCard } from '@/components/animated'
+import { Card, CardContent } from '@/components/ui/card'
+import ShineBorder from '@/components/magicui/shine-border'
 import { colors, motionVariants } from '@/design-system'
 import { LicenseInfoCard } from '@/components/auth/LicenseInfoCard'
 
@@ -167,12 +167,17 @@ export default function RegisterPage() {
   // Si el registro fue exitoso, mostrar información de licencia
   if (registrationSuccess) {
     return (
-      <AuthLayout showParticles showLogo={false}>
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfaf8] relative overflow-hidden px-6 py-10">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.14),transparent_40%)]" />
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-2xl mx-auto"
+          className="w-full max-w-2xl mx-auto relative z-10"
         >
           {/* Success Header */}
           <div className="text-center mb-8">
@@ -224,50 +229,55 @@ export default function RegisterPage() {
             </motion.p>
           </div>
 
-          {/* License Info Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-6"
+          <ShineBorder
+            className="w-full bg-transparent mb-6"
+            borderRadius={24}
+            borderWidth={1.5}
+            duration={14}
+            color={["#0C81CF", "#9ad4fb", "#0C81CF"]}
           >
-            <LicenseInfoCard
-              license_plan={registrationSuccess.license_plan}
-              license_status={registrationSuccess.license_status}
-              license_expires_at={registrationSuccess.license_expires_at}
-              license_grace_days={registrationSuccess.license_grace_days}
-              trial_days_remaining={registrationSuccess.trial_days_remaining}
-            />
-          </motion.div>
+            <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
+              <CardContent className="p-6 space-y-6 bg-gradient-to-b from-white to-[#fbfaf8]">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <LicenseInfoCard
+                    license_plan={registrationSuccess.license_plan}
+                    license_status={registrationSuccess.license_status}
+                    license_expires_at={registrationSuccess.license_expires_at}
+                    license_grace_days={registrationSuccess.license_grace_days}
+                    trial_days_remaining={registrationSuccess.trial_days_remaining}
+                  />
+                </motion.div>
 
-          {/* Store ID Info */}
-          <GlassCard className="mb-6">
-            <div className="p-6 space-y-4">
-              <div>
-                <Label className="text-muted-foreground text-sm mb-2 block">
-                  ID de tu Tienda
-                </Label>
-                <div className="flex items-center gap-2">
-                  <code className="px-3 py-2 bg-slate-100 rounded-lg text-sm font-mono text-slate-800 flex-1">
-                    {registrationSuccess.store_id}
-                  </code>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(registrationSuccess.store_id)
-                      toast.success('ID copiado al portapapeles')
-                    }}
-                  >
-                    Copiar
-                  </Button>
+                <div>
+                  <Label className="text-muted-foreground text-sm mb-2 block">
+                    ID de tu Tienda
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <code className="px-3 py-2 bg-slate-100 rounded-lg text-sm font-mono text-slate-800 flex-1">
+                      {registrationSuccess.store_id}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(registrationSuccess.store_id)
+                        toast.success('ID copiado al portapapeles')
+                      }}
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Guarda este ID, lo necesitarás para iniciar sesión
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Guarda este ID, lo necesitarás para iniciar sesión
-                </p>
-              </div>
-            </div>
-          </GlassCard>
+              </CardContent>
+            </Card>
+          </ShineBorder>
 
           {/* Action Buttons */}
           <motion.div
@@ -305,18 +315,23 @@ export default function RegisterPage() {
             Usa el ID de tienda y el PIN del administrador o del cajero para iniciar sesión
           </motion.p>
         </motion.div>
-      </AuthLayout>
+      </div>
     )
   }
 
   // Formulario de registro
   return (
-    <AuthLayout showParticles showLogo={false}>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfaf8] relative overflow-hidden px-6 py-10">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.14),transparent_40%)]" />
+      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md mx-auto"
+        className="w-full max-w-md mx-auto relative z-10"
       >
         {/* Header */}
         <div className="text-center mb-10">
@@ -373,17 +388,16 @@ export default function RegisterPage() {
           </motion.p>
         </div>
 
-        {/* Main Card */}
-        <GlassCard className="overflow-hidden" hoverScale={1} delay={0.2}>
-          {/* Top accent line */}
-          <div
-            className="h-1"
-            style={{
-              background: `linear-gradient(to right, ${colors.brand.primary}, ${colors.brand.primarySoft}, ${colors.brand.primary})`,
-            }}
-          />
-
-          <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+        <ShineBorder
+          className="w-full bg-transparent"
+          borderRadius={24}
+          borderWidth={1.5}
+          duration={14}
+          color={["#0C81CF", "#9ad4fb", "#0C81CF"]}
+        >
+          <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
+            <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-[#fbfaf8]">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Store Name */}
             <motion.div
               className="space-y-3"
@@ -718,8 +732,10 @@ export default function RegisterPage() {
                 )}
               </Button>
             </motion.div>
-          </form>
-        </GlassCard>
+              </form>
+            </CardContent>
+          </Card>
+        </ShineBorder>
 
         {/* Footer with login link */}
         <motion.div
@@ -740,6 +756,6 @@ export default function RegisterPage() {
           </p>
         </motion.div>
       </motion.div>
-    </AuthLayout>
+    </div>
   )
 }

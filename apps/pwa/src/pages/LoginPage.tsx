@@ -19,10 +19,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { GlassCard } from '@/components/animated'
+import { Card, CardContent } from '@/components/ui/card'
 import { colors, motionVariants } from '@/design-system'
-import { Iphone } from '@/components/ui/iphone'
-import { FloatingParticles } from '@/components/aceternity'
+import ShineBorder from '@/components/magicui/shine-border'
 
 // ============================================================================
 // Schema & Types
@@ -145,64 +144,14 @@ export default function LoginPage() {
   }, [selectedStoreId, selectedCashierId])
 
   return (
-    <div className="min-h-screen w-full flex bg-white overflow-hidden">
-
-      {/* ========================================
-          LEFT SIDE - IPHONE MOCKUP (Desktop Only)
-      ======================================== */}
-      <div className="hidden lg:flex w-[45%] relative flex-col items-center justify-center p-8 overflow-hidden"
-        style={{ background: `linear-gradient(135deg, ${colors.brand.primary}, #0A6AB0)` }}>
-
-        {/* Background Patterns */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-          <FloatingParticles
-            count={20}
-            color="rgba(255, 255, 255, 0.2)"
-            minSize={2}
-            maxSize={4}
-            className="absolute inset-0"
-          />
-        </div>
-
-        {/* Content Container - Flex column to vertically center */}
-        <div className="relative z-10 w-full flex flex-col items-center max-w-sm mx-auto">
-          {/* Phone */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="w-[260px] mx-auto"
-          >
-            <Iphone
-              videoSrc="/demo-video.mov"
-              className="drop-shadow-2xl shadow-black/30"
-            />
-          </motion.div>
-
-          {/* Text Content */}
-          <motion.div
-            className="text-center mt-8 space-y-4 text-white"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <h2 className="text-2xl font-bold tracking-tight">
-              Tu negocio, simplificado
-            </h2>
-            <p className="text-blue-100 text-sm leading-relaxed px-4">
-              Gestiona ventas, inventario y reportes desde cualquier lugar.
-            </p>
-          </motion.div>
-        </div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfaf8] relative overflow-hidden px-6 py-10">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.14),transparent_40%)]" />
       </div>
 
-      {/* ========================================
-          RIGHT SIDE - LOGIN FORM
-      ======================================== */}
-      <div className="w-full lg:w-[55%] h-full min-h-screen flex items-center justify-center p-6 relative bg-slate-50">
-        <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-8 relative z-10">
 
           {/* Header */}
           <div className="text-center space-y-4">
@@ -211,11 +160,9 @@ export default function LoginPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1, type: "spring" }}
             >
-              <img
-                src="/login-image.svg"
-                alt="Velox POS"
-                className="h-20 mx-auto object-contain"
-              />
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm border border-white/70">
+                <img src="/logo-velox.svg" alt="Velox POS" className="h-8 w-8" />
+              </div>
             </motion.div>
 
             <motion.div
@@ -223,11 +170,11 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Bienvenido
+              <h1 className="text-3xl font-heading font-semibold tracking-tight text-slate-900">
+                Bienvenido de nuevo
               </h1>
-              <p className="text-slate-500 mt-2">
-                Inicia sesión en tu punto de venta
+              <p className="text-slate-500 mt-2 text-sm">
+                Accede a tu operación con estilo y precisión.
               </p>
             </motion.div>
           </div>
@@ -274,20 +221,16 @@ export default function LoginPage() {
           </motion.div>
 
           {/* Main Card */}
-          <GlassCard
-            className="overflow-hidden border-slate-200 shadow-xl shadow-slate-200/50 bg-white/80"
-            hoverScale={1}
-            delay={0.2}
+          <ShineBorder
+            className="w-full bg-transparent"
+            borderRadius={28}
+            borderWidth={1.6}
+            duration={14}
+            color={["#0C81CF", "#9ad4fb", "#0C81CF"]}
           >
-            {/* Gradient Line */}
-            <div
-              className="h-1 w-full"
-              style={{
-                background: `linear-gradient(to right, ${colors.brand.primary}, ${colors.brand.primarySoft}, ${colors.brand.primary})`,
-              }}
-            />
-
-            <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+            <Card className="overflow-hidden rounded-[26px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
+              <CardContent className="p-9 space-y-7 bg-gradient-to-b from-white to-[#fbfaf8]">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
               {/* Store Selection */}
               <motion.div
                 className="space-y-3"
@@ -297,12 +240,9 @@ export default function LoginPage() {
               >
                 <Label
                   htmlFor="store_id"
-                  className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                  className="text-xs font-semibold tracking-[0.2em] text-slate-500 flex items-center gap-2 uppercase"
                 >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: colors.brand.primary }}
-                  />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0C81CF]" />
                   Tienda
                 </Label>
 
@@ -321,15 +261,15 @@ export default function LoginPage() {
                     >
                       <SelectTrigger
                         className={cn(
-                          'h-12 text-base border-2 transition-all duration-200 focus:ring-0 focus:ring-offset-0 bg-white',
+                          'h-12 text-base border transition-all duration-200 focus:ring-0 focus:ring-offset-0 bg-white/90 shadow-sm',
                           errors.store_id
                             ? 'border-destructive focus:border-destructive'
-                            : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                            : 'border-slate-200/70 focus:border-[rgba(12,129,207,0.8)] hover:border-[rgba(12,129,207,0.4)]'
                         )}
                       >
                         <SelectValue placeholder="Selecciona tu tienda" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white">
+                      <SelectContent className="bg-white border border-slate-200/60">
                         {stores?.map((store) => {
                           const expired = store.license_expires_at
                             ? new Date(store.license_expires_at).getTime() < Date.now()
@@ -372,11 +312,8 @@ export default function LoginPage() {
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                     className="space-y-3 overflow-hidden"
                   >
-                    <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: colors.brand.primary }}
-                      />
+                    <Label className="text-xs font-semibold tracking-[0.2em] text-slate-500 flex items-center gap-2 uppercase">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0C81CF]" />
                       Empleado
                     </Label>
 
@@ -402,10 +339,10 @@ export default function LoginPage() {
                               type="button"
                               onClick={() => setSelectedCashierId(cashier.user_id)}
                               className={cn(
-                                'flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 w-full',
+                                'flex items-center gap-4 p-4 rounded-2xl border transition-all duration-200 w-full',
                                 isSelected
-                                  ? 'border-[rgb(13,129,206)] bg-[rgba(13,129,206,0.05)] shadow-md'
-                                  : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] hover:bg-slate-50/50 bg-white'
+                                  ? 'border-[rgba(12,129,207,0.6)] bg-[rgba(12,129,207,0.08)] shadow-[0_12px_30px_rgba(12,129,207,0.12)]'
+                                  : 'border-slate-200/70 hover:border-[rgba(12,129,207,0.35)] hover:bg-white bg-white/90 shadow-sm'
                               )}
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
@@ -415,9 +352,9 @@ export default function LoginPage() {
                               {/* Avatar */}
                               <div
                                 className={cn(
-                                  'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200',
+                                  'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200 ring-1 ring-white/70',
                                   isSelected
-                                    ? 'bg-[rgb(13,129,206)] text-white'
+                                    ? 'bg-[rgb(12,129,207)] text-white'
                                     : 'bg-slate-100 text-slate-600'
                                 )}
                               >
@@ -428,7 +365,7 @@ export default function LoginPage() {
                                 <p
                                   className={cn(
                                     'text-sm font-semibold transition-colors duration-200',
-                                    isSelected ? 'text-[rgb(13,129,206)]' : 'text-slate-900'
+                                    isSelected ? 'text-[rgb(12,129,207)]' : 'text-slate-900'
                                   )}
                                 >
                                   {cashier.full_name || 'Sin nombre'}
@@ -483,12 +420,9 @@ export default function LoginPage() {
                   >
                     <Label
                       htmlFor="pin"
-                      className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                      className="text-xs font-semibold tracking-[0.2em] text-slate-500 flex items-center gap-2 uppercase"
                     >
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: colors.brand.primary }}
-                      />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0C81CF]" />
                       PIN
                       {selectedCashierName && (
                         <span className="font-normal text-slate-500">
@@ -503,12 +437,11 @@ export default function LoginPage() {
                       placeholder="••••"
                       maxLength={8}
                       className={cn(
-                        'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
+                        'h-14 text-center text-2xl tracking-[0.5em] font-semibold border transition-all duration-200 bg-white/90 shadow-sm',
                         'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none',
-                        'focus-visible:ring-0 focus-visible:ring-offset-0 ring-0 ring-offset-0 bg-white',
                         errors.pin
                           ? 'border-destructive focus:border-destructive'
-                          : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'
+                          : 'border-slate-200/70 hover:border-[rgba(12,129,207,0.35)] focus:border-[rgba(12,129,207,0.8)]'
                       )}
                       {...register('pin')}
                       autoFocus
@@ -576,12 +509,14 @@ export default function LoginPage() {
                   )}
                 </Button>
               </motion.div>
-            </form>
-          </GlassCard>
+                </form>
+              </CardContent>
+            </Card>
+          </ShineBorder>
 
           {/* Footer hint */}
           <motion.div
-            className="text-center mt-6 space-y-2"
+            className="text-center mt-10 space-y-2 text-[#5f6b7a]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
@@ -610,15 +545,17 @@ export default function LoginPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="text-center"
+            transition={{ delay: 0.8 }}
+            className="text-center mt-8"
           >
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] uppercase tracking-[0.32em] text-[#0C81CF] font-semibold">
+              Velox POS · Operación elegante
+            </p>
+            <p className="text-xs text-slate-400 mt-2">
               © {new Date().getFullYear()} Velox POS. Todos los derechos reservados.
             </p>
           </motion.div>
         </div>
       </div>
-    </div>
   )
 }

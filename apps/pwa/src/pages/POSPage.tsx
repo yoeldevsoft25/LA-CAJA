@@ -47,6 +47,8 @@ export default function POSPage() {
 
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
+  const mobileSearchRef = useRef<HTMLDivElement | null>(null)
+  const [mobileResultsTop, setMobileResultsTop] = useState<number | null>(null)
   const [showCheckout, setShowCheckout] = useState(false)
   const [shouldPrint, setShouldPrint] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -243,6 +245,27 @@ export default function POSPage() {
       });
     }
   }, [user?.store_id, searchQuery]);
+
+  useEffect(() => {
+    if (!isMobile || searchQuery.trim().length < 2) {
+      setMobileResultsTop(null)
+      return
+    }
+
+    const updatePosition = () => {
+      const rect = mobileSearchRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMobileResultsTop(rect.bottom + 8)
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [isMobile, searchQuery])
 
   // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading, isError: isProductsError } = useQuery({
@@ -763,60 +786,119 @@ export default function POSPage() {
 
 
   return (
-    <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-hidden flex flex-col p-2 lg:p-4">
+    <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4">
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
       <div className={cn(
         "grid gap-3 sm:gap-4 flex-1 min-h-0",
         isTabletLandscape ? "grid-cols-[1.3fr_1fr]" : "grid-cols-1 lg:grid-cols-[1fr_400px]"
       )}>
         {/* Búsqueda y Lista de Productos */}
-        {/* Columna Izquierda: Catálogo */}
-        <div className={cn(
-          "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border-2 border-border shadow-md p-3"
-        )}>
-          <CatalogHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            scannerStatus={scannerStatus}
-            scannerSoundEnabled={scannerSoundEnabled}
-            onToggleScannerSound={() => setScannerSoundEnabled(!scannerSoundEnabled)}
-            onRefresh={() => {
-              queryClient.invalidateQueries({ queryKey: ['products'] })
-              toast.success('Actualizando productos...')
-            }}
-            isRefetching={isLoading}
-          />
-
-          <QuickActions
-            recentProducts={recentProducts}
-            suggestedProducts={suggestedProducts}
-            isSearching={searchQuery.length > 0}
-            onProductClick={handleProductClick}
-            onRecentClick={(item: any) => {
-              const inList = products.find((p: any) => p.id === item.product_id)
-              if (inList) handleProductClick(inList)
-              else setSearchQuery(item.name)
-            }}
-          />
-
-          <div className="flex-1 min-h-0 relative">
-            <ProductCatalog
-              products={products as any[]}
-              isLoading={isLoading}
-              isError={isProductsError}
+        {/* Columna Izquierda: Catálogo (ocultar en mobile) */}
+        {!isMobile && (
+          <div className={cn(
+            "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border-2 border-border shadow-md p-3"
+          )}>
+            <CatalogHeader
               searchQuery={searchQuery}
-              lowStockIds={lowStockIds}
-              onProductClick={handleProductClick}
-              exchangeRate={exchangeRate}
+              onSearchChange={setSearchQuery}
+              scannerStatus={scannerStatus}
+              scannerSoundEnabled={scannerSoundEnabled}
+              onToggleScannerSound={() => setScannerSoundEnabled(!scannerSoundEnabled)}
+              onRefresh={() => {
+                queryClient.invalidateQueries({ queryKey: ['products'] })
+                toast.success('Actualizando productos...')
+              }}
+              isRefetching={isLoading}
             />
+
+            <QuickActions
+              recentProducts={recentProducts}
+              suggestedProducts={suggestedProducts}
+              isSearching={searchQuery.length > 0}
+              isMobile={isMobile}
+              onProductClick={handleProductClick}
+              onRecentClick={(item: any) => {
+                const inList = products.find((p: any) => p.id === item.product_id)
+                if (inList) handleProductClick(inList)
+                else setSearchQuery(item.name)
+              }}
+            />
+
+            <div className="flex-1 min-h-0 relative">
+              <ProductCatalog
+                products={products as any[]}
+                isLoading={isLoading}
+                isError={isProductsError}
+                searchQuery={searchQuery}
+                lowStockIds={lowStockIds}
+                onProductClick={handleProductClick}
+                exchangeRate={exchangeRate}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Carrito - Flex para ocupar altura completa */}
         <div className={cn(
-          "flex flex-col h-full overflow-hidden min-h-0",
+          "flex flex-col h-full min-h-0",
+          isMobile ? "overflow-visible" : "overflow-hidden",
           !isTabletLandscape && "lg:col-span-1"
         )}>
+          {isMobile && (
+            <div className="mb-3" ref={mobileSearchRef}>
+              <CatalogHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                scannerStatus={scannerStatus}
+                scannerSoundEnabled={scannerSoundEnabled}
+                onToggleScannerSound={() => setScannerSoundEnabled(!scannerSoundEnabled)}
+                onRefresh={() => {
+                  queryClient.invalidateQueries({ queryKey: ['products'] })
+                  toast.success('Actualizando productos...')
+                }}
+                isRefetching={isLoading}
+              />
+            </div>
+          )}
+          {isMobile && searchQuery.trim().length >= 2 && mobileResultsTop !== null && (
+            <div
+              className="fixed left-0 right-0 z-[100] px-2"
+              style={{ top: mobileResultsTop }}
+            >
+              <div className="rounded-xl border border-border/50 bg-card shadow-lg overflow-hidden">
+                <div className="px-3 py-2 border-b border-border/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Resultados
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {products.length === 0 ? (
+                    <div className="px-3 py-4 text-sm text-muted-foreground">
+                      No se encontraron productos.
+                    </div>
+                  ) : (
+                    products.slice(0, 8).map((product: any) => (
+                      <button
+                        key={`mobile-result-${product.id}`}
+                        onClick={() => handleProductClick(product)}
+                        className="w-full px-3 py-2 text-left hover:bg-muted/40 transition-colors border-b border-border/20 last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium truncate">{product.name}</div>
+                            {product.barcode && (
+                              <div className="text-[11px] text-muted-foreground truncate">{product.barcode}</div>
+                            )}
+                          </div>
+                          <div className="text-sm font-semibold whitespace-nowrap">
+                            ${Number(product.price_usd || 0).toFixed(2)}
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           <POSCart
             items={items}
             cartSummaries={cartSummaries}

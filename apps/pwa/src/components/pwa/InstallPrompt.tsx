@@ -1,7 +1,7 @@
 import { usePWAInstall } from '@/hooks/usePWAInstall'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Download, X, Share, Plus, Smartphone } from 'lucide-react'
+import { Download, X, Share, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface InstallPromptProps {
@@ -10,10 +10,10 @@ interface InstallPromptProps {
 }
 
 export default function InstallPrompt({ className, variant = 'banner' }: InstallPromptProps) {
-  const { isInstallable, isIOS, promptInstall, dismissPrompt } = usePWAInstall()
+  const { isInstallable, isIOS, promptInstall, dismissPrompt, wasPromptDismissed } = usePWAInstall()
 
   // Si ya está instalado o no es instalable, no mostrar nada
-  if (!isInstallable && !isIOS) {
+  if (!isInstallable && (!isIOS || wasPromptDismissed)) {
     return null
   }
 
@@ -58,8 +58,8 @@ export default function InstallPrompt({ className, variant = 'banner' }: Install
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           {/* Icono */}
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Smartphone className="w-6 h-6 text-primary" />
+          <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center flex-shrink-0 border border-border/50">
+            <img src="/logo-velox.svg" alt="Velox POS" className="w-8 h-8" />
           </div>
 
           {/* Contenido */}
