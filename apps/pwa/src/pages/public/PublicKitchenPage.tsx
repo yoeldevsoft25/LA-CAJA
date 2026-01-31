@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Clock, UtensilsCrossed, ChefHat, CheckCircle2 } from 'lucide-react'
-import { publicKitchenService } from '@/services/public-kitchen.service'
+import { publicKitchenService, type KitchenOrder } from '@/services/public-kitchen.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,12 +17,12 @@ export default function PublicKitchenPage() {
   const [pinValue, setPinValue] = useState('')
   const [pinApplied, setPinApplied] = useState(false)
 
-  const { data: orders, isLoading, isError, error, refetch } = useQuery({
+  const { data: orders, isLoading, isError, error, refetch } = useQuery<KitchenOrder[]>({
     queryKey: ['public-kitchen-orders', token, pinApplied ? pinValue : ''],
     queryFn: () => publicKitchenService.getKitchenOrders(token || '', pinApplied ? pinValue : undefined),
     enabled: !!token && (pinApplied || pinValue === ''),
     staleTime: 1000 * 5,
-    refetchInterval: orders ? 1000 * 5 : false,
+    refetchInterval: (query) => (query.state.data && query.state.data.length > 0) ? 1000 * 5 : false,
   })
 
   const formatTime = (minutes: number) => {
