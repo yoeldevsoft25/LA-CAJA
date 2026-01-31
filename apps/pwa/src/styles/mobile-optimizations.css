@@ -26,6 +26,13 @@
     overscroll-behavior-y: contain;
   }
 
+  /* Permitir scroll vertical desde cualquier área */
+  html,
+  body,
+  #root {
+    touch-action: pan-y;
+  }
+
   /* Lazy loading de secciones fuera del viewport */
   section:not([data-visible="true"]) {
     content-visibility: auto;

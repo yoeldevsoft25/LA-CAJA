@@ -719,100 +719,108 @@ export default function MainLayout() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <SyncStatusBadge />
+            <span
+              className="sm:hidden inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_0_4px_rgba(16,185,129,0.18)]"
+              aria-hidden="true"
+            />
+            <div className="hidden sm:flex">
+              <SyncStatusBadge />
+            </div>
             {/* Exchange Rate Indicator */}
             <ExchangeRateIndicator className="hidden sm:flex" />
             <ExchangeRateIndicator compact className="sm:hidden" />
 
             {/* Notifications */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative"
-                  aria-label={`Notificaciones${unreadCount > 0 ? `, ${unreadCount} sin leer` : ''}`}
-                  aria-expanded={false}
-                >
-                  <Bell className="w-5 h-5" aria-hidden="true" />
-                  {unreadCount > 0 && (
-                    <span
-                      className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-destructive text-[10px] leading-[18px] rounded-full text-white text-center"
-                      aria-hidden="true"
-                    >
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 p-0 flex flex-col max-h-[500px]">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-                  <div>
-                    <p className="text-sm font-semibold">Notificaciones</p>
-                    <p className="text-xs text-muted-foreground">
-                      {unreadCount} sin leer · {notifications.length} total
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={markAllAsRead}>
-                      Marcar leídas
-                    </Button>
-                  </div>
-                </div>
-                {notifications.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                    Sin notificaciones
-                  </div>
-                ) : (
-                  <div className="overflow-y-auto overflow-x-hidden max-h-[400px]">
-                    <div className="divide-y divide-border">
-                      {notifications.map((n) => {
-                        const Icon =
-                          n.type === 'warning'
-                            ? AlertTriangle
-                            : n.type === 'success'
-                              ? CheckCircle2
-                              : Info
-                        const color =
-                          n.type === 'warning'
-                            ? 'text-amber-600'
-                            : n.type === 'success'
-                              ? 'text-emerald-600'
-                              : n.type === 'error'
-                                ? 'text-red-600'
-                                : 'text-primary'
-                        return (
-                          <button
-                            key={n.id}
-                            className={cn(
-                              'w-full text-left px-4 py-3 hover:bg-accent transition-colors',
-                              !n.read && 'bg-accent/40'
-                            )}
-                            onClick={() => markAsRead(n.id)}
-                          >
-                            <div className="flex gap-3 items-start">
-                              <Icon className={cn('w-4 h-4 mt-0.5 flex-shrink-0', color)} />
-                              <div className="flex-1 space-y-0.5 min-w-0">
-                                <p className="text-sm font-medium text-foreground">{n.title}</p>
-                                {n.description && (
-                                  <p className="text-xs text-muted-foreground line-clamp-2">{n.description}</p>
-                                )}
-                                <p className="text-[10px] text-muted-foreground">
-                                  {new Date(n.created_at).toLocaleString()}
-                                </p>
-                              </div>
-                              {!n.read && <span className="w-2 h-2 rounded-full bg-primary mt-1 flex-shrink-0" />}
-                            </div>
-                          </button>
-                        )
-                      })}
+            <div className="hidden sm:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    aria-label={`Notificaciones${unreadCount > 0 ? `, ${unreadCount} sin leer` : ''}`}
+                    aria-expanded={false}
+                  >
+                    <Bell className="w-5 h-5" aria-hidden="true" />
+                    {unreadCount > 0 && (
+                      <span
+                        className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-destructive text-[10px] leading-[18px] rounded-full text-white text-center"
+                        aria-hidden="true"
+                      >
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 p-0 flex flex-col max-h-[500px]">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+                    <div>
+                      <p className="text-sm font-semibold">Notificaciones</p>
+                      <p className="text-xs text-muted-foreground">
+                        {unreadCount} sin leer · {notifications.length} total
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={markAllAsRead}>
+                        Marcar leídas
+                      </Button>
                     </div>
                   </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                      Sin notificaciones
+                    </div>
+                  ) : (
+                    <div className="overflow-y-auto overflow-x-hidden max-h-[400px]">
+                      <div className="divide-y divide-border">
+                        {notifications.map((n) => {
+                          const Icon =
+                            n.type === 'warning'
+                              ? AlertTriangle
+                              : n.type === 'success'
+                                ? CheckCircle2
+                                : Info
+                          const color =
+                            n.type === 'warning'
+                              ? 'text-amber-600'
+                              : n.type === 'success'
+                                ? 'text-emerald-600'
+                                : n.type === 'error'
+                                  ? 'text-red-600'
+                                  : 'text-primary'
+                          return (
+                            <button
+                              key={n.id}
+                              className={cn(
+                                'w-full text-left px-4 py-3 hover:bg-accent transition-colors',
+                                !n.read && 'bg-accent/40'
+                              )}
+                              onClick={() => markAsRead(n.id)}
+                            >
+                              <div className="flex gap-3 items-start">
+                                <Icon className={cn('w-4 h-4 mt-0.5 flex-shrink-0', color)} />
+                                <div className="flex-1 space-y-0.5 min-w-0">
+                                  <p className="text-sm font-medium text-foreground">{n.title}</p>
+                                  {n.description && (
+                                    <p className="text-xs text-muted-foreground line-clamp-2">{n.description}</p>
+                                  )}
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {new Date(n.created_at).toLocaleString()}
+                                  </p>
+                                </div>
+                                {!n.read && <span className="w-2 h-2 rounded-full bg-primary mt-1 flex-shrink-0" />}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
             {/* User Menu */}
             <DropdownMenu>
@@ -834,6 +842,74 @@ export default function MainLayout() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                <div className="sm:hidden">
+                  <div className="px-3 py-2 flex items-center justify-between border-b border-border">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <Bell className="w-4 h-4 text-muted-foreground" />
+                      Notificaciones
+                    </div>
+                    {unreadCount > 0 && (
+                      <span className="min-w-[18px] h-[18px] px-1 bg-destructive text-[10px] leading-[18px] rounded-full text-white text-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="px-3 py-3 text-center text-xs text-muted-foreground border-b border-border">
+                      Sin notificaciones
+                    </div>
+                  ) : (
+                    <div className="max-h-56 overflow-y-auto border-b border-border">
+                      {notifications.map((n) => {
+                        const Icon =
+                          n.type === 'warning'
+                            ? AlertTriangle
+                            : n.type === 'success'
+                              ? CheckCircle2
+                              : Info
+                        const color =
+                          n.type === 'warning'
+                            ? 'text-amber-600'
+                            : n.type === 'success'
+                              ? 'text-emerald-600'
+                              : n.type === 'error'
+                                ? 'text-red-600'
+                                : 'text-primary'
+                        return (
+                          <button
+                            key={n.id}
+                            className={cn(
+                              'w-full text-left px-3 py-2 hover:bg-accent transition-colors',
+                              !n.read && 'bg-accent/40'
+                            )}
+                            onClick={() => markAsRead(n.id)}
+                          >
+                            <div className="flex gap-2 items-start">
+                              <Icon className={cn('w-4 h-4 mt-0.5 flex-shrink-0', color)} />
+                              <div className="flex-1 space-y-0.5 min-w-0">
+                                <p className="text-xs font-medium text-foreground line-clamp-2">{n.title}</p>
+                                {n.description && (
+                                  <p className="text-[10px] text-muted-foreground line-clamp-2">{n.description}</p>
+                                )}
+                                <p className="text-[10px] text-muted-foreground">
+                                  {new Date(n.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                              {!n.read && <span className="w-2 h-2 rounded-full bg-primary mt-1 flex-shrink-0" />}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {notifications.length > 0 && (
+                    <div className="px-3 py-2">
+                      <Button size="sm" variant="ghost" className="w-full" onClick={markAllAsRead}>
+                        Marcar todas como leídas
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
