@@ -10,6 +10,7 @@ import { QRCode } from '../database/entities/qr-code.entity';
 import { Table } from '../database/entities/table.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { RecipesService } from '../recipes/recipes.service';
+import { RedisCacheService } from '../common/cache/redis-cache.service';
 
 /**
  * Servicio para menú público
@@ -27,6 +28,7 @@ export class MenuService {
     @InjectRepository(InventoryMovement)
     private inventoryMovementRepository: Repository<InventoryMovement>,
     private recipesService: RecipesService,
+    private cache: RedisCacheService,
   ) { }
 
   /**
@@ -36,6 +38,15 @@ export class MenuService {
     table: Table;
     qrCode: QRCode;
   }> {
+    const cacheKey = `menu:qr:${qrCodeString}`;
+    const cached = await this.cache.get<{
+      table: Table;
+      qrCode: QRCode;
+    }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const qrCode = await this.qrCodeRepository.findOne({
       where: { qr_code: qrCodeString },
       relations: ['table', 'store'],
@@ -62,7 +73,9 @@ export class MenuService {
       throw new NotFoundException('Mesa no encontrada');
     }
 
-    return { table, qrCode };
+    const result = { table, qrCode };
+    await this.cache.set(cacheKey, result, 300);
+    return result;
   }
 
   /**
@@ -84,6 +97,25 @@ export class MenuService {
       }>;
     }>;
   }> {
+    const cacheKey = `menu:public:${storeId}`;
+    const cached = await this.cache.get<{
+      categories: Array<{
+        name: string;
+        products: Array<{
+          id: string;
+          name: string;
+          category: string | null;
+          price_bs: number;
+          price_usd: number;
+          description: string | null;
+          image_url: string | null;
+          is_available: boolean;
+          stock_available: number | null;
+        }>;
+      }>;
+    }>(cacheKey);
+    if (cached) return cached;
+
     // Obtener todos los productos activos de la tienda
     const products = await this.productRepository.find({
       where: {
@@ -150,7 +182,9 @@ export class MenuService {
       }),
     );
 
-    return { categories };
+    const result = { categories };
+    await this.cache.set(cacheKey, result, 30);
+    return result;
   }
 
   /**
@@ -167,6 +201,20 @@ export class MenuService {
     is_available: boolean;
     stock_available: number | null;
   }> {
+    const cacheKey = `menu:public:product:${storeId}:${productId}`;
+    const cached = await this.cache.get<{
+      id: string;
+      name: string;
+      category: string | null;
+      price_bs: number;
+      price_usd: number;
+      description: string | null;
+      image_url: string | null;
+      is_available: boolean;
+      stock_available: number | null;
+    }>(cacheKey);
+    if (cached) return cached;
+
     const product = await this.productRepository.findOne({
       where: {
         id: productId,
@@ -189,7 +237,7 @@ export class MenuService {
       isAvailable = stockAvailable > 0;
     }
 
-    return {
+    const result = {
       id: product.id,
       name: product.public_name || product.name,
       category: product.public_category || product.category,
@@ -200,5 +248,7 @@ export class MenuService {
       is_available: isAvailable,
       stock_available: stockAvailable,
     };
+    await this.cache.set(cacheKey, result, 30);
+    return result;
   }
 }

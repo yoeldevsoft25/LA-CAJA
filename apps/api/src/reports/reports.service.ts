@@ -24,6 +24,7 @@ import { PurchaseOrder } from '../database/entities/purchase-order.entity';
 import { PurchaseOrderItem } from '../database/entities/purchase-order-item.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { FiscalInvoiceItem } from '../database/entities/fiscal-invoice-item.entity';
+import { RedisCacheService } from '../common/cache/redis-cache.service';
 
 @Injectable()
 export class ReportsService {
@@ -118,6 +119,7 @@ export class ReportsService {
     private fiscalInvoiceRepository: Repository<FiscalInvoice>,
     @InjectRepository(FiscalInvoiceItem)
     private fiscalInvoiceItemRepository: Repository<FiscalInvoiceItem>,
+    private cache: RedisCacheService,
   ) {}
 
   async getSalesByDay(
@@ -148,6 +150,10 @@ export class ReportsService {
       profit_usd: number;
     }>;
   }> {
+    const cacheKey = `reports:sales_by_day:${storeId}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const query = this.saleRepository
       .createQueryBuilder('sale')
       .where('sale.store_id = :storeId', { storeId })
@@ -305,7 +311,7 @@ export class ReportsService {
     const profit_margin =
       total_amount_usd > 0 ? (total_profit_usd / total_amount_usd) * 100 : 0;
 
-    return {
+    const result = {
       total_sales,
       total_amount_bs,
       total_amount_usd,
@@ -317,6 +323,8 @@ export class ReportsService {
       by_payment_method,
       daily,
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   async getTopProducts(
@@ -342,6 +350,10 @@ export class ReportsService {
       weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
     }>
   > {
+    const cacheKey = `reports:top_products:${storeId}:${limit}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const query = this.saleItemRepository
       .createQueryBuilder('item')
       .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
@@ -447,7 +459,7 @@ export class ReportsService {
       productData.weight_unit = weightUnit;
     }
 
-    return Array.from(productMap.entries())
+    const result = Array.from(productMap.entries())
       .map(([product_id, data]) => {
         const profit_bs = data.revenue_bs - data.cost_bs;
         const profit_usd = data.revenue_usd - data.cost_usd;
@@ -467,6 +479,8 @@ export class ReportsService {
         return qtyB - qtyA;
       })
       .slice(0, limit);
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   async getDebtSummary(storeId: string): Promise<{
@@ -492,6 +506,10 @@ export class ReportsService {
       pending_usd: number;
     }>;
   }> {
+    const cacheKey = `reports:debt_summary:${storeId}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const debts = await this.debtRepository.find({
       where: { store_id: storeId },
       relations: ['payments'],
@@ -593,7 +611,7 @@ export class ReportsService {
       .sort((a, b) => b.pending_bs - a.pending_bs)
       .slice(0, 10);
 
-    return {
+    const result = {
       total_debt_bs,
       total_debt_usd,
       total_paid_bs,
@@ -603,6 +621,8 @@ export class ReportsService {
       by_status,
       top_debtors,
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   async exportSalesCSV(
@@ -712,6 +732,10 @@ export class ReportsService {
       difference_usd: number | null;
     }>;
   }> {
+    const cacheKey = `reports:shifts:${storeId}:${cashierId || 'all'}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const query = this.shiftRepository
       .createQueryBuilder('shift')
       .where('shift.store_id = :storeId', { storeId });
@@ -831,7 +855,7 @@ export class ReportsService {
       });
     }
 
-    return {
+    const result = {
       total_shifts: shifts.length,
       total_sales_bs,
       total_sales_usd,
@@ -845,6 +869,8 @@ export class ReportsService {
       ),
       shifts: shiftsData,
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   /**
@@ -880,6 +906,10 @@ export class ReportsService {
       difference_usd: number;
     }>;
   }> {
+    const cacheKey = `reports:arqueos:${storeId}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const query = this.shiftRepository
       .createQueryBuilder('shift')
       .where('shift.store_id = :storeId', { storeId })
@@ -989,7 +1019,7 @@ export class ReportsService {
       });
     }
 
-    return {
+    const result = {
       total_arqueos: shifts.length,
       total_differences_bs,
       total_differences_usd,
@@ -1003,6 +1033,8 @@ export class ReportsService {
       ),
       arqueos: arqueosData,
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   /**
@@ -1029,6 +1061,10 @@ export class ReportsService {
       }>;
     }>;
   }> {
+    const cacheKey = `reports:expiring_products:${storeId}:${daysAhead}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const now = new Date();
     const expirationLimit = new Date(now);
     expirationLimit.setDate(expirationLimit.getDate() + daysAhead);
@@ -1103,7 +1139,7 @@ export class ReportsService {
         Number(lot.unit_cost_usd || 0) * Number(lot.remaining_quantity);
     }
 
-    return {
+    const result = {
       total_lots: lots.length,
       total_quantity,
       total_value_bs,
@@ -1115,6 +1151,8 @@ export class ReportsService {
         }),
       ),
     };
+    await this.cache.set(cacheKey, result, 120);
+    return result;
   }
 
   /**

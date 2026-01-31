@@ -13,6 +13,7 @@ import { Shift } from '../database/entities/shift.entity';
 import { ProductLot } from '../database/entities/product-lot.entity';
 import { DebtStatus } from '../database/entities/debt.entity';
 import { ReportsService } from '../reports/reports.service';
+import { RedisCacheService } from '../common/cache/redis-cache.service';
 
 /**
  * Servicio para Dashboard Ejecutivo con KPIs consolidados
@@ -43,6 +44,7 @@ export class DashboardService {
     @InjectRepository(ProductLot)
     private productLotRepository: Repository<ProductLot>,
     private reportsService: ReportsService,
+    private cache: RedisCacheService,
   ) {}
 
   /**
@@ -103,6 +105,10 @@ export class DashboardService {
       best_selling_category: string | null;
     };
   }> {
+    const cacheKey = `dashboard:kpis:${storeId}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEnd = new Date(today);
@@ -456,7 +462,7 @@ export class DashboardService {
     const avgSaleAmountUsd =
       periodSales.length > 0 ? periodAmountUsd / periodSales.length : 0;
 
-    return {
+    const result = {
       sales: {
         today_count: todaySales.length,
         today_amount_bs: todayAmountBs,
@@ -509,6 +515,9 @@ export class DashboardService {
         best_selling_category: topCategory?.category || null,
       },
     };
+
+    await this.cache.set(cacheKey, result, 30);
+    return result;
   }
 
   /**
@@ -531,6 +540,10 @@ export class DashboardService {
       weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
     }>;
   }> {
+    const cacheKey = `dashboard:trends:${storeId}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const endDate = new Date();
     endDate.setHours(23, 59, 59, 999);
     const startDate = new Date(endDate);
@@ -616,9 +629,11 @@ export class DashboardService {
       weight_unit: p.weight_unit ?? null,
     }));
 
-    return {
+    const result = {
       sales_trend: salesTrend,
       top_products_trend: topProductsTrend,
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 }

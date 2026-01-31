@@ -59,6 +59,7 @@ import { LicenseWatcherService } from './admin/license-watcher.service';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ObservabilityModule } from './observability/observability.module';
+import { RedisCacheModule } from './common/cache/redis-cache.module';
 // Nota: LicenseWatcherService necesita NotificationsGateway, que está en NotificationsModule
 // Importar todas las entidades desde el índice centralizado
 // Esto reduce el tamaño del objeto serializado y mejora el rendimiento del bootstrap
@@ -79,6 +80,7 @@ import { BullModule } from '@nestjs/bullmq';
       ignoreEnvFile: false, // Intentar leer .env si existe
       // En producción (Render), las variables vienen de process.env automáticamente
     }),
+    RedisCacheModule,
     ScheduleModule.forRoot(),
     // ⚡ CRÍTICO: Conexión Redis compartida globalmente para BullMQ
     // Esto evita crear múltiples conexiones Redis (cada una consume un cliente)
