@@ -10,7 +10,6 @@ import {
   QrCode,
   ReceiptText,
   Boxes,
-  Sparkles,
   Check,
   Brain,
   Globe,
