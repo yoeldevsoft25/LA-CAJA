@@ -39,6 +39,22 @@ export function usePullToRefresh({
   useEffect(() => {
     if (!enabled) return
 
+    const isScrollable = (el: Element) => {
+      const style = window.getComputedStyle(el)
+      const overflowY = style.overflowY
+      const canScroll = overflowY === 'auto' || overflowY === 'scroll'
+      return canScroll && (el as HTMLElement).scrollHeight > (el as HTMLElement).clientHeight
+    }
+
+    const hasScrollableParent = (start: Element | null, stop: Element | null) => {
+      let current = start
+      while (current && current !== stop && current !== document.body) {
+        if (isScrollable(current)) return current as HTMLElement
+        current = current.parentElement
+      }
+      return null
+    }
+
     const addListeners = () => {
       if (listenersActive.current) return
       document.addEventListener('touchmove', handleTouchMove, { passive: false })
@@ -60,6 +76,11 @@ export function usePullToRefresh({
       const target = e.target as Element | null
       const container = target?.closest('[data-pull-to-refresh]') as HTMLElement | null
       if (!container) return
+      const innerScrollable = hasScrollableParent(target, container)
+      if (innerScrollable) {
+        // Si el gesto inicia dentro de un contenedor con scroll propio, no interceptar
+        return
+      }
       if (container.scrollTop !== 0) return
 
       const touch = e.touches[0]
