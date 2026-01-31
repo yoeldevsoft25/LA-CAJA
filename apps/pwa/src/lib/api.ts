@@ -126,9 +126,21 @@ const probePrimaryApi = async () => {
 void probePrimaryApi();
 
 if (import.meta.env.PROD && !isLocalEnv()) {
+  const PROBE_INTERVAL_MS = 2 * 60 * 1000;
+
   setInterval(() => {
     void probePrimaryApi();
-  }, 60 * 60 * 1000);
+  }, PROBE_INTERVAL_MS);
+
+  window.addEventListener('online', () => {
+    void probePrimaryApi();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      void probePrimaryApi();
+    }
+  });
 }
 
 // Interceptor para agregar token JWT y bloquear peticiones offline
