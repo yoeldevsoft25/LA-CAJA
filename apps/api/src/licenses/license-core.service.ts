@@ -42,7 +42,14 @@ export class LicenseService {
             return this.getFreemiumStatus(storeId);
         }
 
-        const plan = await this.planRepo.findOne({ where: { code: store.license_plan } });
+        const planCode = store.license_plan?.toUpperCase();
+        const plan =
+            (planCode
+                ? await this.planRepo.findOne({ where: { code: planCode } })
+                : null) ||
+            (store.license_plan
+                ? await this.planRepo.findOne({ where: { code: store.license_plan } })
+                : null);
         const usage = await this.usageRepo.find({ where: { store_id: storeId } });
 
         // Mapear uso a un objeto plano
@@ -52,7 +59,7 @@ export class LicenseService {
         }, {} as Record<string, number>);
 
         return {
-            plan: store.license_plan,
+            plan: store.license_plan || (planCode ? planCode.toLowerCase() : 'freemium'),
             status: store.license_status,
             expires_at: store.license_expires_at,
             features: plan?.features || [], // Usar features del plan base
@@ -97,9 +104,11 @@ export class LicenseService {
     }
 
     private async getFreemiumStatus(storeId: string) {
-        const freemiumPlan = await this.planRepo.findOne({ where: { code: 'FREEMIUM' } });
+        const freemiumPlan =
+            (await this.planRepo.findOne({ where: { code: 'FREEMIUM' } })) ||
+            (await this.planRepo.findOne({ where: { code: 'freemium' } }));
         return {
-            plan: 'FREEMIUM',
+            plan: 'freemium',
             status: LicenseStatus.ACTIVE,
             expires_at: null,
             features: freemiumPlan?.features || [],

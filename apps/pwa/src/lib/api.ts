@@ -234,6 +234,8 @@ api.interceptors.response.use(
               full_name: currentUser.full_name, // Mantener nombre del usuario actual
               license_status: currentUser.license_status,
               license_expires_at: currentUser.license_expires_at,
+              license_plan: currentUser.license_plan,
+              license_features: currentUser.license_features,
             };
             
             // Si el rol cambió, loguear el cambio y mostrar advertencia
