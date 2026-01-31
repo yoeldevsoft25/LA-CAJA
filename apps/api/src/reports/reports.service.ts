@@ -1183,6 +1183,10 @@ export class ReportsService {
       sale_id: string | null;
     }>;
   }> {
+    const cacheKey = `reports:serials:${storeId}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const query = this.productSerialRepository
       .createQueryBuilder('serial')
       .innerJoin('serial.product', 'product')
@@ -1264,7 +1268,7 @@ export class ReportsService {
       });
     }
 
-    return {
+    const result = {
       total_serials: serials.length,
       sold_serials,
       available_serials,
@@ -1276,6 +1280,8 @@ export class ReportsService {
       ),
       serials: serialsData,
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   /**
@@ -1305,6 +1311,10 @@ export class ReportsService {
       weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
     }>;
   }> {
+    const cacheKey = `reports:rotation:${storeId}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const query = this.saleItemRepository
       .createQueryBuilder('item')
       .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
@@ -1409,7 +1419,7 @@ export class ReportsService {
       productData.weight_unit = weightUnit;
     }
 
-    return {
+    const result = {
       by_product: Array.from(productMap.entries())
         .map(([product_id, data]) => {
           const profit_bs = data.revenue_bs - data.cost_bs;
@@ -1438,6 +1448,8 @@ export class ReportsService {
         })
         .sort((a, b) => b.rotation_rate - a.rotation_rate),
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   /**
@@ -1462,6 +1474,10 @@ export class ReportsService {
       pending_orders: number;
     }>;
   }> {
+    const cacheKey = `reports:purchases_by_supplier:${storeId}:${startDate?.toISOString() || 'none'}:${endDate?.toISOString() || 'none'}`;
+    const cached = await this.cache.get<any>(cacheKey);
+    if (cached) return cached;
+
     const query = this.purchaseOrderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.supplier', 'supplier')
@@ -1529,7 +1545,7 @@ export class ReportsService {
       total_amount_usd += Number(order.total_amount_usd);
     }
 
-    return {
+    const result = {
       total_orders: orders.length,
       total_amount_bs,
       total_amount_usd,
@@ -1537,6 +1553,8 @@ export class ReportsService {
         (a, b) => b.total_amount_bs - a.total_amount_bs,
       ),
     };
+    await this.cache.set(cacheKey, result, 60);
+    return result;
   }
 
   /**
