@@ -6,8 +6,10 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { Store } from './store.entity';
+import { RecipeIngredient } from './recipe-ingredient.entity';
 
 @Entity('products')
 export class Product {
@@ -78,6 +80,36 @@ export class Product {
   @Column({ type: 'varchar', length: 50, nullable: true })
   scale_plu: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  image_url: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  is_recipe: boolean;
+
+  @Column({ type: 'varchar', length: 20, default: 'sale_item' })
+  product_type: 'sale_item' | 'ingredient' | 'prepared';
+
+  @Column({ type: 'boolean', default: false })
+  is_visible_public: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  public_name: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  public_description: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  public_image_url: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  public_category: string | null;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  profit_margin: number;
+
   @Column({ type: 'int', nullable: true })
   scale_department: number | null;
 
@@ -86,4 +118,7 @@ export class Product {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
+
+  @OneToMany(() => RecipeIngredient, (ri) => ri.recipe_product, { cascade: true })
+  ingredients: RecipeIngredient[];
 }

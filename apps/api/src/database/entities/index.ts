@@ -18,6 +18,9 @@ export { LotMovement } from './lot-movement.entity';
 export { ProductSerial } from './product-serial.entity';
 export { InventoryMovement } from './inventory-movement.entity';
 export { QuickProduct } from './quick-product.entity';
+export { RecipeIngredient } from './recipe-ingredient.entity';
+export { ProductModifier } from './product-modifier.entity';
+export { ProductModifierOption } from './product-modifier-option.entity';
 
 // Sales entities
 export { Sale } from './sale.entity';
@@ -236,6 +239,9 @@ import { Reservation } from './reservation.entity';
 import { SubscriptionPlan } from './license-plan.entity';
 import { StoreLicense } from './store-license.entity';
 import { LicenseUsage } from './license-usage.entity';
+import { RecipeIngredient } from './recipe-ingredient.entity';
+import { ProductModifier } from './product-modifier.entity';
+import { ProductModifierOption } from './product-modifier-option.entity';
 
 /**
  * Array con todas las entidades de TypeORM para configuración centralizada
@@ -338,4 +344,7 @@ export const ALL_ENTITIES = [
   SubscriptionPlan,
   StoreLicense,
   LicenseUsage,
+  RecipeIngredient,
+  ProductModifier,
+  ProductModifierOption,
 ];

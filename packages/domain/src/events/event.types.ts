@@ -47,6 +47,16 @@ export interface ProductCreatedPayload {
   cost_usd: number;
   is_active: boolean;
   low_stock_threshold: number;
+  description?: string;
+  image_url?: string;
+  is_recipe?: boolean;
+  profit_margin?: number;
+  product_type?: 'sale_item' | 'ingredient' | 'prepared';
+  is_visible_public?: boolean;
+  public_name?: string;
+  public_description?: string;
+  public_image_url?: string;
+  public_category?: string;
 }
 
 export interface ProductUpdatedPayload {
@@ -57,6 +67,25 @@ export interface ProductUpdatedPayload {
     sku: string;
     barcode: string;
     low_stock_threshold: number;
+    description: string;
+    image_url: string;
+    is_recipe: boolean;
+    profit_margin: number;
+    product_type: 'sale_item' | 'ingredient' | 'prepared';
+    is_visible_public: boolean;
+    public_name: string;
+    public_description: string;
+    public_image_url: string;
+    public_category: string;
+  }>;
+}
+
+export interface RecipeIngredientsUpdatedPayload {
+  product_id: string;
+  ingredients: Array<{
+    ingredient_product_id: string;
+    qty: number;
+    unit: string | null;
   }>;
 }
 
@@ -209,4 +238,3 @@ export interface DebtPaymentRecordedPayload {
   method: Exclude<PaymentMethod, 'SPLIT' | 'FIAO'>;
   note?: string;
 }
-

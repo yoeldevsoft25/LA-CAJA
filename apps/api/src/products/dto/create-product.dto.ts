@@ -7,6 +7,7 @@ import {
   Min,
   MinLength,
   IsIn,
+  IsArray,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -123,4 +124,50 @@ export class CreateProductDto {
   @Min(0)
   @IsOptional()
   scale_department?: number | null;
+
+  @IsString()
+  @IsOptional()
+  image_url?: string | null;
+
+  @IsString()
+  @IsOptional()
+  description?: string | null;
+
+  @IsBoolean()
+  @IsOptional()
+  is_recipe?: boolean;
+
+  @IsString()
+  @IsIn(['sale_item', 'ingredient', 'prepared'])
+  @IsOptional()
+  product_type?: 'sale_item' | 'ingredient' | 'prepared';
+
+  @IsBoolean()
+  @IsOptional()
+  is_visible_public?: boolean;
+
+  @IsString()
+  @IsOptional()
+  public_name?: string | null;
+
+  @IsString()
+  @IsOptional()
+  public_description?: string | null;
+
+  @IsString()
+  @IsOptional()
+  public_image_url?: string | null;
+
+  @IsString()
+  @IsOptional()
+  public_category?: string | null;
+
+  @Transform(({ value }) => toOptionalNumber(value))
+  @IsNumber()
+  @IsOptional()
+  profit_margin?: number;
+
+  @IsArray()
+  @IsOptional()
+  ingredients?: { ingredient_product_id: string; qty: number; unit: string }[];
 }

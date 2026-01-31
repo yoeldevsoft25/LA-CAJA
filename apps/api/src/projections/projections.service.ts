@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
+import { RecipeIngredient } from '../database/entities/recipe-ingredient.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { Sale } from '../database/entities/sale.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
@@ -80,6 +81,9 @@ export class ProjectionsService {
       case 'ProductDeactivated':
         await this.projectProductDeactivated(event);
         break;
+      case 'RecipeIngredientsUpdated':
+        await this.projectRecipeIngredientsUpdated(event);
+        break;
       case 'PriceChanged':
         await this.projectPriceChanged(event);
         break;
@@ -139,6 +143,16 @@ export class ProjectionsService {
       cost_usd: Number(payload.cost_usd) || 0,
       is_active: payload.is_active !== false,
       low_stock_threshold: Number(payload.low_stock_threshold) || 0,
+      description: payload.description || null,
+      image_url: payload.image_url || null,
+      is_recipe: !!payload.is_recipe,
+      profit_margin: Number(payload.profit_margin) || 0,
+      product_type: payload.product_type || (payload.is_recipe ? 'prepared' : 'sale_item'),
+      is_visible_public: payload.is_visible_public ?? false,
+      public_name: payload.public_name || null,
+      public_description: payload.public_description || null,
+      public_image_url: payload.public_image_url || null,
+      public_category: payload.public_category || null,
     });
 
     await this.productRepository.save(product);
@@ -161,6 +175,17 @@ export class ProjectionsService {
     if (patch.barcode !== undefined) product.barcode = patch.barcode || null;
     if (patch.low_stock_threshold !== undefined)
       product.low_stock_threshold = Number(patch.low_stock_threshold) || 0;
+    if (patch.description !== undefined) product.description = patch.description || null;
+    if (patch.image_url !== undefined) product.image_url = patch.image_url || null;
+    if (patch.is_recipe !== undefined) product.is_recipe = !!patch.is_recipe;
+    if (patch.profit_margin !== undefined)
+      product.profit_margin = Number(patch.profit_margin) || 0;
+    if (patch.product_type !== undefined) product.product_type = patch.product_type as any;
+    if (patch.is_visible_public !== undefined) product.is_visible_public = !!patch.is_visible_public;
+    if (patch.public_name !== undefined) product.public_name = patch.public_name || null;
+    if (patch.public_description !== undefined) product.public_description = patch.public_description || null;
+    if (patch.public_image_url !== undefined) product.public_image_url = patch.public_image_url || null;
+    if (patch.public_category !== undefined) product.public_category = patch.public_category || null;
 
     await this.productRepository.save(product);
   }
@@ -182,6 +207,71 @@ export class ProjectionsService {
         price_usd: Number(payload.price_usd) || 0,
       },
     );
+  }
+
+  private async projectRecipeIngredientsUpdated(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    const productId = payload.product_id;
+
+    if (!productId) return;
+
+    const product = await this.productRepository.findOne({
+      where: { id: productId, store_id: event.store_id },
+      select: ['id'],
+    });
+
+    if (!product) return;
+
+    const ingredients = Array.isArray(payload.ingredients)
+      ? payload.ingredients
+      : [];
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(RecipeIngredient, { recipe_product_id: productId });
+
+      if (ingredients.length === 0) return;
+
+      let ingredientIds = [
+        ...new Set(ingredients.map((i: any) => i.ingredient_product_id)),
+      ];
+      if (ingredientIds.includes(productId)) {
+        this.logger.warn(
+          `Receta ${productId} incluye ingrediente inválido (auto-referencia)`,
+        );
+        ingredientIds = ingredientIds.filter((id) => id !== productId);
+      }
+
+      if (ingredientIds.length === 0) return;
+
+      const validIngredients = await manager.getRepository(Product).find({
+        where: { id: In(ingredientIds), store_id: event.store_id },
+        select: ['id'],
+      });
+      const validIds = new Set(validIngredients.map((item) => item.id));
+
+      const filtered = ingredients.filter((i: any) => {
+        const qty = Number(i.qty);
+        return (
+          validIds.has(i.ingredient_product_id) &&
+          Number.isFinite(qty) &&
+          qty > 0
+        );
+      });
+
+      if (filtered.length === 0) return;
+
+      const newIngredients = filtered.map((i: any) =>
+        manager.create(RecipeIngredient, {
+          id: randomUUID(),
+          recipe_product_id: productId,
+          ingredient_product_id: i.ingredient_product_id,
+          qty: Number(i.qty),
+          unit: i.unit ?? null,
+        }),
+      );
+
+      await manager.save(RecipeIngredient, newIngredients);
+    });
   }
 
   private async projectStockReceived(event: Event): Promise<void> {

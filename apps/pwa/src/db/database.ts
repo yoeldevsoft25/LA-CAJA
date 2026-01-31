@@ -29,10 +29,27 @@ export interface LocalProduct {
   weight_unit?: 'kg' | 'g' | 'lb' | 'oz' | null;
   price_per_weight_bs?: number | null;
   price_per_weight_usd?: number | null;
+  cost_per_weight_bs?: number | null;
+  cost_per_weight_usd?: number | null;
   min_weight?: number | null;
   max_weight?: number | null;
   scale_plu?: string | null;
   scale_department?: number | null;
+  image_url?: string | null;
+  description?: string | null;
+  is_recipe?: boolean;
+  profit_margin?: number;
+  product_type?: 'sale_item' | 'ingredient' | 'prepared';
+  is_visible_public?: boolean;
+  public_name?: string | null;
+  public_description?: string | null;
+  public_image_url?: string | null;
+  public_category?: string | null;
+  ingredients?: Array<{
+    ingredient_product_id: string;
+    qty: number;
+    unit: string | null;
+  }>;
   updated_at: number; // timestamp
   cached_at: number; // cuando se guardó en cache
 }
@@ -243,12 +260,22 @@ export class LaCajaDB extends Dexie {
     search?: string;
     category?: string;
     is_active?: boolean;
+    is_visible_public?: boolean;
+    product_type?: 'sale_item' | 'ingredient' | 'prepared';
     limit?: number;
   }): Promise<LocalProduct[]> {
     let query = this.products.where('store_id').equals(storeId);
 
     if (options?.is_active !== undefined) {
       query = query.filter(p => p.is_active === options.is_active);
+    }
+
+    if (options?.is_visible_public !== undefined) {
+      query = query.filter(p => p.is_visible_public === options.is_visible_public);
+    }
+
+    if (options?.product_type) {
+      query = query.filter(p => p.product_type === options.product_type);
     }
 
     if (options?.category) {

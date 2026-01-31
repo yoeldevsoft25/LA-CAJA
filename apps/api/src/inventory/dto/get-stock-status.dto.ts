@@ -5,6 +5,7 @@ import {
   IsString,
   IsUUID,
   Min,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -20,6 +21,25 @@ export class GetStockStatusDto {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  @Type(() => Boolean)
+  is_active?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Type(() => Boolean)
+  is_visible_public?: boolean;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['sale_item', 'ingredient', 'prepared'])
+  product_type?: 'sale_item' | 'ingredient' | 'prepared';
 
   @IsBoolean()
   @IsOptional()

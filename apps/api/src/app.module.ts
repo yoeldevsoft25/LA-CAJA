@@ -51,6 +51,7 @@ import { LicensesModule } from './licenses/licenses.module';
 import { MenuModule } from './menu/menu.module';
 import { KitchenDisplayModule } from './kitchen/kitchen-display.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { RecipesModule } from './recipes/recipes.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { AdminController } from './admin/admin.controller';
 import { AdminApiGuard } from './admin/admin-api.guard';
@@ -347,6 +348,7 @@ import { BullModule } from '@nestjs/bullmq';
     MenuModule, // ✅ Módulo de menú público QR
     KitchenDisplayModule, // ✅ Módulo de Kitchen Display System
     ReservationsModule, // ✅ Módulo de reservas
+    RecipesModule, // ✅ Módulo de recetas y manufactura
     HealthModule, // ✅ Módulo de health checks
     MetricsModule, // ✅ Módulo de métricas Prometheus
     ObservabilityModule, // ✅ Módulo de observabilidad completo

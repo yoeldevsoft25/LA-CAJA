@@ -22,6 +22,10 @@ export interface StockStatusSearchParams {
   product_id?: string
   warehouse_id?: string
   search?: string
+  category?: string
+  is_active?: boolean
+  is_visible_public?: boolean
+  product_type?: 'sale_item' | 'ingredient' | 'prepared'
   low_stock_only?: boolean
   limit?: number
   offset?: number

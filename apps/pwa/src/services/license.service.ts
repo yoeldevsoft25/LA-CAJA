@@ -84,15 +84,22 @@ export const licenseService = {
         const payload = this.decodeOfflineToken(token)
         if (!payload) return null
 
-        // Verificar expiración (exp está en segundos)
+        // Verificar expiración del token offline (exp está en segundos)
         if (payload.exp && Date.now() >= payload.exp * 1000) {
             return null
         }
 
+        const expiresAt =
+            payload.expires_at
+                ? new Date(payload.expires_at).toISOString()
+                : payload.exp
+                    ? new Date(payload.exp * 1000).toISOString()
+                    : null
+
         return {
             plan: payload.plan,
             status: payload.status,
-            expires_at: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
+            expires_at: expiresAt,
             features: payload.features || [],
             limits: payload.limits || {},
             usage: this.getLocalStatus()?.usage || {}, // Usar último uso conocido

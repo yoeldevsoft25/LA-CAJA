@@ -9,6 +9,7 @@ import { Product } from '../database/entities/product.entity';
 import { QRCode } from '../database/entities/qr-code.entity';
 import { Table } from '../database/entities/table.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
+import { RecipesService } from '../recipes/recipes.service';
 
 /**
  * Servicio para menú público
@@ -25,7 +26,8 @@ export class MenuService {
     private tableRepository: Repository<Table>,
     @InjectRepository(InventoryMovement)
     private inventoryMovementRepository: Repository<InventoryMovement>,
-  ) {}
+    private recipesService: RecipesService,
+  ) { }
 
   /**
    * Valida el código QR y obtiene información de la mesa
@@ -87,6 +89,7 @@ export class MenuService {
       where: {
         store_id: storeId,
         is_active: true,
+        is_visible_public: true,
       },
       order: {
         category: 'ASC',
@@ -103,12 +106,19 @@ export class MenuService {
     const categoriesMap = new Map<string, typeof products>();
 
     for (const product of products) {
-      // Verificar disponibilidad básica
-      // TODO: Mejorar esto con consulta real de stock
-      const isAvailable = true; // Por ahora todos los activos están disponibles
-      const stockAvailable = null; // Se puede mejorar calculando stock real
+      // Calcular disponibilidad basada en receta o stock directo
+      let isAvailable = true;
+      let stockAvailable: number | null = null;
 
-      const categoryName = product.category || 'Sin categoría';
+      if (product.is_recipe) {
+        stockAvailable = await this.recipesService.calculateAvailability(storeId, product.id);
+        isAvailable = stockAvailable > 0;
+      } else {
+        // TODO: Para productos normales, consultar stock real en bodega
+        isAvailable = true;
+      }
+
+      const categoryName = product.public_category || product.category || 'Sin categoría';
 
       if (!categoriesMap.has(categoryName)) {
         categoriesMap.set(categoryName, []);
@@ -128,12 +138,12 @@ export class MenuService {
         name,
         products: products.map((p) => ({
           id: p.id,
-          name: p.name,
-          category: p.category,
+          name: p.public_name || p.name,
+          category: p.public_category || p.category,
           price_bs: Number(p.price_bs),
           price_usd: Number(p.price_usd),
-          description: null, // Se puede agregar campo description a Product
-          image_url: null, // Se puede agregar campo image_url a Product
+          description: p.public_description || p.description,
+          image_url: p.public_image_url || p.image_url,
           is_available: (p as any).is_available,
           stock_available: (p as any).stock_available,
         })),
@@ -162,6 +172,7 @@ export class MenuService {
         id: productId,
         store_id: storeId,
         is_active: true,
+        is_visible_public: true,
       },
     });
 
@@ -169,18 +180,23 @@ export class MenuService {
       throw new NotFoundException('Producto no encontrado');
     }
 
-    // TODO: Calcular disponibilidad real basada en stock
-    const isAvailable = true;
-    const stockAvailable = null;
+    // Calcular disponibilidad real
+    let isAvailable = true;
+    let stockAvailable: number | null = null;
+
+    if (product.is_recipe) {
+      stockAvailable = await this.recipesService.calculateAvailability(storeId, productId);
+      isAvailable = stockAvailable > 0;
+    }
 
     return {
       id: product.id,
-      name: product.name,
-      category: product.category,
+      name: product.public_name || product.name,
+      category: product.public_category || product.category,
       price_bs: Number(product.price_bs),
       price_usd: Number(product.price_usd),
-      description: null,
-      image_url: null,
+      description: product.public_description || product.description,
+      image_url: product.public_image_url || product.image_url,
       is_available: isAvailable,
       stock_available: stockAvailable,
     };

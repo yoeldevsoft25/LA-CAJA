@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Put, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Param, Put, Body, UseGuards, Request, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { KitchenDisplayService } from './kitchen-display.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -18,6 +18,39 @@ export class KitchenDisplayController {
   async getKitchenOrders(@Request() req: any) {
     const storeId = req.user.store_id;
     return this.kitchenDisplayService.getKitchenOrders(storeId);
+  }
+
+  /**
+   * GET /kitchen/public-link
+   * Obtiene (o crea) el enlace público para pantalla de cocina
+   */
+  @Get('public-link')
+  async getPublicKitchenLink(@Request() req: any) {
+    const storeId = req.user.store_id;
+    return this.kitchenDisplayService.getOrCreatePublicLink(storeId);
+  }
+
+  /**
+   * POST /kitchen/public-link/rotate
+   * Regenera el token público de cocina
+   */
+  @Post('public-link/rotate')
+  async rotatePublicKitchenLink(@Request() req: any) {
+    const storeId = req.user.store_id;
+    return this.kitchenDisplayService.rotatePublicToken(storeId);
+  }
+
+  /**
+   * POST /kitchen/public-link/pin
+   * Configura o limpia el PIN del enlace público de cocina
+   */
+  @Post('public-link/pin')
+  async setPublicKitchenPin(
+    @Body('pin') pin: string | undefined,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    return this.kitchenDisplayService.setPublicPin(storeId, pin?.trim());
   }
 
   /**

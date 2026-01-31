@@ -380,6 +380,10 @@ export class InventoryService {
       product_id: productId,
       warehouse_id: warehouseId,
       search,
+      category,
+      is_active,
+      is_visible_public,
+      product_type,
       limit,
       offset,
       low_stock_only,
@@ -408,8 +412,25 @@ export class InventoryService {
       .addSelect('product.weight_unit', 'weight_unit')
       .addSelect('product.cost_per_weight_bs', 'cost_per_weight_bs')
       .addSelect('product.cost_per_weight_usd', 'cost_per_weight_usd')
-      .where('product.store_id = :storeId', { storeId })
-      .andWhere('product.is_active = true');
+      .where('product.store_id = :storeId', { storeId });
+
+    if (is_active !== undefined) {
+      query.andWhere('product.is_active = :isActive', { isActive: is_active });
+    } else {
+      query.andWhere('product.is_active = true');
+    }
+
+    if (is_visible_public !== undefined) {
+      query.andWhere('product.is_visible_public = :isVisiblePublic', {
+        isVisiblePublic: is_visible_public,
+      });
+    }
+
+    if (product_type) {
+      query.andWhere('product.product_type = :productType', {
+        productType: product_type,
+      });
+    }
 
     if (productId) {
       query.andWhere('product.id = :productId', { productId });
@@ -428,6 +449,10 @@ export class InventoryService {
       );
     }
 
+    if (category) {
+      query.andWhere('product.category = :category', { category });
+    }
+
     query.orderBy('product.name', 'ASC');
 
     let total = 0;
@@ -441,7 +466,25 @@ export class InventoryService {
         )
         .setParameters(stockSubquery.getParameters())
         .where('product.store_id = :storeId', { storeId })
-        .andWhere('product.is_active = true');
+        ;
+
+      if (is_active !== undefined) {
+        countQuery.andWhere('product.is_active = :isActive', { isActive: is_active });
+      } else {
+        countQuery.andWhere('product.is_active = true');
+      }
+
+      if (is_visible_public !== undefined) {
+        countQuery.andWhere('product.is_visible_public = :isVisiblePublic', {
+          isVisiblePublic: is_visible_public,
+        });
+      }
+
+      if (product_type) {
+        countQuery.andWhere('product.product_type = :productType', {
+          productType: product_type,
+        });
+      }
 
       if (productId) {
         countQuery.andWhere('product.id = :productId', { productId });
@@ -458,6 +501,10 @@ export class InventoryService {
         countQuery.andWhere(
           'COALESCE(stock.current_stock, 0) <= product.low_stock_threshold',
         );
+      }
+
+      if (category) {
+        countQuery.andWhere('product.category = :category', { category });
       }
 
       total = await countQuery.getCount();

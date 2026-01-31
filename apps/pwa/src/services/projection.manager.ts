@@ -66,6 +66,9 @@ export const projectionManager = {
             case 'ProductDeactivated':
                 await this.applyProductDeactivated(event);
                 break;
+            case 'RecipeIngredientsUpdated':
+                await this.applyRecipeIngredientsUpdated(event);
+                break;
             case 'PriceChanged':     // Nombre corto
             case 'ProductPriceChanged': // Nombre largo (por si acaso)
                 await this.applyPriceChanged(event);
@@ -115,7 +118,17 @@ export const projectionManager = {
             cached_at: Date.now(),
             // Valores por defecto para campos opcionales que no siempre vienen en ProductCreated
             is_weight_product: false,
-            weight_unit: null
+            weight_unit: null,
+            description: payload.description || null,
+            image_url: payload.image_url || null,
+            is_recipe: payload.is_recipe ?? false,
+            profit_margin: payload.profit_margin ?? 0,
+            product_type: payload.product_type || (payload.is_recipe ? 'prepared' : 'sale_item'),
+            is_visible_public: payload.is_visible_public ?? false,
+            public_name: payload.public_name || null,
+            public_description: payload.public_description || null,
+            public_image_url: payload.public_image_url || null,
+            public_category: payload.public_category || null
         };
 
         // Dexie put: crea o reemplaza
@@ -167,6 +180,33 @@ export const projectionManager = {
             existing.cached_at = Date.now();
             await db.products.put(existing);
         }
+    },
+
+    async applyRecipeIngredientsUpdated(event: BaseEvent) {
+        const payload = event.payload as {
+            product_id: string;
+            ingredients?: Array<{
+                ingredient_product_id: string;
+                qty: number;
+                unit: string | null;
+            }>;
+        };
+        const existing = await db.products.get(payload.product_id);
+
+        if (!existing) return;
+
+        const ingredients = Array.isArray(payload.ingredients)
+            ? payload.ingredients
+            : [];
+
+        const updated: LocalProduct = {
+            ...existing,
+            ingredients,
+            updated_at: event.created_at,
+            cached_at: Date.now()
+        };
+
+        await db.products.put(updated);
     },
 
     async applyCustomerCreated(event: BaseEvent) {

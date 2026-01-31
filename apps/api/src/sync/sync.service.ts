@@ -98,6 +98,7 @@ export class SyncService {
     'ProductUpdated',
     'ProductDeactivated',
     'PriceChanged',
+    'RecipeIngredientsUpdated',
     'StockReceived',
     'StockAdjusted',
     'SaleCreated',

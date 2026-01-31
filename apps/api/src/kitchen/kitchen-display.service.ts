@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from '../database/entities/order.entity';
 import { OrderItem } from '../database/entities/order-item.entity';
 import { Table } from '../database/entities/table.entity';
 import { Product } from '../database/entities/product.entity';
+import { Store } from '../database/entities/store.entity';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { RecipesService } from '../recipes/recipes.service';
+import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 export interface KitchenOrderItem {
   id: string;
@@ -31,6 +36,8 @@ export interface KitchenOrder {
  */
 @Injectable()
 export class KitchenDisplayService {
+  private readonly logger = new Logger(KitchenDisplayService.name);
+
   constructor(
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
@@ -40,9 +47,97 @@ export class KitchenDisplayService {
     private tableRepository: Repository<Table>,
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    @InjectRepository(Store)
+    private storeRepository: Repository<Store>,
     @Inject(forwardRef(() => NotificationsGateway))
     private notificationsGateway: NotificationsGateway,
-  ) {}
+    private recipesService: RecipesService,
+    private configService: ConfigService,
+  ) { }
+
+  private generatePublicUrl(token: string): string {
+    let baseUrl = this.configService.get<string>('FRONTEND_URL');
+
+    if (!baseUrl) {
+      baseUrl = 'http://la-caja.netlify.app';
+    }
+
+    return `${baseUrl}/public/kitchen/${token}`;
+  }
+
+  async getOrCreatePublicLink(storeId: string): Promise<{ token: string; url: string; has_pin: boolean }> {
+    const store = await this.storeRepository.findOne({ where: { id: storeId } });
+    if (!store) {
+      throw new NotFoundException('Tienda no encontrada');
+    }
+
+    if (!store.kitchen_public_token) {
+      store.kitchen_public_token = randomUUID().replace(/-/g, '');
+      await this.storeRepository.save(store);
+    }
+
+    return {
+      token: store.kitchen_public_token,
+      url: this.generatePublicUrl(store.kitchen_public_token),
+      has_pin: !!store.kitchen_public_pin_hash,
+    };
+  }
+
+  async rotatePublicToken(storeId: string): Promise<{ token: string; url: string; has_pin: boolean }> {
+    const store = await this.storeRepository.findOne({ where: { id: storeId } });
+    if (!store) {
+      throw new NotFoundException('Tienda no encontrada');
+    }
+
+    store.kitchen_public_token = randomUUID().replace(/-/g, '');
+    await this.storeRepository.save(store);
+
+    return {
+      token: store.kitchen_public_token,
+      url: this.generatePublicUrl(store.kitchen_public_token),
+      has_pin: !!store.kitchen_public_pin_hash,
+    };
+  }
+
+  async getPublicKitchenOrders(token: string, pin?: string): Promise<KitchenOrder[]> {
+    const store = await this.storeRepository.findOne({
+      where: { kitchen_public_token: token },
+      select: ['id', 'kitchen_public_pin_hash'],
+    });
+
+    if (!store) {
+      throw new NotFoundException('Token de cocina inválido');
+    }
+
+    if (store.kitchen_public_pin_hash) {
+      if (!pin) {
+        throw new BadRequestException('PIN requerido');
+      }
+      const isValid = await bcrypt.compare(pin, store.kitchen_public_pin_hash);
+      if (!isValid) {
+        throw new BadRequestException('PIN inválido');
+      }
+    }
+
+    return this.getKitchenOrders(store.id);
+  }
+
+  async setPublicPin(storeId: string, pin?: string): Promise<{ has_pin: boolean }> {
+    const store = await this.storeRepository.findOne({ where: { id: storeId } });
+    if (!store) {
+      throw new NotFoundException('Tienda no encontrada');
+    }
+
+    if (!pin) {
+      store.kitchen_public_pin_hash = null;
+      await this.storeRepository.save(store);
+      return { has_pin: false };
+    }
+
+    store.kitchen_public_pin_hash = await bcrypt.hash(pin, 10);
+    await this.storeRepository.save(store);
+    return { has_pin: true };
+  }
 
   /**
    * Obtiene todas las órdenes abiertas para la cocina
@@ -157,6 +252,19 @@ export class KitchenDisplayService {
     // Validar transición de estado
     if (status === 'pending' && item.status === 'ready') {
       throw new BadRequestException('No se puede revertir un item listo a pendiente');
+    }
+
+    // Si el item pasa a 'ready', descontar stock de ingredientes (receta)
+    if (status === 'ready' && item.status !== 'ready') {
+      try {
+        await this.recipesService.consumeIngredients(storeId, item.product_id, item.qty);
+      } catch (error) {
+        this.logger.error(
+          `Error consumiendo ingredientes para el plato ${item.product_id}: ${error.message}`,
+          error.stack,
+        );
+        // No bloqueamos el cambio de estado si falla el inventario
+      }
     }
 
     // Actualizar estado

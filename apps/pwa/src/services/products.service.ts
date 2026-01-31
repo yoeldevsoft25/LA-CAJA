@@ -78,13 +78,63 @@ export interface Product {
   max_weight?: number | null
   scale_plu?: string | null
   scale_department?: number | null
+  image_url?: string | null
+  description?: string | null
+  is_recipe?: boolean
+  profit_margin?: number
+  product_type?: 'sale_item' | 'ingredient' | 'prepared'
+  is_visible_public?: boolean
+  public_name?: string | null
+  public_description?: string | null
+  public_image_url?: string | null
+  public_category?: string | null
+  ingredients?: RecipeIngredientInput[]
   updated_at: string
+}
+
+export interface RecipeIngredient {
+  id: string
+  recipe_product_id: string
+  ingredient_product_id: string
+  ingredient_product: Product
+  qty: number
+  unit: string | null
+}
+
+export interface RecipeIngredientInput {
+  ingredient_product_id: string
+  qty: number
+  unit: string | null
+}
+
+export interface ProductModifier {
+  id: string
+  product_id: string
+  name: string
+  type: 'optional' | 'interchangeable' | 'required'
+  is_multiple: boolean
+  min_options: number
+  max_options: number | null
+  options: ProductModifierOption[]
+}
+
+export interface ProductModifierOption {
+  id: string
+  modifier_id: string
+  name: string
+  extra_price_bs: number
+  extra_price_usd: number
+  ingredient_product_id: string | null
+  qty_delta: number | null
+  is_default: boolean
 }
 
 export interface ProductSearchParams {
   q?: string
   category?: string
   is_active?: boolean
+  is_visible_public?: boolean
+  product_type?: 'sale_item' | 'ingredient' | 'prepared'
   limit?: number
   offset?: number
 }
@@ -259,6 +309,10 @@ export const productsService = {
       max_weight: null,
       scale_plu: null,
       scale_department: null,
+      image_url: data.image_url || null,
+      description: data.description || null,
+      is_recipe: data.is_recipe ?? false,
+      profit_margin: data.profit_margin ?? 0,
       ...data // Sobreescribir con lo que venga explícito (como flags de peso)
     };
 
@@ -275,7 +329,17 @@ export const productsService = {
         cost_bs: Number(newProduct.cost_bs),
         cost_usd: Number(newProduct.cost_usd),
         is_active: newProduct.is_active,
-        low_stock_threshold: newProduct.low_stock_threshold
+        low_stock_threshold: newProduct.low_stock_threshold,
+        description: newProduct.description || undefined,
+        image_url: newProduct.image_url || undefined,
+        is_recipe: newProduct.is_recipe,
+        profit_margin: newProduct.profit_margin,
+        product_type: newProduct.product_type,
+        is_visible_public: newProduct.is_visible_public,
+        public_name: newProduct.public_name || undefined,
+        public_description: newProduct.public_description || undefined,
+        public_image_url: newProduct.public_image_url || undefined,
+        public_category: newProduct.public_category || undefined,
       };
 
       const event: BaseEvent = {
@@ -294,6 +358,34 @@ export const productsService = {
       };
 
       await syncService.enqueueEvent(event);
+
+      const ingredients = Array.isArray(data.ingredients)
+        ? (data.ingredients as RecipeIngredientInput[])
+        : [];
+
+      if (data.is_recipe && ingredients.length > 0) {
+        await syncService.enqueueEvent({
+          event_id: randomUUID(),
+          store_id: storeId,
+          device_id: localStorage.getItem('device_id') || 'unknown',
+          seq: 0,
+          type: 'RecipeIngredientsUpdated',
+          version: 1,
+          created_at: now,
+          actor: {
+            user_id: userId,
+            role: userRole,
+          },
+          payload: {
+            product_id: productId,
+            ingredients: ingredients.map((ingredient) => ({
+              ingredient_product_id: ingredient.ingredient_product_id,
+              qty: Number(ingredient.qty),
+              unit: ingredient.unit ?? null,
+            })),
+          },
+        });
+      }
       // Guardar en cache local inmediatamente para que la UI lo vea
       await productsCacheService.cacheProduct(newProduct, storeId);
       logger.info('Producto creado offline/optimista', { productId });
@@ -356,6 +448,16 @@ export const productsService = {
       if (data.sku !== undefined) patch.sku = data.sku;
       if (data.barcode !== undefined) patch.barcode = normalizeBarcode(data.barcode);
       if (data.low_stock_threshold !== undefined) patch.low_stock_threshold = data.low_stock_threshold;
+      if (data.description !== undefined) patch.description = data.description;
+      if (data.image_url !== undefined) patch.image_url = data.image_url;
+      if (data.is_recipe !== undefined) patch.is_recipe = data.is_recipe;
+      if (data.profit_margin !== undefined) patch.profit_margin = data.profit_margin;
+      if (data.product_type !== undefined) patch.product_type = data.product_type;
+      if (data.is_visible_public !== undefined) patch.is_visible_public = data.is_visible_public;
+      if (data.public_name !== undefined) patch.public_name = data.public_name;
+      if (data.public_description !== undefined) patch.public_description = data.public_description;
+      if (data.public_image_url !== undefined) patch.public_image_url = data.public_image_url;
+      if (data.public_category !== undefined) patch.public_category = data.public_category;
 
       // Nota: Precios se manejan en evento separado PriceChanged si cambian, pero por simplicidad
       // en este MVP asumimos que si usan el form de edición, mandamos update.
@@ -363,7 +465,7 @@ export const productsService = {
       // MVP ACTUAL: El backend quizás acepta precios en PATCH /products/:id? 
       // Revisando products.service.ts del backend: update() SÍ maneja precios.
 
-      // Para el evento offline 'ProductUpdated' del dominio, solo soporta campos básicos según event.types.ts
+      // Para el evento offline 'ProductUpdated' del dominio, solo soporta un subset según event.types.ts
       // Si hay cambio de precio, deberíamos disparar TAMBIÉN 'PriceChanged'
 
       const payload: ProductUpdatedPayload = {
@@ -422,8 +524,38 @@ export const productsService = {
         await syncService.enqueueEvent({
           ...event,
           event_id: randomUUID(),
-          type: 'ProductPriceChanged', // Verificar nombre exacto en event.types
+          type: 'PriceChanged',
           payload: pricePayload
+        });
+      }
+
+      const shouldSyncIngredients =
+        data.is_recipe === false || data.ingredients !== undefined;
+      if (shouldSyncIngredients) {
+        const ingredients = Array.isArray(data.ingredients)
+          ? (data.ingredients as RecipeIngredientInput[])
+          : [];
+
+        await syncService.enqueueEvent({
+          event_id: randomUUID(),
+          store_id: storeId,
+          device_id: localStorage.getItem('device_id') || 'unknown',
+          seq: 0,
+          type: 'RecipeIngredientsUpdated',
+          version: 1,
+          created_at: now,
+          actor: { user_id: userId, role: userRole },
+          payload: {
+            product_id: id,
+            ingredients:
+              data.is_recipe === false
+                ? []
+                : ingredients.map((ingredient) => ({
+                    ingredient_product_id: ingredient.ingredient_product_id,
+                    qty: Number(ingredient.qty),
+                    unit: ingredient.unit ?? null,
+                  })),
+          },
         });
       }
 
@@ -535,7 +667,7 @@ export const productsService = {
         store_id: storeId,
         device_id: localStorage.getItem('device_id') || 'unknown',
         seq: 0,
-        type: 'ProductPriceChanged',
+        type: 'PriceChanged',
         version: 1,
         created_at: Date.now(),
         actor: {

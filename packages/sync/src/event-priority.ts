@@ -40,6 +40,7 @@ export function getEventPriority(eventType: string): EventPriority {
     eventType === 'ProductCreated' ||
     eventType === 'ProductUpdated' ||
     eventType === 'ProductDeactivated' ||
+    eventType === 'RecipeIngredientsUpdated' ||
     eventType === 'PriceChanged' ||
     eventType === 'CustomerCreated' ||
     eventType === 'CustomerUpdated' ||

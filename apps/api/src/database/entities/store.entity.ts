@@ -25,4 +25,10 @@ export class Store {
 
   @Column({ type: 'text', nullable: true })
   license_notes: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  kitchen_public_token: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  kitchen_public_pin_hash: string | null;
 }

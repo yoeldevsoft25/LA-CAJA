@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, UtensilsCrossed, CheckCircle2, ChefHat, Play, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { Clock, UtensilsCrossed, CheckCircle2, ChefHat, Link as LinkIcon, RefreshCcw, Play, Loader2 } from 'lucide-react'
 import { kitchenService } from '@/services/kitchen.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders'
 import OrderProgressBar, { type OrderProgressData } from '@/components/public/OrderProgressBar'
@@ -14,12 +17,70 @@ export default function KitchenDisplayPage() {
   // Escuchar actualizaciones en tiempo real
   useRealtimeOrders()
   const queryClient = useQueryClient()
+  const [publicPin, setPublicPin] = useState('')
+  const [hasPublicPin, setHasPublicPin] = useState(false)
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['kitchen-orders'],
     queryFn: () => kitchenService.getKitchenOrders(),
     staleTime: 1000 * 5, // 5 segundos
     refetchInterval: 1000 * 5, // Refrescar cada 5 segundos
+  })
+
+  const publicLinkMutation = useMutation({
+    mutationFn: () => kitchenService.getPublicKitchenLink(),
+    onSuccess: async (data) => {
+      setHasPublicPin(data.has_pin)
+      try {
+        await navigator.clipboard.writeText(data.url)
+        toast.success('Enlace público copiado')
+      } catch {
+        toast.success('Enlace público generado')
+      }
+    },
+    onError: () => {
+      toast.error('No se pudo obtener el enlace público')
+    },
+  })
+
+  const rotateLinkMutation = useMutation({
+    mutationFn: () => kitchenService.rotatePublicKitchenLink(),
+    onSuccess: async (data) => {
+      setHasPublicPin(data.has_pin)
+      try {
+        await navigator.clipboard.writeText(data.url)
+        toast.success('Enlace regenerado y copiado')
+      } catch {
+        toast.success('Enlace regenerado')
+      }
+    },
+    onError: () => {
+      toast.error('No se pudo regenerar el enlace')
+    },
+  })
+
+  const setPinMutation = useMutation({
+    mutationFn: () => kitchenService.setPublicKitchenPin(publicPin.trim() || undefined),
+    onSuccess: (data) => {
+      setHasPublicPin(data.has_pin)
+      setPublicPin('')
+      toast.success(data.has_pin ? 'PIN actualizado' : 'PIN eliminado')
+    },
+    onError: () => {
+      toast.error('No se pudo actualizar el PIN')
+    },
+  })
+
+  const clearPinMutation = useMutation({
+    mutationFn: () => kitchenService.setPublicKitchenPin(undefined),
+    onSuccess: (data) => {
+      setHasPublicPin(data.has_pin)
+      setPublicPin('')
+      toast.success('PIN eliminado')
+    },
+    onError: () => {
+      toast.error('No se pudo eliminar el PIN')
+    },
   })
 
   // Mutación para actualizar estado de item
@@ -99,6 +160,52 @@ export default function KitchenDisplayPage() {
         <p className="text-muted-foreground">
           {orders?.length || 0} orden(es) en preparación
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => publicLinkMutation.mutate()}
+            disabled={publicLinkMutation.isPending}
+          >
+            <LinkIcon className="w-4 h-4 mr-2" />
+            Copiar enlace público
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => rotateLinkMutation.mutate()}
+            disabled={rotateLinkMutation.isPending}
+          >
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            Regenerar enlace
+          </Button>
+        </div>
+        <div className="mt-3 flex flex-col sm:flex-row gap-2 items-start sm:items-end">
+          <div className="w-full sm:max-w-xs">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">PIN público (opcional)</Label>
+            <Input
+              type="password"
+              value={publicPin}
+              onChange={(e) => setPublicPin(e.target.value)}
+              className="mt-1 bg-white/60"
+              placeholder={hasPublicPin ? 'Actualizar PIN' : 'Configurar PIN'}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPinMutation.mutate()}
+              disabled={setPinMutation.isPending}
+            >
+              Guardar PIN
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => clearPinMutation.mutate()}
+              disabled={clearPinMutation.isPending}
+            >
+              Quitar PIN
+            </Button>
+          </div>
+        </div>
       </div>
 
       {orders && orders.length === 0 ? (

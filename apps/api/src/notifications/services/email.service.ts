@@ -82,7 +82,7 @@ export class EmailService {
     this.defaultFrom =
       this.configService.get<string>('EMAIL_FROM') || 'onboarding@resend.dev';
     this.defaultFromName =
-      this.configService.get<string>('EMAIL_FROM_NAME') || 'LA-CAJA';
+      this.configService.get<string>('EMAIL_FROM_NAME') || 'Velox POS';
 
     this.logger.log(`📧 Email default FROM: ${this.defaultFromName} <${this.defaultFrom}>`);
     this.logger.log(`   Using Resend domain for testing (change EMAIL_FROM for production)`);

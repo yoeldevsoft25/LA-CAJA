@@ -21,6 +21,7 @@ import ProductCard from '@/components/products/ProductCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { inventoryService, StockStatus } from '@/services/inventory.service'
@@ -94,8 +95,10 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [publicOnly, setPublicOnly] = useState(false)
+  const [productTypeFilter, setProductTypeFilter] = useState<'all' | 'sale_item' | 'ingredient' | 'prepared'>('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(50)
+  const [pageSize] = useState(20)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [duplicatingProduct, setDuplicatingProduct] = useState<Product | null>(null)
@@ -124,7 +127,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, categoryFilter, statusFilter])
+  }, [searchQuery, categoryFilter, statusFilter, publicOnly, productTypeFilter])
 
   const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined)
   const { isOnline } = useOnline()
@@ -141,24 +144,48 @@ export default function ProductsPage() {
     staleTime: 1000 * 60 * 10,
   })
 
-  // Stock status actual
-  const { data: stockStatus } = useQuery({
-    queryKey: ['inventory', 'status', user?.store_id, warehouseFilter],
-    queryFn: () =>
-      inventoryService.getStockStatus({
-        warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
-      }),
-    enabled: !!user?.store_id,
-    staleTime: 1000 * 60 * 5,
-  })
-
-  const stockByProduct = (stockStatus || []).reduce<Record<string, StockStatus>>((acc, item) => {
-    acc[item.product_id] = item
-    return acc
-  }, {})
-
   const isActiveFilter =
     statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined
+  const isVisiblePublicFilter = publicOnly ? true : undefined
+  const productTypeValue = productTypeFilter === 'all' ? undefined : productTypeFilter
+  const offset = (currentPage - 1) * pageSize
+
+  // Stock status actual
+  const { data: stockStatusData } = useQuery({
+    queryKey: [
+      'inventory',
+      'status',
+      user?.store_id,
+      warehouseFilter,
+      searchQuery,
+      categoryFilter,
+      statusFilter,
+      currentPage,
+      pageSize,
+    ],
+    queryFn: () =>
+      inventoryService.getStockStatusPaged({
+        warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
+        search: searchQuery || undefined,
+        category: categoryFilter || undefined,
+        is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
+        limit: pageSize,
+        offset,
+      }),
+    enabled: !!user?.store_id && isOnline,
+    staleTime: 1000 * 60 * 5,
+    gcTime: Infinity,
+  })
+
+  const stockByProduct = (stockStatusData?.items || []).reduce<Record<string, StockStatus>>(
+    (acc, item) => {
+      acc[item.product_id] = item
+      return acc
+    },
+    {}
+  )
 
   useEffect(() => {
     if (user?.store_id) {
@@ -166,6 +193,8 @@ export default function ProductsPage() {
         search: searchQuery || undefined,
         category: categoryFilter || undefined,
         is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
         limit: pageSize,
       }).then(cached => {
         if (cached.length > 0) {
@@ -176,16 +205,17 @@ export default function ProductsPage() {
         }
       }).catch(() => { })
     }
-  }, [user?.store_id, searchQuery, categoryFilter, isActiveFilter, pageSize])
+  }, [user?.store_id, searchQuery, categoryFilter, isActiveFilter, isVisiblePublicFilter, productTypeValue, pageSize])
 
-  const offset = (currentPage - 1) * pageSize
   const { data: productsData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['products', 'list', searchQuery, categoryFilter, statusFilter, currentPage, pageSize, user?.store_id],
+    queryKey: ['products', 'list', searchQuery, categoryFilter, statusFilter, publicOnly, productTypeFilter, currentPage, pageSize, user?.store_id],
     queryFn: () =>
       productsService.search({
         q: searchQuery || undefined,
         category: categoryFilter || undefined,
         is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
         limit: pageSize,
         offset: offset,
       }, user?.store_id),
@@ -349,6 +379,8 @@ export default function ProductsPage() {
         q: searchQuery || undefined,
         category: categoryFilter || undefined,
         is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
         limit: 1,
         offset: 0,
       }, user?.store_id)
@@ -365,6 +397,8 @@ export default function ProductsPage() {
           q: searchQuery || undefined,
           category: categoryFilter || undefined,
           is_active: isActiveFilter,
+          is_visible_public: isVisiblePublicFilter,
+          product_type: productTypeValue,
           limit: totalProducts + 100,
           offset: 0,
         }, user?.store_id)
@@ -377,6 +411,8 @@ export default function ProductsPage() {
             q: searchQuery || undefined,
             category: categoryFilter || undefined,
             is_active: isActiveFilter,
+            is_visible_public: isVisiblePublicFilter,
+            product_type: productTypeValue,
             limit: batchSize,
             offset: i * batchSize,
           }, user?.store_id)
@@ -576,6 +612,37 @@ export default function ProductsPage() {
                   <SelectItem value="inactive">Inactivos</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="w-full sm:max-w-xs">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Tipo</Label>
+              <Select
+                value={productTypeFilter}
+                onValueChange={(value) =>
+                  setProductTypeFilter(value as 'all' | 'sale_item' | 'ingredient' | 'prepared')
+                }
+              >
+                <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="sale_item">Producto de venta</SelectItem>
+                  <SelectItem value="prepared">Plato elaborado</SelectItem>
+                  <SelectItem value="ingredient">Ingrediente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:max-w-xs">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Catálogo público</Label>
+              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-white/60 px-3 py-2">
+                <span className="text-sm text-muted-foreground">
+                  Solo visibles
+                </span>
+                <Switch
+                  checked={publicOnly}
+                  onCheckedChange={setPublicOnly}
+                />
+              </div>
             </div>
             {warehouses.length > 0 && (
               <div className="w-full sm:max-w-sm">

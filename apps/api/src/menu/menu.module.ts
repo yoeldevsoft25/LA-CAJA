@@ -10,6 +10,7 @@ import { Order } from '../database/entities/order.entity';
 import { OrderItem } from '../database/entities/order-item.entity';
 import { PublicOrdersService } from '../orders/public-orders.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RecipesModule } from '../recipes/recipes.module';
 
 /**
  * Módulo para menú público (acceso desde QR codes)
@@ -25,9 +26,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
       OrderItem,
     ]),
     forwardRef(() => NotificationsModule),
+    RecipesModule,
   ],
   controllers: [MenuController],
   providers: [MenuService, PublicOrdersService],
   exports: [MenuService],
 })
-export class MenuModule {}
+export class MenuModule { }

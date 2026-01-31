@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike, In, EntityManager } from 'typeorm';
 import { Product } from '../database/entities/product.entity';
+import { RecipeIngredient } from '../database/entities/recipe-ingredient.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ChangePriceDto } from './dto/change-price.dto';
@@ -26,6 +27,8 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    @InjectRepository(RecipeIngredient)
+    private recipeIngredientRepository: Repository<RecipeIngredient>,
     private exchangeService: ExchangeService,
     private usageService: UsageService,
   ) { }
@@ -108,6 +111,58 @@ export class ProductsService {
     );
   }
 
+  private async syncRecipeIngredients(
+    manager: EntityManager,
+    storeId: string,
+    productId: string,
+    ingredients: { ingredient_product_id: string; qty: number; unit: string | null }[],
+  ): Promise<void> {
+    await manager.delete(RecipeIngredient, { recipe_product_id: productId });
+
+    if (!ingredients || ingredients.length === 0) return;
+
+    const invalidQty = ingredients.some((ingredient) => {
+      const qty = Number(ingredient.qty);
+      return (
+        !ingredient.ingredient_product_id ||
+        !Number.isFinite(qty) ||
+        qty <= 0
+      );
+    });
+    if (invalidQty) {
+      throw new BadRequestException('Ingredientes inválidos');
+    }
+
+    const ingredientIds = [
+      ...new Set(ingredients.map((i) => i.ingredient_product_id)),
+    ];
+    if (ingredientIds.includes(productId)) {
+      throw new BadRequestException(
+        'Una receta no puede incluirse a sí misma',
+      );
+    }
+
+    const validIngredients = await manager.getRepository(Product).find({
+      where: { id: In(ingredientIds), store_id: storeId },
+      select: ['id'],
+    });
+    if (validIngredients.length !== ingredientIds.length) {
+      throw new BadRequestException('Ingredientes inválidos para la tienda');
+    }
+
+    const newIngredients = ingredients.map((i) =>
+      manager.create(RecipeIngredient, {
+        id: randomUUID(),
+        recipe_product_id: productId,
+        ingredient_product_id: i.ingredient_product_id,
+        qty: i.qty,
+        unit: i.unit,
+      }),
+    );
+
+    await manager.save(RecipeIngredient, newIngredients);
+  }
+
   async create(storeId: string, dto: CreateProductDto): Promise<Product> {
     const normalizedBarcode = normalizeBarcode(dto.barcode);
     await this.ensureBarcodeUnique(
@@ -173,34 +228,73 @@ export class ProductsService {
           ? dto.cost_per_weight_bs ?? null
           : null;
 
-    const product = this.productRepository.create({
-      id: randomUUID(),
-      store_id: storeId,
-      name: dto.name,
-      category: dto.category ?? null,
-      sku: dto.sku ?? null,
-      barcode: normalizedBarcode,
-      price_bs: price_bs,
-      price_usd: price_usd,
-      cost_bs: cost_bs,
-      cost_usd: cost_usd,
-      low_stock_threshold: dto.low_stock_threshold || 0,
-      is_active: true,
-      is_weight_product: isWeightProduct,
-      weight_unit: isWeightProduct ? dto.weight_unit ?? null : null,
-      price_per_weight_bs: pricePerWeightBs,
-      price_per_weight_usd: pricePerWeightUsd,
-      cost_per_weight_bs: costPerWeightBs,
-      cost_per_weight_usd: costPerWeightUsd,
-      min_weight: isWeightProduct ? dto.min_weight ?? null : null,
-      max_weight: isWeightProduct ? dto.max_weight ?? null : null,
-      scale_plu: isWeightProduct ? dto.scale_plu ?? null : null,
-      scale_department: isWeightProduct ? dto.scale_department ?? null : null,
-    });
+    return this.productRepository.manager.transaction(async (manager) => {
+      let productType: 'sale_item' | 'ingredient' | 'prepared' =
+        dto.product_type ?? (dto.is_recipe ? 'prepared' : 'sale_item');
 
-    const savedProduct = await this.productRepository.save(product);
-    await this.usageService.increment(storeId, 'products');
-    return savedProduct;
+      if (dto.is_recipe && productType === 'ingredient') {
+        throw new BadRequestException('Una receta no puede ser ingrediente');
+      }
+
+      if (productType === 'ingredient') {
+        // Ingredientes no son recetas ni visibles al público
+        dto.is_recipe = false;
+        dto.is_visible_public = false;
+      }
+
+      if (productType === 'prepared') {
+        dto.is_recipe = true;
+      }
+
+      const product = manager.create(Product, {
+        id: randomUUID(),
+        store_id: storeId,
+        name: dto.name,
+        category: dto.category ?? null,
+        sku: dto.sku ?? null,
+        barcode: normalizedBarcode,
+        price_bs: price_bs,
+        price_usd: price_usd,
+        cost_bs: cost_bs,
+        cost_usd: cost_usd,
+        low_stock_threshold: dto.low_stock_threshold || 0,
+        is_active: true,
+        is_weight_product: isWeightProduct,
+        weight_unit: isWeightProduct ? dto.weight_unit ?? null : null,
+        price_per_weight_bs: pricePerWeightBs,
+        price_per_weight_usd: pricePerWeightUsd,
+        cost_per_weight_bs: costPerWeightBs,
+        cost_per_weight_usd: costPerWeightUsd,
+        min_weight: isWeightProduct ? dto.min_weight ?? null : null,
+        max_weight: isWeightProduct ? dto.max_weight ?? null : null,
+        scale_plu: isWeightProduct ? dto.scale_plu ?? null : null,
+        scale_department: isWeightProduct ? dto.scale_department ?? null : null,
+        image_url: dto.image_url ?? null,
+        description: dto.description ?? null,
+        is_recipe: dto.is_recipe ?? false,
+        product_type: productType,
+        is_visible_public: dto.is_visible_public ?? false,
+        public_name: dto.public_name ?? null,
+        public_description: dto.public_description ?? null,
+        public_image_url: dto.public_image_url ?? null,
+        public_category: dto.public_category ?? null,
+        profit_margin: dto.profit_margin ?? 0,
+      });
+
+      const savedProduct = await manager.save(Product, product);
+
+      if (dto.is_recipe && dto.ingredients && dto.ingredients.length > 0) {
+        await this.syncRecipeIngredients(
+          manager,
+          storeId,
+          savedProduct.id,
+          dto.ingredients,
+        );
+      }
+
+      await this.usageService.increment(storeId, 'products');
+      return savedProduct;
+    });
   }
 
   async findAll(
@@ -227,6 +321,18 @@ export class ProductsService {
     if (searchDto.is_active !== undefined) {
       query.andWhere('product.is_active = :isActive', {
         isActive: searchDto.is_active,
+      });
+    }
+
+    if (searchDto.is_visible_public !== undefined) {
+      query.andWhere('product.is_visible_public = :isVisiblePublic', {
+        isVisiblePublic: searchDto.is_visible_public,
+      });
+    }
+
+    if (searchDto.product_type) {
+      query.andWhere('product.product_type = :productType', {
+        productType: searchDto.product_type,
       });
     }
 
@@ -268,6 +374,8 @@ export class ProductsService {
     if (
       dto.price_usd !== undefined ||
       dto.cost_usd !== undefined ||
+      dto.price_bs !== undefined ||
+      dto.cost_bs !== undefined ||
       dto.price_per_weight_usd != null ||
       dto.cost_per_weight_usd != null
     ) {
@@ -510,6 +618,37 @@ export class ProductsService {
         }
       }
 
+      if (dto.image_url !== undefined) product.image_url = dto.image_url;
+      if (dto.description !== undefined) product.description = dto.description;
+
+      if (dto.product_type !== undefined) {
+        if (dto.is_recipe && dto.product_type === 'ingredient') {
+          throw new BadRequestException('Una receta no puede ser ingrediente');
+        }
+        product.product_type = dto.product_type;
+      }
+
+      if (product.product_type === 'ingredient') {
+        product.is_recipe = false;
+        product.is_visible_public = false;
+      } else if (product.product_type === 'prepared') {
+        product.is_recipe = true;
+      } else if (dto.is_recipe !== undefined) {
+        product.is_recipe = dto.is_recipe;
+      }
+
+      if (dto.is_visible_public !== undefined) {
+        product.is_visible_public = dto.is_visible_public;
+      }
+      if (dto.public_name !== undefined) product.public_name = dto.public_name;
+      if (dto.public_description !== undefined)
+        product.public_description = dto.public_description;
+      if (dto.public_image_url !== undefined)
+        product.public_image_url = dto.public_image_url;
+      if (dto.public_category !== undefined)
+        product.public_category = dto.public_category;
+      if (dto.profit_margin !== undefined) product.profit_margin = dto.profit_margin;
+
       const savedProduct = await productRepo.save(product);
 
       if (unitChanged && product.is_weight_product && previousUnit && currentUnit) {
@@ -522,6 +661,19 @@ export class ProductsService {
           product.id,
           previousUnit,
           currentUnit,
+        );
+      }
+
+      if (product.product_type === 'ingredient') {
+        await this.syncRecipeIngredients(manager, storeId, product.id, []);
+      } else if (dto.is_recipe === false) {
+        await this.syncRecipeIngredients(manager, storeId, product.id, []);
+      } else if (dto.ingredients !== undefined) {
+        await this.syncRecipeIngredients(
+          manager,
+          storeId,
+          product.id,
+          dto.ingredients,
         );
       }
 

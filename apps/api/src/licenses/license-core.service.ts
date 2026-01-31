@@ -70,6 +70,7 @@ export class LicenseService {
         const payload = {
             sub: storeId,
             plan: status.plan,
+            status: status.status,
             features: status.features,
             limits: status.limits,
             expires_at: status.expires_at,

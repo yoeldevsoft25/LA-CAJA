@@ -52,4 +52,26 @@ export const kitchenService = {
     )
     return response.data
   },
+
+  async getPublicKitchenLink(): Promise<{ token: string; url: string; has_pin: boolean }> {
+    const response = await api.get<{ token: string; url: string; has_pin: boolean }>(
+      '/kitchen/public-link'
+    )
+    return response.data
+  },
+
+  async rotatePublicKitchenLink(): Promise<{ token: string; url: string; has_pin: boolean }> {
+    const response = await api.post<{ token: string; url: string; has_pin: boolean }>(
+      '/kitchen/public-link/rotate'
+    )
+    return response.data
+  },
+
+  async setPublicKitchenPin(pin?: string): Promise<{ has_pin: boolean }> {
+    const response = await api.post<{ has_pin: boolean }>(
+      '/kitchen/public-link/pin',
+      { pin }
+    )
+    return response.data
+  },
 }
