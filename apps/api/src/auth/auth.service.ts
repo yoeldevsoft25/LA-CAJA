@@ -295,7 +295,7 @@ export class AuthService {
           this.logger.log(`📧 Sending verification email to ${dto.owner_email}`);
         }
 
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://veloxpos.app';
         const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
         await this.emailService.sendEmail({
@@ -561,7 +561,7 @@ export class AuthService {
     }
 
     // Enviar email
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://veloxpos.app';
     const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
     this.logger.log(`📧 Sending verification email to ${profile.email}`);
