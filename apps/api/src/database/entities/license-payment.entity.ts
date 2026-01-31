@@ -105,11 +105,7 @@ export class LicensePayment {
   @Column({ type: 'timestamptz', nullable: true })
   verified_at: Date | null;
 
-  @ManyToOne(() => Profile, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'verified_by' })
-  verifier: Profile | null;
-
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   verified_by: string | null;
 
   @Column({ type: 'boolean', default: false })
@@ -122,22 +118,14 @@ export class LicensePayment {
   @Column({ type: 'timestamptz', nullable: true })
   approved_at: Date | null;
 
-  @ManyToOne(() => Profile, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'approved_by' })
-  approver: Profile | null;
-
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   approved_by: string | null;
 
   // Rechazo
   @Column({ type: 'timestamptz', nullable: true })
   rejected_at: Date | null;
 
-  @ManyToOne(() => Profile, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'rejected_by' })
-  rejector: Profile | null;
-
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   rejected_by: string | null;
 
   @Column({ type: 'text', nullable: true })
