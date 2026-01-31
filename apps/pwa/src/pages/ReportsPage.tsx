@@ -51,10 +51,10 @@ const paymentMethodLabels: Record<string, string> = {
   CASH_BS: 'Efectivo Bs',
   CASH_USD: 'Efectivo USD',
   PAGO_MOVIL: 'Pago Móvil',
-  TRANSFER: 'Transferencia',
+  TRANSFER: 'Tarjeta',
   FIAO: 'Fiado',
   SPLIT: 'Mixto',
-  OTHER: 'Otro',
+  OTHER: 'Biopago',
   unknown: 'Desconocido',
 }
 
@@ -136,9 +136,9 @@ export default function ReportsPage() {
   }, [dateRange, customStartDate, customEndDate])
 
   // Query: Ventas por día - SOLO si el usuario es owner
-  const { 
-    data: salesReport, 
-    isLoading: loadingSales, 
+  const {
+    data: salesReport,
+    isLoading: loadingSales,
     refetch: refetchSales,
     error: salesError,
   } = useQuery({
@@ -155,8 +155,8 @@ export default function ReportsPage() {
   })
 
   // Query: Top productos - SOLO si el usuario es owner
-  const { 
-    data: topProducts, 
+  const {
+    data: topProducts,
     isLoading: loadingProducts,
     error: productsError,
   } = useQuery({
@@ -173,8 +173,8 @@ export default function ReportsPage() {
   })
 
   // Query: Resumen de deudas - SOLO si el usuario es owner
-  const { 
-    data: debtSummary, 
+  const {
+    data: debtSummary,
     isLoading: loadingDebts,
     error: debtsError,
   } = useQuery({
@@ -255,7 +255,7 @@ export default function ReportsPage() {
     const error = salesError || productsError || debtsError
     const is403 = error?.response?.status === 403
     const errorMessage = error?.response?.data?.message || error?.message || 'Error desconocido'
-    
+
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="border-destructive">
@@ -371,50 +371,50 @@ export default function ReportsPage() {
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <RadioGroupItem value="today" id="today" className="h-4 w-4 sm:h-5 sm:w-5" />
                 <Label htmlFor="today" className="cursor-pointer font-normal text-xs sm:text-sm">
-            Hoy
+                  Hoy
                 </Label>
               </div>
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <RadioGroupItem value="week" id="week" className="h-4 w-4 sm:h-5 sm:w-5" />
                 <Label htmlFor="week" className="cursor-pointer font-normal text-xs sm:text-sm">
-            Esta Semana
+                  Esta Semana
                 </Label>
               </div>
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <RadioGroupItem value="month" id="month" className="h-4 w-4 sm:h-5 sm:w-5" />
                 <Label htmlFor="month" className="cursor-pointer font-normal text-xs sm:text-sm">
-            Este Mes
+                  Este Mes
                 </Label>
               </div>
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <RadioGroupItem value="custom" id="custom" className="h-4 w-4 sm:h-5 sm:w-5" />
                 <Label htmlFor="custom" className="cursor-pointer font-normal text-xs sm:text-sm">
-            Personalizado
+                  Personalizado
                 </Label>
               </div>
             </RadioGroup>
-        </div>
+          </div>
 
-        {dateRange === 'custom' && (
+          {dateRange === 'custom' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border">
               <DatePicker
                 date={customStartDate}
                 onDateChange={setCustomStartDate}
                 label="Desde"
-                />
+              />
               <DatePicker
                 date={customEndDate}
                 onDateChange={setCustomEndDate}
                 label="Hasta"
-                />
-          </div>
-        )}
+              />
+            </div>
+          )}
 
           <div className="text-sm text-muted-foreground flex items-center">
             <CalendarIcon className="inline w-4 h-4 mr-1" />
-          Período: {format(new Date(startDate), "dd 'de' MMMM", { locale: es })} al{' '}
-          {format(new Date(endDate), "dd 'de' MMMM, yyyy", { locale: es })}
-        </div>
+            Período: {format(new Date(startDate), "dd 'de' MMMM", { locale: es })} al{' '}
+            {format(new Date(endDate), "dd 'de' MMMM, yyyy", { locale: es })}
+          </div>
         </CardContent>
       </Card>
 
@@ -422,56 +422,56 @@ export default function ReportsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Card className="border border-border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-muted-foreground">Total Ventas</span>
               <TrendingUp className="w-5 h-5 text-primary" />
-          </div>
+            </div>
             <p className="text-2xl sm:text-3xl font-bold text-foreground">
-            {(salesReport as any)?.total_sales || 0}
-          </p>
+              {(salesReport as any)?.total_sales || 0}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">transacciones</p>
           </CardContent>
         </Card>
 
         <Card className="border border-border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-muted-foreground">Ingresos USD</span>
               <DollarSign className="w-5 h-5 text-primary" />
-          </div>
+            </div>
             <p className="text-xl sm:text-2xl font-bold text-foreground">
-            ${((salesReport as any)?.total_amount_usd || 0).toFixed(2)}
-          </p>
+              ${((salesReport as any)?.total_amount_usd || 0).toFixed(2)}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
-            {((salesReport as any)?.total_amount_bs || 0).toFixed(2)} Bs
-          </p>
+              {((salesReport as any)?.total_amount_bs || 0).toFixed(2)} Bs
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-success/5 !border-success border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-success">Ganancia Neta</span>
               <Wallet className="w-5 h-5 text-success" />
-          </div>
+            </div>
             <p className="text-xl sm:text-2xl font-bold text-success">
-            ${((salesReport as any)?.total_profit_usd || 0).toFixed(2)}
-          </p>
+              ${((salesReport as any)?.total_profit_usd || 0).toFixed(2)}
+            </p>
             <p className="text-xs text-success mt-1">
-            {((salesReport as any)?.total_profit_bs || 0).toFixed(2)} Bs
-          </p>
+              {((salesReport as any)?.total_profit_bs || 0).toFixed(2)} Bs
+            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-info/5 !border-info border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-info">Margen</span>
               <Percent className="w-5 h-5 text-info" />
-          </div>
+            </div>
             <p className="text-xl sm:text-2xl font-bold text-info">
-            {(salesReport?.profit_margin || 0).toFixed(1)}%
-          </p>
+              {(salesReport?.profit_margin || 0).toFixed(1)}%
+            </p>
             <p className="text-xs text-info mt-1">de ganancia</p>
           </CardContent>
         </Card>
@@ -481,56 +481,56 @@ export default function ReportsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Card className="border border-border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-muted-foreground">Costo Total</span>
               <TrendingDown className="w-5 h-5 text-destructive" />
-          </div>
+            </div>
             <p className="text-lg sm:text-xl font-bold text-destructive">
-            ${((salesReport as any)?.total_cost_usd || 0).toFixed(2)}
-          </p>
+              ${((salesReport as any)?.total_cost_usd || 0).toFixed(2)}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
-            {((salesReport as any)?.total_cost_bs || 0).toFixed(2)} Bs
-          </p>
+              {((salesReport as any)?.total_cost_bs || 0).toFixed(2)} Bs
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border border-border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-muted-foreground">Deuda Pendiente</span>
               <AlertCircle className="w-5 h-5 text-warning" />
-          </div>
+            </div>
             <p className="text-lg sm:text-xl font-bold text-warning">
-            ${((debtSummary as any)?.total_pending_usd || 0).toFixed(2)}
-          </p>
+              ${((debtSummary as any)?.total_pending_usd || 0).toFixed(2)}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">por cobrar (FIAO)</p>
           </CardContent>
         </Card>
 
         <Card className="border border-border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-muted-foreground">Deudas Abiertas</span>
               <Users className="w-5 h-5 text-warning" />
-          </div>
+            </div>
             <p className="text-lg sm:text-xl font-bold text-foreground">
-            {((debtSummary as any)?.by_status?.open || 0) + ((debtSummary as any)?.by_status?.partial || 0)}
-          </p>
+              {((debtSummary as any)?.by_status?.open || 0) + ((debtSummary as any)?.by_status?.partial || 0)}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">clientes con deuda</p>
           </CardContent>
         </Card>
 
         <Card className="border border-border">
           <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs sm:text-sm font-semibold text-muted-foreground">Ticket Promedio</span>
               <BarChart3 className="w-5 h-5 text-primary" />
-          </div>
+            </div>
             <p className="text-lg sm:text-xl font-bold text-foreground">
-            ${salesReport && (salesReport as any).total_sales > 0
-              ? ((salesReport as any).total_amount_usd / (salesReport as any).total_sales).toFixed(2)
-              : '0.00'}
-          </p>
+              ${salesReport && (salesReport as any).total_sales > 0
+                ? ((salesReport as any).total_amount_usd / (salesReport as any).total_sales).toFixed(2)
+                : '0.00'}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">USD por venta</p>
           </CardContent>
         </Card>
@@ -558,26 +558,26 @@ export default function ReportsPage() {
                   const isFIAO = method === 'FIAO'
                   return (
                     <Card
-                  key={method}
+                      key={method}
                       className={cn(
                         'border',
                         isFIAO ? 'bg-warning/5 !border-warning' : 'bg-muted/50 border-border'
                       )}
-                >
+                    >
                       <CardContent className="p-3">
-                  <div className="flex justify-between items-center mb-2">
+                        <div className="flex justify-between items-center mb-2">
                           <span
                             className={cn(
                               'font-semibold',
                               isFIAO ? 'text-warning' : 'text-foreground'
                             )}
                           >
-                      {paymentMethodLabels[method] || method}
-                    </span>
+                            {paymentMethodLabels[method] || method}
+                          </span>
                           <Badge variant={isFIAO ? 'default' : 'secondary'} className={isFIAO ? 'bg-warning text-white' : ''}>
-                      {(data?.count || 0)} ventas
+                            {(data?.count || 0)} ventas
                           </Badge>
-                  </div>
+                        </div>
                         <div className="text-sm">
                           <p className={cn(isFIAO ? 'text-warning' : 'text-muted-foreground')}>
                             {(data?.amount_bs || 0).toFixed(2)} Bs
@@ -585,12 +585,12 @@ export default function ReportsPage() {
                           <p className={cn('font-medium', isFIAO ? 'text-warning' : 'text-foreground')}>
                             ${(data?.amount_usd || 0).toFixed(2)} USD
                           </p>
-                  </div>
+                        </div>
                       </CardContent>
                     </Card>
                   )
                 })}
-                </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -614,70 +614,70 @@ export default function ReportsPage() {
                       <CardContent className="p-3">
                         <p className="text-xs text-muted-foreground">Total Fiado</p>
                         <p className="text-lg font-bold text-foreground">
-                        ${((debtSummary as any).total_debt_usd || 0).toFixed(2)}
-                      </p>
+                          ${((debtSummary as any).total_debt_usd || 0).toFixed(2)}
+                        </p>
                       </CardContent>
                     </Card>
                     <Card className="bg-success/5 !border-success border">
                       <CardContent className="p-3">
                         <p className="text-xs text-muted-foreground">Total Cobrado</p>
                         <p className="text-lg font-bold text-success">
-                        ${((debtSummary as any).total_paid_usd || 0).toFixed(2)}
-                      </p>
+                          ${((debtSummary as any).total_paid_usd || 0).toFixed(2)}
+                        </p>
                       </CardContent>
                     </Card>
                     <Card className="bg-warning/5 !border-warning border">
                       <CardContent className="p-3">
                         <p className="text-xs text-muted-foreground">Pendiente</p>
                         <p className="text-lg font-bold text-warning">
-                        ${((debtSummary as any).total_pending_usd || 0).toFixed(2)}
-                      </p>
+                          ${((debtSummary as any).total_pending_usd || 0).toFixed(2)}
+                        </p>
                       </CardContent>
                     </Card>
                     <Card className="bg-info/5 !border-info border">
                       <CardContent className="p-3">
                         <p className="text-xs text-muted-foreground">Deudas Abiertas</p>
                         <p className="text-lg font-bold text-info">
-                        {((debtSummary as any).by_status?.open || 0) + ((debtSummary as any).by_status?.partial || 0)}
-                      </p>
+                          {((debtSummary as any).by_status?.open || 0) + ((debtSummary as any).by_status?.partial || 0)}
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
 
                   {/* Top deudores */}
                   {(debtSummary as any).top_debtors && Array.isArray((debtSummary as any).top_debtors) && (debtSummary as any).top_debtors.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Top 10 Deudores</h3>
-                  <div className="space-y-2">
-                    {debtSummary.top_debtors.map((debtor: any, index: number) => (
-                      <Card
-                        key={debtor.customer_id}
-                        className="bg-muted/50 border-border"
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                              <Badge
-                                variant={index < 3 ? 'default' : 'secondary'}
-                                className={cn(
-                                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3',
-                                  index < 3 && 'bg-warning text-white'
-                                )}
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground mb-3">Top 10 Deudores</h3>
+                      <div className="space-y-2">
+                        {debtSummary.top_debtors.map((debtor: any, index: number) => (
+                          <Card
+                            key={debtor.customer_id}
+                            className="bg-muted/50 border-border"
                           >
-                            {index + 1}
-                              </Badge>
-                              <span className="font-medium text-foreground">{debtor.customer_name}</span>
-                        </div>
-                        <div className="text-right">
-                              <p className="font-bold text-warning">${debtor.pending_usd.toFixed(2)}</p>
-                              <p className="text-xs text-muted-foreground">{debtor.pending_bs.toFixed(2)} Bs</p>
-                        </div>
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <Badge
+                                    variant={index < 3 ? 'default' : 'secondary'}
+                                    className={cn(
+                                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3',
+                                      index < 3 && 'bg-warning text-white'
+                                    )}
+                                  >
+                                    {index + 1}
+                                  </Badge>
+                                  <span className="font-medium text-foreground">{debtor.customer_name}</span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold text-warning">${debtor.pending_usd.toFixed(2)}</p>
+                                  <p className="text-xs text-muted-foreground">{debtor.pending_bs.toFixed(2)} Bs</p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                       </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                    </div>
                   )}
                 </>
               ) : (
@@ -706,7 +706,7 @@ export default function ReportsPage() {
                   <TabsTrigger value="weight">Por Peso</TabsTrigger>
                   <TabsTrigger value="units">Por Cantidad</TabsTrigger>
                 </TabsList>
-                
+
                 {/* Tab: Productos por Peso */}
                 <TabsContent value="weight" className="mt-0">
                   <div className="space-y-2">
@@ -721,7 +721,7 @@ export default function ReportsPage() {
                         (max: number, product: any) => Math.max(max, getWeightQty(product)),
                         1,
                       )
-                      
+
                       return weightProducts.length > 0 ? (
                         weightProducts.map((product: any, index: number) => {
                           const percentage = (getWeightQty(product) / maxQtyWeight) * 100
@@ -794,7 +794,7 @@ export default function ReportsPage() {
                         (max: number, product: any) => Math.max(max, getUnitQty(product)),
                         1,
                       )
-                      
+
                       return unitProducts.length > 0 ? (
                         unitProducts.map((product: any, index: number) => {
                           const percentage = (getUnitQty(product) / maxQtyUnits) * 100
@@ -869,7 +869,7 @@ export default function ReportsPage() {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-0 pb-0">
-            <div className="overflow-x-auto">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -881,18 +881,18 @@ export default function ReportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                  {(salesReport as any).daily && Array.isArray((salesReport as any).daily) && (salesReport as any).daily.map((day: any) => (
+                    {(salesReport as any).daily && Array.isArray((salesReport as any).daily) && (salesReport as any).daily.map((day: any) => (
                       <TableRow key={day.date}>
                         <TableCell>
                           <span className="font-medium text-foreground">
-                          {format(new Date(day.date + 'T12:00:00'), "EEE dd/MM", {
-                            locale: es,
-                          })}
-                        </span>
+                            {format(new Date(day.date + 'T12:00:00'), "EEE dd/MM", {
+                              locale: es,
+                            })}
+                          </span>
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="secondary">
-                          {day.sales_count}
+                            {day.sales_count}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -905,27 +905,27 @@ export default function ReportsPage() {
                           <span className="font-bold text-success">${day.profit_usd.toFixed(2)}</span>
                         </TableCell>
                       </TableRow>
-                  ))}
+                    ))}
                   </TableBody>
                   <TableFooter>
                     <TableRow>
                       <TableCell className="font-bold text-foreground">TOTAL</TableCell>
                       <TableCell className="text-center font-bold text-foreground">
-                      {salesReport.total_sales}
+                        {salesReport.total_sales}
                       </TableCell>
                       <TableCell className="text-right font-bold text-foreground">
-                      ${salesReport.total_amount_usd.toFixed(2)}
+                        ${salesReport.total_amount_usd.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right font-bold text-destructive hidden sm:table-cell">
-                      ${salesReport.total_cost_usd.toFixed(2)}
+                        ${salesReport.total_cost_usd.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right font-bold text-success">
-                      ${salesReport.total_profit_usd.toFixed(2)}
+                        ${salesReport.total_profit_usd.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   </TableFooter>
                 </Table>
-            </div>
+              </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -941,8 +941,8 @@ export default function ReportsPage() {
               </div>
               <h3 className="text-sm sm:text-base font-medium text-foreground mb-2">No hay datos para mostrar</h3>
               <p className="text-xs sm:text-sm text-muted-foreground">
-            No se encontraron ventas en el período seleccionado. Intenta con un rango de fechas diferente.
-          </p>
+                No se encontraron ventas en el período seleccionado. Intenta con un rango de fechas diferente.
+              </p>
             </div>
           </CardContent>
         </Card>

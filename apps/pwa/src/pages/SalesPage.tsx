@@ -44,8 +44,8 @@ const paymentMethodLabels: Record<string, string> = {
   CASH_BS: 'Efectivo Bs',
   CASH_USD: 'Efectivo USD',
   PAGO_MOVIL: 'Pago Móvil',
-  TRANSFER: 'Transferencia',
-  OTHER: 'Otro',
+  TRANSFER: 'Tarjeta',
+  OTHER: 'Biopago',
   SPLIT: 'Mixto',
   FIAO: 'Fiado',
 }
@@ -106,7 +106,7 @@ export default function SalesPage() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const limit = 20
+  const limit = 10
 
   // Filtros avanzados
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all')
@@ -125,7 +125,7 @@ export default function SalesPage() {
   const effectiveStoreId = user?.store_id || ''
 
   // Obtener datos del prefetch como placeholderData (últimas 50 ventas)
-  const prefetchedSales = queryClient.getQueryData<{ sales: Sale[]; total: number }>(['sales', 'list', effectiveStoreId, { limit: 50 }])
+  const prefetchedSales = queryClient.getQueryData<{ sales: Sale[]; total: number }>(['sales', 'list', effectiveStoreId, { limit: 10 }])
 
   // Obtener ventas
   const { data: salesData, isLoading, isError, error, refetch } = useQuery<{ sales: Sale[]; total: number }>({

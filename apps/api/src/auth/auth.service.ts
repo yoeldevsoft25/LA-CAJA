@@ -279,7 +279,7 @@ export class AuthService {
       await queryRunner.manager.save(EmailVerificationToken, emailToken);
 
       // Incrementar uso de usuarios (Owner + Cashier = 2)
-      await this.usageService.increment(savedStore.id, 'users', 2);
+      await this.usageService.increment(savedStore.id, 'users', 2, queryRunner.manager);
 
       // Commit de la transacción
       await queryRunner.commitTransaction();

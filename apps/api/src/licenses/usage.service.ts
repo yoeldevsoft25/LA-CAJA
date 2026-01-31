@@ -17,13 +17,15 @@ export class UsageService {
     /**
      * Incrementa el uso de una métrica de forma atómica
      */
-    async increment(storeId: string, metric: string, amount: number = 1) {
-        let usage = await this.usageRepo.findOne({
+    async increment(storeId: string, metric: string, amount: number = 1, entityManager?: any) {
+        const repo = entityManager ? entityManager.getRepository(LicenseUsage) : this.usageRepo;
+
+        let usage = await repo.findOne({
             where: { store_id: storeId, metric }
         });
 
         if (!usage) {
-            usage = this.usageRepo.create({
+            usage = repo.create({
                 store_id: storeId,
                 metric,
                 used: 0,
@@ -33,7 +35,7 @@ export class UsageService {
         usage.used += amount;
         usage.updated_at = new Date();
 
-        return this.usageRepo.save(usage);
+        return repo.save(usage);
     }
 
     /**

@@ -23,7 +23,7 @@ export class WhatsAppController {
   constructor(
     private readonly whatsappConfigService: WhatsAppConfigService,
     private readonly whatsappBotService: WhatsAppBotService,
-  ) {}
+  ) { }
 
   @Get('config')
   async getConfig(@Request() req: any) {
@@ -58,7 +58,7 @@ export class WhatsAppController {
 
     // Verificar si el bot está conectado
     const isConnected = this.whatsappBotService.isConnected(storeId);
-    
+
     // Si ya está conectado, no necesitamos QR
     if (isConnected) {
       return {
@@ -85,19 +85,19 @@ export class WhatsAppController {
       } catch (error) {
         this.logger.debug(`Error al desconectar bot (puede que no exista):`, error);
       }
-      
+
       // Esperar un momento antes de reinicializar
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Reinicializar el bot (esto generará un nuevo QR si no hay sesión guardada)
-      await this.whatsappBotService.initializeBot(storeId, true);
-      
+      await this.whatsappBotService.initializeBot(storeId, true, true);
+
       // Esperar un momento para que se genere el QR (Baileys puede tardar un poco)
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Obtener el nuevo QR
       qrCode = await this.whatsappBotService.getQRCode(storeId);
-      
+
       // Si aún no hay QR: comprobar si ya conectó (con sesión guardada no hay QR, va a 'open')
       if (!qrCode && this.whatsappBotService.isConnected(storeId)) {
         return { qrCode: null, isConnected: true };
@@ -112,15 +112,15 @@ export class WhatsAppController {
 
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        await this.whatsappBotService.initializeBot(storeId, true);
+        await this.whatsappBotService.initializeBot(storeId, true, true);
 
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
         qrCode = await this.whatsappBotService.getQRCode(storeId);
       }
     } else {
-      // Si hay QR pero no está conectado, asegurarse de que el bot esté inicializado
-      await this.whatsappBotService.initializeBot(storeId);
+      // Si hay QR pero no está conectado, asegurarse de que el bot esté inicializado (modo interactivo)
+      await this.whatsappBotService.initializeBot(storeId, false, true);
     }
 
     return {
@@ -137,7 +137,7 @@ export class WhatsAppController {
     // Esto restaura automáticamente la conexión si la sesión es válida
     const botExists = this.whatsappBotService.hasBot(storeId);
     const hasSession = this.whatsappBotService.hasSavedSession(storeId);
-    
+
     if (!botExists && hasSession) {
       this.logger.log(`Bot no inicializado pero hay sesión guardada para tienda ${storeId}, restaurando conexión...`);
       try {

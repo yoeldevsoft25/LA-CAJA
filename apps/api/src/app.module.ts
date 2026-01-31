@@ -92,7 +92,8 @@ import { BullModule } from '@nestjs/bullmq';
           connectionOpts = {
             url: redisUrl,
             maxRetriesPerRequest: null,
-            enableOfflineQueue: true, // Enable offline queue for reliability
+            enableOfflineQueue: true,
+            connectTimeout: 5000, // 5s timeout to avoid hanging
           };
         } else {
           connectionOpts = {
@@ -100,7 +101,8 @@ import { BullModule } from '@nestjs/bullmq';
             port: configService.get<number>('REDIS_PORT') || 6379,
             password: configService.get<string>('REDIS_PASSWORD'),
             maxRetriesPerRequest: null,
-            enableOfflineQueue: true, // Enable offline queue for reliability
+            enableOfflineQueue: true,
+            connectTimeout: 5000, // 5s timeout to avoid hanging
           };
         }
 
@@ -110,12 +112,12 @@ import { BullModule } from '@nestjs/bullmq';
 
         // Habilitar offline queue para mayor resiliencia ante desconexiones temporales
         // BullMQ requiere maxRetriesPerRequest: null
-        const clientOptions = redisUrl
-          ? {
-            maxRetriesPerRequest: null,
-            enableOfflineQueue: true,
-          }
-          : { ...connectionOpts, maxRetriesPerRequest: null, enableOfflineQueue: true };
+        const clientOptions = {
+          ...connectionOpts,
+          maxRetriesPerRequest: null,
+          enableOfflineQueue: true,
+          connectTimeout: 5000,
+        };
 
         // Cliente compartido para publicar trabajos (puede ser usado por todas las colas)
         const sharedClient = redisUrl
@@ -126,8 +128,20 @@ import { BullModule } from '@nestjs/bullmq';
         const sharedSubscriber = sharedClient.duplicate();
 
         // Manejo de errores en conexiones compartidas
-        sharedClient.on('error', (err: any) => console.error('Redis Shared Client Error:', err.message));
-        sharedSubscriber.on('error', (err: any) => console.error('Redis Shared Subscriber Error:', err.message));
+        sharedClient.on('error', (err: any) => {
+          if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+            console.error(`❌ Redis Connection Error: ${err.message}. Is Redis installed and running? (brew services start redis)`);
+          } else {
+            console.error('Redis Shared Client Error:', err.message);
+          }
+        });
+        sharedSubscriber.on('error', (err: any) => {
+          if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+            // Silenciar duplicados del suscriptor para no inundar el log
+          } else {
+            console.error('Redis Shared Subscriber Error:', err.message);
+          }
+        });
 
         // Poner un límite máximo de listeners para evitar advertencias
         sharedClient.setMaxListeners(100);

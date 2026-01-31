@@ -66,10 +66,11 @@ export class WhatsAppBotService implements OnModuleDestroy {
   /**
    * Inicializa un bot para una tienda
    * Si el bot ya existe pero no está conectado y no hay QR, lo reinicializa
+   * @param isInteractive Si es true, permite generar QR. Si es false (background), aborta si se requiere QR.
    */
-  async initializeBot(storeId: string, forceReinit: boolean = false): Promise<void> {
+  async initializeBot(storeId: string, forceReinit: boolean = false, isInteractive: boolean = false): Promise<void> {
     const existingBot = this.bots.get(storeId);
-    
+
     // Si se fuerza reinicialización, desconectar y eliminar bot existente
     if (forceReinit && existingBot) {
       this.logger.log(`Forzando reinicialización del bot para tienda ${storeId}`);
@@ -93,15 +94,21 @@ export class WhatsAppBotService implements OnModuleDestroy {
         this.logger.log(`Bot ya conectado para tienda ${storeId}`);
         return;
       }
-      
-      // Si hay QR disponible, no reinicializar
+
+      // Si hay QR disponible...
       if (existingBot.qrCode) {
-        this.logger.log(`Bot ya inicializado con QR disponible para tienda ${storeId}`);
-        return;
+        // En modo interactivo, retornamos (ya está listo para escanear)
+        if (isInteractive) {
+          this.logger.log(`Bot ya inicializado con QR disponible para tienda ${storeId}`);
+          return;
+        }
+        // En modo NO interactivo, si hay un QR esperando, lo matamos para no consumir recursos
+        this.logger.log(`Bot con QR pendiente en modo no-interactivo. Limpiando para tienda ${storeId}`);
+        // Se procederá a reinicializar (y caerá en la validación de QR abajo)
       }
-      
-      // Si no está conectado y no hay QR, reinicializar automáticamente
-      this.logger.log(`Bot existe pero sin QR ni conexión, reinicializando para tienda ${storeId}`);
+
+      // Si no está conectado, reinicializar
+      this.logger.log(`Bot existe pero sin conexión (interactive=${isInteractive}), reinicializando para tienda ${storeId}`);
       existingBot.isClosing = true;
       if (existingBot.presenceIntervalId) {
         clearInterval(existingBot.presenceIntervalId);
@@ -160,14 +167,11 @@ export class WhatsAppBotService implements OnModuleDestroy {
       socket.ev.on('creds.update', async () => {
         try {
           await saveCreds();
-          this.logger.log(`Credenciales actualizadas para tienda ${storeId}`);
+          // this.logger.log(`Credenciales actualizadas para tienda ${storeId}`); // Reducir logs
         } catch (e: any) {
           // ENOENT: la carpeta de sesión fue eliminada (p. ej. clearSession) mientras saveCreds
           // se ejecutaba; ignorar para no tumbar el proceso en producción (Render, etc.)
           if (e?.code === 'ENOENT') {
-            this.logger.warn(
-              `saveCreds ENOENT para tienda ${storeId} (sesión ya limpiada), ignorando`,
-            );
             return;
           }
           throw e;
@@ -186,6 +190,19 @@ export class WhatsAppBotService implements OnModuleDestroy {
         }
 
         if (qr) {
+          if (!isInteractive) {
+            this.logger.warn(`⚠️ Se requiere QR para tienda ${storeId} pero no estamos en modo interactivo. Abortando y limpiando sesión.`);
+            botInstance.isClosing = true;
+            try {
+              socket.end(undefined);
+            } catch { }
+            this.bots.delete(storeId);
+
+            // IMPORTANTE: Limpiar la sesión corrupta/inválida para evitar loops infinitos de intento de conexión
+            await this.clearSession(storeId);
+            return;
+          }
+
           // Generar QR code como imagen base64
           try {
             const qrCodeDataUrl = await QRCode.toDataURL(qr);
@@ -226,7 +243,9 @@ export class WhatsAppBotService implements OnModuleDestroy {
               `Reconectando bot para tienda ${storeId} en ${delayMs / 1000}s (intento ${attempts})…`,
             );
             setTimeout(() => {
-              this.initializeBot(storeId).catch((error) => {
+              // En reconexión automática mantenemos el modo background (interactive=false) 
+              // a menos que hayamos implementado persistencia de esa bandera, pero seguro asumir false
+              this.initializeBot(storeId, false, false).catch((error) => {
                 this.logger.error(`Error reconectando bot para tienda ${storeId}:`, error);
               });
             }, delayMs);
@@ -248,7 +267,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
           }
           botInstance.presenceIntervalId = setInterval(() => {
             if (botInstance.socket && botInstance.isConnected) {
-              botInstance.socket.sendPresenceUpdate('available').catch(() => {});
+              botInstance.socket.sendPresenceUpdate('available').catch(() => { });
             }
           }, WhatsAppBotService.PRESENCE_INTERVAL_MS);
 
@@ -258,7 +277,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
             const number = jid.split('@')[0];
             botInstance.whatsappNumber = number;
             this.logger.log(`Bot conectado para tienda ${storeId}. Número: ${number}`);
-            
+
             // Actualizar número de WhatsApp en la base de datos
             this.updateWhatsAppNumberInDB(storeId, number).catch((error) => {
               this.logger.error(`Error actualizando número de WhatsApp en BD para tienda ${storeId}:`, error);
@@ -290,7 +309,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
       const newBot = this.bots.get(storeId);
       return newBot?.qrCode || null;
     }
-    
+
     // Si no hay QR y no está conectado, puede que necesite reinicialización
     // Pero no lo hacemos aquí para evitar loops, se hace en el controller
     return bot.qrCode;
@@ -318,7 +337,7 @@ export class WhatsAppBotService implements OnModuleDestroy {
     if (!existsSync(sessionPath)) {
       return false;
     }
-    
+
     // Verificar si hay archivos de sesión (creds.json o archivos de keys)
     try {
       const files = readdirSync(sessionPath);

@@ -92,7 +92,7 @@ export default function InventoryPage() {
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(50)
+  const [pageSize] = useState(20)
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [isStockReceivedModalOpen, setIsStockReceivedModalOpen] = useState(false)
   const [isStockAdjustModalOpen, setIsStockAdjustModalOpen] = useState(false)
@@ -427,7 +427,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Filtros */}
-      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/60 backdrop-blur-xl sticky top-0 z-20 transition-all duration-300">
+      <Card className="mb-6 border-none shadow-md shadow-black/5 bg-background transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
           {/* Búsqueda */}
           <div className="relative">
@@ -509,7 +509,7 @@ export default function InventoryPage() {
       </Card>
 
       {/* Lista de productos */}
-      <Card className="border-none premium-shadow overflow-hidden bg-background/50 backdrop-blur-sm ring-1 ring-border/50">
+      <Card className="border-none shadow-sm overflow-hidden bg-card ring-1 ring-border/50">
         <CardContent className="p-0">
           {isError ? (
             <div className="p-8 text-center">

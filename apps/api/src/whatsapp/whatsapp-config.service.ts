@@ -19,7 +19,7 @@ export class WhatsAppConfigService {
   constructor(
     @InjectRepository(WhatsAppConfig)
     private whatsappConfigRepository: Repository<WhatsAppConfig>,
-  ) {}
+  ) { }
 
   /**
    * Obtiene la configuración de WhatsApp de una tienda
@@ -140,8 +140,8 @@ export class WhatsAppConfigService {
           : item.qty.toString();
         const unitPrice = item.is_weight_product
           ? Number(
-              item.price_per_weight_usd ?? item.unit_price_usd,
-            ).toFixed(2)
+            item.price_per_weight_usd ?? item.unit_price_usd,
+          ).toFixed(2)
           : Number(item.unit_price_usd).toFixed(2);
         const lineTotal = (
           Number(item.qty) * Number(item.unit_price_usd) -
@@ -172,14 +172,13 @@ export class WhatsAppConfigService {
       CASH_BS: 'Efectivo Bs',
       CASH_USD: 'Efectivo USD',
       PAGO_MOVIL: 'Pago Móvil',
-      TRANSFER: 'Transferencia',
+      TRANSFER: 'Tarjeta',
       ZELLE: 'Zelle',
       FIAO: 'Fiado',
-      OTHER: 'Otro',
+      OTHER: 'Biopago',
     };
     message +=
-      `${
-        paymentMethodLabels[sale.payment.method] || sale.payment.method
+      `${paymentMethodLabels[sale.payment.method] || sale.payment.method
       }\n`;
 
     // Cliente
@@ -236,7 +235,7 @@ export class WhatsAppConfigService {
       message += `\n`;
       message += `*VENTA ASOCIADA:*\n`;
       message += `ID: #${debt.sale.id.slice(0, 8).toUpperCase()}\n`;
-      
+
       // Incluir artículos de la venta si están disponibles
       if (debt.sale.items && debt.sale.items.length > 0) {
         message += `\n`;
@@ -247,8 +246,8 @@ export class WhatsAppConfigService {
             : item.qty.toString();
           const unitPrice = item.is_weight_product
             ? Number(
-                item.price_per_weight_usd ?? item.unit_price_usd,
-              ).toFixed(2)
+              item.price_per_weight_usd ?? item.unit_price_usd,
+            ).toFixed(2)
             : Number(item.unit_price_usd).toFixed(2);
           const lineTotal = (
             Number(item.qty) * Number(item.unit_price_usd) -
@@ -256,10 +255,10 @@ export class WhatsAppConfigService {
           ).toFixed(2);
 
           const productName = item.product?.name || 'Producto';
-          const variantName = item.variant?.variant_value 
-            ? ` - ${item.variant.variant_type}: ${item.variant.variant_value}` 
+          const variantName = item.variant?.variant_value
+            ? ` - ${item.variant.variant_type}: ${item.variant.variant_value}`
             : '';
-          
+
           message += `${index + 1}. ${productName}${variantName}\n`;
           message += `   ${qty} x $${unitPrice} = $${lineTotal}\n`;
           if (Number(item.discount_usd || 0) > 0) {
@@ -342,7 +341,7 @@ export class WhatsAppConfigService {
       message += `   💵 Monto: $${Number(debt.amount_usd).toFixed(2)}\n`;
       message += `   ✅ Abonado: $${totalPaid.toFixed(2)}\n`;
       message += `   ⏳ Pendiente: $${remaining.toFixed(2)}\n`;
-      
+
       // Incluir artículos de la venta si están disponibles
       if (debt.sale?.items && debt.sale.items.length > 0) {
         message += `   \n`;
@@ -353,8 +352,8 @@ export class WhatsAppConfigService {
             : item.qty.toString();
           const unitPrice = item.is_weight_product
             ? Number(
-                item.price_per_weight_usd ?? item.unit_price_usd,
-              ).toFixed(2)
+              item.price_per_weight_usd ?? item.unit_price_usd,
+            ).toFixed(2)
             : Number(item.unit_price_usd).toFixed(2);
           const lineTotal = (
             Number(item.qty) * Number(item.unit_price_usd) -
@@ -362,10 +361,10 @@ export class WhatsAppConfigService {
           ).toFixed(2);
 
           const productName = item.product?.name || 'Producto';
-          const variantName = item.variant?.variant_value 
-            ? ` - ${item.variant.variant_type}: ${item.variant.variant_value}` 
+          const variantName = item.variant?.variant_value
+            ? ` - ${item.variant.variant_type}: ${item.variant.variant_value}`
             : '';
-          
+
           message += `   ${itemIndex + 1}. ${productName}${variantName}\n`;
           message += `      ${qty} x $${unitPrice} = $${lineTotal}\n`;
         });
