@@ -1,4 +1,4 @@
-import { Minus, Plus, Scale, Trash2 } from 'lucide-react'
+import { GripVertical, Minus, Plus, Scale, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/pos/utils'
 import { CartItem } from '@/stores/cart.store'
@@ -36,6 +36,15 @@ export function CartItemRow({
                 isInvalid && "bg-destructive/5"
             )}
         >
+            {isMobile && (
+                <div
+                    data-swipe-handle
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-6 rounded-md border border-border/50 bg-background/80 flex items-center justify-center text-muted-foreground/70"
+                    aria-label="Deslizar para eliminar"
+                >
+                    <GripVertical className="w-4 h-4" />
+                </div>
+            )}
             <div className="flex gap-3">
                 {/* 1. Icono Grande */}
                 <div className={cn(

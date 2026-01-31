@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion, PanInfo, useMotionValue, useTransform, animate, useDragControls } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
@@ -11,6 +11,7 @@ interface SwipeableItemProps {
   rightAction?: React.ReactNode
   threshold?: number
   enabled?: boolean
+  requireHandle?: boolean
   className?: string
 }
 
@@ -26,6 +27,7 @@ export function SwipeableItem({
   rightAction,
   threshold = 100,
   enabled = true,
+  requireHandle = false,
   className,
 }: SwipeableItemProps) {
   const [isDragging, setIsDragging] = useState(false)
@@ -33,8 +35,15 @@ export function SwipeableItem({
   const x = useMotionValue(0)
   const { shouldReduceMotion } = useReducedMotion()
   const dragControls = useDragControls()
-  const startPoint = React.useRef<{ x: number; y: number } | null>(null)
-  const hasDirectionLock = React.useRef(false)
+  const startPoint = useRef<{ x: number; y: number } | null>(null)
+  const hasDirectionLock = useRef(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const manualDragState = useRef<{
+    pointerId: number | null
+    startX: number
+    startY: number
+    isDragging: boolean
+  }>({ pointerId: null, startX: 0, startY: 0, isDragging: false })
 
   // Transformaciones para el contenido y las acciones
   const contentX = useTransform(x, (value) => {
@@ -121,6 +130,12 @@ export function SwipeableItem({
 
   const handlePointerDown = (event: React.PointerEvent) => {
     if (!enabled) return
+    if (requireHandle) {
+      const target = event.target as Element | null
+      if (!target?.closest('[data-swipe-handle]')) {
+        return
+      }
+    }
     startPoint.current = { x: event.clientX, y: event.clientY }
     hasDirectionLock.current = false
   }
@@ -146,8 +161,108 @@ export function SwipeableItem({
     hasDirectionLock.current = false
   }
 
+  useEffect(() => {
+    if (!requireHandle) return
+    const root = containerRef.current
+    if (!root) return
+
+    const handle = root.querySelector('[data-swipe-handle]') as HTMLElement | null
+    if (!handle) return
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!enabled) return
+      manualDragState.current.pointerId = event.pointerId
+      manualDragState.current.startX = event.clientX
+      manualDragState.current.startY = event.clientY
+      manualDragState.current.isDragging = false
+      handle.setPointerCapture(event.pointerId)
+    }
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!enabled) return
+      if (manualDragState.current.pointerId !== event.pointerId) return
+
+      const dx = event.clientX - manualDragState.current.startX
+      const dy = event.clientY - manualDragState.current.startY
+      const absX = Math.abs(dx)
+      const absY = Math.abs(dy)
+
+      if (!manualDragState.current.isDragging) {
+        if (absX > 8 && absX > absY + 4) {
+          manualDragState.current.isDragging = true
+        } else if (absY > 8 && absY > absX + 4) {
+          handle.releasePointerCapture(event.pointerId)
+          manualDragState.current.pointerId = null
+          return
+        } else {
+          return
+        }
+      }
+
+      event.preventDefault()
+      const clamped = Math.max(Math.min(dx, threshold * 2), -threshold * 2)
+      x.set(clamped)
+    }
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (!enabled) return
+      if (manualDragState.current.pointerId !== event.pointerId) return
+
+      const dx = event.clientX - manualDragState.current.startX
+      const velocity = 0
+      const shouldTriggerLeft = onSwipeLeft && (dx > threshold || velocity > 500)
+      const shouldTriggerRight = onSwipeRight && (dx < -threshold || velocity < -500)
+
+      if (shouldTriggerLeft) {
+        animate(x, threshold * 2, {
+          duration: shouldReduceMotion ? 0 : 0.2,
+          onComplete: () => {
+            onSwipeLeft?.()
+            setTimeout(() => {
+              animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.3 })
+            }, 100)
+          },
+        })
+      } else if (shouldTriggerRight) {
+        animate(x, -threshold * 2, {
+          duration: shouldReduceMotion ? 0 : 0.2,
+          onComplete: () => {
+            onSwipeRight?.()
+            setTimeout(() => {
+              animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.3 })
+            }, 100)
+          },
+        })
+      } else {
+        animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.3 })
+      }
+
+      manualDragState.current.pointerId = null
+      manualDragState.current.isDragging = false
+    }
+
+    const onPointerCancel = (event: PointerEvent) => {
+      if (manualDragState.current.pointerId !== event.pointerId) return
+      manualDragState.current.pointerId = null
+      manualDragState.current.isDragging = false
+      animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.2 })
+    }
+
+    handle.addEventListener('pointerdown', onPointerDown)
+    handle.addEventListener('pointermove', onPointerMove, { passive: false })
+    handle.addEventListener('pointerup', onPointerUp)
+    handle.addEventListener('pointercancel', onPointerCancel)
+
+    return () => {
+      handle.removeEventListener('pointerdown', onPointerDown)
+      handle.removeEventListener('pointermove', onPointerMove)
+      handle.removeEventListener('pointerup', onPointerUp)
+      handle.removeEventListener('pointercancel', onPointerCancel)
+    }
+  }, [enabled, onSwipeLeft, onSwipeRight, requireHandle, shouldReduceMotion, threshold, x])
+
   return (
-    <div className={cn('relative overflow-hidden', className)}>
+    <div ref={containerRef} className={cn('relative overflow-hidden', className)}>
       {/* Acciones de fondo */}
       {(leftAction || rightAction) && (
         <div className="absolute inset-0 flex">
@@ -172,26 +287,26 @@ export function SwipeableItem({
 
       {/* Contenido principal */}
       <motion.div
-        drag={enabled ? 'x' : false}
-        dragControls={dragControls}
-        dragListener={false}
-        dragDirectionLock
+        drag={enabled && !requireHandle ? 'x' : false}
+        dragControls={!requireHandle ? dragControls : undefined}
+        dragListener={!requireHandle ? false : undefined}
+        dragDirectionLock={!requireHandle}
         dragConstraints={{ left: -threshold * 2, right: threshold * 2 }}
         dragElastic={0.2}
-        onDragStart={handleDragStart}
-        onDrag={handleDrag}
-        onDragEnd={handleDragEnd}
-        style={{ x: contentX }}
+        onDragStart={!requireHandle ? handleDragStart : undefined}
+        onDrag={!requireHandle ? handleDrag : undefined}
+        onDragEnd={!requireHandle ? handleDragEnd : undefined}
+        style={{ x: contentX, touchAction: 'pan-y' }}
         className={cn(
           'relative bg-background touch-pan-y',
           isDragging && 'cursor-grabbing',
           !enabled && 'cursor-default'
         )}
         whileTap={enabled && !shouldReduceMotion ? { scale: 0.98 } : undefined}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onPointerDown={!requireHandle ? handlePointerDown : undefined}
+        onPointerMove={!requireHandle ? handlePointerMove : undefined}
+        onPointerUp={!requireHandle ? handlePointerUp : undefined}
+        onPointerCancel={!requireHandle ? handlePointerUp : undefined}
       >
         {children}
       </motion.div>
