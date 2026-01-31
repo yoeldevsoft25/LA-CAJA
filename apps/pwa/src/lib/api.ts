@@ -108,7 +108,7 @@ const isLocalEnv = () =>
   window.location.port === '4173' ||
   window.location.port === '5173';
 
-const probePrimaryApi = async () => {
+const probePrimaryApi = async (): Promise<boolean> => {
   if (!import.meta.env.PROD || isLocalEnv()) return;
   if (!PRIMARY_API_URL || !FALLBACK_API_URL) return;
 
@@ -126,8 +126,10 @@ const probePrimaryApi = async () => {
     });
     // Si no falla la red, asumimos que el host primario está disponible
     setApiBaseUrl(PRIMARY_API_URL);
+    return true;
   } catch {
     setApiBaseUrl(FALLBACK_API_URL);
+    return false;
   } finally {
     clearTimeout(timeout);
   }
@@ -136,11 +138,19 @@ const probePrimaryApi = async () => {
 void probePrimaryApi();
 
 if (import.meta.env.PROD && !isLocalEnv() && PRIMARY_API_URL && FALLBACK_API_URL) {
-  const PROBE_INTERVAL_MS = 2 * 60 * 1000;
+  const PROBE_MIN_MS = 30 * 1000;
+  const PROBE_MAX_MS = 2 * 60 * 1000;
+  let probeInterval = PROBE_MIN_MS;
 
-  setInterval(() => {
-    void probePrimaryApi();
-  }, PROBE_INTERVAL_MS);
+  const scheduleProbe = () => {
+    setTimeout(async () => {
+      const ok = await probePrimaryApi();
+      probeInterval = ok ? PROBE_MIN_MS : Math.min(PROBE_MAX_MS, probeInterval * 2);
+      scheduleProbe();
+    }, probeInterval);
+  };
+
+  scheduleProbe();
 
   window.addEventListener('online', () => {
     void probePrimaryApi();
