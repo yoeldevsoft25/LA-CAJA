@@ -24,8 +24,7 @@ interface AuthenticatedSocket extends Socket {
   namespace: '/realtime',
 })
 export class RealTimeAnalyticsGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -36,7 +35,7 @@ export class RealTimeAnalyticsGateway
     private readonly analyticsService: RealTimeAnalyticsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
@@ -237,5 +236,12 @@ export class RealTimeAnalyticsGateway
       heatmap,
       timestamp: Date.now(),
     });
+  }
+
+  /**
+   * Emitir actualización de tasa de cambio
+   */
+  emitExchangeRateUpdate(storeId: string, payload: { rate: number; rate_type: string; timestamp: number }) {
+    this.server.to(`store:${storeId}`).emit('exchange:update', payload);
   }
 }

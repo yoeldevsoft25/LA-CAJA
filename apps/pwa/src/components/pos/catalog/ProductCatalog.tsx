@@ -29,6 +29,7 @@ interface ProductCatalogProps {
     searchQuery: string
     lowStockIds: Set<string>
     onProductClick: (product: Product) => void
+    exchangeRate: number
 }
 
 export function ProductCatalog({
@@ -37,7 +38,8 @@ export function ProductCatalog({
     isError,
     searchQuery,
     lowStockIds,
-    onProductClick
+    onProductClick,
+    exchangeRate
 }: ProductCatalogProps) {
     const listViewportRef = useRef<HTMLDivElement | null>(null)
     const [listScrollTop, setListScrollTop] = useState(0)
@@ -164,6 +166,10 @@ export function ProductCatalog({
                         const CategoryIcon = getCategoryIcon(product.category)
                         const isLowStock = lowStockIds.has(product.id)
 
+                        // Calcular precios dinámicos
+                        const priceUsd = product.is_weight_product ? product.price_per_weight_usd : product.price_usd
+                        const priceBs = (priceUsd || 0) * exchangeRate
+
                         return (
                             <div
                                 key={product.id}
@@ -239,10 +245,10 @@ export function ProductCatalog({
                                                 </span>
                                             ) : null}
                                             <span className="font-extrabold text-lg sm:text-xl text-primary tabular-nums tracking-tighter drop-shadow-sm">
-                                                ${Number(product.is_weight_product ? product.price_per_weight_usd : product.price_usd || 0).toFixed(2)}
+                                                ${Number(priceUsd || 0).toFixed(2)}
                                             </span>
                                             <span className="text-[11px] sm:text-xs text-muted-foreground/80 font-medium tabular-nums mt-0.5">
-                                                Bs {Number(product.is_weight_product ? product.price_per_weight_bs : product.price_bs || 0).toFixed(2)}
+                                                Bs {Number(priceBs || 0).toFixed(2)}
                                             </span>
                                         </div>
                                     </div>

@@ -34,7 +34,6 @@ import {
   AlertCircle,
   X,
   Minus,
-  Crown,
   Rocket,
   Target,
   Star,
@@ -1470,301 +1469,208 @@ function StatsSection() {
 }
 
 // ========================================
-// SECCIÓN PRICING
+// SECCIÓN DE PRICING - PLANES Y PRECIOS
 // ========================================
 function PricingSection() {
-  const sectionRef = useRef(null)
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
+  const pricingRef = useRef(null)
   const isMobile = useMobileDetection()
-  // En mobile, activar más temprano con amount más bajo
-  const isInView = useInView(sectionRef, {
+  const isInView = useInView(pricingRef, {
     once: true,
-    amount: isMobile ? 0.05 : 0.3,
+    amount: isMobile ? 0.05 : 0.2,
     margin: isMobile ? '-150px' : '0px'
   })
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const navigate = useNavigate()
 
   const plans = [
     {
-      name: 'Free',
-      description: 'Para empezar y crecer',
-      price: 0,
-      annualPrice: 0,
-      icon: Sparkles,
-      color: 'blue',
-      popular: false,
+      name: 'Freemium',
+      description: 'Plan gratuito para empezar',
+      price: { monthly: 0, yearly: 0 },
       features: [
-        'POS offline-first completo',
-        'Hasta 100 productos',
-        'Hasta 50 ventas/mes',
-        '1 usuario',
-        'Soporte por email',
-        'Analytics básicos',
-        'Multi-plataforma (PWA/Desktop)',
+        '1 Usuario',
+        '50 Productos',
+        '50 Facturas/mes',
+        '1 Tienda',
+        'Modo Offline Básico',
+        'Reportes Básicos',
       ],
       cta: 'Empezar Gratis',
-    },
-    {
-      name: 'Pro',
-      description: 'Para negocios en crecimiento',
-      price: 29,
-      annualPrice: 24,
-      icon: Rocket,
-      color: 'blue',
-      popular: true,
-      features: [
-        'Todo lo de Free +',
-        'Productos ilimitados',
-        'Ventas ilimitadas',
-        'Hasta 5 usuarios',
-        'Facturación fiscal SENIAT',
-        'Contabilidad integrada',
-        'IA/ML predictivo',
-        'Multi-bodega',
-        'Analytics avanzados',
-        'Soporte prioritario 24/7',
-        'Integración ERP',
-      ],
-      cta: 'Empezar Prueba 14 días',
-    },
-    {
-      name: 'Enterprise',
-      description: 'Para grandes operaciones',
-      price: null,
-      annualPrice: null,
-      icon: Crown,
-      color: 'yellow',
       popular: false,
+      color: 'slate',
+    },
+    {
+      name: 'Básico',
+      description: 'Perfecto para pequeños negocios',
+      price: { monthly: 29, yearly: 290 },
       features: [
-        'Todo lo de Pro +',
-        'Usuarios ilimitados',
-        'Multi-tienda ilimitado',
-        'SLA 99.9% garantizado',
-        'Soporte dedicado',
-        'Custom branding',
-        'API access completo',
-        'Capacitación in-situ',
-        'Migración asistida',
-        'Custom features',
+        '3 Usuarios',
+        '500 Productos',
+        '1,000 Facturas/mes',
+        '1 Tienda',
+        'Modo Offline Completo',
+        'Facturación Fiscal',
+        'Inventario Básico',
+        'Soporte WhatsApp',
+      ],
+      cta: 'Prueba Gratis 14 días',
+      popular: true,
+      color: 'blue',
+    },
+    {
+      name: 'Profesional',
+      description: 'Para negocios en crecimiento',
+      price: { monthly: 79, yearly: 790 },
+      features: [
+        '10 Usuarios',
+        '5,000 Productos',
+        '10,000 Facturas/mes',
+        '2 Tiendas',
+        'Todo lo del Básico',
+        'Inventario Avanzado',
+        'Contabilidad Básica',
+        'Soporte Prioritario',
+        'Acceso API',
+      ],
+      cta: 'Contratar Ahora',
+      popular: false,
+      color: 'indigo',
+    },
+    {
+      name: 'Empresarial',
+      description: 'Para grandes empresas',
+      price: { monthly: 199, yearly: 1990 },
+      features: [
+        'Usuarios Ilimitados',
+        'Productos Ilimitados',
+        'Facturación Ilimitada',
+        'Hasta 99 Tiendas',
+        'Todo lo del Profesional',
+        'Contabilidad Completa',
+        'IA Analytics',
+        'Gerente de Cuenta Dedicado',
       ],
       cta: 'Contactar Ventas',
+      popular: false,
+      color: 'emerald',
     },
   ]
 
-  const colorClasses = {
-    blue: {
-      gradient: 'from-blue-600 to-indigo-600',
-      ring: 'ring-blue-500/50',
-      badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-    },
-    purple: {
-      gradient: 'from-blue-600 to-indigo-600',
-      ring: 'ring-blue-500/50',
-      badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-    },
-    yellow: {
-      gradient: 'from-yellow-500 to-yellow-600',
-      ring: 'ring-yellow-500/50',
-      badge: 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-    },
-  }
-
   return (
-    <section id="pricing" ref={sectionRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900/30 to-slate-900/50">
-      <div className="container mx-auto max-w-7xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: isMobile ? 1 : 0, y: isMobile ? 0 : 20 }}
-          transition={{ duration: isMobile ? 0.3 : 0.6 }}
-          className="text-center space-y-4 mb-12"
-        >
+    <section id="pricing" className="py-24 relative overflow-hidden" ref={pricingRef}>
+      <div className="absolute inset-0 bg-slate-900/50" />
+
+      <div className="container mx-auto max-w-7xl relative z-10 px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
-            Planes y Precios
+            Precios Simples
           </Badge>
-          <h2 className="text-4xl sm:text-5xl font-black">
-            <span className="text-white">Precios</span>{' '}
-            <span className="bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              Transparentes
+          <h2 className="text-4xl sm:text-5xl font-black text-white">
+            Planes para cada{' '}
+            <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+              etapa de tu negocio
             </span>
           </h2>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-            Comienza gratis. Escala cuando lo necesites. Sin sorpresas.
+          <p className="text-xl text-slate-400">
+            Comienza gratis y escala a medida que creces. Sin contratos forzosos.
           </p>
-        </motion.div>
 
-        {/* Billing toggle */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12"
-        >
-          <span className={cn(
-            "text-sm sm:text-base font-semibold transition-colors duration-300 whitespace-nowrap",
-            billingCycle === 'monthly' ? 'text-white' : 'text-slate-400'
-          )}>
-            Mensual
-          </span>
-          <button
-            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
-            className={cn(
-              "relative flex items-center w-12 h-6 sm:w-14 sm:h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900",
-              billingCycle === 'annual'
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30'
-                : 'bg-slate-700 hover:bg-slate-600 border border-slate-600'
-            )}
-            aria-label="Toggle billing cycle"
-          >
-            <div className={cn(
-              "absolute flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out",
-              billingCycle === 'annual' ? 'translate-x-6 sm:translate-x-7' : 'translate-x-0.5 sm:translate-x-0.5'
-            )} />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              "text-sm sm:text-base font-semibold transition-colors duration-300 whitespace-nowrap",
-              billingCycle === 'annual' ? 'text-white' : 'text-slate-400'
-            )}>
-              Anual
+          <div className="flex items-center justify-center gap-4 mt-8">
+            <span className={cn("text-sm font-medium", billingPeriod === 'monthly' ? 'text-white' : 'text-slate-500')}>
+              Mensual
             </span>
-            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs px-2 sm:px-3 py-1 shadow-lg shadow-emerald-500/20 whitespace-nowrap">
-              Ahorra 20%
-            </Badge>
+            <button
+              onClick={() => setBillingPeriod(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
+              className="relative w-14 h-7 bg-slate-800 rounded-full p-1 transition-colors duration-200 border border-slate-700"
+            >
+              <div
+                className={cn(
+                  "w-5 h-5 bg-blue-500 rounded-full shadow-lg transition-transform duration-200",
+                  billingPeriod === 'yearly' ? 'translate-x-7' : 'translate-x-0'
+                )}
+              />
+            </button>
+            <span className={cn("text-sm font-medium flex items-center gap-2", billingPeriod === 'yearly' ? 'text-white' : 'text-slate-500')}>
+              Anual
+              <Badge variant="outline" className="text-xs border-green-500 text-green-400 bg-green-500/10">
+                Ahorra 2 meses
+              </Badge>
+            </span>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Plans */}
-        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, index) => {
-            const Icon = plan.icon
-            const colors = colorClasses[plan.color as keyof typeof colorClasses]
-            const price = billingCycle === 'annual' ? plan.annualPrice : plan.price
-
-            return (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: isMobile ? 1 : 0, y: isMobile ? 0 : 20 }}
-                transition={{ duration: isMobile ? 0.3 : 0.5, delay: isMobile ? 0 : 0.1 * index }}
-                className="relative"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {plans.map((plan, index) => (
+            <motion.div
+              key={plan.name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ delay: index * 0.1, duration: 0.5 }}
+            >
+              <Card
+                className={cn(
+                  "h-full relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 flex flex-col",
+                  plan.popular
+                    ? "bg-slate-800/80 border-blue-500/50 shadow-blue-500/10"
+                    : "bg-slate-900/50 border-slate-800 hover:border-slate-700"
+                )}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-0 right-0 flex justify-center">
-                    <Badge className="bg-indigo-500 text-white border-0 shadow-lg">
-                      Más Popular
-                    </Badge>
+                  <div className="absolute top-0 right-0 p-4">
+                    <Badge className="bg-blue-500 hover:bg-blue-600">Más Popular</Badge>
                   </div>
                 )}
 
-                <Card className={cn(
-                  "bg-slate-800/50 border-slate-700 hover:border-slate-600 transition-all duration-300 h-full",
-                  plan.popular && "ring-2 ring-blue-500/50 shadow-2xl shadow-blue-500/20 scale-105"
-                )}>
-                  <CardHeader>
-                    <div className={cn(
-                      "w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-4",
-                      colors.gradient
-                    )}>
-                      <Icon className="w-7 h-7 text-white" />
-                    </div>
+                <CardHeader>
+                  <CardTitle className="text-xl text-white">{plan.name}</CardTitle>
+                  <CardDescription className="text-slate-400 h-10">
+                    {plan.description}
+                  </CardDescription>
+                </CardHeader>
 
-                    <CardTitle className="text-2xl text-white mb-2">{plan.name}</CardTitle>
-                    <CardDescription className="text-slate-400">{plan.description}</CardDescription>
-
-                    <div className="mt-6">
-                      {price === null ? (
-                        <div>
-                          <p className="text-4xl font-black text-white">Custom</p>
-                          <p className="text-sm text-slate-400 mt-1">Contacta a ventas</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-4xl font-black text-white">${price}</span>
-                            <span className="text-slate-400">/mes</span>
-                          </div>
-                          {billingCycle === 'annual' && plan.price !== 0 && (
-                            <p className="text-sm text-emerald-400 mt-1">
-                              Ahorras ${(plan.price! - plan.annualPrice!) * 12}/año
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-6">
-                    <Button
-                      size="lg"
-                      onClick={() => navigate('/login')}
-                      variant={plan.popular ? "gradient" : "default"}
-                      className={cn(
-                        "w-full rounded-lg font-semibold relative overflow-hidden group transition-all duration-300",
-                        plan.popular
-                          ? "shadow-xl hover:shadow-2xl"
-                          : "bg-slate-700 hover:bg-slate-600 hover:shadow-lg hover:shadow-slate-500/20"
-                      )}
-                    >
-                      <span className="relative z-10 flex items-center justify-center gap-2">
-                        {plan.cta}
-                        {!plan.popular && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />}
-                        {plan.popular && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />}
+                <CardContent className="space-y-6 flex-1 flex flex-col">
+                  <div className="space-y-2">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-white">
+                        ${billingPeriod === 'monthly' ? plan.price.monthly : Math.round(plan.price.yearly / 12)}
                       </span>
-                      {plan.popular && (
-                        <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      )}
-                    </Button>
-
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-slate-300">Incluye:</p>
-                      {plan.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-slate-300">{feature}</span>
-                        </div>
-                      ))}
+                      <span className="text-slate-500">
+                        /mes
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )
-          })}
-        </div>
+                    {billingPeriod === 'yearly' && plan.price.yearly > 0 && (
+                      <p className="text-sm text-green-400 font-medium">
+                        Facturado ${plan.price.yearly}/año
+                      </p>
+                    )}
+                  </div>
 
-        {/* ROI Calculator teaser */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: isMobile ? 1 : 0, y: isMobile ? 0 : 20 }}
-          transition={{ duration: isMobile ? 0.3 : 0.6, delay: isMobile ? 0 : 0.6 }}
-          className="mt-16 text-center"
-        >
-          <Card className="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border-blue-500/30 max-w-3xl mx-auto">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <BarChart3 className="w-6 h-6 text-blue-400" />
-                <h3 className="text-2xl font-bold text-white">ROI Calculado</h3>
-              </div>
-              <p className="text-slate-300 mb-6">
-                Nuestros clientes ahorran en promedio <span className="text-emerald-400 font-bold">20 horas/mes</span> en contabilidad
-                y aumentan sus ventas un <span className="text-emerald-400 font-bold">15%</span> con IA predictiva.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-3xl font-black text-emerald-400">4,869%</p>
-                  <p className="text-sm text-slate-400">ROI Plan Pro</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-black text-blue-400">$2,400</p>
-                  <p className="text-sm text-slate-400">Ahorro anual</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-black text-indigo-400">3 meses</p>
-                  <p className="text-sm text-slate-400">Tiempo de payback</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                  <ul className="space-y-3 flex-1">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                        <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className={cn(
+                      "w-full font-bold mt-4",
+                      plan.popular
+                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
+                    )}
+                    size="lg"
+                    onClick={() => navigate('/login')}
+                  >
+                    {plan.cta}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   )

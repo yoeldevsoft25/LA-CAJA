@@ -52,33 +52,64 @@ const paymentRequestSchema = z.object({
 
 type PaymentRequestForm = z.infer<typeof paymentRequestSchema>;
 
-const PLAN_INFO: Record<
+const PLAN_METADATA: Record<
   LicensePlan,
-  { name: string; monthly: number; yearly: number; description: string }
+  { name: string; description: string; features: string[] }
 > = {
   freemium: {
     name: 'Freemium',
-    monthly: 0,
-    yearly: 0,
     description: 'Plan gratuito para empezar',
+    features: [
+      '1 Usuario',
+      '50 Productos',
+      '50 Facturas/mes',
+      '1 Tienda',
+      'Modo Offline Básico',
+      'Reportes Básicos',
+    ],
   },
   basico: {
     name: 'Básico',
-    monthly: 29,
-    yearly: 290,
     description: 'Perfecto para pequeños negocios',
+    features: [
+      '3 Usuarios',
+      '500 Productos',
+      '1,000 Facturas/mes',
+      '1 Tienda',
+      'Modo Offline Completo',
+      'Facturación Fiscal',
+      'Inventario Básico',
+      'Soporte WhatsApp',
+    ],
   },
   profesional: {
     name: 'Profesional',
-    monthly: 79,
-    yearly: 790,
     description: 'Para negocios en crecimiento',
+    features: [
+      '10 Usuarios',
+      '5,000 Productos',
+      '10,000 Facturas/mes',
+      '2 Tiendas',
+      'Todo lo del Básico',
+      'Inventario Avanzado',
+      'Contabilidad Básica',
+      'Soporte Prioritario',
+      'Acceso API',
+    ],
   },
   empresarial: {
     name: 'Empresarial',
-    monthly: 199,
-    yearly: 1990,
     description: 'Para grandes empresas',
+    features: [
+      'Usuarios Ilimitados',
+      'Productos Ilimitados',
+      'Facturación Ilimitada',
+      'Hasta 99 Tiendas',
+      'Todo lo del Profesional',
+      'Contabilidad Completa',
+      'IA Analytics',
+      'Gerente de Cuenta Dedicado',
+    ],
   },
 };
 
@@ -114,6 +145,27 @@ export default function LicensePage() {
     queryFn: () => exchangeService.getBCVRate(),
   });
 
+  // Obtener planes del backend
+  const { data: planPrices } = useQuery({
+    queryKey: ['license-plans'],
+    queryFn: async () => {
+      const response = await api.get('/licenses/plans');
+      return response.data;
+    },
+  });
+
+  // Combinar metadata con precios del backend
+  // Combinar metadata con precios del backend
+  const planInfo = planPrices ? (Object.keys(PLAN_METADATA) as LicensePlan[]).reduce((acc, key) => {
+    const prices = planPrices[key];
+    acc[key] = {
+      ...PLAN_METADATA[key],
+      monthly: prices?.monthly || 0,
+      yearly: prices?.yearly || 0,
+    };
+    return acc;
+  }, {} as any) : null;
+
   // Calcular montos cuando cambia plan, período o tasa
   useEffect(() => {
     if (watchedPlan && watchedPlan !== 'freemium') {
@@ -138,13 +190,8 @@ export default function LicensePage() {
   const { data: storeInfo } = useQuery({
     queryKey: ['current-store-license'],
     queryFn: async () => {
-      // Aquí deberías tener un endpoint para obtener info de la tienda actual
-      // Por ahora, usaremos la info del user
-      return {
-        plan: user?.license_plan || 'freemium',
-        status: user?.license_status || 'active',
-        expires_at: user?.license_expires_at || null,
-      };
+      const response = await api.get('/licenses/status');
+      return response.data;
     },
     enabled: !!user,
   });
@@ -209,7 +256,7 @@ export default function LicensePage() {
   };
 
   const currentPlan = (storeInfo?.plan || user?.license_plan || 'freemium') as LicensePlan;
-  const currentPlanInfo = PLAN_INFO[currentPlan] || PLAN_INFO.freemium;
+  const currentPlanInfo = planInfo ? (planInfo[currentPlan] || planInfo.freemium) : PLAN_METADATA[currentPlan] || PLAN_METADATA.freemium;
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
@@ -285,7 +332,7 @@ export default function LicensePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-lg">
-              Tu solicitud de pago para el plan <strong>{PLAN_INFO[pendingPayment.plan as LicensePlan]?.name}</strong> está siendo verificada por nuestro equipo.
+              Tu solicitud de pago para el plan <strong>{(planInfo || PLAN_METADATA)[pendingPayment.plan as LicensePlan]?.name}</strong> está siendo verificada por nuestro equipo.
             </p>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-md shadow-sm border space-y-2">
               <div className="flex justify-between">
@@ -314,94 +361,112 @@ export default function LicensePage() {
       ) : (
         <>
           {/* Planes Disponibles */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Planes Disponibles</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <Label>Período de Facturación</Label>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant={selectedPeriod === 'monthly' ? 'default' : 'outline'}
-                    onClick={() => setSelectedPeriod('monthly')}
-                    size="sm"
-                  >
-                    Mensual
-                  </Button>
-                  <Button
-                    variant={selectedPeriod === 'yearly' ? 'default' : 'outline'}
-                    onClick={() => setSelectedPeriod('yearly')}
-                    size="sm"
-                  >
-                    Anual (2 meses gratis)
-                  </Button>
+          {planInfo ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Planes Disponibles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <Label>Período de Facturación</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant={selectedPeriod === 'monthly' ? 'default' : 'outline'}
+                      onClick={() => setSelectedPeriod('monthly')}
+                      size="sm"
+                    >
+                      Mensual
+                    </Button>
+                    <Button
+                      variant={selectedPeriod === 'yearly' ? 'default' : 'outline'}
+                      onClick={() => setSelectedPeriod('yearly')}
+                      size="sm"
+                    >
+                      Anual (2 meses gratis)
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {(['basico', 'profesional', 'empresarial'] as LicensePlan[]).map(
-                  (plan) => {
-                    const info = PLAN_INFO[plan];
-                    const price =
-                      selectedPeriod === 'monthly' ? info.monthly : info.yearly;
-                    const isSelected = selectedPlan === plan;
-                    const isCurrent = currentPlan === plan;
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(['basico', 'profesional', 'empresarial'] as LicensePlan[]).map(
+                    (plan) => {
+                      const info = planInfo[plan];
+                      const price =
+                        selectedPeriod === 'monthly' ? info.monthly : info.yearly;
+                      const isSelected = selectedPlan === plan;
+                      const isCurrent = currentPlan === plan;
 
-                    return (
-                      <Card
-                        key={plan}
-                        className={`cursor-pointer transition-all ${isSelected
-                          ? 'ring-2 ring-primary border-primary'
-                          : 'hover:border-primary/50'
-                          } ${isCurrent ? 'opacity-75' : ''}`}
-                        onClick={() => {
-                          if (!isCurrent) {
-                            setSelectedPlan(plan);
-                            setValue('plan', plan as 'basico' | 'profesional' | 'empresarial');
-                            setValue('billing_period', selectedPeriod);
-                          }
-                        }}
-                      >
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">{info.name}</CardTitle>
-                            {isCurrent && (
-                              <Badge variant="outline">Plan Actual</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {info.description}
-                          </p>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-3xl font-bold">
-                            ${price}
-                            <span className="text-base font-normal text-muted-foreground">
-                              /{selectedPeriod === 'monthly' ? 'mes' : 'año'}
-                            </span>
-                          </div>
-                          {selectedPeriod === 'yearly' && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Ahorra 2 meses
+                      // Fallback features if not present in info (migration might not have populated exactly)
+                      const features = info.features && Array.isArray(info.features) ? info.features : [];
+
+                      return (
+                        <Card
+                          key={plan}
+                          className={`cursor-pointer transition-all flex flex-col ${isSelected
+                            ? 'ring-2 ring-primary border-primary'
+                            : 'hover:border-primary/50'
+                            } ${isCurrent ? 'opacity-75' : ''}`}
+                          onClick={() => {
+                            if (!isCurrent) {
+                              setSelectedPlan(plan);
+                              setValue('plan', plan as 'basico' | 'profesional' | 'empresarial');
+                              setValue('billing_period', selectedPeriod);
+                            }
+                          }}
+                        >
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg">{info.name}</CardTitle>
+                              {isCurrent && (
+                                <Badge variant="outline">Plan Actual</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground h-10">
+                              {info.description}
                             </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  }
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                          </CardHeader>
+                          <CardContent className="flex-1 flex flex-col">
+                            <div className="text-3xl font-bold mb-4">
+                              ${price}
+                              <span className="text-base font-normal text-muted-foreground">
+                                /{selectedPeriod === 'monthly' ? 'mes' : 'año'}
+                              </span>
+                            </div>
+
+                            {selectedPeriod === 'yearly' && (
+                              <p className="text-xs text-green-600 font-medium mb-4">
+                                Ahorra 2 meses pagando anual
+                              </p>
+                            )}
+
+                            {/* Features List */}
+                            <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300 flex-1">
+                              {features.map((feature: string, idx: number) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                  <span>{feature.replace(/_/g, ' ')}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="text-center py-8">Cargando planes...</div>
+          )}
 
           {/* Formulario de Solicitud de Pago */}
-          {selectedPlan && selectedPlan !== currentPlan && (
+          {selectedPlan && selectedPlan !== currentPlan && planInfo && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
-                  Solicitar Pago - {PLAN_INFO[selectedPlan].name} (
+                  Solicitar Pago - {planInfo[selectedPlan].name} (
                   {selectedPeriod === 'monthly' ? 'Mensual' : 'Anual'})
                 </CardTitle>
               </CardHeader>
@@ -671,7 +736,7 @@ function PendingPaymentsList({ existingPayments, isLoading }: { existingPayments
                           payment.status === 'verifying' ? 'Verificando' : payment.status}
                   </Badge>
                   <span className="font-semibold">
-                    {PLAN_INFO[payment.plan as LicensePlan]?.name || payment.plan || 'Desconocido'}
+                    {(PLAN_METADATA[payment.plan as LicensePlan]?.name) || payment.plan || 'Desconocido'}
                   </span>
                   <span className="text-sm text-muted-foreground">
                     {payment.billing_period === 'monthly' ? 'Mensual' : 'Anual'}

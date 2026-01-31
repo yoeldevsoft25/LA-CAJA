@@ -198,6 +198,13 @@ export interface HasThresholdsResponse {
   hasThresholds: boolean
 }
 
+// Tasa de cambio (Websocket)
+export interface ExchangeRateUpdate {
+  rate: number
+  rate_type: string
+  timestamp: number
+}
+
 
 
 

@@ -96,83 +96,70 @@ export default function PaymentVerificationForm({
     <div className="space-y-6">
       {/* Verificación Manual */}
       {canVerify && (
-        <Card className="bg-slate-900/50 border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-blue-400" />
-              Verificar Pago
+        <Card className="bg-white border-slate-200 shadow-sm overflow-hidden border-2 border-[#0c81cf20]">
+          <CardHeader className="bg-slate-50 border-b border-slate-100">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-[#0c81cf]" />
+              Verificar Transacción
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div>
-              <Label htmlFor="verify-notes">Notas (opcional)</Label>
+              <Label htmlFor="verify-notes" className="text-slate-900 font-medium">Notas de verificación (opcional)</Label>
               <Textarea
                 id="verify-notes"
                 value={verifyNotes}
                 onChange={(e) => setVerifyNotes(e.target.value)}
-                placeholder="Agregar notas sobre la verificación..."
-                className="mt-1 bg-slate-800 border-slate-700"
-                rows={3}
+                placeholder="Escribe detalles sobre la transacción..."
+                className="mt-1.5 bg-white border-slate-200 focus:border-[#0c81cf] min-h-[80px]"
               />
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => verifyMutation.mutate(false)}
-                disabled={verifyMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {verifyMutation.isPending ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Verificando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Verificar Manualmente
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={() => verifyMutation.mutate(true)}
-                disabled={verifyMutation.isPending}
-                variant="outline"
-              >
-                {verifyMutation.isPending ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Verificando...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Verificar Automáticamente
-                  </>
-                )}
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => verifyMutation.mutate(false)}
+                  disabled={verifyMutation.isPending}
+                  className="bg-[#0c81cf] hover:bg-[#0a6fb3] text-white"
+                >
+                  {verifyMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Manual
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => verifyMutation.mutate(true)}
+                  disabled={verifyMutation.isPending}
+                  variant="outline"
+                  className="border-[#0c81cf] text-[#0c81cf] hover:bg-[#0c81cf10]"
+                >
+                  {verifyMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Automático
+                    </>
+                  )}
+                </Button>
+              </div>
               {payment.verification_attempts > 0 && (
                 <Button
                   onClick={() => retryVerificationMutation.mutate()}
                   disabled={retryVerificationMutation.isPending}
-                  variant="outline"
+                  variant="ghost"
+                  className="text-slate-500 text-xs h-8"
                 >
-                  {retryVerificationMutation.isPending ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Reintentando...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Reintentar Verificación
-                    </>
-                  )}
+                  Reintentar verificación automática
                 </Button>
               )}
             </div>
             {payment.verification_attempts > 0 && (
-              <p className="text-sm text-slate-400">
-                Intentos de verificación: {payment.verification_attempts}
+              <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold">
+                Intentos realizados: {payment.verification_attempts}
               </p>
             )}
           </CardContent>
@@ -181,44 +168,40 @@ export default function PaymentVerificationForm({
 
       {/* Aprobar Pago */}
       {canApprove && (
-        <Card className="bg-slate-900/50 border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              Aprobar Pago y Activar Licencia
+        <Card className="bg-white border-slate-200 shadow-sm overflow-hidden border-2 border-emerald-500/20">
+          <CardHeader className="bg-slate-50 border-b border-slate-100">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              Aprobar y Activar
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-4">
-              <p className="text-sm text-emerald-400">
-                Al aprobar este pago, la licencia de la tienda se activará automáticamente.
+          <CardContent className="space-y-4 pt-6">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+              <p className="text-xs text-emerald-700 leading-relaxed font-medium">
+                Al aprobar, la licencia se activará inmediatamente en la tienda seleccionada.
               </p>
             </div>
             <div>
-              <Label htmlFor="approve-notes">Notas (opcional)</Label>
+              <Label htmlFor="approve-notes" className="text-slate-900 font-medium">Notas de aprobación (opcional)</Label>
               <Textarea
                 id="approve-notes"
                 value={approveNotes}
                 onChange={(e) => setApproveNotes(e.target.value)}
-                placeholder="Agregar notas sobre la aprobación..."
-                className="mt-1 bg-slate-800 border-slate-700"
-                rows={3}
+                placeholder="Notas adicionales para el registro..."
+                className="mt-1.5 bg-white border-slate-200 focus:border-[#0c81cf] min-h-[80px]"
               />
             </div>
             <Button
               onClick={() => approveMutation.mutate()}
               disabled={approveMutation.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 w-full"
+              className="bg-emerald-600 hover:bg-emerald-700 w-full text-white shadow-lg shadow-emerald-600/20"
             >
               {approveMutation.isPending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Aprobando...
-                </>
+                <RefreshCw className="h-4 w-4 animate-spin text-white" />
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Aprobar y Activar Licencia
+                  Aprobar Pago y Activar Licencia
                 </>
               )}
             </Button>
@@ -228,42 +211,40 @@ export default function PaymentVerificationForm({
 
       {/* Rechazar Pago */}
       {canReject && (
-        <Card className="bg-slate-900/50 border-slate-800">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-400" />
-              Rechazar Pago
+        <Card className="bg-white border-slate-200 shadow-sm overflow-hidden border-2 border-rose-500/20">
+          <CardHeader className="bg-slate-50 border-b border-slate-100">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-rose-500" />
+              Rechazar Solicitud
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-red-500/10 border border-red-500/30 rounded p-4">
-              <p className="text-sm text-red-400">
-                Esta acción rechazará el pago. El usuario recibirá una notificación con el motivo.
+          <CardContent className="space-y-4 pt-6">
+            <div className="bg-rose-50 border border-rose-100 rounded-lg p-3">
+              <p className="text-xs text-rose-700 leading-relaxed font-medium">
+                Esta acción rechazará el pago y notificará al usuario con el motivo.
               </p>
             </div>
             <div>
-              <Label htmlFor="reject-reason" className="text-red-400">
+              <Label htmlFor="reject-reason" className="text-rose-600 font-bold text-xs uppercase tracking-wider">
                 Motivo del Rechazo *
               </Label>
               <Textarea
                 id="reject-reason"
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Explicar por qué se rechaza el pago..."
-                className="mt-1 bg-slate-800 border-slate-700"
-                rows={3}
+                placeholder="Explica detalladamente por qué se rechaza..."
+                className="mt-1.5 bg-white border-rose-100 focus:border-rose-400 min-h-[80px]"
                 required
               />
             </div>
             <div>
-              <Label htmlFor="reject-notes">Notas Adicionales (opcional)</Label>
+              <Label htmlFor="reject-notes" className="text-slate-900 font-medium">Notas Internas (opcional)</Label>
               <Textarea
                 id="reject-notes"
                 value={rejectNotes}
                 onChange={(e) => setRejectNotes(e.target.value)}
-                placeholder="Notas internas (no se mostrarán al usuario)..."
-                className="mt-1 bg-slate-800 border-slate-700"
-                rows={2}
+                placeholder="Notas que el usuario NO podrá ver..."
+                className="mt-1.5 bg-white border-slate-200 focus:border-rose-400 min-h-[60px]"
               />
             </div>
             <Button
@@ -276,13 +257,10 @@ export default function PaymentVerificationForm({
               }}
               disabled={rejectMutation.isPending || !rejectReason.trim()}
               variant="destructive"
-              className="w-full"
+              className="w-full bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20 text-white"
             >
               {rejectMutation.isPending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Rechazando...
-                </>
+                <RefreshCw className="h-4 w-4 animate-spin text-white" />
               ) : (
                 <>
                   <XCircle className="h-4 w-4 mr-2" />
@@ -294,16 +272,13 @@ export default function PaymentVerificationForm({
         </Card>
       )}
 
-      {/* Estado actual */}
+      {/* Estado actual si no hay acciones */}
       {!canVerify && !canApprove && !canReject && (
-        <Card className="bg-slate-900/50 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="text-center py-8 text-slate-400">
-              <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-slate-500" />
-              <p>
-                Este pago no puede ser modificado en su estado actual (
-                {payment.status}).
-              </p>
+        <Card className="bg-white border-slate-200 shadow-sm border-dashed">
+          <CardContent className="pt-8 pb-8">
+            <div className="text-center text-slate-400">
+              <AlertTriangle className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+              <p className="font-medium">No hay acciones disponibles para este estado: <span className="text-slate-900">{payment.status}</span></p>
             </div>
           </CardContent>
         </Card>

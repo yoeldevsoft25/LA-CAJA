@@ -34,6 +34,7 @@ interface POSCartProps {
     onUpdateQty: (id: string, qty: number) => void
     onRemoveItem: (id: string) => void
     onClearCart: () => void
+    exchangeRate: number
 }
 
 export default function POSCart({
@@ -53,6 +54,7 @@ export default function POSCart({
     onUpdateQty,
     onRemoveItem,
     onClearCart,
+    exchangeRate,
 }: POSCartProps) {
     const [isClearDialogOpen, setIsClearDialogOpen] = useState(false)
 
@@ -111,6 +113,7 @@ export default function POSCart({
                     invalidCartProductIds={invalidCartProductIds}
                     onUpdateQty={onUpdateQty}
                     onRemoveItem={onRemoveItem}
+                    exchangeRate={exchangeRate}
                 />
 
                 {/* Resumen y Checkout */}

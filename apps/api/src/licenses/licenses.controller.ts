@@ -53,6 +53,16 @@ export class LicensesController {
   // ============================================
 
   /**
+   * GET /licenses/plans
+   * Obtener planes y precios disponibles
+   */
+  @Get('plans')
+  @UseGuards(JwtAuthGuard)
+  getPlans() {
+    return this.paymentsService.getPlans();
+  }
+
+  /**
    * POST /licenses/payments
    * Crear una nueva solicitud de pago
    */

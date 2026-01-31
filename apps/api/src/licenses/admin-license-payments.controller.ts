@@ -11,6 +11,7 @@ import {
     HttpStatus,
     DefaultValuePipe,
     ParseIntPipe,
+    InternalServerErrorException,
 } from '@nestjs/common';
 import { AdminApiGuard } from '../admin/admin-api.guard';
 import { LicensePaymentsService } from './license-payments.service';
@@ -86,7 +87,12 @@ export class AdminLicensePaymentsController {
         @Request() req: any,
     ) {
         const approvedBy = req.headers['x-admin-user-id'] || 'system';
-        return this.paymentsService.approvePayment(id, approvedBy, dto.notes);
+        try {
+            return await this.paymentsService.approvePayment(id, approvedBy, dto.notes);
+        } catch (error: any) {
+            console.error('Error approving payment:', error);
+            throw new InternalServerErrorException(error.message || 'Error approving payment');
+        }
     }
 
     /**

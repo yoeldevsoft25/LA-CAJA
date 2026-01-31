@@ -12,6 +12,7 @@ interface QuickProduct {
 interface QuickActionsProps {
     recentProducts: QuickProduct[]
     suggestedProducts: any[]
+    isSearching: boolean
     onProductClick: (product: any) => void
     onRecentClick: (product: any) => void
 }
@@ -19,6 +20,7 @@ interface QuickActionsProps {
 export function QuickActions({
     recentProducts,
     suggestedProducts,
+    isSearching,
     onProductClick,
     onRecentClick
 }: QuickActionsProps) {
@@ -40,11 +42,11 @@ export function QuickActions({
                                 onClick={() => onProductClick(product)}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="inline-flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary-foreground hover:text-primary px-3 py-1.5 rounded-full text-sm font-medium transition-colors border border-primary/20"
+                                className="inline-flex items-center gap-1.5 bg-[#0c81cf10] hover:bg-[#0c81cf] text-[#0c81cf] hover:text-white px-3 py-1.5 rounded-full text-sm font-bold transition-all border border-[#0c81cf30] hover:border-[#0c81cf] shadow-sm"
                             >
                                 {product.name}
                                 {product.is_weight_product && (
-                                    <span className="text-[10px] bg-background/50 px-1 rounded">
+                                    <span className="text-[10px] bg-white/50 px-1 rounded">
                                         {product.weight_unit || 'kg'}
                                     </span>
                                 )}
@@ -54,8 +56,8 @@ export function QuickActions({
                 </div>
             )}
 
-            {/* Recientes */}
-            {recentProducts.length > 0 && (
+            {/* Recientes - Solo mostrar si no se está buscando */}
+            {!isSearching && recentProducts.length > 0 && (
                 <div className="space-y-2">
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />
@@ -68,7 +70,7 @@ export function QuickActions({
                                 onClick={() => onRecentClick(item)} // Nota: en POSPage esto requerirá fetch si no tenemos el objeto completo
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="inline-flex items-center gap-1.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-3 py-1.5 rounded-full text-sm transition-colors border border-border/50"
+                                className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border border-slate-200"
                             >
                                 {item.name}
                             </motion.button>

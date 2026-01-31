@@ -106,6 +106,7 @@ const ObservabilityPage = lazy(() => import('./pages/ObservabilityPage'))
 // Lazy loading - Páginas de administración
 const LicenseBlockedPage = lazy(() => import('./pages/LicenseBlockedPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
+const AdminLayoutEnhanced = lazy(() => import('./components/layout/AdminLayoutEnhanced'));
 const LicensePaymentsPage = lazy(() => import('./pages/admin/LicensePaymentsPage'))
 const AccountingPage = lazy(() => import('./pages/AccountingPage'))
 const ConflictsPage = lazy(() => import('./pages/ConflictsPage'))
@@ -364,9 +365,11 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        {/* Panel admin: acceso directo con admin key, no requiere sesión */}
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/license-payments" element={<LicensePaymentsPage />} />
+        {/* Admin Routes */}
+        <Route element={<AdminLayoutEnhanced />}>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/license-payments" element={<LicensePaymentsPage />} />
+        </Route>
         <Route
           path="/onboarding"
           element={

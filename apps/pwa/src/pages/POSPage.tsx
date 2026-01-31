@@ -4,6 +4,7 @@ import { CatalogHeader } from '@/components/pos/catalog/CatalogHeader'
 import { ProductCatalog } from '@/components/pos/catalog/ProductCatalog'
 import { QuickActions } from '@/components/pos/catalog/QuickActions'
 import { productsService, ProductSearchResponse } from '@/services/products.service'
+import { realtimeWebSocketService } from '@/services/realtime-websocket.service'
 import { useOnline } from '@/hooks/use-online'
 import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.service'
 import { printService } from '@/services/print.service'
@@ -124,8 +125,9 @@ export default function POSPage() {
   const { data: bcvRateData } = useQuery({
     queryKey: ['exchange', 'bcv'],
     queryFn: () => exchangeService.getBCVRate(),
-    staleTime: 1000 * 60 * 60 * 2,
+    staleTime: 1000 * 60 * 5, // 5 minutos (antes 2 horas)
     gcTime: Infinity,
+    refetchInterval: 1000 * 60 * 5, // Refrescar cada 5 minutos
   })
 
   // Obtener bodega por defecto
@@ -142,6 +144,38 @@ export default function POSPage() {
       setSelectedWarehouseId(defaultWarehouse.id)
     }
   }, [defaultWarehouse, selectedWarehouseId])
+
+  // --- REALTIME EXCHANGE RATE SYNC (SOCKET.IO) ---
+  useEffect(() => {
+    // Asegurar conexión al socket
+    if (!realtimeWebSocketService.connected) {
+      realtimeWebSocketService.connect()
+    }
+
+    // Suscribirse a actualizaciones de tasa
+    const unsubscribe = realtimeWebSocketService.onExchangeRateUpdate((data) => {
+      console.log('[POS] Nueva tasa recibida:', data)
+      toast.info(`Tasa actualizada: ${data.rate} Bs/USD (Realtime)`, { id: 'rate-update' })
+
+      // Actualizar cache inmediatamente sin refetch (Optimistic Update)
+      queryClient.setQueryData(['exchange', 'bcv'], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          rate: data.rate,
+          timestamp: new Date(data.timestamp).toISOString(),
+          source: 'socket',
+        }
+      })
+
+      // Invalidar para asegurar consistencia (opcional, pero seguro)
+      queryClient.invalidateQueries({ queryKey: ['exchange', 'bcv'] })
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [queryClient])
 
   // --- HOOKS POS MODULARES ---
 
@@ -742,6 +776,7 @@ export default function POSPage() {
           <QuickActions
             recentProducts={recentProducts}
             suggestedProducts={suggestedProducts}
+            isSearching={searchQuery.length > 0}
             onProductClick={handleProductClick}
             onRecentClick={(item: any) => {
               const inList = products.find((p: any) => p.id === item.product_id)
@@ -758,6 +793,7 @@ export default function POSPage() {
               searchQuery={searchQuery}
               lowStockIds={lowStockIds}
               onProductClick={handleProductClick}
+              exchangeRate={exchangeRate}
             />
           </div>
         </div>
@@ -784,6 +820,7 @@ export default function POSPage() {
             onUpdateQty={handleUpdateQty}
             onRemoveItem={removeItem}
             onClearCart={clear}
+            exchangeRate={exchangeRate}
           />
         </div>
       </div>

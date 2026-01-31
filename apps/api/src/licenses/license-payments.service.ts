@@ -13,7 +13,8 @@ import {
   LicensePaymentStatus,
   LicensePlan,
   BillingPeriod,
-} from '../database/entities/license-payment.entity';
+  SubscriptionPlan,
+} from '../database/entities';
 import { Store } from '../database/entities/store.entity';
 import { CreatePaymentRequestDto } from './dto/create-payment-request.dto';
 
@@ -37,8 +38,30 @@ export class LicensePaymentsService {
     private readonly paymentRepo: Repository<LicensePayment>,
     @InjectRepository(Store)
     private readonly storeRepo: Repository<Store>,
+    @InjectRepository(SubscriptionPlan)
+    private readonly planRepo: Repository<SubscriptionPlan>, // Inject planRepo
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
+
+  /**
+   * Obtiene los planes y precios disponibles desde la base de datos
+   */
+  async getPlans() {
+    const plans = await this.planRepo.find({ where: { is_active: true } });
+
+    // Transformar al formato esperado por el frontend (code as key)
+    return plans.reduce((acc, plan) => {
+      acc[plan.code.toLowerCase()] = {
+        name: plan.name,
+        description: plan.description,
+        monthly: Number(plan.price_monthly),
+        yearly: Number(plan.price_yearly),
+        features: plan.features,
+        limits: plan.limits,
+      };
+      return acc;
+    }, {});
+  }
 
   /**
    * Calcula el monto esperado según el plan y período

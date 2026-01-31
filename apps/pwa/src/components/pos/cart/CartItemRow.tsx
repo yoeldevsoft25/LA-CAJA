@@ -9,6 +9,7 @@ interface CartItemRowProps {
     isInvalid: boolean
     onUpdateQty: (id: string, qty: number) => void
     onRemoveItem: (id: string) => void
+    exchangeRate: number
 }
 
 export function CartItemRow({
@@ -16,15 +17,15 @@ export function CartItemRow({
     isMobile,
     isInvalid,
     onUpdateQty,
-    onRemoveItem
+    onRemoveItem,
+    exchangeRate
 }: CartItemRowProps) {
     const lineTotalUsd = item.is_weight_product
         ? (item.qty * (item.price_per_weight_usd || 0)) - (item.discount_usd || 0)
         : (item.qty * item.unit_price_usd) - (item.discount_usd || 0)
 
-    const lineTotalBs = item.is_weight_product
-        ? (item.qty * (item.price_per_weight_bs || 0)) - (item.discount_bs || 0)
-        : (item.qty * item.unit_price_bs) - (item.discount_bs || 0)
+    // Calcular Bs dinámicamente con la tasa actual
+    const lineTotalBs = lineTotalUsd * exchangeRate
 
     const Icon = getCategoryIcon(item.category)
 

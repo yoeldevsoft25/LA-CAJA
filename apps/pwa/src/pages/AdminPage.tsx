@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+// import { useNavigate } from 'react-router-dom'
 import { adminService, AdminStore, AdminMember } from '@/services/admin.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,7 +21,13 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { toast } from '@/lib/toast'
 import { addDays, format, formatDistanceToNowStrict, isAfter, parseISO } from 'date-fns'
-import { MoreHorizontal, ShieldCheck, ShieldOff, Sparkles, CreditCard, Calendar, Trash2, AlertTriangle } from 'lucide-react'
+import { MoreHorizontal, ShieldCheck, ShieldOff, Sparkles, Calendar, Trash2, Store, Activity, AlertTriangle, Search } from 'lucide-react'
+import NumberTicker from '@/components/magicui/number-ticker'
+import BlurFade from '@/components/magicui/blur-fade'
+import ShineBorder from '@/components/magicui/shine-border'
+// import { BentoGrid, BentoCard } from '@/components/magicui/bento-grid'
+// import { motion } from 'framer-motion'
+// import { cn } from '@/lib/utils'
 
 function formatDate(value: string | null) {
   if (!value) return '—'
@@ -46,25 +52,26 @@ function statusBadge(store: AdminStore) {
   const expires = store.license_expires_at ? parseISO(store.license_expires_at) : null
   const isExpired = expires ? isAfter(now, expires) : false
   if (store.license_status === 'suspended') {
-    return <Badge variant="destructive">Suspendida</Badge>
+    return <Badge variant="destructive" className="bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20">Suspendida</Badge>
   }
   if (isExpired) {
-    return <Badge variant="destructive">Expirada</Badge>
+    return <Badge variant="destructive" className="bg-rose-500/10 text-rose-500 border-rose-500/20 hover:bg-rose-500/20">Expirada</Badge>
   }
-  return <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">Activa</Badge>
+  return <Badge className="bg-[#0c81cf10] text-[#0c81cf] border-[#0c81cf20] hover:bg-[#0c81cf20]">Activa</Badge>
 }
 
 export default function AdminPage() {
   const qc = useQueryClient()
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [planFilter, setPlanFilter] = useState<string>('all')
-  const [expiringIn, setExpiringIn] = useState<string>('none')
+  const [expiringIn] = useState<string>('none')
   const [adminKey, setAdminKey] = useState<string>(() => adminService.getKey() || '')
   const [userSheetStore, setUserSheetStore] = useState<AdminStore | null>(null)
   const [planSheetStore, setPlanSheetStore] = useState<AdminStore | null>(null)
   const [newPlan, setNewPlan] = useState<string>('')
   const [planExpiryDays, setPlanExpiryDays] = useState<string>('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [newUser, setNewUser] = useState<{ full_name: string; role: 'owner' | 'cashier'; pin: string }>({
     full_name: '',
     role: 'cashier',
@@ -76,8 +83,8 @@ export default function AdminPage() {
     days: '',
     notes: '',
   })
-  const [deleteConfirmStore, setDeleteConfirmStore] = useState<AdminStore | null>(null)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  // const [deleteConfirmStore, setDeleteConfirmStore] = useState<AdminStore | null>(null)
+
   const { data: stores, isLoading, refetch, error } = useQuery<AdminStore[], Error>({
     queryKey: ['admin-stores', statusFilter, planFilter, expiringIn, adminKey],
     queryFn: () =>
@@ -121,7 +128,17 @@ export default function AdminPage() {
 
   const sorted = useMemo<AdminStore[]>(() => {
     if (!stores) return []
-    return [...stores]
+    let result = [...stores]
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase()
+      result = result.filter(s =>
+        s.name.toLowerCase().includes(lower) ||
+        s.id.toLowerCase().includes(lower)
+      )
+    }
+
+    return result
       .filter((s) => {
         if (statusFilter === 'expired') {
           return s.license_expires_at ? isAfter(new Date(), parseISO(s.license_expires_at)) : false
@@ -133,7 +150,7 @@ export default function AdminPage() {
         const bDate = b.license_expires_at || ''
         return aDate.localeCompare(bDate)
       })
-  }, [stores, statusFilter])
+  }, [stores, statusFilter, searchTerm])
 
   const stats = useMemo(() => {
     if (!stores) return { total: 0, active: 0, suspended: 0, expiringSoon: 0 }
@@ -178,6 +195,7 @@ export default function AdminPage() {
     },
   })
 
+  // Sheet Logic Reuse
   const {
     data: members,
     refetch: refetchMembers,
@@ -220,427 +238,301 @@ export default function AdminPage() {
     },
   })
 
-  const deleteStoreMutation = useMutation({
-    mutationFn: (storeId: string) => adminService.deleteStore(storeId),
-    onSuccess: (data) => {
-      toast.success(data.message || 'Tienda eliminada')
-      setDeleteConfirmStore(null)
-      setDeleteConfirmText('')
-      qc.invalidateQueries({ queryKey: ['admin-stores'] })
-    },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message || err?.message || 'Error al eliminar'
-      toast.error(msg)
-    },
-  })
+  // deleteStoreMutation is not used
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-50">
-      <div className="grid lg:grid-cols-[280px,1fr] gap-6 p-6">
-        <Card className="bg-slate-900/70 border-slate-800 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-white">
-              <ShieldCheck className="h-5 w-5 text-emerald-400" />
-              Torre de control
-            </CardTitle>
-            <p className="text-sm text-slate-400">
-              Administra licencias, trials y estados de todas las tiendas.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="adminkey" className="text-slate-200">
-                Admin key
-              </Label>
-              <Input
-                id="adminkey"
-                type="password"
-                placeholder="Ingresa tu clave"
-                value={adminKey}
-                onChange={(e) => setAdminKey(e.target.value)}
-                className="bg-slate-950 border-slate-800 text-slate-100"
-              />
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1 bg-black text-white hover:bg-black/80 border border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => refetch()}
-                  disabled={!adminKey}
-                >
-                  Sincronizar
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-slate-700 text-white bg-black hover:bg-black/80"
-                  onClick={() => {
-                    adminService.clearKey()
-                    setAdminKey('')
-                    qc.clear()
-                  }}
-                >
-                  Limpiar
-                </Button>
-              </div>
-            </div>
+    <div className="space-y-6 pb-20">
+      {/* Top Bar with Search and Create */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-[#0c81cf] transition-colors" />
+          <Input
+            placeholder="Buscar tienda por nombre o ID..."
+            className="pl-9 bg-white border-slate-200 focus:border-[#0c81cf] transition-all rounded-xl shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-            <Separator className="bg-slate-800" />
-
-            <div className="space-y-3">
-              <Label className="text-slate-200">Filtros rápidos</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 text-slate-100 border-slate-800">
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="active">Activas</SelectItem>
-                  <SelectItem value="suspended">Suspendidas</SelectItem>
-                  <SelectItem value="expired">Expiradas</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={planFilter} onValueChange={setPlanFilter}>
-                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
-                  <SelectValue placeholder="Plan" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 text-slate-100 border-slate-800">
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="freemium">🆓 Freemium</SelectItem>
-                  <SelectItem value="emprendedor">🚀 Emprendedor</SelectItem>
-                  <SelectItem value="basico">💼 Básico</SelectItem>
-                  <SelectItem value="profesional">🚀 Profesional</SelectItem>
-                  <SelectItem value="empresarial">🏢 Empresarial</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={expiringIn} onValueChange={setExpiringIn}>
-                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
-                  <SelectValue placeholder="Expiran en" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 text-slate-100 border-slate-800">
-                  <SelectItem value="none">Sin filtro de fecha</SelectItem>
-                  <SelectItem value="3">3 días</SelectItem>
-                  <SelectItem value="7">7 días</SelectItem>
-                  <SelectItem value="14">14 días</SelectItem>
-                  <SelectItem value="30">30 días</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Admin</p>
-              <h1 className="text-2xl font-semibold text-white flex items-center gap-2">
-                Panel de licencias
-                <Sparkles className="h-5 w-5 text-amber-300" />
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => navigate('/admin/license-payments')}
-                className="border-slate-700 text-white bg-slate-900/70 hover:bg-slate-800"
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Pagos de Licencias
-              </Button>
-              <div className="text-xs text-slate-400">
-                Sincronizado {stores ? <span className="text-emerald-300">OK</span> : <span className="text-slate-400">pendiente</span>}
-              </div>
-              <div className="flex items-center gap-2 bg-slate-900/70 border border-slate-800 rounded-lg px-3 py-2">
-                <Input
-                  placeholder="Nombre de tienda"
-                  value={newStore.name}
-                  onChange={(e) => setNewStore((prev) => ({ ...prev, name: e.target.value }))}
-                  className="h-9 bg-slate-950 border-slate-800 text-slate-100"
-                />
-                <Input
-                  placeholder="Plan (opcional)"
-                  value={newStore.plan}
-                  onChange={(e) => setNewStore((prev) => ({ ...prev, plan: e.target.value }))}
-                  className="h-9 bg-slate-950 border-slate-800 text-slate-100 w-32"
-                />
-                <Input
-                  placeholder="Días trial"
-                  value={newStore.days}
-                  onChange={(e) => setNewStore((prev) => ({ ...prev, days: e.target.value }))}
-                  className="h-9 bg-slate-950 border-slate-800 text-slate-100 w-24"
-                />
-                <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white h-9"
-                  disabled={!newStore.name || createStoreMutation.isPending}
-                  onClick={() => createStoreMutation.mutate()}
-                >
-                  Crear tienda
-                </Button>
-              </div>
-            </div>
+        <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-1.5 py-1.5 shadow-sm">
+            <Input
+              placeholder="Nombre nueva tienda"
+              value={newStore.name}
+              onChange={(e) => setNewStore((prev) => ({ ...prev, name: e.target.value }))}
+              className="h-9 bg-transparent border-none focus-visible:ring-0 text-slate-900 placeholder:text-slate-400 w-48"
+            />
+            <div className="h-6 w-px bg-slate-200" />
+            <Input
+              placeholder="Días"
+              value={newStore.days}
+              onChange={(e) => setNewStore((prev) => ({ ...prev, days: e.target.value }))}
+              className="h-9 bg-transparent border-none focus-visible:ring-0 text-slate-900 w-16 text-center"
+            />
+            <Button
+              size="sm"
+              className="bg-[#0c81cf] hover:bg-[#0a6fb3] text-white rounded-lg h-8 px-4"
+              disabled={!newStore.name || createStoreMutation.isPending}
+              onClick={() => createStoreMutation.mutate()}
+            >
+              Crear
+            </Button>
           </div>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-300">Tiendas</CardTitle>
-              </CardHeader>
-              <CardContent className="text-3xl font-semibold text-white">{stats.total}</CardContent>
-            </Card>
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-300">Activas</CardTitle>
-              </CardHeader>
-              <CardContent className="text-3xl font-semibold text-emerald-300">{stats.active}</CardContent>
-            </Card>
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-300">Suspendidas</CardTitle>
-              </CardHeader>
-              <CardContent className="text-3xl font-semibold text-rose-300">{stats.suspended}</CardContent>
-            </Card>
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-slate-300">Expiran &lt; 7d</CardTitle>
-              </CardHeader>
-              <CardContent className="text-3xl font-semibold text-amber-300">{stats.expiringSoon}</CardContent>
-            </Card>
-          </div>
-
-          {!adminKey ? (
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardContent className="py-6 text-sm text-slate-300">
-                Ingresa la admin key para gestionar licencias.
-              </CardContent>
-            </Card>
-          ) : isLoading ? (
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardContent className="py-6 text-sm text-slate-300">Cargando...</CardContent>
-            </Card>
-          ) : error ? (
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardContent className="py-6 text-sm text-rose-300">
-                No se pudo cargar: {error.message || 'Error cargando tiendas'}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-slate-900/70 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-white">Tiendas</CardTitle>
-                <p className="text-sm text-slate-400">Control granular de licencias y trials.</p>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="w-full">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-slate-900 border border-slate-800 text-slate-200 sticky top-0">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">Tienda</th>
-                        <th className="px-3 py-2 text-left font-medium">Estado</th>
-                        <th className="px-3 py-2 text-left font-medium">Plan</th>
-                        <th className="px-3 py-2 text-left font-medium">Uso Real</th>
-                        <th className="px-3 py-2 text-left font-medium">Expira</th>
-                        <th className="px-3 py-2 text-left font-medium">Usuarios</th>
-                        <th className="px-3 py-2 text-left font-medium">Gracia</th>
-                        <th className="px-3 py-2 text-left font-medium">Notas</th>
-                        <th className="px-3 py-2 text-right font-medium">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sorted.map((store) => (
-                        <tr key={store.id} className="border-b border-slate-800 hover:bg-slate-900/60">
-                          <td className="px-3 py-3">
-                            <div className="font-semibold text-white">{store.name}</div>
-                            <div className="text-[11px] text-slate-400">{store.id}</div>
-                          </td>
-                          <td className="px-3 py-3">{statusBadge(store)}</td>
-
-                          <td className="px-3 py-3">
-                            {(() => {
-                              const plan = store.license_plan || 'sin-plan'
-                              const planLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-                                'freemium': { label: '🆓 Freemium', variant: 'outline' },
-                                'emprendedor': { label: '🚀 Emprendedor', variant: 'secondary' },
-                                'basico': { label: '💼 Básico', variant: 'secondary' },
-                                'profesional': { label: '🚀 Profesional', variant: 'default' },
-                                'empresarial': { label: '🏢 Empresarial', variant: 'default' },
-                                'sin-plan': { label: 'Sin plan', variant: 'outline' },
-                              }
-                              const planInfo = planLabels[plan] || planLabels['sin-plan']
-                              return (
-                                <Badge variant={planInfo.variant} className="border-slate-700 text-slate-200">
-                                  {planInfo.label}
-                                </Badge>
-                              )
-                            })()}
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex flex-col gap-1 w-32">
-                              <div className="text-xs text-slate-400 flex justify-between">
-                                <span>Prod</span>
-                                <span className="text-slate-200">{store.usage?.products || 0}</span>
-                              </div>
-                              <div className="text-xs text-slate-400 flex justify-between">
-                                <span>Fact</span>
-                                <span className="text-slate-200">{store.usage?.invoices_per_month || 0}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="text-slate-100">{formatDate(store.license_expires_at)}</div>
-                            <div className="text-[11px] text-slate-400">{formatDistance(store.license_expires_at)}</div>
-                          </td>
-                          <td className="px-3 py-3 text-slate-100">
-                            <div className="text-sm font-semibold">{store.member_count} usuarios</div>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {store.members?.slice(0, 3).map((m) => (
-                                <Badge key={m.user_id} variant="outline" className="border-slate-700 text-slate-200">
-                                  {m.full_name || m.user_id.slice(0, 6)} · {m.role}
-                                </Badge>
-                              ))}
-                              {store.member_count > 3 && (
-                                <Badge variant="secondary" className="bg-slate-800 text-slate-200">
-                                  +{store.member_count - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-slate-200">{store.license_grace_days} días</td>
-                          <td className="px-3 py-3 text-xs text-slate-300 max-w-[220px]">
-                            {store.license_notes || '—'}
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex justify-end">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button size="sm" variant="ghost" className="text-slate-100 hover:bg-slate-800">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="bg-slate-900 border-slate-800 text-slate-100">
-                                  <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                  <DropdownMenuSeparator className="bg-slate-800" />
-                                  <DropdownMenuItem
-                                    onClick={() => trialMutation.mutate(store.id)}
-                                    disabled={trialMutation.isPending}
-                                  >
-                                    Reiniciar trial 14d
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleExtend(store, 7)}
-                                    disabled={mutation.isPending}
-                                  >
-                                    Extender 7 días
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleExtend(store, 30)}
-                                    disabled={mutation.isPending}
-                                  >
-                                    Extender 30 días
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-slate-800" />
-                                  <DropdownMenuItem
-                                    onClick={() => setUserSheetStore(store)}
-                                    disabled={mutation.isPending}
-                                  >
-                                    Gestionar usuarios
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-slate-800" />
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      mutation.mutate({
-                                        storeId: store.id,
-                                        data: { status: 'active' },
-                                      })
-                                    }
-                                    className="text-emerald-300"
-                                    disabled={mutation.isPending}
-                                  >
-                                    <ShieldCheck className="h-4 w-4 mr-2" />
-                                    Activar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      mutation.mutate({
-                                        storeId: store.id,
-                                        data: { status: 'suspended', notes: 'Suspendida manualmente' },
-                                      })
-                                    }
-                                    className="text-rose-300"
-                                    disabled={mutation.isPending}
-                                  >
-                                    <ShieldOff className="h-4 w-4 mr-2" />
-                                    Suspender
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-slate-800" />
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setPlanSheetStore(store)
-                                      setNewPlan(store.license_plan || 'freemium')
-                                      setPlanExpiryDays('')
-                                    }}
-                                    disabled={mutation.isPending}
-                                  >
-                                    <CreditCard className="h-4 w-4 mr-2" />
-                                    Cambiar plan
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      mutation.mutate({
-                                        storeId: store.id,
-                                        data: { notes: 'Marcada para seguimiento' },
-                                      })
-                                    }
-                                    disabled={mutation.isPending}
-                                  >
-                                    Añadir nota
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-slate-800" />
-                                  <DropdownMenuItem
-                                    onClick={() => setDeleteConfirmStore(store)}
-                                    className="text-rose-400 focus:text-rose-300 focus:bg-rose-950/50"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Eliminar tienda
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
+
+      {/* Bento Grid Stats */}
+      <BlurFade delay={0.1}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500">Total Tiendas</CardTitle>
+              <Store className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900">
+                <NumberTicker value={stats.total} />
+              </div>
+              <p className="text-xs text-slate-400">Registradas en plataforma</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500">Activas</CardTitle>
+              <Activity className="h-4 w-4 text-[#0c81cf]" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#0c81cf]">
+                <NumberTicker value={stats.active} />
+              </div>
+              <p className="text-xs text-slate-400">Licencias vigentes</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500">Suspendidas</CardTitle>
+              <ShieldOff className="h-4 w-4 text-rose-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-rose-500">
+                <NumberTicker value={stats.suspended} />
+              </div>
+              <p className="text-xs text-slate-400">Acceso bloqueado</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500">Riesgo Expiración</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-500">
+                <NumberTicker value={stats.expiringSoon} />
+              </div>
+              <p className="text-xs text-slate-400">Expiran en &lt; 7 días</p>
+            </CardContent>
+          </Card>
+        </div>
+      </BlurFade>
+
+      {/* Main Content Area */}
+      <div className="grid lg:grid-cols-[1fr] gap-6">
+        {!adminKey ? (
+          <BlurFade delay={0.2}>
+            <ShineBorder className="w-full flex flex-col items-center justify-center p-12 text-center" color={["#0c81cf", "#0ea5e9"]}>
+              <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-[#0c81cf]">
+                <ShieldCheck className="h-8 w-8" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Acceso Restringido</h2>
+              <p className="text-slate-500 mb-6 max-w-md">Esta área es exclusiva para administradores del sistema. Por favor ingresa tu clave maestra para continuar.</p>
+              <div className="flex gap-2 max-w-sm w-full">
+                <Input
+                  type="password"
+                  placeholder="Admin Key"
+                  value={adminKey}
+                  onChange={(e) => setAdminKey(e.target.value)}
+                  className="bg-white"
+                />
+                <Button onClick={() => refetch()} disabled={!adminKey} className="bg-[#0c81cf] hover:bg-[#0a6fb3]">Ingresar</Button>
+              </div>
+            </ShineBorder>
+          </BlurFade>
+        ) : isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0c81cf]"></div>
+          </div>
+        ) : error ? (
+          <Card className="bg-red-50 border-red-200">
+            <CardContent className="py-6 text-sm text-red-600">
+              {error.message || 'Error cargando tiendas'}
+              <Button variant="link" onClick={() => refetch()} className="text-red-700 underline ml-2">Reintentar</Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <BlurFade delay={0.3}>
+            <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Tiendas Registradas</CardTitle>
+                    <p className="text-sm text-slate-500 mt-1">Gestión centralizada de clientes y licencias</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[130px] h-8 bg-white text-xs">
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los estados</SelectItem>
+                        <SelectItem value="active">Activas</SelectItem>
+                        <SelectItem value="suspended">Suspendidas</SelectItem>
+                        <SelectItem value="expired">Expiradas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={planFilter} onValueChange={setPlanFilter}>
+                      <SelectTrigger className="w-[130px] h-8 bg-white text-xs">
+                        <SelectValue placeholder="Plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los planes</SelectItem>
+                        <SelectItem value="basico">Básico</SelectItem>
+                        <SelectItem value="profesional">Profesional</SelectItem>
+                        <SelectItem value="empresarial">Empresarial</SelectItem>
+                        <SelectItem value="freemium">Freemium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <div className="p-0">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+                    <tr>
+                      <th className="px-6 py-3">Tienda</th>
+                      <th className="px-6 py-3">Estado</th>
+                      <th className="px-6 py-3">Plan</th>
+                      <th className="px-6 py-3">Vencimiento</th>
+                      <th className="px-6 py-3">Usuarios</th>
+                      <th className="px-6 py-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sorted.map((store /*, i*/) => (
+                      <tr key={store.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-[#0c81cf] to-[#0ea5e9] flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                              {store.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-slate-900 group-hover:text-[#0c81cf] transition-colors">{store.name}</div>
+                              <div className="text-xs text-slate-400 font-mono">{store.id.substring(0, 8)}...</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {statusBadge(store)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant="outline" className="font-normal capitalize bg-slate-50 text-slate-600 border-slate-200">
+                            {store.license_plan || 'N/A'}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-slate-900 font-medium">{formatDate(store.license_expires_at)}</div>
+                          <div className="text-xs text-slate-400">{formatDistance(store.license_expires_at)}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex -space-x-2 overflow-hidden">
+                            {store.members?.slice(0, 3).map((m, idx) => (
+                              <div key={idx} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-bold" title={m.full_name ?? 'Usuario'}>
+                                {m.full_name ? m.full_name.charAt(0) : '?'}
+                              </div>
+                            ))}
+                            {(store.member_count || 0) > 3 && (
+                              <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-50 flex items-center justify-center text-[10px] text-slate-400">
+                                +{store.member_count - 3}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleExtend(store, 30)}>
+                                <Calendar className="mr-2 h-4 w-4" /> Extender 30 días
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => trialMutation.mutate(store.id)}>
+                                <Sparkles className="mr-2 h-4 w-4" /> Reiniciar Trial
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setUserSheetStore(store)}>
+                                Gestión Usuarios
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setPlanSheetStore(store)}>
+                                Cambiar Plan
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-rose-600 focus:text-rose-600 hover:bg-rose-50" onClick={() => { /* setDeleteConfirmStore(store) */ }}>
+                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar Tienda
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {sorted.length === 0 && (
+                  <div className="p-12 text-center text-slate-500">
+                    No se encontraron tiendas con los filtros seleccionados.
+                  </div>
+                )}
+              </div>
+            </Card>
+          </BlurFade>
+        )}
+      </div>
+
+      {/* Sheet para usuarios */}
       <Sheet open={!!userSheetStore} onOpenChange={(open) => !open && setUserSheetStore(null)}>
-        <SheetContent className="bg-slate-900 text-slate-100 border-slate-800 w-[420px]">
+        <SheetContent className="bg-white text-slate-900 border-slate-200 w-[420px]">
           <SheetHeader>
-            <SheetTitle className="text-white">Usuarios de {userSheetStore?.name || ''}</SheetTitle>
-            <SheetDescription className="text-slate-400">
+            <SheetTitle className="text-slate-900">Usuarios de {userSheetStore?.name || ''}</SheetTitle>
+            <SheetDescription className="text-slate-500">
               Crea, revisa o elimina usuarios (owner/cashier) de la tienda.
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-4 space-y-4">
             {isMembersLoading ? (
-              <p className="text-sm text-slate-400">Cargando usuarios...</p>
+              <p className="text-sm text-slate-500">Cargando usuarios...</p>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Usuarios</p>
-                <ScrollArea className="h-48 rounded-md border border-slate-800">
+                <ScrollArea className="h-48 rounded-md border border-slate-200">
                   <div className="p-3 space-y-2">
                     {(members ?? []).map((m) => (
                       <div
                         key={m.user_id}
-                        className="flex items-center justify-between rounded border border-slate-800 px-3 py-2"
+                        className="flex items-center justify-between rounded border border-slate-200 px-3 py-2"
                       >
                         <div>
-                          <div className="text-sm font-semibold text-white">{m.full_name || m.user_id}</div>
-                          <div className="text-[11px] text-slate-400">{m.user_id}</div>
+                          <div className="text-sm font-semibold text-slate-900">{m.full_name || m.user_id}</div>
+                          <div className="text-[11px] text-slate-500">{m.user_id}</div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="border-slate-700 text-slate-200">
+                          <Badge variant="outline" className="border-slate-200 text-slate-700">
                             {m.role}
                           </Badge>
                           <Button
@@ -663,41 +555,41 @@ export default function AdminPage() {
               </div>
             )}
 
-            <Separator className="bg-slate-800" />
+            <Separator className="bg-slate-200" />
 
             <div className="space-y-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Crear usuario</p>
               <div className="space-y-2">
-                <Label className="text-slate-200">Nombre</Label>
+                <Label className="text-slate-700">Nombre</Label>
                 <Input
                   value={newUser.full_name}
                   onChange={(e) => setNewUser((prev) => ({ ...prev, full_name: e.target.value }))}
-                  className="bg-slate-950 border-slate-800 text-slate-100"
+                  className="bg-white border-slate-200 text-slate-900"
                   placeholder="Nombre completo"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-200">Rol</Label>
+                <Label className="text-slate-700">Rol</Label>
                 <Select
                   value={newUser.role}
                   onValueChange={(val) => setNewUser((prev) => ({ ...prev, role: val as 'owner' | 'cashier' }))}
                 >
-                  <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
+                  <SelectTrigger className="bg-white border-slate-200 text-slate-900">
                     <SelectValue placeholder="Rol" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-100">
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="cashier">Cashier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-200">PIN / Contraseña</Label>
+                <Label className="text-slate-700">PIN / Contraseña</Label>
                 <Input
                   type="password"
                   value={newUser.pin}
                   onChange={(e) => setNewUser((prev) => ({ ...prev, pin: e.target.value }))}
-                  className="bg-slate-950 border-slate-800 text-slate-100"
+                  className="bg-white border-slate-200 text-slate-900"
                   placeholder={
                     newUser.role === 'cashier'
                       ? 'PIN para cajero (4-6 dígitos)'
@@ -711,7 +603,7 @@ export default function AdminPage() {
                 </p>
               </div>
               <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="w-full bg-[#0c81cf] hover:bg-[#0a6fb3] text-white"
                 onClick={() => createUserMutation.mutate()}
                 disabled={
                   !newUser.full_name ||
@@ -729,59 +621,51 @@ export default function AdminPage() {
 
       {/* Sheet para cambiar plan */}
       <Sheet open={!!planSheetStore} onOpenChange={(open) => !open && setPlanSheetStore(null)}>
-        <SheetContent className="bg-slate-900 text-slate-100 border-slate-800 w-[420px]">
+        <SheetContent className="bg-white text-slate-900 border-slate-200 w-[420px]">
           <SheetHeader>
-            <SheetTitle className="text-white">Cambiar Plan - {planSheetStore?.name || ''}</SheetTitle>
-            <SheetDescription className="text-slate-400">
+            <SheetTitle className="text-slate-900">Cambiar Plan - {planSheetStore?.name || ''}</SheetTitle>
+            <SheetDescription className="text-slate-500">
               Actualiza el plan de suscripción de esta tienda.
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label className="text-slate-200">Plan Actual</Label>
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                <Badge variant="outline" className="border-slate-700 text-slate-200">
+              <Label className="text-slate-700">Plan Actual</Label>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                <Badge variant="outline" className="border-slate-200 text-slate-700">
                   {planSheetStore?.license_plan || 'Sin plan'}
                 </Badge>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-200">Nuevo Plan</Label>
+              <Label className="text-slate-700">Nuevo Plan</Label>
               <Select value={newPlan} onValueChange={setNewPlan}>
-                <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-100">
+                <SelectTrigger className="bg-white border-slate-200 text-slate-900">
                   <SelectValue placeholder="Selecciona un plan" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-800 text-slate-100">
+                <SelectContent className="bg-white border-slate-200 text-slate-900">
                   <SelectItem value="freemium">🆓 Freemium - GRATIS</SelectItem>
-                  <SelectItem value="emprendedor">🚀 Emprendedor - $9/mes</SelectItem>
                   <SelectItem value="basico">💼 Básico - $29/mes</SelectItem>
-                  <SelectItem value="profesional">🚀 Profesional - $49/mes</SelectItem>
-                  <SelectItem value="empresarial">🏢 Empresarial - $99/mes</SelectItem>
+                  <SelectItem value="profesional">🚀 Profesional - $79/mes</SelectItem>
+                  <SelectItem value="empresarial">🏢 Empresarial - $199/mes</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500">
-                {newPlan === 'freemium' && 'Gratis para siempre - Ideal para empezar'}
-                {newPlan === 'emprendedor' && '$9/mes - Para emprendedores que inician'}
-                {newPlan === 'basico' && '$29/mes - Perfecto para pequeños negocios'}
-                {newPlan === 'profesional' && '$49/mes - Para negocios en crecimiento'}
-                {newPlan === 'empresarial' && '$99/mes - Solución completa empresarial'}
-              </p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-200">Fecha de Expiración (opcional)</Label>
+              <Label className="text-slate-700">Fecha de Expiración (opcional)</Label>
               <div className="flex gap-2">
                 <Input
                   type="number"
                   placeholder="Días desde hoy"
                   value={planExpiryDays}
                   onChange={(e) => setPlanExpiryDays(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-slate-100"
+                  className="bg-white border-slate-200 text-slate-900"
                 />
                 {planExpiryDays && (
-                  <div className="text-xs text-slate-400 flex items-center gap-1">
+                  <div className="text-xs text-slate-500 flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {formatDate(
                       new Date(Date.now() + Number(planExpiryDays) * 86400000).toISOString()
@@ -794,124 +678,30 @@ export default function AdminPage() {
               </p>
             </div>
 
-            <Separator className="bg-slate-800" />
+            <Separator className="bg-slate-200" />
 
             <Button
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full bg-[#0c81cf] hover:bg-[#0a6fb3] text-white"
               onClick={() => {
-                if (!planSheetStore) return
-                const expiresAt = planExpiryDays
-                  ? new Date(Date.now() + Number(planExpiryDays) * 86400000).toISOString()
-                  : undefined
-
+                if (!planSheetStore) return;
+                const updates: any = { plan: newPlan }
+                if (planExpiryDays) {
+                  updates.expires_at = new Date(Date.now() + Number(planExpiryDays) * 86400000).toISOString()
+                }
                 mutation.mutate({
                   storeId: planSheetStore.id,
-                  data: {
-                    plan: newPlan,
-                    expires_at: expiresAt,
-                    status: 'active',
-                  },
+                  data: updates
                 })
                 setPlanSheetStore(null)
-                setNewPlan('')
-                setPlanExpiryDays('')
               }}
-              disabled={mutation.isPending || !newPlan || newPlan === planSheetStore?.license_plan}
+              disabled={!newPlan || mutation.isPending}
             >
-              {mutation.isPending ? 'Actualizando...' : 'Actualizar Plan'}
+              Actualizar Plan
             </Button>
           </div>
         </SheetContent>
       </Sheet>
 
-      {/* Modal de confirmación para eliminar tienda */}
-      <Sheet open={!!deleteConfirmStore} onOpenChange={(open) => {
-        if (!open) {
-          setDeleteConfirmStore(null)
-          setDeleteConfirmText('')
-        }
-      }}>
-        <SheetContent className="bg-slate-900 text-slate-100 border-slate-800 w-[420px]">
-          <SheetHeader>
-            <SheetTitle className="text-white flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-rose-400" />
-              Eliminar Tienda
-            </SheetTitle>
-            <SheetDescription className="text-slate-400">
-              Esta acción es <span className="text-rose-400 font-semibold">IRREVERSIBLE</span>.
-              Se eliminarán todos los datos asociados a la tienda.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-4">
-            <div className="p-4 bg-rose-950/30 border border-rose-900/50 rounded-lg space-y-2">
-              <p className="text-sm text-slate-200">
-                <strong>Tienda:</strong> {deleteConfirmStore?.name}
-              </p>
-              <p className="text-xs text-slate-400">
-                <strong>ID:</strong> {deleteConfirmStore?.id}
-              </p>
-              <p className="text-xs text-slate-400">
-                <strong>Usuarios:</strong> {deleteConfirmStore?.member_count || 0}
-              </p>
-              <p className="text-xs text-slate-400">
-                <strong>Plan:</strong> {deleteConfirmStore?.license_plan || 'Sin plan'}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-slate-200">
-                Para confirmar, escribe el nombre de la tienda:
-              </Label>
-              <Input
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder={deleteConfirmStore?.name || ''}
-                className="bg-slate-950 border-slate-800 text-slate-100"
-              />
-              <p className="text-xs text-slate-500">
-                Escribe exactamente: <code className="text-rose-300">{deleteConfirmStore?.name}</code>
-              </p>
-            </div>
-
-            <Separator className="bg-slate-800" />
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1 border-slate-700 text-slate-200 hover:bg-slate-800"
-                onClick={() => {
-                  setDeleteConfirmStore(null)
-                  setDeleteConfirmText('')
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white"
-                disabled={
-                  deleteConfirmText !== deleteConfirmStore?.name ||
-                  deleteStoreMutation.isPending
-                }
-                onClick={() => {
-                  if (deleteConfirmStore) {
-                    deleteStoreMutation.mutate(deleteConfirmStore.id)
-                  }
-                }}
-              >
-                {deleteStoreMutation.isPending ? (
-                  'Eliminando...'
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar Permanentemente
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   )
 }

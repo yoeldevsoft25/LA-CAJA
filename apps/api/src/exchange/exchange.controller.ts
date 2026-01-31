@@ -17,12 +17,17 @@ import { UpdateRateConfigDto } from './dto/update-rate-config.dto';
 import { SetMultipleRatesDto } from './dto/set-multiple-rates.dto';
 import { ExchangeRateType } from '../database/entities/exchange-rate.entity';
 
+import { RealTimeAnalyticsGateway } from '../realtime-analytics/realtime-analytics.gateway';
+
 @Controller('exchange')
 @UseGuards(JwtAuthGuard)
 export class ExchangeController {
   private readonly logger = new Logger(ExchangeController.name);
 
-  constructor(private readonly exchangeService: ExchangeService) {}
+  constructor(
+    private readonly exchangeService: ExchangeService,
+    private readonly realtimeGateway: RealTimeAnalyticsGateway,
+  ) { }
 
   // ============================================
   // ENDPOINTS MULTI-TASA
@@ -129,6 +134,13 @@ export class ExchangeController {
         rate_type: saved.rate_type,
         is_preferred: saved.is_preferred,
         effective_from: saved.effective_from,
+      });
+
+      // Emitir evento de actualización por socket
+      this.realtimeGateway.emitExchangeRateUpdate(storeId, {
+        rate: Number(saved.rate),
+        rate_type: saved.rate_type,
+        timestamp: Date.now(),
       });
     }
 
@@ -309,6 +321,13 @@ export class ExchangeController {
       dto.rate_type || 'BCV',
       dto.is_preferred ?? true,
     );
+
+    // Emitir evento de actualización por socket
+    this.realtimeGateway.emitExchangeRateUpdate(storeId, {
+      rate: Number(exchangeRate.rate),
+      rate_type: exchangeRate.rate_type,
+      timestamp: Date.now(),
+    });
 
     return {
       id: exchangeRate.id,

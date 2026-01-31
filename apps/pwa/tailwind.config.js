@@ -335,6 +335,25 @@ export default {
 					'50%': {
 						opacity: '0.5'
 					}
+				},
+				"meteor": {
+					"0%": { transform: "rotate(215deg) translateX(0)", opacity: 1 },
+					"70%": { opacity: 1 },
+					"100%": {
+						transform: "rotate(215deg) translateX(-500px)",
+						opacity: 0,
+					},
+				},
+				"shine": {
+					"0%": {
+						"background-position": "0% 0%",
+					},
+					"50%": {
+						"background-position": "100% 100%",
+					},
+					"to": {
+						"background-position": "0% 0%",
+					},
 				}
 			},
 			animation: {
@@ -361,7 +380,9 @@ export default {
 				'text-gradient': 'text-gradient 5s ease infinite',
 				blob: 'blob 7s infinite',
 				'move-up': 'move-up 0.5s ease-out',
-				'sync-pulse': 'sync-pulse 1.5s ease-in-out infinite'
+				'sync-pulse': 'sync-pulse 1.5s ease-in-out infinite',
+				"meteor": "meteor 5s linear infinite",
+				"shine": "shine 8s ease-in-out infinite"
 			},
 			transitionTimingFunction: {
 				'bounce-in': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',

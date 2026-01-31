@@ -12,6 +12,7 @@ interface CartListProps {
     invalidCartProductIds: string[]
     onUpdateQty: (id: string, qty: number) => void
     onRemoveItem: (id: string) => void
+    exchangeRate: number
 }
 
 export function CartList({
@@ -19,7 +20,8 @@ export function CartList({
     isMobile,
     invalidCartProductIds,
     onUpdateQty,
-    onRemoveItem
+    onRemoveItem,
+    exchangeRate
 }: CartListProps) {
 
     return (
@@ -73,6 +75,7 @@ export function CartList({
                                                 isInvalid={isInvalid}
                                                 onUpdateQty={onUpdateQty}
                                                 onRemoveItem={onRemoveItem}
+                                                exchangeRate={exchangeRate}
                                             />
                                         </SwipeableItem>
                                     </motion.div>

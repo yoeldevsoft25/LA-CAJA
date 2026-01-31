@@ -17,8 +17,8 @@ export class LicenseService {
     constructor(
         @InjectRepository(SubscriptionPlan)
         private planRepo: Repository<SubscriptionPlan>,
-        @InjectRepository(StoreLicense)
-        private licenseRepo: Repository<StoreLicense>,
+        @InjectRepository(Store)
+        private storeRepo: Repository<Store>,
         @InjectRepository(LicenseUsage)
         private usageRepo: Repository<LicenseUsage>,
         private jwtService: JwtService,
@@ -28,16 +28,21 @@ export class LicenseService {
      * Obtiene el estado detallado de la licencia de una tienda
      */
     async getLicenseStatus(storeId: string) {
-        const license = await this.licenseRepo.findOne({
-            where: { store_id: storeId },
-            relations: ['plan'],
+        const store = await this.storeRepo.findOne({
+            where: { id: storeId },
         });
 
-        if (!license) {
-            // Fallback a Freemium si no hay licencia registrada
+        if (!store) {
+            // Should not happen for valid requests
             return this.getFreemiumStatus(storeId);
         }
 
+        // Si no tiene plan asignado, es Freemium
+        if (!store.license_plan) {
+            return this.getFreemiumStatus(storeId);
+        }
+
+        const plan = await this.planRepo.findOne({ where: { code: store.license_plan } });
         const usage = await this.usageRepo.find({ where: { store_id: storeId } });
 
         // Mapear uso a un objeto plano
@@ -47,11 +52,11 @@ export class LicenseService {
         }, {} as Record<string, number>);
 
         return {
-            plan: license.plan_code,
-            status: license.status,
-            expires_at: license.expires_at,
-            features: [...(license.plan?.features || []), ...license.custom_features],
-            limits: { ...(license.plan?.limits || {}), ...license.custom_limits },
+            plan: store.license_plan,
+            status: store.license_status,
+            expires_at: store.license_expires_at,
+            features: plan?.features || [], // Usar features del plan base
+            limits: plan?.limits || {},     // Usar limites del plan base
             usage: usageMap,
         };
     }

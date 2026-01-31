@@ -3,6 +3,7 @@ import {
   RealTimeMetric,
   RealTimeAlert,
   SalesHeatmapData,
+  ExchangeRateUpdate,
 } from '@/types/realtime-analytics.types'
 import { createLogger } from '@/lib/logger'
 
@@ -11,6 +12,7 @@ const logger = createLogger('RealtimeWebSocket')
 type MetricUpdateCallback = (metric: RealTimeMetric) => void
 type AlertNewCallback = (alert: RealTimeAlert) => void
 type HeatmapUpdateCallback = (data: SalesHeatmapData[]) => void
+type ExchangeRateUpdateCallback = (data: ExchangeRateUpdate) => void
 type ErrorCallback = (error: string) => void
 
 class RealtimeWebSocketService {
@@ -23,6 +25,7 @@ class RealtimeWebSocketService {
   private metricUpdateCallbacks: Set<MetricUpdateCallback> = new Set()
   private alertNewCallbacks: Set<AlertNewCallback> = new Set()
   private heatmapUpdateCallbacks: Set<HeatmapUpdateCallback> = new Set()
+  private exchangeRateUpdateCallbacks: Set<ExchangeRateUpdateCallback> = new Set()
   private errorCallbacks: Set<ErrorCallback> = new Set()
 
   /**
@@ -118,6 +121,10 @@ class RealtimeWebSocketService {
 
     this.socket.on('heatmap:update', (data: SalesHeatmapData[]) => {
       this.heatmapUpdateCallbacks.forEach((callback) => callback(data))
+    })
+
+    this.socket.on('exchange:update', (data: ExchangeRateUpdate) => {
+      this.exchangeRateUpdateCallbacks.forEach((callback) => callback(data))
     })
 
     // Escuchar cambios de estado de licencia desde el namespace de notificaciones
@@ -227,6 +234,16 @@ class RealtimeWebSocketService {
     this.heatmapUpdateCallbacks.add(callback)
     return () => {
       this.heatmapUpdateCallbacks.delete(callback)
+    }
+  }
+
+  /**
+   * Registra callback para actualizaciones de tasa de cambio
+   */
+  onExchangeRateUpdate(callback: ExchangeRateUpdateCallback): () => void {
+    this.exchangeRateUpdateCallbacks.add(callback)
+    return () => {
+      this.exchangeRateUpdateCallbacks.delete(callback)
     }
   }
 

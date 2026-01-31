@@ -10,6 +10,7 @@ import {
   SaleChange,
 } from '../database/entities';
 import { SecurityModule } from '../security/security.module';
+import { RealTimeAnalyticsModule } from '../realtime-analytics/realtime-analytics.module';
 
 @Module({
   imports: [
@@ -20,9 +21,10 @@ import { SecurityModule } from '../security/security.module';
       SaleChange,
     ]),
     SecurityModule,
+    RealTimeAnalyticsModule,
   ],
   controllers: [ExchangeController],
   providers: [ExchangeService, SalePaymentsService],
   exports: [ExchangeService, SalePaymentsService],
 })
-export class ExchangeModule {}
+export class ExchangeModule { }

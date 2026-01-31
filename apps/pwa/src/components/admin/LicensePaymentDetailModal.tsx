@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -28,12 +27,17 @@ import {
   RefreshCw,
   Eye,
   FileText,
+  CreditCard,
+  Building2,
+  Phone,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import {
   LicensePayment,
 } from '@/services/license-payments.service';
 import PaymentVerificationForm from './PaymentVerificationForm';
 import { format, parseISO } from 'date-fns';
+import BlurFade from '@/components/magicui/blur-fade';
 
 interface LicensePaymentDetailModalProps {
   payment: LicensePayment;
@@ -49,32 +53,32 @@ function getStatusBadge(status: LicensePayment['status']) {
   > = {
     pending: {
       label: 'Pendiente',
-      className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+      className: 'bg-yellow-500/10 text-yellow-600 border-yellow-200',
       icon: Clock,
     },
     verifying: {
       label: 'Verificando',
-      className: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+      className: 'bg-[#0c81cf10] text-[#0c81cf] border-[#0c81cf20]',
       icon: RefreshCw,
     },
     verified: {
       label: 'Verificado',
-      className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50',
+      className: 'bg-sky-500/10 text-sky-600 border-sky-200',
       icon: CheckCircle2,
     },
     approved: {
       label: 'Aprobado',
-      className: 'bg-green-600 text-white border-green-700',
+      className: 'bg-[#0c81cf] text-white border-[#0c81cf] shadow-md',
       icon: CheckCircle2,
     },
     rejected: {
       label: 'Rechazado',
-      className: 'bg-red-500/20 text-red-400 border-red-500/50',
+      className: 'bg-red-500/10 text-red-600 border-red-200',
       icon: XCircle,
     },
     expired: {
       label: 'Expirado',
-      className: 'bg-slate-500/20 text-slate-400 border-slate-500/50',
+      className: 'bg-slate-500/10 text-slate-600 border-slate-200',
       icon: AlertCircle,
     },
   };
@@ -82,8 +86,8 @@ function getStatusBadge(status: LicensePayment['status']) {
   const config = variants[status] || variants.pending;
   const Icon = config.icon;
   return (
-    <Badge className={config.className} variant="outline">
-      <Icon className="h-3 w-3 mr-1" />
+    <Badge className={`${config.className} px-3 py-1 text-sm font-medium transition-all`} variant="outline">
+      <Icon className="h-3.5 w-3.5 mr-1.5" />
       {config.label}
     </Badge>
   );
@@ -120,261 +124,278 @@ export default function LicensePaymentDetailModal({
   const [activeTab, setActiveTab] = useState('details');
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 py-4 border-b border-slate-800 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-xl flex items-center gap-2">
-                <FileText className="h-5 w-5 text-emerald-400" />
-                Detalles del Pago
-              </DialogTitle>
-              <DialogDescription className="text-slate-400 mt-1">
-                ID: {payment.id}
-              </DialogDescription>
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="sm:max-w-2xl p-0 flex flex-col bg-slate-50/50 backdrop-blur-xl">
+        <SheetHeader className="px-6 py-6 border-b border-slate-200 bg-white shadow-sm z-10">
+          <BlurFade delay={0.1}>
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 font-mono">
+                ID: {payment.id.slice(0, 8)}...
+              </Badge>
+              {getStatusBadge(payment.status)}
             </div>
-            {getStatusBadge(payment.status)}
-          </div>
-        </DialogHeader>
+            <SheetTitle className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <CreditCard className="h-6 w-6 text-[#0c81cf]" />
+              Detalles del Pago
+            </SheetTitle>
+            <SheetDescription className="text-slate-500">
+              Revisa la información completa de la transacción y gestiona su estado.
+            </SheetDescription>
+          </BlurFade>
+        </SheetHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="mx-6 mt-4 flex-shrink-0">
-            <TabsTrigger value="details">Detalles</TabsTrigger>
-            <TabsTrigger value="actions">Acciones</TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
-          </TabsList>
+          <div className="px-6 pt-4 bg-white border-b border-slate-200">
+            <TabsList className="w-full justify-start bg-transparent p-0 gap-6">
+              <TabsTrigger
+                value="details"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#0c81cf] rounded-none px-0 pb-3 text-slate-500 data-[state=active]:text-[#0c81cf] transition-all"
+              >
+                Detalles
+              </TabsTrigger>
+              <TabsTrigger
+                value="actions"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#0c81cf] rounded-none px-0 pb-3 text-slate-500 data-[state=active]:text-[#0c81cf] transition-all"
+              >
+                Acciones
+              </TabsTrigger>
+              <TabsTrigger
+                value="history"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#0c81cf] rounded-none px-0 pb-3 text-slate-500 data-[state=active]:text-[#0c81cf] transition-all"
+              >
+                Historial
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <ScrollArea className="flex-1 min-h-0">
-            <TabsContent value="details" className="p-6 space-y-4 mt-0">
-              {/* Información General */}
-              <Card className="bg-slate-900/50 border-slate-800">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-400">Plan</Label>
-                      <div className="text-white font-semibold">{getPlanName(payment.plan)}</div>
-                    </div>
-                    <div>
-                      <Label className="text-slate-400">Período</Label>
-                      <div className="text-white">
-                        {payment.billing_period === 'monthly' ? 'Mensual' : 'Anual'}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-slate-400">Monto USD</Label>
-                      <div className="text-white font-semibold">${payment.amount_usd}</div>
-                    </div>
-                    {payment.amount_bs && (
-                      <div>
-                        <Label className="text-slate-400">Monto Bs</Label>
-                        <div className="text-white">{payment.amount_bs} Bs</div>
-                      </div>
-                    )}
-                    <div>
-                      <Label className="text-slate-400">Método de Pago</Label>
-                      <div className="text-white">{getPaymentMethodName(payment.payment_method)}</div>
-                    </div>
-                    <div>
-                      <Label className="text-slate-400">Referencia</Label>
-                      <div className="text-white font-mono">{payment.payment_reference}</div>
-                    </div>
-                    {payment.bank_code && (
-                      <div>
-                        <Label className="text-slate-400">Banco</Label>
-                        <div className="text-white">{payment.bank_code}</div>
-                      </div>
-                    )}
-                    {payment.phone_number && (
-                      <div>
-                        <Label className="text-slate-400">Teléfono</Label>
-                        <div className="text-white">{payment.phone_number}</div>
-                      </div>
-                    )}
-                    {payment.account_number && (
-                      <div>
-                        <Label className="text-slate-400">Número de Cuenta</Label>
-                        <div className="text-white font-mono">{payment.account_number}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  <Separator className="bg-slate-800" />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-slate-400">Tienda ID</Label>
-                      <div className="text-white font-mono text-sm">{payment.store_id}</div>
-                    </div>
-                    <div>
-                      <Label className="text-slate-400">Creado</Label>
-                      <div className="text-white text-sm">
-                        {format(parseISO(payment.created_at), 'dd/MM/yyyy HH:mm:ss')}
-                      </div>
-                    </div>
-                    {payment.expires_at && (
-                      <div>
-                        <Label className="text-slate-400">Expira</Label>
-                        <div className="text-yellow-400 text-sm">
-                          {format(parseISO(payment.expires_at), 'dd/MM/yyyy HH:mm:ss')}
+          <ScrollArea className="flex-1 bg-slate-50">
+            <div className="p-6">
+              <BlurFade delay={0.2} inView>
+                <TabsContent value="details" className="space-y-6 mt-0">
+                  {/* Información General */}
+                  <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
+                        <div className="p-4 space-y-1">
+                          <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Plan Solicitado</Label>
+                          <div className="text-lg font-semibold text-slate-900">{getPlanName(payment.plan)}</div>
+                        </div>
+                        <div className="p-4 space-y-1">
+                          <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Período</Label>
+                          <div className="text-lg font-medium text-slate-900">
+                            {payment.billing_period === 'monthly' ? 'Mensual' : 'Anual'}
+                          </div>
                         </div>
                       </div>
-                    )}
-                    {payment.verified_at && (
-                      <div>
-                        <Label className="text-slate-400">Verificado</Label>
-                        <div className="text-white text-sm">
-                          {format(parseISO(payment.verified_at), 'dd/MM/yyyy HH:mm:ss')}
+                      <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
+                        <div className="p-4 space-y-1">
+                          <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Monto USD</Label>
+                          <div className="text-xl font-bold text-slate-900">${payment.amount_usd}</div>
                         </div>
+                        {payment.amount_bs && (
+                          <div className="p-4 space-y-1">
+                            <Label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Monto Bs</Label>
+                            <div className="text-xl font-bold text-slate-700">{payment.amount_bs} Bs</div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {payment.approved_at && (
-                      <div>
-                        <Label className="text-slate-400">Aprobado</Label>
-                        <div className="text-white text-sm">
-                          {format(parseISO(payment.approved_at), 'dd/MM/yyyy HH:mm:ss')}
+
+                      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-slate-500 mb-1 block text-xs">Método de Pago</Label>
+                            <div className="flex items-center gap-2 text-slate-900 font-medium">
+                              <CreditCard className="h-4 w-4 text-[#0c81cf]" />
+                              {getPaymentMethodName(payment.payment_method)}
+                            </div>
+                          </div>
+                          {payment.bank_code && (
+                            <div>
+                              <Label className="text-slate-500 mb-1 block text-xs">Banco</Label>
+                              <div className="flex items-center gap-2 text-slate-900">
+                                <Building2 className="h-4 w-4 text-slate-400" />
+                                {payment.bank_code}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-                    {payment.rejected_at && (
-                      <div>
-                        <Label className="text-slate-400">Rechazado</Label>
-                        <div className="text-white text-sm">
-                          {format(parseISO(payment.rejected_at), 'dd/MM/yyyy HH:mm:ss')}
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
-                  {payment.auto_verified && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded p-3">
-                      <div className="flex items-center gap-2 text-emerald-400">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="text-sm">Verificado automáticamente</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {payment.verification_attempts > 0 && (
-                    <div className="text-sm text-slate-400">
-                      Intentos de verificación: {payment.verification_attempts}
-                    </div>
-                  )}
-
-                  {payment.rejection_reason && (
-                    <div>
-                      <Label className="text-slate-400">Motivo del Rechazo</Label>
-                      <div className="text-red-400 mt-1">{payment.rejection_reason}</div>
-                    </div>
-                  )}
-
-                  {payment.notes && (
-                    <div>
-                      <Label className="text-slate-400">Notas</Label>
-                      <div className="text-white mt-1 whitespace-pre-wrap">{payment.notes}</div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Documentos */}
-              {payment.documents && payment.documents.length > 0 && (
-                <Card className="bg-slate-900/50 border-slate-800">
-                  <CardContent className="pt-6">
-                    <Label className="text-slate-400 mb-4 block">Documentos Adjuntos</Label>
-                    <div className="space-y-2">
-                      {payment.documents.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="flex items-center justify-between p-3 bg-slate-800/50 rounded border border-slate-700"
-                        >
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-slate-400" />
-                            <span className="text-white text-sm">{doc.file_name}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {doc.file_type}
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-slate-500 mb-1 block text-xs">Referencia</Label>
+                            <Badge variant="secondary" className="font-mono text-slate-700 bg-slate-100 border-slate-200">
+                              {payment.payment_reference}
                             </Badge>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(doc.file_path, '_blank')}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          {payment.phone_number && (
+                            <div>
+                              <Label className="text-slate-500 mb-1 block text-xs">Teléfono</Label>
+                              <div className="flex items-center gap-2 text-slate-900">
+                                <Phone className="h-4 w-4 text-slate-400" />
+                                {payment.phone_number}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-            <TabsContent value="actions" className="p-6 mt-0">
-              <PaymentVerificationForm
-                payment={payment}
-                onSuccess={() => {
-                  onUpdate();
-                  queryClient.invalidateQueries({ queryKey: ['license-payments'] });
-                  queryClient.invalidateQueries({ queryKey: ['license-payments-stats'] });
-                  toast.success('Operación realizada exitosamente');
-                }}
-              />
-            </TabsContent>
-
-            <TabsContent value="history" className="p-6 mt-0">
-              {payment.verifications && payment.verifications.length > 0 ? (
-                <div className="space-y-4">
-                  {payment.verifications.map((verification) => (
-                    <Card key={verification.id} className="bg-slate-900/50 border-slate-800">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className="bg-slate-800">
-                            {verification.verification_method}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={
-                              verification.status === 'success'
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-red-500/20 text-red-400'
-                            }
-                          >
-                            {verification.status}
-                          </Badge>
+                  <Card className="bg-white border-slate-200 shadow-sm">
+                    <CardContent className="pt-6">
+                      <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                        <div>
+                          <Label className="text-slate-500 text-xs">Tienda ID</Label>
+                          <div className="font-mono text-sm text-slate-700 mt-1">{payment.store_id}</div>
                         </div>
-                        <div className="text-sm text-slate-400">
-                          {verification.verified_at
-                            ? format(parseISO(verification.verified_at), 'dd/MM/yyyy HH:mm:ss')
-                            : format(parseISO(verification.created_at), 'dd/MM/yyyy HH:mm:ss')}
+                        <div>
+                          <Label className="text-slate-500 text-xs">Creado el</Label>
+                          <div className="text-sm text-slate-900 mt-1 flex items-center gap-2">
+                            <CalendarIcon className="h-3.5 w-3.5 text-slate-400" />
+                            {format(parseISO(payment.created_at), 'dd/MM/yyyy HH:mm')}
+                          </div>
                         </div>
-                        {verification.error_message && (
-                          <div className="text-red-400 text-sm mt-2">
-                            {verification.error_message}
+                        {payment.expires_at && (
+                          <div>
+                            <Label className="text-slate-500 text-xs">Expira el</Label>
+                            <div className="text-sm text-amber-600 font-medium mt-1 flex items-center gap-2">
+                              <Clock className="h-3.5 w-3.5" />
+                              {format(parseISO(payment.expires_at), 'dd/MM/yyyy HH:mm')}
+                            </div>
                           </div>
                         )}
-                        {verification.response_data && (
-                          <details className="mt-2">
-                            <summary className="text-sm text-slate-400 cursor-pointer">
-                              Ver respuesta
-                            </summary>
-                            <pre className="text-xs bg-slate-800 p-2 rounded mt-2 overflow-auto">
-                              {JSON.stringify(verification.response_data, null, 2)}
-                            </pre>
-                          </details>
-                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Documentos */}
+                  {payment.documents && payment.documents.length > 0 && (
+                    <Card className="bg-white border-slate-200 shadow-sm">
+                      <CardContent className="pt-6">
+                        <Label className="text-slate-900 font-medium mb-4 block flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-[#0c81cf]" />
+                          Comprobantes Adjuntos
+                        </Label>
+                        <div className="space-y-2">
+                          {payment.documents.map((doc) => (
+                            <div
+                              key={doc.id}
+                              className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-blue-200 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0c81cf]">
+                                  <FileText className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <div className="text-slate-900 text-sm font-medium">{doc.file_name}</div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-slate-200 text-slate-500">
+                                      {doc.file_type}
+                                    </Badge>
+                                    <span className="text-xs text-slate-400">
+                                      {(doc.file_size / 1024).toFixed(1)} KB
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-slate-400 hover:text-[#0c81cf] hover:bg-blue-50"
+                                onClick={() => window.open(doc.file_path, '_blank')}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  No hay historial de verificaciones
-                </div>
-              )}
-            </TabsContent>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="actions" className="mt-0">
+                  <Card className="bg-white border-slate-200 shadow-sm">
+                    <CardContent className="pt-6">
+                      <PaymentVerificationForm
+                        payment={payment}
+                        onSuccess={() => {
+                          onUpdate();
+                          queryClient.invalidateQueries({ queryKey: ['license-payments'] });
+                          queryClient.invalidateQueries({ queryKey: ['license-payments-stats'] });
+                          toast.success('Operación realizada exitosamente');
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="history" className="mt-0">
+                  {payment.verifications && payment.verifications.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="relative pl-4 border-l-2 border-slate-200 space-y-8 py-2">
+                        {payment.verifications.map((verification) => (
+                          <div key={verification.id} className="relative">
+                            <div className={`absolute -left-[21px] top-0 h-4 w-4 rounded-full border-2 ${verification.status === 'success' ? 'bg-emerald-500 border-emerald-100' : 'bg-slate-400 border-slate-100'} ring-4 ring-white`}></div>
+
+                            <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium text-slate-900">
+                                  {verification.verification_method === 'manual' ? 'Verificación Manual' : 'Verificación Automática'}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  {verification.verified_at
+                                    ? format(parseISO(verification.verified_at), 'dd/MM/yyyy HH:mm')
+                                    : format(parseISO(verification.created_at), 'dd/MM/yyyy HH:mm')}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge
+                                  variant="secondary"
+                                  className={
+                                    verification.status === 'success'
+                                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100'
+                                      : 'bg-red-100 text-red-700 hover:bg-red-100'
+                                  }
+                                >
+                                  {verification.status.toUpperCase()}
+                                </Badge>
+                              </div>
+
+                              {verification.error_message && (
+                                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md border border-red-100 mb-2">
+                                  {verification.error_message}
+                                </div>
+                              )}
+
+                              {verification.response_data && (
+                                <details className="group">
+                                  <summary className="text-xs text-[#0c81cf] cursor-pointer font-medium hover:underline flex items-center gap-1">
+                                    Ver datos técnicos
+                                  </summary>
+                                  <div className="mt-2 text-xs bg-slate-900 text-slate-300 p-3 rounded-md overflow-x-auto font-mono">
+                                    {JSON.stringify(verification.response_data, null, 2)}
+                                  </div>
+                                </details>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 bg-white rounded-lg border border-slate-200 border-dashed">
+                      <Clock className="h-10 w-10 text-slate-300 mb-3" />
+                      <p>No hay historial de verificaciones</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </BlurFade>
+            </div>
           </ScrollArea>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

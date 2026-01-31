@@ -40,6 +40,7 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly ACCESS_TOKEN_EXPIRES_IN = 15 * 60; // 15 minutos en segundos
   private readonly REFRESH_TOKEN_EXPIRES_IN_DAYS = 30; // 30 días
+  private readonly REFRESH_TOKEN_GRACE_MS = 30 * 1000; // 30s para refresh concurrente
 
   constructor(
     @InjectRepository(Store)
@@ -1019,9 +1020,34 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido');
     }
 
-    // Verificar que esté activo
-    if (!refreshToken.isActive()) {
+    const now = new Date();
+    const isExpired = refreshToken.expires_at <= now;
+    const revokedAt = refreshToken.revoked_at;
+    const isRevoked = Boolean(revokedAt);
+
+    if (isExpired) {
       throw new UnauthorizedException('Refresh token expirado o revocado');
+    }
+
+    if (isRevoked) {
+      const revokedReason = refreshToken.revoked_reason;
+      const revokedAgoMs = revokedAt ? now.getTime() - revokedAt.getTime() : null;
+      const withinGrace =
+        revokedReason === 'rotated' &&
+        revokedAt !== null &&
+        revokedAgoMs !== null &&
+        revokedAgoMs <= this.REFRESH_TOKEN_GRACE_MS;
+
+      if (!withinGrace) {
+        this.logger.warn(
+          `⚠️ Posible reutilización de refresh token revocado detectada para usuario: ${refreshToken.user_id}`,
+        );
+        throw new UnauthorizedException('Refresh token expirado o revocado');
+      }
+
+      this.logger.debug(
+        `Refresh token reutilizado dentro de ventana de gracia para usuario: ${refreshToken.user_id}`,
+      );
     }
 
     // Verificar licencia de la tienda
@@ -1030,7 +1056,7 @@ export class AuthService {
       throw new UnauthorizedException('Tienda no encontrada');
     }
 
-    const now = Date.now();
+    const nowMs = Date.now();
     const expires = store.license_expires_at
       ? store.license_expires_at.getTime()
       : null;
@@ -1039,7 +1065,7 @@ export class AuthService {
     if (
       !store.license_status ||
       store.license_status === 'suspended' ||
-      (expires && now > expires + graceMs)
+      (expires && nowMs > expires + graceMs)
     ) {
       throw new ForbiddenException('Licencia inválida o expirada');
     }
@@ -1078,10 +1104,12 @@ export class AuthService {
       newRefreshTokenExpiresAt.getDate() + this.REFRESH_TOKEN_EXPIRES_IN_DAYS,
     );
 
-    // Revocar el refresh token anterior
-    refreshToken.revoked_at = new Date();
-    refreshToken.revoked_reason = 'rotated';
-    await this.refreshTokenRepository.save(refreshToken);
+    // Revocar el refresh token anterior (si ya estaba revocado por rotación en grace, no actualizar)
+    if (!refreshToken.revoked_at) {
+      refreshToken.revoked_at = new Date();
+      refreshToken.revoked_reason = 'rotated';
+      await this.refreshTokenRepository.save(refreshToken);
+    }
 
     // Crear nuevo refresh token
     const newRefreshToken = this.refreshTokenRepository.create({
@@ -1094,16 +1122,6 @@ export class AuthService {
       expires_at: newRefreshTokenExpiresAt,
     });
     await this.refreshTokenRepository.save(newRefreshToken);
-
-    // Detectar reutilización de tokens revocados (posible ataque)
-    // Si el token anterior ya estaba revocado, es sospechoso
-    if (refreshToken.revoked_at && refreshToken.revoked_at < new Date()) {
-      this.logger.warn(
-        `⚠️ Posible reutilización de refresh token revocado detectada para usuario: ${refreshToken.user_id}`,
-      );
-      // Registrar en auditoría de seguridad
-      // Nota: Esto requeriría inyectar SecurityAuditService, por ahora solo logueamos
-    }
 
     return {
       access_token: accessToken,
