@@ -4,8 +4,8 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('API');
 
-const PRIMARY_API_URL = import.meta.env.VITE_PRIMARY_API_URL as string | undefined;
-const FALLBACK_API_URL = import.meta.env.VITE_FALLBACK_API_URL as string | undefined;
+const PRIMARY_API_URL = (import.meta.env.VITE_PRIMARY_API_URL as string | undefined) ?? '';
+const FALLBACK_API_URL = (import.meta.env.VITE_FALLBACK_API_URL as string | undefined) ?? '';
 const API_BASE_STORAGE_KEY = 'velox_api_base';
 
 /**
