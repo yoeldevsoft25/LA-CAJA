@@ -167,7 +167,7 @@ export default function RegisterPage() {
   // Si el registro fue exitoso, mostrar información de licencia
   if (registrationSuccess) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfaf8] relative overflow-hidden px-6 py-10">
+      <div className="min-h-screen w-full flex items-start sm:items-center justify-center bg-[#fbfaf8] relative overflow-x-hidden overflow-y-auto px-6 py-10">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
           <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
@@ -321,7 +321,7 @@ export default function RegisterPage() {
 
   // Formulario de registro
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#fbfaf8] relative overflow-hidden px-6 py-10">
+    <div className="min-h-screen w-full flex items-start sm:items-center justify-center bg-[#fbfaf8] relative overflow-x-hidden overflow-y-auto px-6 py-10">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
         <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />

@@ -15,6 +15,15 @@
     transition-duration: 0.2s !important;
   }
 
+  /* Suavizar efectos parpadeantes en mobile */
+  .animate-pulse {
+    animation-duration: 1.6s !important;
+  }
+
+  .animate-shine {
+    animation-duration: 2.4s !important;
+  }
+
   /* Desactivar transforms pesados */
   * {
     will-change: auto !important;

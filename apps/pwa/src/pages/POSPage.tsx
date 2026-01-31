@@ -841,7 +841,7 @@ export default function POSPage() {
         {/* Carrito - Flex para ocupar altura completa */}
         <div className={cn(
           "flex flex-col h-full min-h-0",
-          isMobile ? "overflow-visible" : "overflow-hidden",
+          "overflow-hidden",
           !isTabletLandscape && "lg:col-span-1"
         )}>
           {isMobile && (
