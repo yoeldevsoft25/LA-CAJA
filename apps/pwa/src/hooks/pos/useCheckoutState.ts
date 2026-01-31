@@ -1,5 +1,5 @@
 import { useReducer, useCallback } from 'react'
-import { CheckoutState, CheckoutAction, CheckoutPaymentMode, SinglePaymentMethod } from '@/types/checkout.types'
+import { CheckoutState, CheckoutAction, CheckoutPaymentMode, SinglePaymentMethod, CashChangeRoundingMode } from '@/types/checkout.types'
 
 const initialState: CheckoutState = {
     paymentMode: 'SINGLE',
@@ -16,6 +16,8 @@ const initialState: CheckoutState = {
         receivedUsd: 0,
         receivedBs: 0,
         giveChangeInBs: false,
+        changeRoundingMode: 'CUSTOMER',
+        changeRoundingConsent: false,
     },
     invoice: {
         seriesId: null,
@@ -52,6 +54,10 @@ function checkoutReducer(state: CheckoutState, action: CheckoutAction): Checkout
             return { ...state, cash: { ...state.cash, receivedBs: action.payload } }
         case 'SET_GIVE_CHANGE_IN_BS':
             return { ...state, cash: { ...state.cash, giveChangeInBs: action.payload } }
+        case 'SET_CHANGE_ROUNDING_MODE':
+            return { ...state, cash: { ...state.cash, changeRoundingMode: action.payload } }
+        case 'SET_CHANGE_ROUNDING_CONSENT':
+            return { ...state, cash: { ...state.cash, changeRoundingConsent: action.payload } }
         case 'SET_INVOICE_SERIES':
             return { ...state, invoice: { ...state.invoice, seriesId: action.payload } }
         case 'SET_PRICE_LIST':
@@ -119,6 +125,14 @@ export function useCheckoutState() {
 
         setGiveChangeInBs: useCallback((value: boolean) => {
             dispatch({ type: 'SET_GIVE_CHANGE_IN_BS', payload: value })
+        }, []),
+
+        setChangeRoundingMode: useCallback((mode: CashChangeRoundingMode) => {
+            dispatch({ type: 'SET_CHANGE_ROUNDING_MODE', payload: mode })
+        }, []),
+
+        setChangeRoundingConsent: useCallback((value: boolean) => {
+            dispatch({ type: 'SET_CHANGE_ROUNDING_CONSENT', payload: value })
         }, []),
 
         setInvoiceSeries: useCallback((id: string | null) => {

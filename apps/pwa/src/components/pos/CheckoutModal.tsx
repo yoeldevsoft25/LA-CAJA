@@ -3,7 +3,7 @@ import { X, Loader2, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CartItem } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
-import { calculateRoundedChange } from '@/utils/vzla-denominations'
+import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNearestDenominationUp } from '@/utils/vzla-denominations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,10 +55,24 @@ interface CheckoutModalProps {
     cash_payment?: {
       received_usd: number
       change_bs?: number
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+        exact_change_bs: number
+        rounded_change_bs: number
+        adjustment_bs: number
+        consented?: boolean
+      }
     }
     cash_payment_bs?: {
       received_bs: number
       change_bs?: number
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+        exact_change_bs: number
+        rounded_change_bs: number
+        adjustment_bs: number
+        consented?: boolean
+      }
     }
     split_payments?: SplitPaymentForBackend[]
     customer_id?: string
@@ -194,6 +208,17 @@ export default function CheckoutModal({
       }
     }
 
+    // Validar consentimiento para redondeo a favor de la tienda
+    if (
+      state.paymentMode === 'SINGLE' &&
+      (state.selectedMethod === 'CASH_BS' || (state.selectedMethod === 'CASH_USD' && state.cash.giveChangeInBs)) &&
+      state.cash.changeRoundingMode === 'MERCHANT' &&
+      !state.cash.changeRoundingConsent
+    ) {
+      actions.setError('Debes confirmar que el cliente acepta el redondeo a favor de la tienda.')
+      return
+    }
+
     // Preparar datos para enviar
     const confirmData: any = {
       payment_method: state.paymentMode === 'SPLIT' ? 'SPLIT' : state.selectedMethod,
@@ -220,18 +245,47 @@ export default function CheckoutModal({
     } else {
       if (state.selectedMethod === 'CASH_USD') {
         const changeUsd = state.cash.receivedUsd - total.usd
-        const changeBs = state.cash.giveChangeInBs
-          ? calculateRoundedChange(changeUsd, checkoutData.exchangeRate)
+        const roundingResult = state.cash.giveChangeInBs
+          ? calculateRoundedChangeWithMode(changeUsd, checkoutData.exchangeRate, state.cash.changeRoundingMode)
           : undefined
 
         confirmData.cash_payment = {
           received_usd: state.cash.receivedUsd,
-          change_bs: changeBs
+          change_bs: roundingResult?.changeBs
+        }
+
+        if (roundingResult) {
+          confirmData.cash_payment.change_rounding = {
+            mode: state.cash.changeRoundingMode,
+            exact_change_bs: roundingResult.exactChangeBs,
+            rounded_change_bs: roundingResult.changeBs,
+            adjustment_bs: roundingResult.adjustmentBs,
+            consented: state.cash.changeRoundingMode === 'MERCHANT' ? state.cash.changeRoundingConsent : undefined,
+          }
         }
       } else if (state.selectedMethod === 'CASH_BS') {
+        const totalBs = total.usd * checkoutData.exchangeRate
+        const changeBsRaw = Math.max(0, state.cash.receivedBs - totalBs)
+        let roundedChangeBs = changeBsRaw
+        if (state.cash.changeRoundingMode === 'MERCHANT') {
+          roundedChangeBs = changeBsRaw > 0 ? roundToNearestDenomination(changeBsRaw) : 0
+        } else if (state.cash.changeRoundingMode === 'CUSTOMER') {
+          roundedChangeBs = changeBsRaw > 0 ? roundToNearestDenominationUp(changeBsRaw) : 0
+        }
+        const adjustmentBs = Math.round((changeBsRaw - roundedChangeBs) * 100) / 100
         confirmData.cash_payment_bs = {
           received_bs: state.cash.receivedBs,
-          change_bs: state.cash.receivedBs - (total.usd * checkoutData.exchangeRate)
+          change_bs: roundedChangeBs
+        }
+
+        if (changeBsRaw > 0) {
+          confirmData.cash_payment_bs.change_rounding = {
+            mode: state.cash.changeRoundingMode,
+            exact_change_bs: Math.round(changeBsRaw * 100) / 100,
+            rounded_change_bs: Math.round(roundedChangeBs * 100) / 100,
+            adjustment_bs: adjustmentBs,
+            consented: state.cash.changeRoundingMode === 'MERCHANT' ? state.cash.changeRoundingConsent : undefined,
+          }
         }
       }
     }
@@ -418,6 +472,10 @@ export default function CheckoutModal({
                     onAmountChange={actions.setReceivedUsd}
                     giveChangeInBs={state.cash.giveChangeInBs}
                     onGiveChangeInBsChange={actions.setGiveChangeInBs}
+                    roundingMode={state.cash.changeRoundingMode}
+                    onRoundingModeChange={actions.setChangeRoundingMode}
+                    roundingConsent={state.cash.changeRoundingConsent}
+                    onRoundingConsentChange={actions.setChangeRoundingConsent}
                   />
                 )}
 
@@ -429,6 +487,10 @@ export default function CheckoutModal({
                     exchangeRate={checkoutData.exchangeRate}
                     receivedAmount={state.cash.receivedBs}
                     onAmountChange={actions.setReceivedBs}
+                    roundingMode={state.cash.changeRoundingMode}
+                    onRoundingModeChange={actions.setChangeRoundingMode}
+                    roundingConsent={state.cash.changeRoundingConsent}
+                    onRoundingConsentChange={actions.setChangeRoundingConsent}
                   />
                 )}
               </>

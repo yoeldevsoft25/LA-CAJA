@@ -72,10 +72,24 @@ export class Sale {
     cash_payment?: {
       received_usd: number; // Monto recibido en USD físico
       change_bs?: number; // Cambio dado en Bs
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT';
+        exact_change_bs: number;
+        rounded_change_bs: number;
+        adjustment_bs: number;
+        consented?: boolean;
+      };
     };
     cash_payment_bs?: {
       received_bs: number; // Monto recibido en Bs físico
       change_bs?: number; // Cambio dado en Bs (redondeado)
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT';
+        exact_change_bs: number;
+        rounded_change_bs: number;
+        adjustment_bs: number;
+        consented?: boolean;
+      };
     };
   };
 

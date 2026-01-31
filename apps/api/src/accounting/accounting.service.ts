@@ -285,12 +285,16 @@ export class AccountingService {
         'cash_asset',
         'accounts_receivable',
         'inventory_asset',
+        'income',
+        'adjustment',
       ], sale.payment);
       const revenueMapping = mappings.get('sale_revenue');
       const costMapping = mappings.get('sale_cost');
       const cashMapping = mappings.get('cash_asset');
       const receivableMapping = mappings.get('accounts_receivable');
       const inventoryMapping = mappings.get('inventory_asset');
+      const incomeMapping = mappings.get('income');
+      const adjustmentMapping = mappings.get('adjustment');
 
       if (!revenueMapping || !costMapping) {
         this.logger.warn(`No se encontraron mapeos de cuentas para venta ${sale.id}`);
@@ -315,6 +319,10 @@ export class AccountingService {
       const roundTwo = (value: number) => Math.round(value * 100) / 100;
       const totalBs = roundTwo(sale.totals.total_bs);
       const totalUsd = roundTwo(sale.totals.total_usd);
+      const roundingAdjustmentBs = roundTwo(
+        (sale.payment?.cash_payment?.change_rounding?.adjustment_bs || 0) +
+        (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0)
+      );
 
       // Calcular costo real desde sale_items
       const saleItems = await this.saleItemRepository.find({
@@ -395,6 +403,53 @@ export class AccountingService {
             debit_amount_usd: 0,
             credit_amount_usd: costUsd,
             description: `Salida de inventario - ${sale.invoice_full_number || sale.id}`,
+          });
+        }
+      }
+
+      if (roundingAdjustmentBs !== 0 && cashMapping) {
+        if (roundingAdjustmentBs > 0 && incomeMapping) {
+          lines.push({
+            account_id: cashMapping.account_id,
+            account_code: cashMapping.account_code,
+            account_name: cashMapping.account?.account_name || cashMapping.account_code,
+            debit_amount_bs: roundingAdjustmentBs,
+            credit_amount_bs: 0,
+            debit_amount_usd: 0,
+            credit_amount_usd: 0,
+            description: `Ajuste de vuelto a favor tienda - ${sale.invoice_full_number || sale.id}`,
+          });
+          lines.push({
+            account_id: incomeMapping.account_id,
+            account_code: incomeMapping.account_code,
+            account_name: incomeMapping.account?.account_name || incomeMapping.account_code,
+            debit_amount_bs: 0,
+            credit_amount_bs: roundingAdjustmentBs,
+            debit_amount_usd: 0,
+            credit_amount_usd: 0,
+            description: `Ingreso por ajuste de vuelto - ${sale.invoice_full_number || sale.id}`,
+          });
+        } else if (roundingAdjustmentBs < 0 && adjustmentMapping) {
+          const adjustmentAbs = Math.abs(roundingAdjustmentBs);
+          lines.push({
+            account_id: adjustmentMapping.account_id,
+            account_code: adjustmentMapping.account_code,
+            account_name: adjustmentMapping.account?.account_name || adjustmentMapping.account_code,
+            debit_amount_bs: adjustmentAbs,
+            credit_amount_bs: 0,
+            debit_amount_usd: 0,
+            credit_amount_usd: 0,
+            description: `Gasto por ajuste de vuelto - ${sale.invoice_full_number || sale.id}`,
+          });
+          lines.push({
+            account_id: cashMapping.account_id,
+            account_code: cashMapping.account_code,
+            account_name: cashMapping.account?.account_name || cashMapping.account_code,
+            debit_amount_bs: 0,
+            credit_amount_bs: adjustmentAbs,
+            debit_amount_usd: 0,
+            credit_amount_usd: 0,
+            description: `Ajuste de vuelto a favor cliente - ${sale.invoice_full_number || sale.id}`,
           });
         }
       }

@@ -124,6 +124,60 @@ export function roundToNearestDenomination(amount: number): number {
 }
 
 /**
+ * Redondea un monto hacia arriba al múltiplo de 5 o 10 más cercano,
+ * favoreciendo al cliente (entregar más cambio).
+ */
+export function roundToNearestDenominationUp(amount: number): number {
+  const amountInt = Math.ceil(amount)
+
+  if (amountInt % 10 === 0) {
+    return amountInt
+  }
+
+  const roundedTo5 = Math.ceil(amountInt / 5) * 5
+
+  return roundedTo5
+}
+
+export type CashChangeRoundingMode = 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+
+export function calculateRoundedChangeWithMode(
+  changeUsd: number,
+  exchangeRate: number,
+  mode: CashChangeRoundingMode
+): {
+  changeBs: number
+  breakdown: Record<string, number>
+  breakdownFormatted: string
+  exactChangeBs: number
+  adjustmentBs: number
+} {
+  const initialChangeBs = Math.round(changeUsd * exchangeRate * 100) / 100
+
+  let roundedChangeBs = initialChangeBs
+  if (mode === 'MERCHANT') {
+    roundedChangeBs = roundToNearestDenomination(initialChangeBs)
+  } else if (mode === 'CUSTOMER') {
+    roundedChangeBs = roundToNearestDenominationUp(initialChangeBs)
+  }
+
+  const breakdown = roundedChangeBs > 0 ? calculateChange(roundedChangeBs) : {}
+  const breakdownFormatted = Object.keys(breakdown).length > 0
+    ? formatChangeBreakdown(breakdown)
+    : ''
+
+  const adjustmentBs = Math.round((initialChangeBs - roundedChangeBs) * 100) / 100
+
+  return {
+    changeBs: roundedChangeBs,
+    breakdown,
+    breakdownFormatted,
+    exactChangeBs: initialChangeBs,
+    adjustmentBs,
+  }
+}
+
+/**
  * Calcula el cambio redondeado según las denominaciones disponibles
  * Primero calcula el cambio, luego lo redondea al valor más cercano que pueda entregarse exactamente
  */

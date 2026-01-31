@@ -58,6 +58,25 @@ export class SplitPaymentDto {
   note?: string;
 }
 
+export class CashChangeRoundingDto {
+  @IsString()
+  @IsIn(['EXACT', 'CUSTOMER', 'MERCHANT'])
+  mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT';
+
+  @IsNumber()
+  exact_change_bs: number;
+
+  @IsNumber()
+  rounded_change_bs: number;
+
+  @IsNumber()
+  adjustment_bs: number;
+
+  @IsOptional()
+  @IsBoolean()
+  consented?: boolean;
+}
+
 export class CreateSaleDto {
   @IsArray()
   @ValidateNested({ each: true })
@@ -106,6 +125,7 @@ export class CreateSaleDto {
   cash_payment?: {
     received_usd: number; // Monto recibido en USD físico
     change_bs?: number; // Cambio dado en Bs (si aplica)
+    change_rounding?: CashChangeRoundingDto;
   };
 
   // Para pagos en efectivo Bs con cambio en Bs
@@ -114,6 +134,7 @@ export class CreateSaleDto {
   cash_payment_bs?: {
     received_bs: number; // Monto recibido en Bs físico
     change_bs?: number; // Cambio dado en Bs (redondeado)
+    change_rounding?: CashChangeRoundingDto;
   };
 
   @IsUUID()

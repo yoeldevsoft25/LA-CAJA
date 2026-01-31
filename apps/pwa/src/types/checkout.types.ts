@@ -10,10 +10,14 @@ export interface CustomerData {
     note?: string
 }
 
+export type CashChangeRoundingMode = 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+
 export interface CashPaymentData {
     receivedUsd: number
     receivedBs: number
     giveChangeInBs: boolean
+    changeRoundingMode: CashChangeRoundingMode
+    changeRoundingConsent: boolean
 }
 
 export interface InvoiceConfig {
@@ -64,6 +68,8 @@ export type CheckoutAction =
     | { type: 'SET_RECEIVED_USD'; payload: number }
     | { type: 'SET_RECEIVED_BS'; payload: number }
     | { type: 'SET_GIVE_CHANGE_IN_BS'; payload: boolean }
+    | { type: 'SET_CHANGE_ROUNDING_MODE'; payload: CashChangeRoundingMode }
+    | { type: 'SET_CHANGE_ROUNDING_CONSENT'; payload: boolean }
     | { type: 'SET_INVOICE_SERIES'; payload: string | null }
     | { type: 'SET_PRICE_LIST'; payload: string | null }
     | { type: 'SET_PROMOTION'; payload: string | null }

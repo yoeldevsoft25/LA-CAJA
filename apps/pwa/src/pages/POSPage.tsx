@@ -620,10 +620,24 @@ export default function POSPage() {
     cash_payment?: {
       received_usd: number
       change_bs?: number
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+        exact_change_bs: number
+        rounded_change_bs: number
+        adjustment_bs: number
+        consented?: boolean
+      }
     }
     cash_payment_bs?: {
       received_bs: number
       change_bs?: number
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+        exact_change_bs: number
+        rounded_change_bs: number
+        adjustment_bs: number
+        consented?: boolean
+      }
     }
     split_payments?: Array<{
       method: string
