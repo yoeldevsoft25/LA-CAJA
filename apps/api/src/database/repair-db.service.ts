@@ -4,28 +4,28 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class DbRepairService implements OnModuleInit {
-    private readonly logger = new Logger(DbRepairService.name);
+  private readonly logger = new Logger(DbRepairService.name);
 
-    constructor(private dataSource: DataSource) { }
+  constructor(private dataSource: DataSource) { }
 
-    async onModuleInit() {
-        this.logger.log('🛠️ Iniciando reparación de base de datos (Emergency Fix)...');
-        try {
-            await this.createMissingTables();
-            this.logger.log('✅ Reparación de base de datos completada.');
-        } catch (error) {
-            this.logger.error('❌ Error reparando base de datos:', error);
-        }
+  async onModuleInit() {
+    this.logger.log('🛠️ Iniciando reparación de base de datos (Emergency Fix)...');
+    try {
+      await this.createMissingTables();
+      this.logger.log('✅ Reparación de base de datos completada.');
+    } catch (error) {
+      this.logger.error('❌ Error reparando base de datos:', error);
     }
+  }
 
-    private async createMissingTables() {
-        const queryRunner = this.dataSource.createQueryRunner();
-        await queryRunner.connect();
+  private async createMissingTables() {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
 
-        try {
-            // 1. Crear tabla email_verification_tokens (Migration 51)
-            this.logger.log('Verificando tabla email_verification_tokens...');
-            await queryRunner.query(`
+    try {
+      // 1. Crear tabla email_verification_tokens (Migration 51)
+      this.logger.log('Verificando tabla email_verification_tokens...');
+      await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS email_verification_tokens (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -39,9 +39,9 @@ export class DbRepairService implements OnModuleInit {
         CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_expires_at ON email_verification_tokens(expires_at);
       `);
 
-            // 2. Crear tabla notifications (Migration 30) - Simplificado si no existe
-            this.logger.log('Verificando tabla notifications...');
-            await queryRunner.query(`
+      // 2. Crear tabla notifications (Migration 30) - Simplificado si no existe
+      this.logger.log('Verificando tabla notifications...');
+      await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS notifications (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
@@ -68,9 +68,9 @@ export class DbRepairService implements OnModuleInit {
         );
       `);
 
-            // 3. Crear tabla notification_templates (Migration 36)
-            this.logger.log('Verificando tabla notification_templates...');
-            await queryRunner.query(`
+      // 3. Crear tabla notification_templates (Migration 36)
+      this.logger.log('Verificando tabla notification_templates...');
+      await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS notification_templates (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
@@ -96,9 +96,9 @@ export class DbRepairService implements OnModuleInit {
         );
       `);
 
-            // 4. Crear tabla email_queue (Migration 36)
-            this.logger.log('Verificando tabla email_queue...');
-            await queryRunner.query(`
+      // 4. Crear tabla email_queue (Migration 36)
+      this.logger.log('Verificando tabla email_queue...');
+      await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS email_queue (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
@@ -130,8 +130,19 @@ export class DbRepairService implements OnModuleInit {
         CREATE INDEX IF NOT EXISTS idx_email_queue_status ON email_queue(status);
       `);
 
-        } finally {
-            await queryRunner.release();
-        }
+      // 5. Verificar columnas de licencia en la tabla stores (Migration 89)
+      this.logger.log('Verificando columnas de licencia en tabla stores...');
+      await queryRunner.query(`
+              ALTER TABLE stores 
+              ADD COLUMN IF NOT EXISTS license_status text DEFAULT 'active',
+              ADD COLUMN IF NOT EXISTS license_expires_at timestamptz,
+              ADD COLUMN IF NOT EXISTS license_grace_days integer DEFAULT 3,
+              ADD COLUMN IF NOT EXISTS license_plan text,
+              ADD COLUMN IF NOT EXISTS license_notes text;
+            `);
+
+    } finally {
+      await queryRunner.release();
     }
+  }
 }
