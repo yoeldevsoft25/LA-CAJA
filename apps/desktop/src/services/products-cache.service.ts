@@ -204,7 +204,7 @@ export class ProductsCacheService {
     if (this.barcodeIndexStoreId === storeId && this.barcodeIndex.size > 0) return;
     const locals = await db.products
       .where('[store_id+is_active]')
-      .equals([storeId, true])
+      .equals([storeId, true] as any)
       .toArray();
     this.barcodeIndex.clear();
     this.barcodeIndexStoreId = storeId;
