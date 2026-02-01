@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
 const LIVE_BCV_REFETCH_MS = 30_000
+const roundCurrency = (value: number) => Math.round(value * 100) / 100
 
 const paymentSchema = z.object({
   amount_usd: z.number().min(0.01, 'El monto debe ser mayor a 0'),
@@ -98,20 +99,25 @@ export default function PaySelectedDebtsModal({
 
   const totals = useMemo(() => {
     let totalRemainingUsd = 0
-    let totalRemainingBs = 0
+    let totalRemainingBsLegacy = 0
 
     selectedDebts.forEach((debt) => {
       const calc = calculateDebtTotals(debt)
       totalRemainingUsd += calc.remaining_usd
-      totalRemainingBs += calc.remaining_bs
+      totalRemainingBsLegacy += calc.remaining_bs
     })
 
     return {
-      totalRemainingUsd,
-      totalRemainingBs,
+      totalRemainingUsd: roundCurrency(totalRemainingUsd),
+      totalRemainingBsLegacy: roundCurrency(totalRemainingBsLegacy),
       selectedCount: selectedDebts.length,
     }
   }, [selectedDebts])
+
+  const totalRemainingBs =
+    exchangeRate > 0
+      ? roundCurrency(totals.totalRemainingUsd * exchangeRate)
+      : totals.totalRemainingBsLegacy
 
   const amountUsd = watch('amount_usd')
   const selectedMethod = watch('method')
@@ -132,12 +138,13 @@ export default function PaySelectedDebtsModal({
       setPercentage(100)
       reset({
         amount_usd: totals.totalRemainingUsd,
-        amount_bs: totals.totalRemainingBs,
+        amount_bs: totalRemainingBs,
         method: 'CASH_USD',
         note: totals.selectedCount > 0 ? `Pago de deudas seleccionadas (${totals.selectedCount})` : '',
       })
     }
-  }, [isOpen, totals, reset])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, totals.totalRemainingUsd, totals.totalRemainingBsLegacy, totals.selectedCount, reset])
 
   useEffect(() => {
     if (!isOpen) return

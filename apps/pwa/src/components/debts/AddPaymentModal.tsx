@@ -21,6 +21,7 @@ import { useAuth } from '@/stores/auth.store'
 import { useOnline } from '@/hooks/use-online'
 
 const LIVE_BCV_REFETCH_MS = 30_000
+const roundCurrency = (value: number) => Math.round(value * 100) / 100
 
 const paymentSchema = z.object({
   amount_usd: z.number().min(0.01, 'El monto debe ser mayor a 0'),
@@ -89,6 +90,12 @@ export default function AddPaymentModal({
   const exchangeRate = bcvRateData?.rate || 0
   const debtId = debt?.id
   const debtWithTotals = useMemo(() => (debt ? calculateDebtTotals(debt) : null), [debt])
+  const remainingUsd = debtWithTotals ? roundCurrency(debtWithTotals.remaining_usd) : 0
+  const remainingBsDisplay = debtWithTotals
+    ? exchangeRate > 0
+      ? roundCurrency(remainingUsd * exchangeRate)
+      : roundCurrency(debtWithTotals.remaining_bs)
+    : 0
 
   const amountUsd = watch('amount_usd')
   const amountBs = watch('amount_bs')
@@ -173,8 +180,8 @@ export default function AddPaymentModal({
     if (!debt || !debtWithTotals) return
 
     // Validar que no exceda el saldo pendiente en USD (moneda de referencia)
-    if (data.amount_usd > debtWithTotals.remaining_usd + 0.01) {
-      toast.error(`El monto excede el saldo pendiente ($${debtWithTotals.remaining_usd.toFixed(2)})`)
+    if (data.amount_usd > remainingUsd + 0.01) {
+      toast.error(`El monto excede el saldo pendiente ($${remainingUsd.toFixed(2)})`)
       return
     }
 
@@ -183,7 +190,7 @@ export default function AddPaymentModal({
         toast.error('El traslado de saldo requiere conexión a internet')
         return
       }
-      const remainingAfterPayment = debtWithTotals.remaining_usd - data.amount_usd
+      const remainingAfterPayment = remainingUsd - data.amount_usd
       if (remainingAfterPayment <= 0.01) {
         toast.error('No hay saldo restante para trasladar a una nueva deuda')
         return
@@ -204,10 +211,10 @@ export default function AddPaymentModal({
   const handlePayFull = () => {
     if (!debtWithTotals) return
     inputSourceRef.current = 'usd'
-    setValue('amount_usd', debtWithTotals.remaining_usd, { shouldValidate: true })
+    setValue('amount_usd', remainingUsd, { shouldValidate: true })
     setValue('rollover_remaining', false, { shouldValidate: false })
     if (exchangeRate > 0) {
-      setValue('amount_bs', Math.round(debtWithTotals.remaining_usd * exchangeRate * 100) / 100, { shouldValidate: false })
+      setValue('amount_bs', Math.round(remainingUsd * exchangeRate * 100) / 100, { shouldValidate: false })
     } else {
       setValue('amount_bs', 0, { shouldValidate: false })
     }
@@ -236,10 +243,10 @@ export default function AddPaymentModal({
                 <AlertTitle className="text-warning">Saldo Pendiente</AlertTitle>
                 <AlertDescription className="text-warning">
                   <p className="text-2xl font-bold">
-                    ${debtWithTotals.remaining_usd.toFixed(2)} USD
+                    ${remainingUsd.toFixed(2)} USD
                   </p>
                   <p className="text-sm">
-                    {debtWithTotals.remaining_bs.toFixed(2)} Bs
+                    {remainingBsDisplay.toFixed(2)} Bs
                   </p>
                 </AlertDescription>
               </Alert>

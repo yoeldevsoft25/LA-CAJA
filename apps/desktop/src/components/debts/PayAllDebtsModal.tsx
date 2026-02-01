@@ -10,6 +10,7 @@ import { exchangeService } from '@/services/exchange.service'
 import { useOnline } from '@/hooks/use-online'
 
 const LIVE_BCV_REFETCH_MS = 30_000
+const roundCurrency = (value: number) => Math.round(value * 100) / 100
 import toast from '@/lib/toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -90,20 +91,25 @@ export default function PayAllDebtsModal({
   const totals = useMemo(() => {
     const openDebts = debts.filter((d) => d.status !== 'paid')
     let totalRemainingUsd = 0
-    let totalRemainingBs = 0
+    let totalRemainingBsLegacy = 0
 
     openDebts.forEach((debt) => {
       const calc = calculateDebtTotals(debt)
       totalRemainingUsd += calc.remaining_usd
-      totalRemainingBs += calc.remaining_bs
+      totalRemainingBsLegacy += calc.remaining_bs
     })
 
     return {
-      totalRemainingUsd,
-      totalRemainingBs,
+      totalRemainingUsd: roundCurrency(totalRemainingUsd),
+      totalRemainingBsLegacy: roundCurrency(totalRemainingBsLegacy),
       openDebtsCount: openDebts.length,
     }
   }, [debts])
+
+  const totalRemainingBs =
+    exchangeRate > 0
+      ? roundCurrency(totals.totalRemainingUsd * exchangeRate)
+      : totals.totalRemainingBsLegacy
 
   // Observar cambios en amount_usd para calcular amount_bs
   const amountUsd = watch('amount_usd')
@@ -121,14 +127,19 @@ export default function PayAllDebtsModal({
   // Reset form cuando se abre el modal
   useEffect(() => {
     if (isOpen && totals.totalRemainingUsd > 0) {
+      const initialAmountBs =
+        exchangeRate > 0
+          ? roundCurrency(totals.totalRemainingUsd * exchangeRate)
+          : totals.totalRemainingBsLegacy
       reset({
         amount_usd: totals.totalRemainingUsd,
-        amount_bs: totals.totalRemainingBs,
+        amount_bs: initialAmountBs,
         method: 'CASH_USD',
         note: `Pago completo de todas las deudas pendientes`,
       })
     }
-  }, [isOpen, totals, reset])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, totals.totalRemainingUsd, totals.totalRemainingBsLegacy, reset])
 
   const payAllMutation = useMutation({
     mutationFn: (data: CreateDebtPaymentDto) => {
@@ -183,7 +194,7 @@ export default function PayAllDebtsModal({
                       ${totals.totalRemainingUsd.toFixed(2)} USD
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {totals.totalRemainingBs.toFixed(2)} Bs
+                      {totalRemainingBs.toFixed(2)} Bs
                     </p>
                   </div>
                 </div>

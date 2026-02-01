@@ -5,6 +5,7 @@
 
 import { db, LocalProduct } from '@/db/database';
 import { Product } from './products.service';
+import { normalizeBarcode } from '@la-caja/domain';
 
 export class ProductsCacheService {
   /**
@@ -158,6 +159,17 @@ export class ProductsCacheService {
    */
   async getProductByIdFromCache(id: string): Promise<Product | null> {
     const local = await db.getProductById(id);
+    return local ? this.toProduct(local) : null;
+  }
+
+  /**
+   * Obtiene un producto por barcode del cache local (rápido para escáner)
+   */
+  async getProductByBarcodeFromCache(storeId: string, barcode: string): Promise<Product | null> {
+    const normalized = normalizeBarcode(barcode);
+    if (!normalized) return null;
+    const matches = await db.products.where('barcode').equals(normalized).toArray();
+    const local = matches.find((p) => p.store_id === storeId && p.is_active);
     return local ? this.toProduct(local) : null;
   }
 

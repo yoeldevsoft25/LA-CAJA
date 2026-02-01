@@ -1,9 +1,11 @@
 import { useState, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { productsService } from '@/services/products.service'
+import { productsCacheService } from '@/services/products-cache.service'
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 
 import { Product } from '@/services/products.service'
+import { normalizeBarcode } from '@la-caja/domain'
 
 interface UsePOSScannerProps {
     storeId?: string
@@ -45,25 +47,39 @@ export function usePOSScanner({ storeId, onProductFound }: UsePOSScannerProps) {
     }, [scannerSoundEnabled])
 
     const handleBarcodeScan = useCallback(async (barcode: string) => {
-        setLastScannedBarcode(barcode)
+        const normalizedBarcode = normalizeBarcode(barcode) ?? barcode
+        setLastScannedBarcode(normalizedBarcode)
         setScannerStatus('scanning')
 
         try {
+            if (storeId) {
+                const cachedProduct = await productsCacheService.getProductByBarcodeFromCache(storeId, normalizedBarcode)
+                if (cachedProduct) {
+                    playScanTone('success')
+                    await onProductFound(cachedProduct)
+                    setTimeout(() => {
+                        setScannerStatus('idle')
+                        setLastScannedBarcode(null)
+                    }, 900)
+                    return
+                }
+            }
+
             const result = await productsService.search({
-                q: barcode,
+                q: normalizedBarcode,
                 is_active: true,
                 limit: 5,
             }, storeId)
 
             // Buscar coincidencia exacta por barcode
             const product = result.products.find(
-                (p) => p.barcode?.toLowerCase() === barcode.toLowerCase()
+                (p) => p.barcode?.toLowerCase() === normalizedBarcode.toLowerCase()
             )
 
             if (!product) {
                 setScannerStatus('error')
                 toast.error(`Producto no encontrado`, {
-                    description: `Código: ${barcode}`,
+                    description: `Código: ${normalizedBarcode}`,
                     icon: '🔍',
                     duration: 3000
                 })
@@ -101,6 +117,7 @@ export function usePOSScanner({ storeId, onProductFound }: UsePOSScannerProps) {
         minLength: 4,
         maxLength: 50,
         maxIntervalMs: 100,
+        allowInInputs: true,
     })
 
     return {

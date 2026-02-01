@@ -36,6 +36,11 @@ interface BarcodeScannerOptions {
    * Default: true
    */
   preventDefault?: boolean
+  /**
+   * Permitir detección de escaneo aunque el foco esté en inputs
+   * Default: false
+   */
+  allowInInputs?: boolean
 }
 
 /**
@@ -67,6 +72,7 @@ export function useBarcodeScanner({
   endKey = 'Enter',
   enabled = true,
   preventDefault = true,
+  allowInInputs = false,
 }: BarcodeScannerOptions) {
   // Buffer para acumular caracteres del escaneo
   const bufferRef = useRef<string>('')
@@ -123,7 +129,7 @@ export function useBarcodeScanner({
       // detecta con el foco fuera (p. ej. en la lista, en el body). Si se escanea
       // con el foco en el buscador, el código se escribe en el input y la búsqueda
       // se dispara por change o Enter como con cualquier texto.
-      if (isInputElement) {
+      if (isInputElement && !allowInInputs) {
         clearBuffer()
         return
       }
@@ -163,6 +169,10 @@ export function useBarcodeScanner({
       }
 
       if (isRapidInput) {
+        if (allowInInputs && isInputElement && preventDefault) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
         bufferRef.current += key
         lastKeyTimeRef.current = now
         isScanningRef.current = true
@@ -182,7 +192,7 @@ export function useBarcodeScanner({
       window.removeEventListener('keydown', handleKeyDown, { capture: true })
       clearBuffer()
     }
-  }, [enabled, maxIntervalMs, minLength, maxLength, endKey, preventDefault, processBarcode, clearBuffer])
+  }, [enabled, maxIntervalMs, minLength, maxLength, endKey, preventDefault, allowInInputs, processBarcode, clearBuffer])
 
   // Retornar función para limpiar manualmente si es necesario
   return { clearBuffer }
