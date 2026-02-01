@@ -176,6 +176,7 @@ export default function DebtsPage() {
   const handlePaymentSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['debts'] })
     queryClient.invalidateQueries({ queryKey: ['debtSummary'] })
+    queryClient.invalidateQueries({ queryKey: ['customers'] })
     setIsPaymentOpen(false)
     // No limpiar selectedDebt para mantener el modal de detalle abierto si estaba abierto
     // El modal de detalle se refrescará automáticamente con los nuevos datos

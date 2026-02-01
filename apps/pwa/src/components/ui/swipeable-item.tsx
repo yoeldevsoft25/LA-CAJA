@@ -125,6 +125,14 @@ export function SwipeableItem({
 
     setIsDragging(false)
     setSwipeDirection(null)
+
+    if (!actionTriggeredRef.current) {
+      setTimeout(() => {
+        if (Math.abs(x.get()) > 1) {
+          animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.2 })
+        }
+      }, 0)
+    }
   }
 
   // Resetear cuando se deshabilita
@@ -166,7 +174,8 @@ export function SwipeableItem({
     startPoint.current = null
     hasDirectionLock.current = false
     if (!enabled) return
-    if (!actionTriggeredRef.current && Math.abs(x.get()) > 1) {
+    const currentX = Math.abs(x.get())
+    if (!actionTriggeredRef.current && currentX > 1 && currentX < threshold) {
       animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.2 })
     }
   }

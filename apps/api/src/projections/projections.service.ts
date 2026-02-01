@@ -774,6 +774,7 @@ export class ProjectionsService {
         : event.created_at,
       amount_bs: Number(payload.amount_bs) || 0,
       amount_usd: Number(payload.amount_usd) || 0,
+      note: payload.note ? String(payload.note) : null,
       status: DebtStatus.OPEN,
     });
 

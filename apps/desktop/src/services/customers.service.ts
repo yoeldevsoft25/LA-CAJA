@@ -7,6 +7,7 @@ export interface Customer {
   document_id: string | null
   phone: string | null
   note: string | null
+  debt_cutoff_at?: string | null
   updated_at: string
 }
 
@@ -46,4 +47,3 @@ export const customersService = {
     return response.data
   },
 }
-

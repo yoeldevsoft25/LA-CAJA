@@ -26,6 +26,7 @@ const paymentMethodLabels: Record<string, string> = {
   PAGO_MOVIL: 'Pago Móvil',
   TRANSFER: 'Transferencia',
   OTHER: 'Otro',
+  ROLLOVER: 'Traslado',
 }
 
 const statusConfig = {

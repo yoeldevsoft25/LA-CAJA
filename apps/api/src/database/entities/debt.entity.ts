@@ -52,6 +52,9 @@ export class Debt {
   @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
   amount_usd: number;
 
+  @Column({ type: 'text', nullable: true })
+  note: string | null;
+
   @Column({ type: 'varchar', length: 20, default: DebtStatus.OPEN })
   status: DebtStatus;
 

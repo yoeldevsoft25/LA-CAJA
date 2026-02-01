@@ -17,6 +17,7 @@ export interface Customer {
   email: string | null
   credit_limit: number | null
   note: string | null
+  debt_cutoff_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -76,6 +77,7 @@ async function saveCustomerToLocalDB(customer: Customer): Promise<void> {
       document_id: customer.document_id || null,
       phone: customer.phone || null,
       note: customer.note || null,
+      debt_cutoff_at: customer.debt_cutoff_at ? new Date(customer.debt_cutoff_at).getTime() : null,
       updated_at: new Date(customer.updated_at).getTime(),
       cached_at: Date.now(),
     }
@@ -97,6 +99,7 @@ async function saveCustomersToLocalDB(customers: Customer[]): Promise<void> {
       document_id: customer.document_id || null,
       phone: customer.phone || null,
       note: customer.note || null,
+      debt_cutoff_at: customer.debt_cutoff_at ? new Date(customer.debt_cutoff_at).getTime() : null,
       updated_at: new Date(customer.updated_at).getTime(),
       cached_at: Date.now(),
     }))
@@ -159,6 +162,7 @@ export const customersService = {
           email: null, // No se guarda email en local DB
           credit_limit: null, // No se guarda credit_limit en local DB
           note: c.note,
+          debt_cutoff_at: c.debt_cutoff_at ? new Date(c.debt_cutoff_at).toISOString() : null,
           created_at: new Date(c.cached_at).toISOString(),
           updated_at: new Date(c.updated_at).toISOString(),
         }))
@@ -173,6 +177,7 @@ export const customersService = {
         email: null,
         credit_limit: null,
         note: c.note,
+        debt_cutoff_at: c.debt_cutoff_at ? new Date(c.debt_cutoff_at).toISOString() : null,
         created_at: new Date(c.cached_at).toISOString(),
         updated_at: new Date(c.updated_at).toISOString(),
       }))

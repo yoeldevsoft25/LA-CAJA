@@ -73,6 +73,7 @@ export class DebtsService {
       created_at: sale.sold_at,
       amount_bs: sale.totals.total_bs,
       amount_usd: sale.totals.total_usd,
+      note: null,
       status: DebtStatus.OPEN,
     });
 
@@ -109,6 +110,7 @@ export class DebtsService {
       created_at: dto.created_at ? new Date(dto.created_at) : new Date(),
       amount_bs: dto.amount_usd * 36,
       amount_usd: dto.amount_usd,
+      note: dto.note ?? null,
       status: DebtStatus.OPEN,
     });
 
@@ -207,6 +209,12 @@ export class DebtsService {
           );
         }
 
+        const remainingUsdAfterPayment =
+          Math.round((debtAmountUsd - totalPaidUsd) * 100) / 100;
+        const rolloverRequested = Boolean(dto.rollover_remaining);
+        const shouldRollover =
+          rolloverRequested && remainingUsdAfterPayment > tolerance;
+
         // Validar que los valores sean válidos antes de crear el pago
         if (!paymentAmountUsd || paymentAmountUsd <= 0) {
           throw new BadRequestException(
@@ -301,13 +309,55 @@ export class DebtsService {
           throw new BadRequestException('Error al guardar el pago');
         }
 
+        let rolloverDebtId: string | null = null;
+        if (shouldRollover) {
+          rolloverDebtId = randomUUID();
+          const rolloverAmountUsd = remainingUsdAfterPayment;
+          const rolloverAmountBs =
+            Math.round(rolloverAmountUsd * exchangeRate * 100) / 100;
+
+          await manager.query(
+            `INSERT INTO debts (id, store_id, sale_id, customer_id, created_at, amount_bs, amount_usd, note, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+              rolloverDebtId,
+              storeId,
+              null,
+              debt.customer_id,
+              paidAt,
+              rolloverAmountBs,
+              rolloverAmountUsd,
+              `Saldo restante de deuda ${debtId}`,
+              DebtStatus.OPEN,
+            ],
+          );
+
+          const rolloverPaymentId = randomUUID();
+          await manager.query(
+            `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              rolloverPaymentId,
+              storeId,
+              debtId,
+              paidAt,
+              rolloverAmountBs,
+              rolloverAmountUsd,
+              'ROLLOVER',
+              `Saldo trasladado a nueva deuda ${rolloverDebtId}`,
+            ],
+          );
+        }
+
         // Actualizar estado de la deuda (solo considerar USD como moneda de referencia)
         // El equivalente en Bs puede variar con la tasa, pero USD es la referencia
         const isFullyPaid = totalPaidUsd >= debtAmountUsd;
         const hasPartialPayment = totalPaidUsd > 0;
 
         let newStatus: DebtStatus = debt.status;
-        if (isFullyPaid) {
+        if (shouldRollover) {
+          newStatus = DebtStatus.PAID;
+        } else if (isFullyPaid) {
           newStatus = DebtStatus.PAID;
         } else if (hasPartialPayment && debt.status === DebtStatus.OPEN) {
           newStatus = DebtStatus.PARTIAL;
@@ -620,19 +670,41 @@ export class DebtsService {
     customerId: string,
     dto: CreateDebtPaymentDto,
   ): Promise<{ debts: Debt[]; payments: DebtPayment[] }> {
-    // Obtener todas las deudas pendientes del cliente
+    const requestedDebtIds = Array.isArray(dto.debt_ids)
+      ? Array.from(new Set(dto.debt_ids))
+      : null;
+
+    // Obtener deudas pendientes del cliente (todas o las seleccionadas)
+    const whereClause: any = {
+      store_id: storeId,
+      customer_id: customerId,
+      status: In([DebtStatus.OPEN, DebtStatus.PARTIAL]),
+    };
+
+    if (requestedDebtIds && requestedDebtIds.length > 0) {
+      whereClause.id = In(requestedDebtIds);
+    }
+
     const debts = await this.debtRepository.find({
-      where: {
-        store_id: storeId,
-        customer_id: customerId,
-        status: In([DebtStatus.OPEN, DebtStatus.PARTIAL]),
-      },
+      where: whereClause,
       relations: ['payments'],
     });
+
+    if (requestedDebtIds && requestedDebtIds.length > 0) {
+      const foundIds = new Set(debts.map((d) => d.id));
+      const missing = requestedDebtIds.filter((id) => !foundIds.has(id));
+      if (missing.length > 0) {
+        throw new BadRequestException(
+          'Algunas deudas seleccionadas no existen, ya están pagadas o no pertenecen a este cliente',
+        );
+      }
+    }
 
     if (debts.length === 0) {
       throw new NotFoundException('No hay deudas pendientes para este cliente');
     }
+
+    const isSelective = !!(requestedDebtIds && requestedDebtIds.length > 0);
 
     // Calcular el total pendiente
     let totalRemainingUsd = 0;
@@ -651,12 +723,38 @@ export class DebtsService {
       totalRemainingBs += Number(debt.amount_bs) - totalPaidBs;
     }
 
-    // Validar que el monto del pago sea suficiente
-    if (Number(dto.amount_usd) < totalRemainingUsd) {
+    const paymentUsd = Number(dto.amount_usd) || 0;
+    const tolerance = 0.01;
+
+    // Validaciones de monto
+    if (paymentUsd <= 0) {
+      throw new BadRequestException('El monto del pago debe ser mayor a cero');
+    }
+    if (!isSelective && paymentUsd < totalRemainingUsd - tolerance) {
       throw new BadRequestException(
-        `El monto del pago ($${dto.amount_usd.toFixed(2)}) es menor al total pendiente ($${totalRemainingUsd.toFixed(2)})`,
+        `El monto del pago ($${paymentUsd.toFixed(2)}) es menor al total pendiente ($${totalRemainingUsd.toFixed(2)})`,
       );
     }
+    if (isSelective && paymentUsd > totalRemainingUsd + tolerance) {
+      throw new BadRequestException(
+        `El monto del pago ($${paymentUsd.toFixed(2)}) excede el total seleccionado ($${totalRemainingUsd.toFixed(2)})`,
+      );
+    }
+
+    // Obtener tasa BCV actual para calcular el equivalente en Bs (solo referencia)
+    let exchangeRate = 36;
+    try {
+      const bcvRateData = await this.exchangeService.getBCVRate();
+      if (bcvRateData && bcvRateData.rate && bcvRateData.rate > 0) {
+        exchangeRate = bcvRateData.rate;
+      }
+    } catch (error) {
+      // fallback
+    }
+
+    const sortedDebts = debts.sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
 
     // Procesar pagos en una transacción
     const payments: DebtPayment[] = [];
@@ -665,7 +763,10 @@ export class DebtsService {
     await this.dataSource.transaction(async (manager) => {
       const paymentRepository = manager.getRepository(DebtPayment);
 
-      for (const debt of debts) {
+      let remainingToPayUsd =
+        Math.round(paymentUsd * 100) / 100;
+
+      for (const debt of sortedDebts) {
         const totalPaidUsd = (debt.payments || []).reduce(
           (sum, p) => sum + Number(p.amount_usd),
           0,
@@ -676,8 +777,15 @@ export class DebtsService {
         );
         const remainingUsd = Number(debt.amount_usd) - totalPaidUsd;
         const remainingBs = Number(debt.amount_bs) - totalPaidBs;
+        if (remainingUsd <= 0 || remainingToPayUsd <= tolerance) {
+          continue;
+        }
 
-        if (remainingUsd <= 0) continue;
+        const payUsd = Math.min(remainingUsd, remainingToPayUsd);
+        const isFullForDebt = payUsd >= remainingUsd - tolerance;
+        const payBs = !isSelective && isFullForDebt
+          ? Math.round(remainingBs * 100) / 100
+          : Math.round(payUsd * exchangeRate * 100) / 100;
 
         // Crear pago para esta deuda
         const paymentId = randomUUID();
@@ -691,18 +799,20 @@ export class DebtsService {
             storeId,
             debt.id,
             paidAt,
-            remainingBs,
-            remainingUsd,
+            payBs,
+            payUsd,
             dto.method,
-            dto.note || `Pago completo de todas las deudas`,
+            dto.note || (isSelective ? 'Pago de deudas seleccionadas' : 'Pago completo de todas las deudas'),
           ],
         );
 
-        // Actualizar estado de la deuda a PAID
+        // Actualizar estado de la deuda
+        const willBePaid = payUsd >= remainingUsd - tolerance;
+        const newStatus = willBePaid ? DebtStatus.PAID : DebtStatus.PARTIAL;
         await manager
           .createQueryBuilder()
           .update(Debt)
-          .set({ status: DebtStatus.PAID })
+          .set({ status: newStatus })
           .where('id = :debtId', { debtId: debt.id })
           .execute();
 
@@ -720,11 +830,28 @@ export class DebtsService {
           updatedDebts.push(updatedDebt);
           payments.push(payment);
         }
+
+        remainingToPayUsd =
+          Math.round((remainingToPayUsd - payUsd) * 100) / 100;
+      }
+
+      if (isSelective && requestedDebtIds && requestedDebtIds.length > 0) {
+        const cutoffTimestamp = Math.max(
+          ...sortedDebts.map((d) => new Date(d.created_at).getTime()),
+        );
+        if (cutoffTimestamp > 0) {
+          await manager.query(
+            `UPDATE customers
+             SET debt_cutoff_at = GREATEST(COALESCE(debt_cutoff_at, 'epoch'::timestamptz), $1)
+             WHERE id = $2 AND store_id = $3`,
+            [new Date(cutoffTimestamp), customerId, storeId],
+          );
+        }
       }
     });
 
     this.logger.log(
-      `Pago completo realizado para cliente ${customerId}: ${payments.length} pagos, ${updatedDebts.length} deudas actualizadas`,
+      `${isSelective ? 'Pago selectivo' : 'Pago completo'} realizado para cliente ${customerId}: ${payments.length} pagos, ${updatedDebts.length} deudas actualizadas`,
     );
 
     return { debts: updatedDebts, payments };

@@ -6,7 +6,7 @@ import { BaseEvent } from '@la-caja/domain'
 
 export type DebtStatus = 'open' | 'partial' | 'paid'
 
-export type PaymentMethod = 'CASH_BS' | 'CASH_USD' | 'PAGO_MOVIL' | 'TRANSFER' | 'OTHER'
+export type PaymentMethod = 'CASH_BS' | 'CASH_USD' | 'PAGO_MOVIL' | 'TRANSFER' | 'OTHER' | 'ROLLOVER'
 
 export interface DebtPayment {
   id: string
@@ -78,6 +78,8 @@ export interface CreateDebtPaymentDto {
   amount_usd: number
   method: PaymentMethod
   note?: string
+  rollover_remaining?: boolean
+  debt_ids?: string[]
   // Meta data para offline
   store_id?: string
   user_id?: string
@@ -275,6 +277,23 @@ export const debtsService = {
     const response = await api.post<{ debts: Debt[]; payments: DebtPayment[] }>(
       `/debts/customer/${customerId}/pay-all`,
       payload
+    )
+    return response.data
+  },
+
+  // Pagar deudas seleccionadas de un cliente
+  async paySelectedDebts(
+    customerId: string,
+    debtIds: string[],
+    data: CreateDebtPaymentDto
+  ): Promise<{ debts: Debt[]; payments: DebtPayment[] }> {
+    if (!debtIds || debtIds.length === 0) {
+      throw new Error('Debe seleccionar al menos una deuda')
+    }
+    const { store_id, user_id, ...payload } = data
+    const response = await api.post<{ debts: Debt[]; payments: DebtPayment[] }>(
+      `/debts/customer/${customerId}/pay-all`,
+      { ...payload, debt_ids: debtIds }
     )
     return response.data
   },

@@ -46,6 +46,9 @@ export class Customer {
   @Column({ type: 'text', nullable: true })
   note: string | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  debt_cutoff_at: Date | null;
+
   @Column({ type: 'timestamptz', default: () => 'NOW()' })
   created_at: Date;
 

@@ -3,7 +3,7 @@ import { Customer } from './customers.service'
 
 export type DebtStatus = 'open' | 'partial' | 'paid'
 
-export type PaymentMethod = 'CASH_BS' | 'CASH_USD' | 'PAGO_MOVIL' | 'TRANSFER' | 'OTHER'
+export type PaymentMethod = 'CASH_BS' | 'CASH_USD' | 'PAGO_MOVIL' | 'TRANSFER' | 'OTHER' | 'ROLLOVER'
 
 export interface DebtPayment {
   id: string
@@ -53,6 +53,8 @@ export interface CreateDebtPaymentDto {
   amount_usd: number
   method: PaymentMethod
   note?: string
+  rollover_remaining?: boolean
+  debt_ids?: string[]
 }
 
 export interface DebtWithCalculations extends Debt {

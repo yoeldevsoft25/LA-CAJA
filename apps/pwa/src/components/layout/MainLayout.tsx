@@ -527,21 +527,29 @@ export default function MainLayout() {
             </nav>
           </ScrollArea>
 
-          {/* Collapse Button */}
-          {
-            !isMobile && (
-              <div className="p-3 flex-shrink-0 border-t border-white/5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="w-full hover:bg-white/5 text-muted-foreground hover:text-foreground justify-center h-10 rounded-xl"
-                >
-                  <ChevronLeft className="w-5 h-5 rotate-180 transition-transform" />
-                </Button>
-              </div>
-            )
-          }
+          {/* Action Buttons (Collapse for Desktop, Close for Mobile) */}
+          <div className="p-3 flex-shrink-0 border-t border-white/10">
+            {!isMobile ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="w-full hover:bg-white/5 text-muted-foreground hover:text-foreground justify-center h-10 rounded-xl"
+              >
+                <ChevronLeft className="w-5 h-5 rotate-180 transition-transform" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileOpen(false)}
+                className="w-full hover:bg-white/5 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 h-10 rounded-xl"
+              >
+                <ChevronLeft className="w-5 h-5 transition-transform" />
+                <span className="font-medium">Ocultar Menú</span>
+              </Button>
+            )}
+          </div>
         </motion.div >
       )
     }
@@ -632,9 +640,9 @@ export default function MainLayout() {
           </nav>
         </ScrollArea>
 
-        {/* Collapse Button (Desktop only) */}
-        {!isMobile && (
-          <div className="p-4 flex-shrink-0">
+        {/* Footer Actions (Desktop Collapse / Mobile Close) */}
+        <div className="p-4 flex-shrink-0 border-t border-white/5">
+          {!isMobile ? (
             <Button
               variant="ghost"
               size="sm"
@@ -644,8 +652,18 @@ export default function MainLayout() {
               <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
               <span className="ml-2 font-medium">Contraer Menú</span>
             </Button>
-          </div>
-        )}
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileOpen(false)}
+              className="w-full h-12 rounded-xl bg-background/50 border-white/10 hover:bg-white/5 text-muted-foreground hover:text-foreground group flex items-center justify-center gap-2"
+            >
+              <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+              <span className="font-medium">Ocultar Menú</span>
+            </Button>
+          )}
+        </div>
       </div>
     )
   }
@@ -694,7 +712,7 @@ export default function MainLayout() {
                 <Menu className="w-5 h-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-72 flex flex-col max-h-screen overflow-hidden">
+            <SheetContent side="left" className="p-0 w-72 flex flex-col max-h-screen overflow-hidden" hideClose>
               <SidebarContent isMobile />
             </SheetContent>
           </Sheet>

@@ -61,6 +61,7 @@ export interface LocalCustomer {
   document_id: string | null;
   phone: string | null;
   note: string | null;
+  debt_cutoff_at?: number | null;
   updated_at: number;
   cached_at: number;
 }

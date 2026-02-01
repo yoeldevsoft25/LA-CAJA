@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth.store'
 
@@ -23,6 +24,7 @@ const paymentSchema = z.object({
   amount_bs: z.number().min(0, 'El monto en Bs no puede ser negativo'),
   method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER']),
   note: z.string().optional(),
+  rollover_remaining: z.boolean().optional(),
 })
 
 type PaymentFormData = z.infer<typeof paymentSchema>
@@ -63,6 +65,7 @@ export default function AddPaymentModal({
       amount_bs: 0,
       method: 'CASH_BS',
       note: '',
+      rollover_remaining: false,
     },
   })
 
@@ -82,7 +85,9 @@ export default function AddPaymentModal({
   const amountUsd = watch('amount_usd')
   const amountBs = watch('amount_bs')
   const selectedMethod = watch('method')
+  const rolloverRemaining = Boolean(watch('rollover_remaining'))
   const inputSourceRef = useRef<'usd' | 'bs' | null>(null)
+  const isOnline = navigator.onLine
 
   // Cálculo bidireccional USD ↔ Bs con la tasa del día: al editar uno se actualiza el otro
   useEffect(() => {
@@ -109,6 +114,7 @@ export default function AddPaymentModal({
         amount_bs: 0,
         method: 'CASH_BS',
         note: '',
+        rollover_remaining: false,
       })
     }
   }, [isOpen, debtId, reset])
@@ -122,6 +128,7 @@ export default function AddPaymentModal({
         amount_usd: data.amount_usd,
         method: data.method,
         note: data.note,
+        rollover_remaining: data.rollover_remaining,
         store_id: user.store_id,
         user_id: user.user_id
       })
@@ -164,6 +171,18 @@ export default function AddPaymentModal({
       return
     }
 
+    if (data.rollover_remaining) {
+      if (!isOnline) {
+        toast.error('El traslado de saldo requiere conexión a internet')
+        return
+      }
+      const remainingAfterPayment = debtWithTotals.remaining_usd - data.amount_usd
+      if (remainingAfterPayment <= 0.01) {
+        toast.error('No hay saldo restante para trasladar a una nueva deuda')
+        return
+      }
+    }
+
     // El backend calculará el amount_bs usando la tasa BCV actual
     // Solo enviamos el amount_usd y un amount_bs aproximado (el backend lo recalculará)
     addPaymentMutation.mutate({
@@ -171,6 +190,7 @@ export default function AddPaymentModal({
       amount_bs: data.amount_bs, // El backend lo recalculará con la tasa BCV actual
       method: data.method,
       note: data.note,
+      rollover_remaining: data.rollover_remaining,
     })
   }
 
@@ -178,6 +198,7 @@ export default function AddPaymentModal({
     if (!debtWithTotals) return
     inputSourceRef.current = 'usd'
     setValue('amount_usd', debtWithTotals.remaining_usd, { shouldValidate: true })
+    setValue('rollover_remaining', false, { shouldValidate: false })
     if (exchangeRate > 0) {
       setValue('amount_bs', Math.round(debtWithTotals.remaining_usd * exchangeRate * 100) / 100, { shouldValidate: false })
     } else {
@@ -280,6 +301,30 @@ export default function AddPaymentModal({
                 {exchangeRate <= 0 && (
                   <p className="text-xs text-muted-foreground">Configure la tasa BCV para abonar en Bs.</p>
                 )}
+              </div>
+
+              {/* Trasladar saldo restante */}
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="rollover_remaining"
+                    checked={rolloverRemaining}
+                    disabled={!isOnline}
+                    onCheckedChange={(checked) => setValue('rollover_remaining', checked === true)}
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="rollover_remaining" className="text-sm font-semibold">
+                      Cerrar esta deuda y abrir una nueva por el saldo restante
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      El abono se registra aquí y el saldo pendiente se mueve a una nueva deuda.
+                    </p>
+                    {!isOnline && (
+                      <p className="text-xs text-warning">Disponible solo con conexión a internet.</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Método de pago */}

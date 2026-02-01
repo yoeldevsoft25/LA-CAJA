@@ -1,4 +1,4 @@
-import { IsNumber, IsString, IsIn, Min, IsOptional } from 'class-validator';
+import { IsNumber, IsString, IsIn, Min, IsOptional, IsBoolean, IsArray, ArrayMinSize, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateDebtPaymentDto {
@@ -34,4 +34,21 @@ export class CreateDebtPaymentDto {
   @IsOptional()
   @IsString({ message: 'note debe ser una cadena de texto' })
   note?: string | null;
+
+  @Transform(({ value }) => {
+    if (value === null || value === undefined || value === '') return undefined;
+    if (typeof value === 'boolean') return value;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return Boolean(value);
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'rollover_remaining debe ser booleano' })
+  rollover_remaining?: boolean;
+
+  @IsOptional()
+  @IsArray({ message: 'debt_ids debe ser un arreglo' })
+  @ArrayMinSize(1, { message: 'debt_ids debe tener al menos un elemento' })
+  @IsUUID('4', { each: true, message: 'debt_ids debe contener UUIDs válidos' })
+  debt_ids?: string[];
 }

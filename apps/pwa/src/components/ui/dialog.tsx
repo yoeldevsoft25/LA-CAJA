@@ -55,17 +55,23 @@ const DialogContent = React.forwardRef<
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  const isBottomSheet = Boolean(className?.includes('bottom-0') || className?.includes('top-auto'))
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          // Clases base: solo aplicar si no hay clases personalizadas de posicionamiento
-          !className?.includes('bottom-0') && !className?.includes('top-auto') && "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
+          // Posicionamiento: centrado por defecto o bottom sheet en mobile
+          isBottomSheet
+            ? "fixed left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-[640px]"
+            : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
           // Tamaño y estilos base - z-index igual que overlay (100) para que el orden del DOM determine el apilamiento (Content > Overlay)
           // Cuando hay modales anidados: Overlay B (z-100) > Content A (z-100) por orden DOM
-          "z-[100] [&>*]:pointer-events-auto [&_*]:pointer-events-auto w-[calc(100%-2rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
+          isBottomSheet
+            ? "z-[100] [&>*]:pointer-events-auto [&_*]:pointer-events-auto gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg"
+            : "z-[100] [&>*]:pointer-events-auto [&_*]:pointer-events-auto w-[calc(100%-1.5rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
           // Solo aplicar grid si no hay clases personalizadas
           !className?.includes('flex') && "grid",
           // Animaciones optimizadas para mobile
@@ -73,13 +79,15 @@ const DialogContent = React.forwardRef<
             ? "data-[state=open]:opacity-100 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=closed]:scale-95 transition-all duration-150"
             : !className?.includes('bottom-0') && "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
           // Para bottom sheet mobile
-          className?.includes('bottom-0') && isMobile && "data-[state=open]:translate-y-0 data-[state=closed]:translate-y-full transition-transform duration-300 ease-out",
+          isBottomSheet && isMobile && "data-[state=open]:translate-y-0 data-[state=closed]:translate-y-full transition-transform duration-300 ease-out",
           className
         )}
         style={{
           willChange: isMobile ? 'opacity, transform' : undefined,
           pointerEvents: 'auto',
-          zIndex: 100
+          zIndex: 100,
+          bottom: isBottomSheet ? '1rem' : undefined,
+          top: isBottomSheet ? 'auto' : undefined,
         }}
         onInteractOutside={(e) => {
           // Permitir cerrar solo si el click es fuera del contenido
