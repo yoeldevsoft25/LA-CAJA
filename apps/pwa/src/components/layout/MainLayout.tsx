@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/stores/auth.store'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -61,7 +61,6 @@ import { useNotifications } from '@/stores/notifications.store'
 import { useOnline } from '@/hooks/use-online'
 import { inventoryService } from '@/services/inventory.service'
 import { cashService } from '@/services/cash.service'
-import { syncService } from '@/services/sync.service'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -69,7 +68,6 @@ import { useNotificationsSync } from '@/hooks/useNotificationsSync'
 import { isRouteAllowed, type Role } from '@/lib/permissions'
 import ExchangeRateIndicator from '@/components/exchange/ExchangeRateIndicator'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
-import OfflineBanner from '@/components/offline/OfflineBanner'
 import { KeyboardShortcutsHelp, useKeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help'
 // import { Breadcrumbs } from '@/components/ui/breadcrumbs'
 import { SkipLinks } from '@/components/ui/skip-links'
@@ -78,6 +76,7 @@ import { CommandMenu } from './CommandMenu'
 import { QuotaBanner } from '@/components/license/QuotaTracker'
 import { UpgradeModal } from '@/components/license/UpgradeModal'
 import { licenseService } from '@/services/license.service'
+import toast from '@/lib/toast'
 
 type NavItem = {
   path: string
@@ -182,42 +181,26 @@ export default function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { isOnline } = useOnline()
   const { add, addUnique } = useNotifications()
+  const prevOnlineRef = useRef<boolean | null>(null)
 
-  // Detectar cuando el banner offline está visible (misma lógica que OfflineBanner)
-  const [showBanner, setShowBanner] = useState(false)
-  const [pendingCount, setPendingCount] = useState(0)
-
-  // Replicar lógica de visibilidad del banner
   useEffect(() => {
-    if (!isOnline) {
-      setShowBanner(true)
-    } else {
-      // Delay para mostrar mensaje de reconexión (igual que en OfflineBanner)
-      const timer = setTimeout(() => {
-        setShowBanner(false)
-      }, 3000)
-      return () => clearTimeout(timer)
+    if (prevOnlineRef.current === null) {
+      prevOnlineRef.current = isOnline
+      if (!isOnline) {
+        toast.warning('Sin conexión. Tus ventas se guardarán localmente.')
+      }
+      return
+    }
+
+    if (prevOnlineRef.current !== isOnline) {
+      if (isOnline) {
+        toast.success('Conexión restaurada.')
+      } else {
+        toast.warning('Sin conexión. Tus ventas se guardarán localmente.')
+      }
+      prevOnlineRef.current = isOnline
     }
   }, [isOnline])
-
-  // Obtener conteo de eventos pendientes
-  useEffect(() => {
-    const updatePendingCount = () => {
-      try {
-        const status = syncService.getStatus()
-        setPendingCount(status.pendingCount)
-      } catch {
-        setPendingCount(0)
-      }
-    }
-
-    updatePendingCount()
-    const interval = setInterval(updatePendingCount, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // El banner está visible si showBanner es true o hay eventos pendientes
-  const isBannerVisible = showBanner || pendingCount > 0
   // Usar el hook de sincronización que combina ambos sistemas
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationsSync()
   const storeId = user?.store_id
@@ -681,9 +664,7 @@ export default function MainLayout() {
       {/* Header */}
       {/* Header */}
       <header className={cn(
-        "sticky z-40 bg-background/80 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all duration-300",
-        // Ajustar posición cuando el banner está visible (offline o reconexión)
-        isBannerVisible ? "top-[48px]" : "top-0"
+        "sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40 shadow-sm transition-all duration-300"
       )}>
         <div className="flex h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6">
           {/* Logo (Desktop) */}
@@ -965,18 +946,8 @@ export default function MainLayout() {
 
       <div
         className={cn(
-          "flex",
-          // Ajustar altura para compensar el banner cuando está visible
-          isBannerVisible
-            ? "h-[calc(100vh-4rem-48px)]"
-            : "h-[calc(100vh-4rem)]"
+          "flex h-[calc(100vh-4rem)]"
         )}
-        style={{
-          // Cuando el banner está visible, el header sticky está en top-[48px]
-          // El contenedor normalmente empieza después del header (64px), pero como el header
-          // ahora está desplazado 48px hacia abajo, el contenedor necesita 48px adicionales de padding
-          paddingTop: isBannerVisible ? '48px' : undefined
-        }}
       >
         {/* Desktop Sidebar */}
         <aside
@@ -1034,9 +1005,6 @@ export default function MainLayout() {
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
-
-      {/* Offline Banner */}
-      <OfflineBanner />
 
       {/* Keyboard Shortcuts Help Modal */}
       <KeyboardShortcutsHelp
