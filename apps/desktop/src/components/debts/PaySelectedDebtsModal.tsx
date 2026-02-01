@@ -8,6 +8,7 @@ import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals, PaymentMethod, CreateDebtPaymentDto } from '@/services/debts.service'
 import { exchangeService } from '@/services/exchange.service'
 import toast from '@/lib/toast'
+import { useOnline } from '@/hooks/use-online'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +18,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+
+const LIVE_BCV_REFETCH_MS = 30_000
 
 const paymentSchema = z.object({
   amount_usd: z.number().min(0.01, 'El monto debe ser mayor a 0'),
@@ -55,6 +58,7 @@ export default function PaySelectedDebtsModal({
   const [amountMode, setAmountMode] = useState<'amount' | 'percentage'>('amount')
   const [percentage, setPercentage] = useState(100)
   const [distribution, setDistribution] = useState<'SEQUENTIAL' | 'PROPORTIONAL'>('PROPORTIONAL')
+  const { isOnline } = useOnline()
 
   const {
     register,
@@ -73,12 +77,15 @@ export default function PaySelectedDebtsModal({
     },
   })
 
-  const isOnline = navigator.onLine
-
   const { data: bcvRateData } = useQuery({
     queryKey: ['exchange', 'bcv'],
-    queryFn: () => exchangeService.getBCVRate(),
-    staleTime: 1000 * 60 * 60 * 2,
+    queryFn: () => exchangeService.getBCVRate(true),
+    staleTime: 0,
+    gcTime: 1000 * 60 * 10,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: isOpen && isOnline ? LIVE_BCV_REFETCH_MS : false,
     enabled: isOpen,
   })
 

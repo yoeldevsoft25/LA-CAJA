@@ -7,6 +7,9 @@ import { DollarSign, AlertTriangle, CheckCircle } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals, PaymentMethod, CreateDebtPaymentDto } from '@/services/debts.service'
 import { exchangeService } from '@/services/exchange.service'
+import { useOnline } from '@/hooks/use-online'
+
+const LIVE_BCV_REFETCH_MS = 30_000
 import toast from '@/lib/toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -50,6 +53,7 @@ export default function PayAllDebtsModal({
   debts,
   onSuccess,
 }: PayAllDebtsModalProps) {
+  const { isOnline } = useOnline()
   const {
     register,
     handleSubmit,
@@ -67,11 +71,16 @@ export default function PayAllDebtsModal({
     },
   })
 
-  // Obtener tasa BCV
+  // Obtener tasa BCV (siempre fresca mientras el modal esté abierto)
   const { data: bcvRateData } = useQuery({
     queryKey: ['exchange', 'bcv'],
-    queryFn: () => exchangeService.getBCVRate(),
-    staleTime: 1000 * 60 * 60 * 2, // 2 horas
+    queryFn: () => exchangeService.getBCVRate(true),
+    staleTime: 0,
+    gcTime: 1000 * 60 * 10,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: isOpen && isOnline ? LIVE_BCV_REFETCH_MS : false,
     enabled: isOpen,
   })
 

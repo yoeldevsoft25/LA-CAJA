@@ -113,7 +113,7 @@ export function QuickActionsBar({
                             className={cn(
                                 "h-9 px-2 transition-all shadow-none justify-between",
                                 selectedPromotionId
-                                    ? "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/40 dark:text-purple-300"
+                                    ? "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300"
                                     : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                         >

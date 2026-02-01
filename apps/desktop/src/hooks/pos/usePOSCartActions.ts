@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useCart } from '@/stores/cart.store'
 import { inventoryService } from '@/services/inventory.service'
@@ -12,6 +13,7 @@ interface UsePOSCartActionsProps {
 }
 
 export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps) {
+    const queryClient = useQueryClient()
     const { items, addItem, updateItem } = useCart()
     const MAX_QTY_PER_PRODUCT = 999
 
@@ -26,7 +28,14 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
         if (!isOnline || isWeightProduct) return true // Offline o peso => confiar/permitir
 
         try {
-            const stockInfo = await inventoryService.getProductStock(productId)
+            // Optimización: Intentar obtener stock del cache primero
+            const queryKey = ['stock', productId]
+            const stockInfo = await queryClient.ensureQueryData({
+                queryKey,
+                queryFn: () => inventoryService.getProductStock(productId),
+                staleTime: 1000 * 30 // 30 segundos de frescura para stock
+            })
+
             const availableStock = stockInfo.current_stock
             const newTotal = currentQty + addedQty
 
@@ -43,7 +52,7 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
             console.warn('[POS] Error verificando stock', e)
             return true // Fallback permisivo
         }
-    }, [isOnline])
+    }, [isOnline, queryClient])
 
     // 2. Acción: Agregar al carrito (Core logic)
     const handleAddToCart = useCallback(async (product: any, variant: ProductVariant | null = null, qty: number = 1) => {
@@ -106,10 +115,15 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
         if (p && source.weight_unit) return p
 
         try {
-            const fresh = await productsService.getById(source.id, storeId)
+            // Usar cache para evitar fetch repetitivo de producto pesado
+            const fresh = await queryClient.ensureQueryData({
+                queryKey: ['products', source.id],
+                queryFn: () => productsService.getById(source.id, storeId),
+                staleTime: 1000 * 60 * 5
+            })
             return normalize(fresh)
         } catch { return null }
-    }, [storeId])
+    }, [storeId, queryClient])
 
     // 4. Handler Principal: Click en producto (Grid o Scanner)
     const handleProductClick = useCallback(async (product: any) => {
@@ -127,9 +141,12 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
 
         // B) Variantes
         try {
-            // Optimizacion: Si el producto ya trae variantes cargadas (no siempre pasa), usarlas.
-            // Pero por seguridad consultamos el servicio.
-            const variants = await productVariantsService.getVariantsByProduct(product.id)
+            // Optimizacion: Usar React Query para cachear variantes del producto
+            const variants = await queryClient.ensureQueryData({
+                queryKey: ['variants', 'product', product.id],
+                queryFn: () => productVariantsService.getVariantsByProduct(product.id),
+                staleTime: 1000 * 60 * 5 // 5 minutos de cache para variantes
+            })
             const activeVariants = variants.filter((v) => v.is_active)
 
             if (activeVariants.length > 0) {
@@ -143,7 +160,7 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
             // Fallback a simple en error
             await handleAddToCart(product)
         }
-    }, [handleAddToCart, resolveWeightProduct])
+    }, [handleAddToCart, resolveWeightProduct, queryClient])
 
 
     // 5. Handlers de Modales

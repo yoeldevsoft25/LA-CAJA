@@ -269,7 +269,7 @@ export default function RealtimeAnalyticsPage() {
           {/* Sección: Rendimiento de Ventas */}
           <div className="space-y-4">
             <h2 className="text-lg font-bold flex items-center gap-2 px-1">
-              <History className="w-5 h-5 text-indigo-600" />
+              <History className="w-5 h-5 text-blue-600" />
               Calidad de Ventas
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

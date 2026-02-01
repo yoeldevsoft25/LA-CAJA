@@ -18,11 +18,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth.store'
+import { useOnline } from '@/hooks/use-online'
+
+const LIVE_BCV_REFETCH_MS = 30_000
 
 const paymentSchema = z.object({
   amount_usd: z.number().min(0.01, 'El monto debe ser mayor a 0'),
   amount_bs: z.number().min(0, 'El monto en Bs no puede ser negativo'),
-  method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER']),
+  method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER', 'ROLLOVER']),
   note: z.string().optional(),
   rollover_remaining: z.boolean().optional(),
 })
@@ -51,6 +54,7 @@ export default function AddPaymentModal({
   onSuccess,
 }: AddPaymentModalProps) {
   const { user } = useAuth()
+  const { isOnline } = useOnline()
   const {
     register,
     handleSubmit,
@@ -69,12 +73,16 @@ export default function AddPaymentModal({
     },
   })
 
-  // Obtener tasa BCV (usa cache del prefetch)
+  // Obtener tasa BCV (siempre fresca mientras el modal esté abierto)
   const { data: bcvRateData } = useQuery({
     queryKey: ['exchange', 'bcv'],
-    queryFn: () => exchangeService.getBCVRate(),
-    staleTime: 1000 * 60 * 60 * 2, // 2 horas
-    gcTime: Infinity, // Nunca eliminar
+    queryFn: () => exchangeService.getBCVRate(true),
+    staleTime: 0,
+    gcTime: 1000 * 60 * 10,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: isOpen && isOnline ? LIVE_BCV_REFETCH_MS : false,
     enabled: isOpen,
   })
 
@@ -87,7 +95,6 @@ export default function AddPaymentModal({
   const selectedMethod = watch('method')
   const rolloverRemaining = Boolean(watch('rollover_remaining'))
   const inputSourceRef = useRef<'usd' | 'bs' | null>(null)
-  const isOnline = navigator.onLine
 
   // Cálculo bidireccional USD ↔ Bs con la tasa del día: al editar uno se actualiza el otro
   useEffect(() => {
@@ -334,7 +341,7 @@ export default function AddPaymentModal({
                 </Label>
                 <RadioGroup
                   value={selectedMethod}
-                  onValueChange={(value) => setValue('method', value as PaymentMethod)}
+                  onValueChange={(value) => setValue('method', value as PaymentFormData['method'])}
                   className="grid grid-cols-2 gap-x-4 gap-y-3"
                 >
                   {paymentMethods.map((method) => (

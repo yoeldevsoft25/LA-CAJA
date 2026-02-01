@@ -71,13 +71,13 @@ export default function DiscountSummary({ startDate, endDate }: DiscountSummaryP
           </Card>
 
           {/* Promedio porcentaje */}
-          <Card className="bg-purple-50 border-purple-200">
+          <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-4">
               <div className="flex items-center mb-2">
-                <TrendingUp className="w-4 h-4 text-purple-600 mr-2" />
-                <span className="text-sm font-medium text-purple-900">Promedio %</span>
+                <TrendingUp className="w-4 h-4 text-blue-600 mr-2" />
+                <span className="text-sm font-medium text-blue-900">Promedio %</span>
               </div>
-              <p className="text-lg font-bold text-purple-900">
+              <p className="text-lg font-bold text-blue-900">
                 {Number(summary.average_percentage).toFixed(2)}%
               </p>
             </CardContent>

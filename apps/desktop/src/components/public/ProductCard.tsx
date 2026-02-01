@@ -33,7 +33,7 @@ export default function ProductCard({
       'from-yellow-400/30 to-orange-400/20',
       'from-green-400/30 to-emerald-400/20',
       'from-blue-400/30 to-cyan-400/20',
-      'from-purple-400/30 to-pink-400/20',
+      'from-blue-400/30 to-pink-400/20',
       'from-amber-400/30 to-yellow-400/20',
     ]
     return gradients[hash % gradients.length]

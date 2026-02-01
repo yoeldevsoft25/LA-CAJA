@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, lazy, Suspense, useEffect, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { CatalogHeader } from '@/components/pos/catalog/CatalogHeader'
 import { ProductCatalog } from '@/components/pos/catalog/ProductCatalog'
 import { QuickActions } from '@/components/pos/catalog/QuickActions'
@@ -47,6 +47,15 @@ export default function POSPage() {
 
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+
+  // Debounce simple para evitar peticiones en cada tecla
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
   const mobileSearchRef = useRef<HTMLDivElement | null>(null)
   const [mobileResultsTop, setMobileResultsTop] = useState<number | null>(null)
   const [showCheckout, setShowCheckout] = useState(false)
@@ -228,9 +237,9 @@ export default function POSPage() {
   const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined)
   // Cargar desde IndexedDB al montar o cuando cambia la búsqueda
   useEffect(() => {
-    if (user?.store_id && (searchQuery.length >= 2 || searchQuery.length === 0)) {
+    if (user?.store_id && (debouncedQuery.length >= 2 || debouncedQuery.length === 0)) {
       productsCacheService.getProductsFromCache(user.store_id, {
-        search: searchQuery || undefined,
+        search: debouncedQuery || undefined,
         is_active: true,
         limit: 50,
       }).then(cached => {
@@ -244,7 +253,7 @@ export default function POSPage() {
         // Silenciar errores
       });
     }
-  }, [user?.store_id, searchQuery]);
+  }, [user?.store_id, debouncedQuery]);
 
   useEffect(() => {
     if (!isMobile || searchQuery.trim().length < 2) {
@@ -269,12 +278,12 @@ export default function POSPage() {
 
   // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading, isError: isProductsError } = useQuery({
-    queryKey: ['products', 'search', searchQuery, user?.store_id],
+    queryKey: ['products', 'search', debouncedQuery, user?.store_id],
     queryFn: () =>
       Promise.race([
         productsService.search(
           {
-            q: searchQuery || undefined,
+            q: debouncedQuery || undefined,
             is_active: true,
             limit: 50,
           },
@@ -284,7 +293,7 @@ export default function POSPage() {
           setTimeout(() => reject(new Error('timeout')), 8000)
         ),
       ]),
-    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id && isOnline,
+    enabled: (debouncedQuery.length >= 2 || debouncedQuery.length === 0) && !!user?.store_id && isOnline,
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: Infinity, // Nunca eliminar del cache
     retry: (failureCount, error: any) => {
@@ -294,8 +303,7 @@ export default function POSPage() {
       return false
     },
     retryDelay: 1200,
-    initialData: !isOnline ? initialData : undefined,
-    placeholderData: !isOnline ? initialData : undefined,
+    placeholderData: keepPreviousData,
   })
 
   const products = productsData?.products || []
@@ -311,12 +319,13 @@ export default function POSPage() {
       })
       .slice(0, 6)
   }, [products, searchQuery])
-  const { data: lowStockStatuses } = useQuery({
-    queryKey: ['inventory', 'low-stock', 'pos', searchQuery, selectedWarehouseId],
+  // Cargar estados de stock para TODOS los productos de la búsqueda (pre-warming cache)
+  const { data: stockStatuses } = useQuery({
+    queryKey: ['inventory', 'stock-status', 'pos', debouncedQuery, selectedWarehouseId],
     queryFn: () =>
       inventoryService.getStockStatus({
-        search: searchQuery || undefined,
-        low_stock_only: true,
+        search: debouncedQuery || undefined,
+        low_stock_only: false, // Cargamos todo para evitar peticiones al hacer click
         warehouse_id: selectedWarehouseId || undefined,
         limit: 50,
       }),
@@ -324,10 +333,24 @@ export default function POSPage() {
     staleTime: 1000 * 60, // 1 minuto
     gcTime: 1000 * 60 * 5,
     retry: 1,
+    placeholderData: keepPreviousData,
   })
+
   const lowStockIds = useMemo(() => {
-    return new Set((lowStockStatuses || []).map((item) => item.product_id))
-  }, [lowStockStatuses])
+    return new Set((stockStatuses || []).filter(item => item.is_low_stock).map((item) => item.product_id))
+  }, [stockStatuses])
+
+  // Poblar cache individual de stock a partir del masivo para ahorrar peticiones al hacer click
+  useEffect(() => {
+    if (stockStatuses && stockStatuses.length > 0) {
+      stockStatuses.forEach(item => {
+        queryClient.setQueryData(['stock', item.product_id], {
+          product_id: item.product_id,
+          current_stock: item.current_stock
+        })
+      })
+    }
+  }, [stockStatuses, queryClient])
   const { data: recentSales } = useQuery({
     queryKey: ['sales', 'recent-products', user?.store_id],
     queryFn: () =>

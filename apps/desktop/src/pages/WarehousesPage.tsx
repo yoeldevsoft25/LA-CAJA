@@ -191,7 +191,7 @@ export default function WarehousesPage() {
   const getTypeColor = (type: string) => {
     const types: Record<string, string> = {
       'STORE': 'bg-blue-100 text-blue-800 border-blue-200',
-      'MAIN': 'bg-purple-100 text-purple-800 border-purple-200',
+      'MAIN': 'bg-blue-100 text-blue-800 border-blue-200',
       'SHOWROOM': 'bg-pink-100 text-pink-800 border-pink-200',
       'TRANSIT': 'bg-amber-100 text-amber-800 border-amber-200',
       'DAMAGED': 'bg-red-100 text-red-800 border-red-200'

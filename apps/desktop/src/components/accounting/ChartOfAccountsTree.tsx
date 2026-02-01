@@ -21,7 +21,7 @@ const accountTypeLabels: Record<AccountType, string> = {
 const accountTypeColors: Record<AccountType, string> = {
   asset: 'bg-blue-100 text-blue-800',
   liability: 'bg-red-100 text-red-800',
-  equity: 'bg-purple-100 text-purple-800',
+  equity: 'bg-blue-100 text-blue-800',
   revenue: 'bg-green-100 text-green-800',
   expense: 'bg-orange-100 text-orange-800',
 }

@@ -677,7 +677,7 @@ export default function InventoryPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleAdjustStock(item)}
-                              className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full"
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
                               title="Ajustar stock"
                             >
                               <TrendingDown className="w-4 h-4" />
@@ -739,45 +739,44 @@ export default function InventoryPage() {
       )}
 
       {/* Modales */}
-      <StockReceivedModal
-        isOpen={isStockReceivedModalOpen}
-        onClose={handleCloseModals}
-        product={selectedProduct}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['inventory'] })
-          handleCloseModals()
-        }}
-      />
+      <Suspense fallback={null}>
+        <StockReceivedModal
+          isOpen={isStockReceivedModalOpen}
+          onClose={handleCloseModals}
+          product={selectedProduct}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] })
+            handleCloseModals()
+          }}
+        />
+      </Suspense>
 
-      <StockAdjustModal
-        isOpen={isStockAdjustModalOpen}
-        onClose={handleCloseModals}
-        product={selectedProduct}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['inventory'] })
-          handleCloseModals()
-        }}
-      />
+      <Suspense fallback={null}>
+        <StockAdjustModal
+          isOpen={isStockAdjustModalOpen}
+          onClose={handleCloseModals}
+          product={selectedProduct}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] })
+            handleCloseModals()
+          }}
+        />
+      </Suspense>
 
-      <BulkStockAdjustModal
-        isOpen={isBulkStockAdjustModalOpen}
-        onClose={() => setIsBulkStockAdjustModalOpen(false)}
-        stockItems={stockItems}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['inventory'] })
-          setIsBulkStockAdjustModalOpen(false)
-        }}
-      />
+      <Suspense fallback={null}>
+        <BulkStockAdjustModal
+          isOpen={isBulkStockAdjustModalOpen}
+          onClose={() => setIsBulkStockAdjustModalOpen(false)}
+          stockItems={stockItems}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] })
+            setIsBulkStockAdjustModalOpen(false)
+          }}
+        />
+      </Suspense>
 
       {isPurchaseOrderModalOpen && (
-        <Suspense fallback={
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">Cargando...</p>
-            </div>
-          </div>
-        }>
+        <Suspense fallback={null}>
           <PurchaseOrderFormModal
             isOpen={isPurchaseOrderModalOpen}
             onClose={() => setIsPurchaseOrderModalOpen(false)}
@@ -802,12 +801,14 @@ export default function InventoryPage() {
         </Suspense>
       )}
 
-      <MovementsModal
-        isOpen={isMovementsModalOpen}
-        onClose={handleCloseModals}
-        product={selectedProduct}
-        warehouseId={warehouseFilter !== 'all' ? warehouseFilter : undefined}
-      />
+      <Suspense fallback={null}>
+        <MovementsModal
+          isOpen={isMovementsModalOpen}
+          onClose={handleCloseModals}
+          product={selectedProduct}
+          warehouseId={warehouseFilter !== 'all' ? warehouseFilter : undefined}
+        />
+      </Suspense>
 
       {/* Modal de confirmación para vaciar stock de un producto */}
       <Dialog open={isResetProductModalOpen} onOpenChange={(open) => !open && handleCloseModals()}>

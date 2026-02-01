@@ -68,15 +68,15 @@ const getCategoryColor = (category: string): [string, string, string] => {
   const colorPalette: Array<[string, string, string]> = [
     ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
     ['bg-green-100', 'text-green-700', 'border-green-300'],
-    ['bg-purple-100', 'text-purple-700', 'border-purple-300'],
+    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
     ['bg-orange-100', 'text-orange-700', 'border-orange-300'],
     ['bg-pink-100', 'text-pink-700', 'border-pink-300'],
     ['bg-cyan-100', 'text-cyan-700', 'border-cyan-300'],
     ['bg-amber-100', 'text-amber-700', 'border-amber-300'],
-    ['bg-indigo-100', 'text-indigo-700', 'border-indigo-300'],
+    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
     ['bg-teal-100', 'text-teal-700', 'border-teal-300'],
     ['bg-rose-100', 'text-rose-700', 'border-rose-300'],
-    ['bg-violet-100', 'text-violet-700', 'border-violet-300'],
+    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
     ['bg-emerald-100', 'text-emerald-700', 'border-emerald-300'],
   ]
 
@@ -790,7 +790,7 @@ export default function ProductsPage() {
                       >
                         <td className="px-4 py-3 align-middle w-[45%] sm:w-[40%] pl-6">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-background shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-background shrink-0">
                               {initial}
                             </div>
                             <div className="min-w-0 max-w-full">

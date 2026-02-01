@@ -605,7 +605,7 @@ export default function MainLayout() {
                                   variant="secondary"
                                   className={cn(
                                     "text-[10px] h-5 px-1.5 flex-shrink-0",
-                                    item.badge === 'Nuevo' ? "bg-indigo-500/20 text-indigo-400" : ""
+                                    item.badge === 'Nuevo' ? "bg-blue-500/20 text-blue-400" : ""
                                   )}
                                 >
                                   {item.badge}

@@ -213,14 +213,14 @@ export default function DebtsPage() {
 
       {/* Smart Stats Dashboard */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 sm:mb-6">
-        <Card className="border border-indigo-100 bg-indigo-50/50">
+        <Card className="border border-blue-100 bg-blue-50/50">
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Dinero en la Calle</span>
+              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Dinero en la Calle</span>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold text-foreground">${stats.totalPending.toFixed(2)}</span>
-                <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <TrendingUp className="h-4 w-4 text-indigo-600" />
+                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">

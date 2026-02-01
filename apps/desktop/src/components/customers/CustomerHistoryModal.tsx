@@ -85,8 +85,8 @@ export default function CustomerHistoryModal({
                   icon={TrendingUp}
                   label="Promedio"
                   value={`$${history.average_purchase_usd.toFixed(2)}`}
-                  color="text-purple-600"
-                  bgColor="bg-purple-100"
+                  color="text-blue-600"
+                  bgColor="bg-blue-100"
                 />
                 <StatCard
                   icon={Calendar}
