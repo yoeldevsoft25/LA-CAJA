@@ -37,12 +37,38 @@ export interface VariantStockResponse {
   stock: number
 }
 
+const VARIANTS_CACHE_TTL_MS = 1000 * 60 * 5
+const variantsCache = new Map<string, { data: ProductVariant[]; fetchedAt: number }>()
+
+function getCachedVariants(productId: string): ProductVariant[] | null {
+  const cached = variantsCache.get(productId)
+  if (!cached) return null
+  if (Date.now() - cached.fetchedAt > VARIANTS_CACHE_TTL_MS) {
+    variantsCache.delete(productId)
+    return null
+  }
+  return cached.data
+}
+
+function setCachedVariants(productId: string, variants: ProductVariant[]) {
+  variantsCache.set(productId, { data: variants, fetchedAt: Date.now() })
+}
+
+function invalidateVariantsCache(productId?: string) {
+  if (productId) {
+    variantsCache.delete(productId)
+    return
+  }
+  variantsCache.clear()
+}
+
 export const productVariantsService = {
   /**
    * Crea una nueva variante de producto
    */
   async createVariant(data: CreateProductVariantRequest): Promise<ProductVariant> {
     const response = await api.post<ProductVariant>('/product-variants', data)
+    invalidateVariantsCache(data.product_id)
     return response.data
   },
 
@@ -54,6 +80,7 @@ export const productVariantsService = {
     data: Partial<CreateProductVariantRequest>
   ): Promise<ProductVariant> {
     const response = await api.put<ProductVariant>(`/product-variants/${id}`, data)
+    invalidateVariantsCache(data.product_id)
     return response.data
   },
 
@@ -61,8 +88,13 @@ export const productVariantsService = {
    * Obtiene todas las variantes de un producto
    */
   async getVariantsByProduct(productId: string): Promise<ProductVariant[]> {
+    const cached = getCachedVariants(productId)
+    if (cached) return cached
+
     const response = await api.get<ProductVariant[]>(`/product-variants/product/${productId}`)
-    return response.data
+    const variants = response.data
+    setCachedVariants(productId, variants)
+    return variants
   },
 
   /**
@@ -111,6 +143,6 @@ export const productVariantsService = {
    */
   async deleteVariant(id: string): Promise<void> {
     await api.delete(`/product-variants/${id}`)
+    invalidateVariantsCache()
   },
 }
-

@@ -78,6 +78,11 @@ export default function POSPage() {
     carts,
   } = useCart()
 
+  useEffect(() => {
+    if (items.length === 0) return
+    void import('@/components/pos/CheckoutModal')
+  }, [items.length])
+
   const cartSummaries = useMemo(() => {
     return CART_IDS.map((id) => {
       const cartItems = carts[id]?.items ?? []
@@ -710,19 +715,16 @@ export default function POSPage() {
   }) => {
     if (items.length === 0) return
     setInvalidCartProductIds([])
+    const uniqueProductIds = Array.from(new Set(items.map((item) => item.product_id)))
     try {
-      const uniqueProductIds = Array.from(new Set(items.map((item) => item.product_id)))
-      const results = await Promise.allSettled(
-        uniqueProductIds.map((productId) => productsService.getById(productId, user?.store_id))
+      const cachedResults = await Promise.all(
+        uniqueProductIds.map((productId) =>
+          productsCacheService.getProductByIdFromCache(productId).catch(() => null)
+        )
       )
-      const invalidIds = results
-        .map((result, index) => {
-          if (result.status === 'rejected') {
-            return uniqueProductIds[index]
-          }
-          return result.value.is_active ? null : uniqueProductIds[index]
-        })
-        .filter((value): value is string => Boolean(value))
+      const invalidIds = cachedResults
+        .filter((product) => product && !product.is_active)
+        .map((product) => product!.id)
 
       if (invalidIds.length > 0) {
         setInvalidCartProductIds(invalidIds)
@@ -730,8 +732,7 @@ export default function POSPage() {
         return
       }
     } catch (error) {
-      toast.error('No se pudo validar el carrito. Intenta de nuevo.')
-      return
+      console.warn('[POS] Validación de carrito con cache falló', error)
     }
     const saleItems = items.map((item) => {
       const isWeightProduct = Boolean(item.is_weight_product)

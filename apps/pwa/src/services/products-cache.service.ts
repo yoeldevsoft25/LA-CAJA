@@ -25,7 +25,7 @@ export class ProductsCacheService {
       name: product.name,
       category: product.category || null,
       sku: product.sku || null,
-      barcode: product.barcode || null,
+      barcode: product.barcode ? normalizeBarcode(product.barcode) : null,
       price_bs: typeof product.price_bs === 'string' ? parseFloat(product.price_bs) : product.price_bs,
       price_usd: typeof product.price_usd === 'string' ? parseFloat(product.price_usd) : product.price_usd,
       cost_bs: typeof product.cost_bs === 'string' ? parseFloat(product.cost_bs) : product.cost_bs,
@@ -184,17 +184,26 @@ export class ProductsCacheService {
    */
   async getProductByBarcodeFromCache(storeId: string, barcode: string): Promise<Product | null> {
     const normalized = normalizeBarcode(barcode);
-    if (!normalized) return null;
-    if (this.shouldUseBarcodeIndex(storeId)) {
-      const cached = this.barcodeIndex.get(normalized);
-      if (cached) return this.toProduct(cached);
+    const raw = barcode?.trim();
+    const candidates = Array.from(new Set([normalized, raw].filter((value): value is string => !!value)));
+
+    for (const candidate of candidates) {
+      if (this.shouldUseBarcodeIndex(storeId)) {
+        const cached = this.barcodeIndex.get(candidate);
+        if (cached) return this.toProduct(cached);
+      }
+
+      const matches = await db.products.where('barcode').equals(candidate).toArray();
+      const local = matches.find((p) => p.store_id === storeId && p.is_active);
+      if (local) {
+        if (this.barcodeIndexStoreId === storeId) {
+          this.barcodeIndex.set(candidate, local);
+        }
+        return this.toProduct(local);
+      }
     }
-    const matches = await db.products.where('barcode').equals(normalized).toArray();
-    const local = matches.find((p) => p.store_id === storeId && p.is_active);
-    if (local && this.barcodeIndexStoreId === storeId) {
-      this.barcodeIndex.set(normalized, local);
-    }
-    return local ? this.toProduct(local) : null;
+
+    return null;
   }
 
   /**
@@ -210,7 +219,8 @@ export class ProductsCacheService {
     this.barcodeIndexStoreId = storeId;
     for (const local of locals) {
       if (local.barcode) {
-        this.barcodeIndex.set(local.barcode, local);
+        const normalized = normalizeBarcode(local.barcode) ?? local.barcode;
+        this.barcodeIndex.set(normalized, local);
       }
     }
   }

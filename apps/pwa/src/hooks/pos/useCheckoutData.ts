@@ -10,7 +10,21 @@ import { warehousesService } from '@/services/warehouses.service'
 /**
  * Hook para manejar todas las queries de datos del checkout
  */
-export function useCheckoutData(storeId: string | undefined, isOpen: boolean) {
+export function useCheckoutData(options: {
+    storeId: string | undefined
+    isOpen: boolean
+    customerSearch?: string
+    selectedCustomerId?: string | null
+}) {
+    const {
+        storeId,
+        isOpen,
+        customerSearch,
+        selectedCustomerId,
+    } = options
+    const normalizedSearch = customerSearch?.trim() ?? ''
+    const shouldFetchCustomers = isOpen && !!storeId && (normalizedSearch.length >= 2 || !!selectedCustomerId)
+
     // Exchange rate
     const exchangeRateQuery = useQuery({
         queryKey: ['exchange', 'bcv'],
@@ -23,10 +37,24 @@ export function useCheckoutData(storeId: string | undefined, isOpen: boolean) {
 
     // Customers
     const customersQuery = useQuery({
-        queryKey: ['customers', storeId],
-        queryFn: () => customersService.search(''),
-        enabled: isOpen && !!storeId,
-        staleTime: 1000 * 60 * 5, // 5 minutos
+        queryKey: ['customers', storeId, normalizedSearch, selectedCustomerId],
+        queryFn: async () => {
+            if (normalizedSearch.length >= 2) {
+                return customersService.search(normalizedSearch)
+            }
+            if (selectedCustomerId) {
+                try {
+                    const customer = await customersService.getById(selectedCustomerId)
+                    return customer ? [customer] : []
+                } catch {
+                    return []
+                }
+            }
+            return []
+        },
+        enabled: shouldFetchCustomers,
+        staleTime: 1000 * 60 * 2, // 2 minutos
+        placeholderData: (previous) => previous,
     })
 
     // Payment configurations
