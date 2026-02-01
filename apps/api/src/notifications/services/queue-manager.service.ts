@@ -183,6 +183,40 @@ export class QueueManagerService implements OnModuleInit {
   }
 
   /**
+   * Cron: Reporte semanal para owners (Sábado 8 AM Venezuela)
+   */
+  @Cron('0 8 * * 6', {
+    timeZone: 'America/Caracas',
+  })
+  async generateWeeklyOwnerReportsCron() {
+    this.logger.log('📈 Weekly owner reports triggered (8:00 AM Venezuela)');
+
+    try {
+      const stores = await this.storeRepository.find();
+      this.logger.log(`Generating weekly reports for ${stores.length} stores`);
+
+      for (const store of stores) {
+        await this.notificationsQueue.add(
+          'weekly-owner-report',
+          { storeId: store.id },
+          {
+            removeOnComplete: true,
+            attempts: 2,
+            backoff: {
+              type: 'exponential',
+              delay: 30000,
+            },
+          },
+        );
+      }
+
+      this.logger.log(`✅ Scheduled weekly reports for ${stores.length} stores`);
+    } catch (error) {
+      this.logger.error(`Error generating weekly owner reports:`, error);
+    }
+  }
+
+  /**
    * Obtiene estadísticas de la cola
    */
   async getQueueStats(): Promise<{

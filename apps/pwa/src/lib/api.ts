@@ -61,7 +61,7 @@ function getApiUrl(): string {
   // 3. En producción, intentar detectar automáticamente la URL del API
   if (import.meta.env.PROD) {
     const hostname = window.location.hostname;
-    
+
     // Usar última URL válida si existe (para failover automático)
     const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
     if (storedBase) {
@@ -72,7 +72,7 @@ function getApiUrl(): string {
     if (hostname.includes('netlify.app')) {
       return FALLBACK_API_URL;
     }
-    
+
     // Si estamos en otro dominio, intentar inferir el API URL
     // Opción 1: Mismo dominio, puerto 3000 (si es local)
     // Opción 2: Dominio API (si existe un patrón conocido)
@@ -109,8 +109,8 @@ const isLocalEnv = () =>
   window.location.port === '5173';
 
 const probePrimaryApi = async (): Promise<boolean> => {
-  if (!import.meta.env.PROD || isLocalEnv()) return;
-  if (!PRIMARY_API_URL || !FALLBACK_API_URL) return;
+  if (!import.meta.env.PROD || isLocalEnv()) return true;
+  if (!PRIMARY_API_URL || !FALLBACK_API_URL) return true;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
@@ -180,7 +180,7 @@ api.interceptors.request.use(
       // Decodificar token para logging de depuración
       const decoded = decodeJWT(token);
       const authState = useAuth.getState();
-      
+
       if (decoded) {
         logger.debug('Token info', {
           url: config.url,
@@ -189,7 +189,7 @@ api.interceptors.request.use(
           userIdInToken: decoded.sub,
           userIdInStore: authState.user?.user_id,
         });
-        
+
         // Si hay discrepancia, advertir
         if (decoded.role !== authState.user?.role) {
           logger.warn('DISCREPANCIA DE ROL', {
@@ -199,7 +199,7 @@ api.interceptors.request.use(
             storeUserId: authState.user?.user_id,
           });
         }
-        
+
         // Si hay discrepancia en user_id, advertir también
         if (decoded.sub !== authState.user?.user_id) {
           logger.warn('DISCREPANCIA DE USER_ID', {
@@ -210,7 +210,7 @@ api.interceptors.request.use(
           });
         }
       }
-      
+
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -306,7 +306,7 @@ api.interceptors.response.use(
         );
 
         const { access_token, refresh_token: newRefreshToken } = response.data;
-        
+
         // ✅ ROTACIÓN: Actualizar el refresh token en localStorage con el nuevo token
         // El backend ahora rota los refresh tokens por seguridad
 
@@ -316,11 +316,11 @@ api.interceptors.response.use(
         const decoded = decodeJWT(access_token);
         if (decoded) {
           logger.debug('Token decodificado', { userId: decoded.sub, role: decoded.role, storeId: decoded.store_id });
-          
+
           // Actualizar el estado del usuario con la información del token
           const auth = useAuth.getState();
           const currentUser = auth.user;
-          
+
           if (currentUser) {
             // El JWT solo contiene: sub (user_id), store_id, role
             // Mantener los demás campos del usuario actual (full_name, license_status, etc.)
@@ -334,7 +334,7 @@ api.interceptors.response.use(
               license_plan: currentUser.license_plan,
               license_features: currentUser.license_features,
             };
-            
+
             // Si el rol cambió, loguear el cambio y mostrar advertencia
             if (updatedUser.role !== currentUser.role) {
               logger.warn('Rol del usuario cambió en el token', {
@@ -350,7 +350,7 @@ api.interceptors.response.use(
                 );
               });
             }
-            
+
             // Actualizar el usuario en el store
             auth.setUser(updatedUser);
           } else {

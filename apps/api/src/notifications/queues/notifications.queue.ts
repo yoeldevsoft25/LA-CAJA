@@ -16,6 +16,9 @@ export interface DailyDigestJob {
   storeId: string;
 }
 
+export interface WeeklyOwnerReportJob {
+  storeId: string;
+}
 /**
  * Queue Processor para notificaciones
  * Procesa trabajos asíncronos de ML insights, emails, y digests
@@ -52,6 +55,9 @@ export class NotificationsQueueProcessor extends WorkerHost {
 
       case 'daily-digest':
         return await this.generateDailyDigest(job);
+
+      case 'weekly-owner-report':
+        return await this.generateWeeklyOwnerReport(job);
 
       default:
         this.logger.warn(`Unknown job type: ${job.name}`);
@@ -116,6 +122,21 @@ export class NotificationsQueueProcessor extends WorkerHost {
     this.logger.log(`Generating daily digest for store ${storeId}`);
 
     await this.orchestratorService.generateDailyDigest(storeId);
+
+    await job.updateProgress(100);
+  }
+
+  /**
+   * Genera reporte semanal para owners
+   */
+  private async generateWeeklyOwnerReport(
+    job: Job<WeeklyOwnerReportJob>,
+  ): Promise<void> {
+    const { storeId } = job.data;
+
+    this.logger.log(`Generating weekly owner report for store ${storeId}`);
+
+    await this.orchestratorService.generateWeeklyOwnerReport(storeId);
 
     await job.updateProgress(100);
   }

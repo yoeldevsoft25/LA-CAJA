@@ -22,8 +22,12 @@ import { Product } from '../database/entities/product.entity';
 import { User } from '../database/entities/user.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { Store } from '../database/entities/store.entity';
+import { StoreMember } from '../database/entities/store-member.entity';
+import { Profile } from '../database/entities/profile.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ReportsModule } from '../reports/reports.module';
+import { DashboardModule } from '../dashboard/dashboard.module';
 
 // Nuevos servicios ML-driven
 import { MLInsightsService } from './services/ml-insights.service';
@@ -61,6 +65,8 @@ import { MLNotificationsController } from './ml-notifications.controller';
       User,
       InventoryMovement,
       Store,
+      StoreMember,
+      Profile,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -80,6 +86,8 @@ import { MLNotificationsController } from './ml-notifications.controller';
       inject: [ConfigService],
     }),
     QueuesModule,
+    ReportsModule,
+    DashboardModule,
     // Schedule module para cron jobs
     ScheduleModule.forRoot(),
   ],

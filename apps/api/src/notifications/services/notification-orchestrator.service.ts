@@ -5,11 +5,16 @@ import { Notification } from '../../database/entities/notification.entity';
 import { MLInsight } from '../../database/entities/ml-insight.entity';
 import { NotificationAnalytics } from '../../database/entities/notification-analytics.entity';
 import { User } from '../../database/entities/user.entity';
+import { Store } from '../../database/entities/store.entity';
+import { StoreMember } from '../../database/entities/store-member.entity';
+import { Profile } from '../../database/entities/profile.entity';
 import { MLInsightsService } from './ml-insights.service';
 import { TemplateService } from './template.service';
 import { EmailService } from './email.service';
 import { NotificationsService } from '../notifications.service';
 import { randomUUID } from 'crypto';
+import { ReportsService } from '../../reports/reports.service';
+import { DashboardService } from '../../dashboard/dashboard.service';
 
 export interface CreateMLNotificationOptions {
   mlInsight: MLInsight;
@@ -38,10 +43,18 @@ export class NotificationOrchestratorService {
     private userRepository: Repository<User>,
     @InjectRepository(NotificationAnalytics)
     private analyticsRepository: Repository<NotificationAnalytics>,
+    @InjectRepository(Store)
+    private storeRepository: Repository<Store>,
+    @InjectRepository(StoreMember)
+    private storeMemberRepository: Repository<StoreMember>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
     private mlInsightsService: MLInsightsService,
     private templateService: TemplateService,
     private emailService: EmailService,
     private notificationsService: NotificationsService,
+    private reportsService: ReportsService,
+    private dashboardService: DashboardService,
   ) {}
 
   /**
@@ -544,6 +557,129 @@ export class NotificationOrchestratorService {
       } catch (error) {
         this.logger.error(`Failed to send digest to ${manager.email}:`, error);
       }
+    }
+  }
+
+  /**
+   * Genera reporte semanal para owners
+   */
+  async generateWeeklyOwnerReport(storeId: string): Promise<void> {
+    this.logger.log(`Generating weekly owner report for store ${storeId}`);
+
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0);
+
+    const store = await this.storeRepository.findOne({
+      where: { id: storeId },
+      select: ['id', 'name'],
+    });
+
+    const owners = await this.storeMemberRepository.find({
+      where: { store_id: storeId, role: 'owner' },
+      relations: ['profile'],
+    });
+
+    if (owners.length === 0) {
+      this.logger.warn(`No owners found for store ${storeId}`);
+      return;
+    }
+
+    const salesSummary = await this.reportsService.getSalesByDay(
+      storeId,
+      startDate,
+      endDate,
+    );
+
+    const topProducts = await this.reportsService.getTopProducts(
+      storeId,
+      5,
+      startDate,
+      endDate,
+    );
+
+    const kpis = await this.dashboardService.getKPIs(
+      storeId,
+      startDate,
+      endDate,
+    );
+
+    const debtSummary = await this.reportsService.getDebtSummary(storeId);
+
+    const insights = await this.mlInsightRepository
+      .createQueryBuilder('insight')
+      .where('insight.store_id = :storeId', { storeId })
+      .andWhere('insight.created_at >= :startDate', { startDate })
+      .andWhere('insight.created_at <= :endDate', { endDate })
+      .getMany();
+
+    const anomalyCount = insights.filter((i) => i.insight_type === 'anomaly').length;
+    const recommendationCount = insights.filter((i) =>
+      ['recommendation', 'opportunity'].includes(i.insight_type),
+    ).length;
+    const criticalCount = insights.filter((i) => i.severity === 'critical').length;
+    const highCount = insights.filter((i) => i.severity === 'high').length;
+
+    const topProductsSummary = topProducts.map((p) => {
+      const quantity = p.is_weight_product ? p.quantity_sold_kg : p.quantity_sold_units;
+      return {
+        name: p.product_name,
+        quantity: Number(quantity || 0),
+        revenue_usd: Number(p.revenue_usd || 0),
+        revenue_bs: Number(p.revenue_bs || 0),
+        is_weight_product: p.is_weight_product,
+        weight_unit: p.weight_unit,
+      };
+    });
+
+    for (const owner of owners) {
+      const profile = owner.profile;
+      if (!profile?.email) continue;
+
+      const rendered = await this.templateService.renderTemplate(
+        'ml_weekly_report',
+        {
+          language: 'es',
+          channel: 'email',
+          variables: {
+            userName: profile.full_name || 'Owner',
+            storeName: store?.name || 'Tu tienda',
+            startDate,
+            endDate,
+            totalSalesCount: salesSummary.total_sales,
+            totalSalesBs: salesSummary.total_amount_bs,
+            totalSalesUsd: salesSummary.total_amount_usd,
+            totalProfitBs: salesSummary.total_profit_bs,
+            totalProfitUsd: salesSummary.total_profit_usd,
+            profitMargin: salesSummary.profit_margin,
+            lowStockCount: kpis.inventory.low_stock_count,
+            expiringSoonCount: kpis.inventory.expiring_soon_count,
+            pendingDebtBs: debtSummary.total_pending_bs,
+            pendingDebtUsd: debtSummary.total_pending_usd,
+            anomalyCount,
+            recommendationCount,
+            criticalCount,
+            highCount,
+            topProducts: topProductsSummary,
+            dashboardUrl: '/dashboard',
+          },
+        },
+        storeId,
+      );
+
+      await this.emailService.sendEmail({
+        storeId,
+        to: profile.email,
+        toName: profile.full_name || undefined,
+        subject: rendered.title,
+        htmlBody: rendered.html || rendered.body,
+        textBody: rendered.body,
+        priority: 60,
+      });
+
+      this.logger.log(`Weekly report sent to ${profile.email}`);
     }
   }
 
