@@ -151,9 +151,10 @@ export default function SaleDetailModal({
       ? 'Esta venta tiene pagos asociados.'
       : null
   const canVoid = isOwner && !isVoided && !voidBlockReason
-  const canReturn = isOwner && !isVoided && sale.items.length > 0
+  const saleItems = sale.items || []
+  const canReturn = isOwner && !isVoided && saleItems.length > 0
 
-  const totalItems = sale.items.reduce((sum, item) => sum + item.qty, 0)
+  const totalItems = saleItems.reduce((sum, item) => sum + item.qty, 0)
 
   const handleCreateSuccess = () => {
     // Invalidar queries y refrescar la factura fiscal
@@ -265,7 +266,7 @@ export default function SaleDetailModal({
                       <span className="text-xs sm:text-sm font-semibold text-foreground">Productos</span>
                     </div>
                     <p className="text-sm sm:text-base font-semibold text-foreground">
-                      {sale.items.length} producto{sale.items.length !== 1 ? 's' : ''} - {totalItems}{' '}
+                      {saleItems.length} producto{saleItems.length !== 1 ? 's' : ''} - {totalItems}{' '}
                       unidad{totalItems !== 1 ? 'es' : ''}
                     </p>
                   </CardContent>
@@ -640,7 +641,7 @@ export default function SaleDetailModal({
               {/* Vista de Cards para Mobile */}
               {isMobile ? (
                 <div className="space-y-3">
-                  {sale.items.map((item) => {
+                  {saleItems.map((item) => {
                     const unitPriceBs = Number(item.unit_price_bs)
                     const unitPriceUsd = Number(item.unit_price_usd)
                     const discountBs = Number(item.discount_bs || 0)
@@ -732,7 +733,7 @@ export default function SaleDetailModal({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sale.items.map((item) => {
+                        {saleItems.map((item) => {
                           const unitPriceBs = Number(item.unit_price_bs)
                           const unitPriceUsd = Number(item.unit_price_usd)
                           const discountBs = Number(item.discount_bs || 0)

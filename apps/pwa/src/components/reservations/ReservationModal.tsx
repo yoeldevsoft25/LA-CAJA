@@ -42,6 +42,7 @@ export default function ReservationModal({
   const [reservationTime, setReservationTime] = useState('')
   const [partySize, setPartySize] = useState(2)
   const [tableId, setTableId] = useState<string>('')
+  const noTableValue = 'none'
   const [specialRequests, setSpecialRequests] = useState('')
   const [note, setNote] = useState('')
 
@@ -171,12 +172,15 @@ export default function ReservationModal({
 
             <div className="space-y-2">
               <Label htmlFor="tableId">Mesa</Label>
-              <Select value={tableId} onValueChange={setTableId}>
+              <Select
+                value={tableId || noTableValue}
+                onValueChange={(value) => setTableId(value === noTableValue ? '' : value)}
+              >
                 <SelectTrigger id="tableId">
                   <SelectValue placeholder="Sin asignar (se asignará automáticamente)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin asignar</SelectItem>
+                  <SelectItem value={noTableValue}>Sin asignar</SelectItem>
                   {availableTables.map((table) => (
                     <SelectItem key={table.id} value={table.id}>
                       Mesa {table.table_number}

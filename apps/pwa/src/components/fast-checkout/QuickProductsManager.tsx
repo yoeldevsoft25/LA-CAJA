@@ -135,14 +135,19 @@ export default function QuickProductsManager() {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 space-y-0 pb-4">
           <CardTitle className="text-lg sm:text-xl flex items-center">
             <Zap className="w-5 h-5 mr-2" />
             Productos Rápidos ({sortedProducts.length}/50)
           </CardTitle>
-          <Button onClick={handleAdd} size="sm" disabled={sortedProducts.length >= 50}>
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Producto
+          <Button
+            onClick={handleAdd}
+            size="sm"
+            disabled={sortedProducts.length >= 50}
+            className="w-full sm:w-auto whitespace-normal sm:whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4 mr-2 shrink-0" />
+            <span className="text-xs sm:text-sm">Agregar Producto</span>
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -303,4 +308,3 @@ export default function QuickProductsManager() {
     </>
   )
 }
-

@@ -38,6 +38,7 @@ export function SwipeableItem({
   const startPoint = useRef<{ x: number; y: number } | null>(null)
   const hasDirectionLock = useRef(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const actionTriggeredRef = useRef(false)
   const manualDragState = useRef<{
     pointerId: number | null
     startX: number
@@ -63,6 +64,7 @@ export function SwipeableItem({
 
   const handleDragStart = () => {
     if (!enabled) return
+    actionTriggeredRef.current = false
     setIsDragging(true)
   }
 
@@ -91,6 +93,7 @@ export function SwipeableItem({
     const shouldTriggerRight = onSwipeRight && (offset < -threshold || velocity < -500)
 
     if (shouldTriggerLeft) {
+      actionTriggeredRef.current = true
       // Animar hacia la derecha y ejecutar acción
       animate(x, threshold * 2, {
         duration: shouldReduceMotion ? 0 : 0.2,
@@ -98,10 +101,12 @@ export function SwipeableItem({
           onSwipeLeft?.()
           setTimeout(() => {
             animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.3 })
+            actionTriggeredRef.current = false
           }, 100)
         },
       })
     } else if (shouldTriggerRight) {
+      actionTriggeredRef.current = true
       // Animar hacia la izquierda y ejecutar acción
       animate(x, -threshold * 2, {
         duration: shouldReduceMotion ? 0 : 0.2,
@@ -109,6 +114,7 @@ export function SwipeableItem({
           onSwipeRight?.()
           setTimeout(() => {
             animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.3 })
+            actionTriggeredRef.current = false
           }, 100)
         },
       })
@@ -159,6 +165,10 @@ export function SwipeableItem({
   const handlePointerUp = () => {
     startPoint.current = null
     hasDirectionLock.current = false
+    if (!enabled) return
+    if (!actionTriggeredRef.current && Math.abs(x.get()) > 1) {
+      animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.2 })
+    }
   }
 
   useEffect(() => {
@@ -214,22 +224,26 @@ export function SwipeableItem({
       const shouldTriggerRight = onSwipeRight && (dx < -threshold || velocity < -500)
 
       if (shouldTriggerLeft) {
+        actionTriggeredRef.current = true
         animate(x, threshold * 2, {
           duration: shouldReduceMotion ? 0 : 0.2,
           onComplete: () => {
             onSwipeLeft?.()
             setTimeout(() => {
               animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.3 })
+              actionTriggeredRef.current = false
             }, 100)
           },
         })
       } else if (shouldTriggerRight) {
+        actionTriggeredRef.current = true
         animate(x, -threshold * 2, {
           duration: shouldReduceMotion ? 0 : 0.2,
           onComplete: () => {
             onSwipeRight?.()
             setTimeout(() => {
               animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.3 })
+              actionTriggeredRef.current = false
             }, 100)
           },
         })
@@ -245,6 +259,7 @@ export function SwipeableItem({
       if (manualDragState.current.pointerId !== event.pointerId) return
       manualDragState.current.pointerId = null
       manualDragState.current.isDragging = false
+      actionTriggeredRef.current = false
       animate(x, 0, { duration: shouldReduceMotion ? 0 : 0.2 })
     }
 
