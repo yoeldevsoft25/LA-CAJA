@@ -8,6 +8,13 @@ import { Product } from './products.service';
 import { normalizeBarcode } from '@la-caja/domain';
 
 export class ProductsCacheService {
+  private barcodeIndex = new Map<string, LocalProduct>();
+  private barcodeIndexStoreId: string | null = null;
+
+  private shouldUseBarcodeIndex(storeId: string): boolean {
+    return this.barcodeIndexStoreId === storeId && this.barcodeIndex.size > 0;
+  }
+
   /**
    * Convierte Product del API a LocalProduct
    */
@@ -129,6 +136,13 @@ export class ProductsCacheService {
   async cacheProducts(products: Product[], storeId: string): Promise<void> {
     const localProducts = products.map(p => this.toLocalProduct(p, storeId));
     await db.cacheProducts(localProducts);
+    if (this.barcodeIndexStoreId === storeId) {
+      for (const local of localProducts) {
+        if (local.barcode) {
+          this.barcodeIndex.set(local.barcode, local);
+        }
+      }
+    }
   }
 
   /**
@@ -137,6 +151,9 @@ export class ProductsCacheService {
   async cacheProduct(product: Product, storeId: string): Promise<void> {
     const localProduct = this.toLocalProduct(product, storeId);
     await db.cacheProduct(localProduct);
+    if (this.barcodeIndexStoreId === storeId && localProduct.barcode) {
+      this.barcodeIndex.set(localProduct.barcode, localProduct);
+    }
   }
 
   /**
@@ -168,9 +185,34 @@ export class ProductsCacheService {
   async getProductByBarcodeFromCache(storeId: string, barcode: string): Promise<Product | null> {
     const normalized = normalizeBarcode(barcode);
     if (!normalized) return null;
+    if (this.shouldUseBarcodeIndex(storeId)) {
+      const cached = this.barcodeIndex.get(normalized);
+      if (cached) return this.toProduct(cached);
+    }
     const matches = await db.products.where('barcode').equals(normalized).toArray();
     const local = matches.find((p) => p.store_id === storeId && p.is_active);
+    if (local && this.barcodeIndexStoreId === storeId) {
+      this.barcodeIndex.set(normalized, local);
+    }
     return local ? this.toProduct(local) : null;
+  }
+
+  /**
+   * Precarga índice de barcodes en memoria para escaneo ultra rápido
+   */
+  async warmBarcodeIndex(storeId: string): Promise<void> {
+    if (this.barcodeIndexStoreId === storeId && this.barcodeIndex.size > 0) return;
+    const locals = await db.products
+      .where('[store_id+is_active]')
+      .equals([storeId, true])
+      .toArray();
+    this.barcodeIndex.clear();
+    this.barcodeIndexStoreId = storeId;
+    for (const local of locals) {
+      if (local.barcode) {
+        this.barcodeIndex.set(local.barcode, local);
+      }
+    }
   }
 
   /**

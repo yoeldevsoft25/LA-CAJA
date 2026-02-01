@@ -11,6 +11,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -42,6 +43,26 @@ export class ProductsController {
   async findAll(@Query() searchDto: SearchProductsDto, @Request() req: any) {
     const storeId = req.user.store_id;
     return this.productsService.findAll(storeId, searchDto);
+  }
+
+  @Get('barcode/:barcode')
+  async findByBarcode(
+    @Param('barcode') barcode: string,
+    @Query('include_inactive') includeInactive: string | undefined,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const includeInactiveFlag = includeInactive === 'true';
+    const product = await this.productsService.findByBarcode(
+      storeId,
+      barcode,
+      includeInactiveFlag,
+    );
+
+    if (!product) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+    return product;
   }
 
   @Get(':id')

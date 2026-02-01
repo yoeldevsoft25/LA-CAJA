@@ -364,6 +364,26 @@ export class ProductsService {
     return product;
   }
 
+  async findByBarcode(
+    storeId: string,
+    barcode: string,
+    includeInactive = false,
+  ): Promise<Product | null> {
+    const normalizedBarcode = normalizeBarcode(barcode);
+    if (!normalizedBarcode) return null;
+
+    const where: Record<string, any> = {
+      store_id: storeId,
+      barcode: normalizedBarcode,
+    };
+
+    if (!includeInactive) {
+      where.is_active = true;
+    }
+
+    return this.productRepository.findOne({ where });
+  }
+
   async update(
     storeId: string,
     productId: string,

@@ -154,6 +154,35 @@ export interface ProductMutationOptions {
  */
 export const productsService = {
 
+  async getByBarcode(barcode: string, storeId?: string): Promise<Product | null> {
+    const normalized = normalizeBarcode(barcode);
+    if (!normalized) return null;
+
+    if (storeId) {
+      try {
+        const cachedProduct = await productsCacheService.getProductByBarcodeFromCache(storeId, normalized);
+        if (cachedProduct) return cachedProduct;
+      } catch (error) {
+        logger.warn('Error cargando producto por barcode desde cache', { error });
+      }
+    }
+
+    if (!navigator.onLine) return null;
+
+    try {
+      const response = await api.get<Product>(`/products/barcode/${encodeURIComponent(normalized)}`);
+      if (storeId && response.data) {
+        productsCacheService.cacheProduct(response.data, storeId).catch(() => { });
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
   async search(params: ProductSearchParams, storeId?: string): Promise<ProductSearchResponse> {
     const isOnline = navigator.onLine;
     let cachedData: ProductSearchResponse | null = null;

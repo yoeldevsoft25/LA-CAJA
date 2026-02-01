@@ -1,0 +1,51 @@
+name: "Release Desktop App"
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build internal packages
+        run: npm run build:packages
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Usamos las variables actuales como fallback si no hay secrets configurados
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://denver-unbrooded-miley.ngrok-free.dev' }}
+          VITE_PRIMARY_API_URL: ${{ secrets.VITE_PRIMARY_API_URL || 'https://denver-unbrooded-miley.ngrok-free.dev' }}
+          VITE_FALLBACK_API_URL: ${{ secrets.VITE_FALLBACK_API_URL || 'https://la-caja-8i4h.onrender.com' }}
+          VITE_WS_URL: ${{ secrets.VITE_WS_URL || 'wss://denver-unbrooded-miley.ngrok-free.dev' }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY || 'BEpghdUBOMHoCmFDd1YlATkAT65cnu7HUfYg7chIJekLVAYLTZa3Rdc230_O729hz8qcYuqN4EH2EkI_kRBOJCM' }}
+        with:
+          projectPath: apps/desktop
+          tagName: v__VERSION__
+          releaseName: "Velox POS v__VERSION__"
+          releaseBody: "Release de Velox POS para Windows y macOS generado automáticamente por GitHub Actions."
+          releaseDraft: true
+          prerelease: false
