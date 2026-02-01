@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useCart } from '@/stores/cart.store'
 import { inventoryService } from '@/services/inventory.service'
 import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
 import { productsService } from '@/services/products.service'
+import { productsCacheService } from '@/services/products-cache.service'
 import { WeightProduct } from '@/components/pos/WeightInputModal'
 
 interface UsePOSCartActionsProps {
@@ -16,18 +17,53 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
     const queryClient = useQueryClient()
     const { items, addItem, updateItem } = useCart()
     const MAX_QTY_PER_PRODUCT = 999
+    const LOW_STOCK_REFRESH_MS = 60_000
+    const lowStockRef = useRef<{ ids: Set<string>; fetchedAt: number }>({
+        ids: new Set(),
+        fetchedAt: 0,
+    })
 
     // Estados locales necesarios para interactuar con modales
     const [showVariantSelector, setShowVariantSelector] = useState(false)
-    const [selectedProductForVariant, setSelectedProductForVariant] = useState<{ id: string; name: string } | null>(null)
+    const [selectedProductForVariant, setSelectedProductForVariant] = useState<any | null>(null)
     const [showWeightModal, setShowWeightModal] = useState(false)
     const [selectedWeightProduct, setSelectedWeightProduct] = useState<WeightProduct | null>(null)
+
+    useEffect(() => {
+        if (!isOnline) return
+        let cancelled = false
+
+        const fetchLowStock = async () => {
+            try {
+                const lowStock = await inventoryService.getLowStock()
+                if (cancelled) return
+                lowStockRef.current = {
+                    ids: new Set(lowStock.map((item) => item.product_id)),
+                    fetchedAt: Date.now(),
+                }
+            } catch (e) {
+                if (cancelled) return
+                lowStockRef.current.fetchedAt = Date.now()
+            }
+        }
+
+        fetchLowStock()
+        const interval = setInterval(fetchLowStock, LOW_STOCK_REFRESH_MS)
+        return () => {
+            cancelled = true
+            clearInterval(interval)
+        }
+    }, [isOnline])
 
     // 1. Helper: Validar Stock
     const checkStock = useCallback(async (productId: string, currentQty: number, addedQty: number, isWeightProduct: boolean) => {
         if (!isOnline || isWeightProduct) return true // Offline o peso => confiar/permitir
 
         try {
+            const lowStockIds = lowStockRef.current.ids
+            if (lowStockIds.size > 0 && !lowStockIds.has(productId)) {
+                return true
+            }
             // Optimización: Intentar obtener stock del cache primero
             const queryKey = ['stock', productId]
             const stockInfo = await queryClient.ensureQueryData({
@@ -115,6 +151,10 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
         if (p && source.weight_unit) return p
 
         try {
+            if (storeId) {
+                const cached = await productsCacheService.getProductByIdFromCache(source.id)
+                if (cached) return normalize(cached)
+            }
             // Usar cache para evitar fetch repetitivo de producto pesado
             const fresh = await queryClient.ensureQueryData({
                 queryKey: ['products', source.id],
@@ -150,7 +190,7 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
             const activeVariants = variants.filter((v) => v.is_active)
 
             if (activeVariants.length > 0) {
-                setSelectedProductForVariant({ id: product.id, name: product.name })
+                setSelectedProductForVariant(product)
                 setShowVariantSelector(true)
             } else {
                 // C) Producto simple
@@ -181,8 +221,7 @@ export function usePOSCartActions({ storeId, isOnline }: UsePOSCartActionsProps)
         if (!selectedProductForVariant) return;
 
         try {
-            const product = await productsService.getById(selectedProductForVariant.id, storeId)
-            await handleAddToCart(product, variant)
+            await handleAddToCart(selectedProductForVariant, variant)
         } catch (e) { toast.error('Error procesando variante') }
 
         setShowVariantSelector(false)

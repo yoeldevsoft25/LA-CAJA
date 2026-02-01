@@ -103,7 +103,21 @@ export default function CheckoutModal({
 
   // Hooks personalizados
   const { state, actions } = useCheckoutState()
-  const checkoutData = useCheckoutData(storeId || undefined, isOpen)
+  const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState(state.customerData.search)
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedCustomerSearch(state.customerData.search)
+    }, 250)
+    return () => clearTimeout(handle)
+  }, [state.customerData.search])
+
+  const checkoutData = useCheckoutData({
+    storeId: storeId || undefined,
+    isOpen,
+    customerSearch: debouncedCustomerSearch,
+    selectedCustomerId: state.customerData.selectedId,
+  })
   const validation = useCheckoutValidation()
 
   // Estados locales para pagos divididos y seriales

@@ -36,17 +36,22 @@ export default function CustomerSearchSection({
     const [showResults, setShowResults] = useState(false)
     const searchRef = useRef<HTMLDivElement>(null)
 
+    const MIN_SEARCH_LENGTH = 2
+    const trimmedSearch = searchValue.trim()
+    const canSearch = trimmedSearch.length >= MIN_SEARCH_LENGTH
     const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
 
     // Filtrar clientes por búsqueda
-    const filteredCustomers = customers.filter(customer => {
-        const search = searchValue.toLowerCase()
-        return (
-            customer.name.toLowerCase().includes(search) ||
-            customer.document_id?.toLowerCase().includes(search) ||
-            customer.phone?.toLowerCase().includes(search)
-        )
-    }).slice(0, 10) // Limitar a 10 resultados
+    const filteredCustomers = canSearch
+        ? customers.filter(customer => {
+            const search = trimmedSearch.toLowerCase()
+            return (
+                customer.name.toLowerCase().includes(search) ||
+                customer.document_id?.toLowerCase().includes(search) ||
+                customer.phone?.toLowerCase().includes(search)
+            )
+        }).slice(0, 10) // Limitar a 10 resultados
+        : []
 
     // Cerrar resultados al hacer click fuera
     useEffect(() => {
@@ -109,7 +114,7 @@ export default function CustomerSearchSection({
                     </div>
 
                     {/* Resultados de búsqueda */}
-                    {showResults && searchValue && filteredCustomers.length > 0 && (
+                    {showResults && canSearch && filteredCustomers.length > 0 && (
                         <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-60 overflow-auto">
                             {filteredCustomers.map((customer) => (
                                 <button
@@ -140,7 +145,16 @@ export default function CustomerSearchSection({
                     )}
 
                     {/* Sin resultados */}
-                    {showResults && searchValue && filteredCustomers.length === 0 && (
+                    {showResults && trimmedSearch.length > 0 && !canSearch && (
+                        <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg p-3">
+                            <div className="text-sm text-muted-foreground text-center">
+                                Escribe al menos {MIN_SEARCH_LENGTH} caracteres
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Sin resultados */}
+                    {showResults && canSearch && filteredCustomers.length === 0 && (
                         <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg p-3">
                             <div className="text-sm text-muted-foreground text-center">
                                 No se encontraron clientes
