@@ -2,60 +2,431 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos para impresión de facturas fiscales */
+@media print {
+
+  /* Ocultar elementos no deseados */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ocultar header, nav, footer, sidebar del layout */
+  header,
+  nav,
+  aside,
+  footer {
+    display: none !important;
+  }
+
+  /* Ocultar el wrapper del layout y sidebar */
+  body>div>div>div:first-child,
+  body>div>div>aside {
+    display: none !important;
+  }
+
+  /* Ocultar el wrapper del layout */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Ocultar animaciones y transiciones */
+  [class*="motion"] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Estilos para el contenedor de factura */
+  .invoice-print-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: white !important;
+    position: relative !important;
+  }
+
+  /* Asegurar que las tablas se muestren correctamente */
+  .invoice-print-container table {
+    display: table !important;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .invoice-print-container tr {
+    display: table-row !important;
+  }
+
+  .invoice-print-container td,
+  .invoice-print-container th {
+    display: table-cell !important;
+  }
+
+  .print-break {
+    page-break-after: always;
+  }
+
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .bg-white {
+    background: white !important;
+  }
+
+  .print\\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\\:border-0 {
+    border: 0 !important;
+  }
+
+  /* Asegurar que las tablas se impriman correctamente */
+  .invoice-print-container table {
+    page-break-inside: avoid;
+  }
+
+  /* Evitar cortes de página en elementos importantes */
+  .invoice-print-container>* {
+    page-break-inside: avoid;
+  }
+
+  /* Asegurar que el QR se imprima correctamente */
+  .invoice-print-container img {
+    max-width: 100%;
+    height: auto;
+    display: block !important;
+  }
+
+  /* Asegurar que los textos se impriman en negro */
+  .invoice-print-container {
+    color: black !important;
+  }
+
+  .invoice-print-container * {
+    color: black !important;
+  }
+}
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* ✨ Premium Indigo Theme - Light Mode */
+
+    /* Backgrounds - Subtle Off-White/Gray instead of harsh white */
+    --background: 220 14% 96%;
+    --foreground: 224 71% 4%;
+
+    /* Cards - White with shadow depth */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 224 71% 4%;
+
+    /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
+    --popover-foreground: 224 71% 4%;
+
+    /* Primary - Vibrant Indigo */
+    /* Primary - User Requested Blue (rgb(12, 129, 207)) */
+    --primary: 204 89% 43%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
+
+    /* Secondary - Soft Blue/Gray */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 224 71% 4%;
+
+    /* Muted */
+    --muted: 210 20% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+
+    /* Accent - Light Blue Wash */
+    --accent: 204 90% 97%;
+    --accent-foreground: 204 89% 43%;
+
+    /* Destructive - Rose */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
+
+    /* Success - Emerald */
+    --success: 151 65% 52%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning - Amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+
+    /* Info - Sky */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 98%;
+
+    /* Borders & Inputs */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --ring: 204 89% 43%;
+    /* Blue Ring */
+
+    /* Radius - More modern rounded */
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* ✨ Premium Blue Theme - Dark Mode */
+
+    /* Backgrounds - Deep Slate */
+    --background: 222.2 47.4% 1.2%;
     --foreground: 210 40% 98%;
+
+    /* Cards */
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
+
+    /* Popover */
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
+
+    /* Primary */
+    --primary: 204 89% 55%;
     --primary-foreground: 222.2 47.4% 11.2%;
+
+    /* Secondary */
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
+
+    /* Muted */
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
+
+    /* Accent */
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
+
+    /* Destructive */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+
+    /* Success */
+    --success: 151 55% 42%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+
+    /* Info */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 98%;
+
+    /* Borders & Rings */
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --ring: 204 89% 55%;
+    /* Blue Ring */
+
+    /* Effects */
+    --glass-opacity: 0.6;
+    --glass-border: 255 255 255 / 0.1;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border/0;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* A11Y-04: Focus visible en todos los elementos interactivos */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Estilos específicos para botones */
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Estilos para inputs */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline-none ring-2 ring-ring;
+  }
+
+  /* Links */
+  a:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background rounded-sm;
+  }
+
+  /* A11Y-07: Soporte para reduced motion ya existente en Tailwind */
+  @media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .bg-gradient-radial {
+    background-image: radial-gradient(circle, var(--tw-gradient-stops));
+  }
+
+  /* A11Y-05: Screen reader only - ocultar visualmente pero mantener accesible */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* A11Y-03: Utilidades para asegurar contraste WCAG AA */
+  /* WCAG AA requiere mínimo 4.5:1 para texto normal y 3:1 para texto grande (18pt+) */
+
+  /* Texto sobre fondos de color - asegurar contraste suficiente */
+  .text-wcag-safe {
+    color: hsl(var(--foreground));
+  }
+
+  /* Badges y etiquetas con contraste mejorado */
+  .badge-wcag-safe {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--foreground));
+  }
+
+  /* Link con contraste mejorado cuando tiene hover */
+  .link-wcag-safe {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .link-wcag-safe:hover {
+    color: hsl(var(--primary));
+    opacity: 0.8;
+  }
+
+  /* Custom Scrollbar for Enterprise Pro feel */
+  @media (min-width: 768px) {
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: hsl(var(--muted-foreground) / 0.2);
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--muted-foreground) / 0.4);
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+  }
+
+  /* Glassmorphism & Premium Utilities */
+  .glass-panel {
+    @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+
+  .premium-shadow {
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60;
+  }
+
+  .active-nav-item {
+    @apply bg-primary text-primary-foreground;
+    box-shadow: 0 8px 25px -5px hsl(var(--primary) / 0.4);
+  }
+
+  /* ✨ New Premium Effects */
+  .card-hover-effect {
+    @apply transition-all duration-300 hover:shadow-[0_20px_40px_-15px_rgba(0, 0, 0, 0.3)] hover:-translate-y-1;
+  }
+
+  .border-beam-effect {
+    @apply relative after:absolute after:inset-0 after:rounded-[inherit] after:p-[1px] after:bg-gradient-to-r after:from-primary/50 after:to-transparent after:[mask:linear-gradient(#fff_0_0)_content-box, linear-gradient(#fff_0_0)] after:-z-10;
+  }
+
+  .subtle-grid {
+    background-image: radial-gradient(circle at 2px 2px, hsl(var(--muted-foreground) / 0.1) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  /* Magic UI - Shining Gradient */
+  @keyframes shining-gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .bg-shining-gradient {
+    background-size: 300% 300%;
+    animation: shining-gradient var(--duration) ease infinite;
+  }
+
+  /* Layout refinements */
+  .main-content-area {
+    @apply transition-all duration-300 ease-in-out;
   }
 }
 
 
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

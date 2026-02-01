@@ -1,6 +1,10 @@
 import { useState } from 'react'
-import { Trash2, AlertTriangle, CheckCircle2, X } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/components/ui/progress'
+import toast from '@/lib/toast'
 import { productsService, Product } from '@/services/products.service'
 import { useAuth } from '@/stores/auth.store'
 
@@ -16,18 +20,7 @@ interface CleanDuplicatesModalProps {
   onSuccess: () => void
 }
 
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  if (error instanceof Error) {
-    return error.message || fallback
-  }
-  return fallback
-}
-
-export default function CleanDuplicatesModal({
-  isOpen,
-  onClose,
-  onSuccess,
-}: CleanDuplicatesModalProps) {
+export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: CleanDuplicatesModalProps) {
   const { user } = useAuth()
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([])
   const [isScanning, setIsScanning] = useState(false)
@@ -36,38 +29,53 @@ export default function CleanDuplicatesModal({
   const [deactivatedCount, setDeactivatedCount] = useState(0)
 
   const handleScan = async () => {
+    if (!user?.store_id) return
+
     setIsScanning(true)
+    console.log('[Clean Duplicates] 🔍 Escaneando productos duplicados...')
 
     try {
-      const response = await productsService.search({ is_active: true, limit: 100000 }, user?.store_id)
+      // Cargar TODOS los productos activos
+      const response = await productsService.search({ is_active: true, limit: 100000 }, user.store_id)
       const allProducts = response.products
 
+      console.log('[Clean Duplicates] ✅ Productos cargados:', allProducts.length)
+
+      // Agrupar por nombre (case-insensitive)
       const productsByName = new Map<string, Product[]>()
 
-      allProducts.forEach((product) => {
+      allProducts.forEach(product => {
         const normalizedName = product.name.toLowerCase().trim()
         if (!productsByName.has(normalizedName)) {
           productsByName.set(normalizedName, [])
         }
-        productsByName.get(normalizedName)?.push(product)
+        productsByName.get(normalizedName)!.push(product)
       })
 
+      // Filtrar solo grupos con duplicados (más de 1 producto con mismo nombre)
       const duplicates: DuplicateGroup[] = []
 
       productsByName.forEach((products) => {
         if (products.length > 1) {
+          // Ordenar por fecha de creación (más reciente primero según ID)
           const sorted = [...products].sort((a, b) => b.id.localeCompare(a.id))
+
           duplicates.push({
-            name: products[0].name,
+            name: products[0].name, // Usar el nombre original del primer producto
             products: sorted,
-            duplicateCount: sorted.length - 1,
+            duplicateCount: sorted.length - 1 // -1 porque queremos mantener el más reciente
           })
         }
       })
 
+      // Ordenar grupos por cantidad de duplicados (descendente)
       duplicates.sort((a, b) => b.duplicateCount - a.duplicateCount)
 
       setDuplicateGroups(duplicates)
+
+      console.log('[Clean Duplicates] 📊 Grupos duplicados encontrados:', duplicates.length)
+      console.log('[Clean Duplicates] 🔢 Total de productos a desactivar:',
+        duplicates.reduce((sum, g) => sum + g.duplicateCount, 0))
 
       if (duplicates.length === 0) {
         toast.success('¡No se encontraron productos duplicados!', { duration: 4000 })
@@ -76,51 +84,68 @@ export default function CleanDuplicatesModal({
         setStep('preview')
         toast.success(`Encontrados ${duplicates.length} grupos con duplicados`, { duration: 5000 })
       }
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Error al escanear productos duplicados'))
+    } catch (error: any) {
+      console.error('[Clean Duplicates] ❌ Error escaneando duplicados:', error)
+      toast.error('Error al escanear productos duplicados')
     } finally {
       setIsScanning(false)
     }
   }
 
   const handleClean = async () => {
-    if (duplicateGroups.length === 0) return
+    if (!user?.store_id || duplicateGroups.length === 0) return
 
     setStep('cleaning')
     setCleanProgress(0)
     setDeactivatedCount(0)
 
+    console.log('[Clean Duplicates] 🧹 Iniciando limpieza de duplicados...')
+
     try {
       let totalDeactivated = 0
-      const totalToDeactivate = duplicateGroups.reduce((sum, group) => sum + group.duplicateCount, 0)
+      const totalToDeactivate = duplicateGroups.reduce((sum, g) => sum + g.duplicateCount, 0)
 
       for (let i = 0; i < duplicateGroups.length; i++) {
         const group = duplicateGroups[i]
 
+        // Desactivar todos excepto el primero (más reciente por ID)
         for (let j = 1; j < group.products.length; j++) {
           const product = group.products[j]
 
           try {
-            await productsService.deactivate(product.id, user?.store_id)
+            console.log(`[Clean Duplicates] 🗑️ Desactivando duplicado: ${product.name} (ID: ${product.id})`)
+
+            await productsService.deactivate(product.id, user.store_id)
+
             totalDeactivated++
             setDeactivatedCount(totalDeactivated)
 
+            // Actualizar progreso
             const progress = Math.round((totalDeactivated / totalToDeactivate) * 100)
             setCleanProgress(progress)
 
-            await new Promise((resolve) => setTimeout(resolve, 100))
-          } catch (error) {
-            console.warn('[Clean Duplicates] Error desactivando producto:', {
-              productId: product.id,
-              error,
-            })
+            // Pequeño delay para evitar rate limiting (100ms)
+            await new Promise(resolve => setTimeout(resolve, 100))
+          } catch (error: any) {
+            console.error(`[Clean Duplicates] ❌ Error desactivando ${product.name}:`, error)
+            // Continuar con los demás aunque uno falle
           }
+        }
+
+        // Log cada 10 grupos
+        if ((i + 1) % 10 === 0) {
+          console.log(`[Clean Duplicates] ✅ Progreso: ${i + 1}/${duplicateGroups.length} grupos procesados`)
         }
       }
 
+      console.log('[Clean Duplicates] ✅ Limpieza completada:', {
+        grupos_procesados: duplicateGroups.length,
+        productos_desactivados: totalDeactivated
+      })
+
       setStep('complete')
       toast.success(`✅ ${totalDeactivated} productos duplicados desactivados`, {
-        duration: 5000,
+        duration: 5000
       })
 
       setTimeout(() => {
@@ -128,7 +153,8 @@ export default function CleanDuplicatesModal({
         handleClose()
       }, 3000)
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Error al limpiar duplicados'))
+      console.error('[Clean Duplicates] ❌ Error crítico durante limpieza:', error)
+      toast.error('Error al limpiar duplicados')
       setStep('preview')
     }
   }
@@ -141,130 +167,148 @@ export default function CleanDuplicatesModal({
     onClose()
   }
 
-  if (!isOpen) return null
-
-  const totalDuplicates = duplicateGroups.reduce((sum, group) => sum + group.duplicateCount, 0)
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between rounded-t-lg">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Trash2 className="w-5 h-5" />
-              Limpiar Productos Duplicados
-            </h2>
-            <p className="text-sm text-gray-600">Encuentra y desactiva productos duplicados por nombre</p>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-            aria-label="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Trash2 className="w-5 h-5" />
+            Limpiar Productos Duplicados
+          </DialogTitle>
+          <DialogDescription>
+            Encuentra y desactiva productos duplicados por nombre
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <div className="space-y-4">
           {step === 'scan' && (
             <>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5" />
-                  <div className="text-sm text-yellow-700 space-y-2">
-                    <p className="font-semibold">Esta herramienta desactivará productos duplicados.</p>
-                    <p>
-                      Se mantendrá el producto más reciente (basado en el ID) y los duplicados se marcarán
-                      como inactivos. No se eliminan permanentemente.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Esta herramienta buscará productos con el mismo nombre y <strong>desactivará los duplicados</strong>,
+                  manteniendo solo el más reciente (basado en el ID del producto).
+                  <br /><br />
+                  Los productos desactivados NO se eliminarán permanentemente, solo se marcarán como inactivos.
+                </AlertDescription>
+              </Alert>
 
-              <button
+              <Button
                 onClick={handleScan}
                 disabled={isScanning}
-                className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 disabled:bg-gray-400"
+                className="w-full"
               >
-                {isScanning ? 'Escaneando...' : 'Escanear duplicados'}
-              </button>
+                {isScanning ? 'Escaneando...' : 'Escanear Productos Duplicados'}
+              </Button>
             </>
           )}
 
-          {step === 'preview' && (
+          {step === 'preview' && duplicateGroups.length > 0 && (
             <>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-sm text-gray-700">
-                  Se encontraron <strong>{duplicateGroups.length}</strong> grupos con duplicados.
-                  Se desactivarán <strong>{totalDuplicates}</strong> productos.
-                </p>
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>¡ATENCIÓN!</strong> Se encontraron <strong>{duplicateGroups.length}</strong> grupos con duplicados.
+                  <br />
+                  Total de productos que se desactivarán: <strong>{duplicateGroups.reduce((sum, g) => sum + g.duplicateCount, 0)}</strong>
+                </AlertDescription>
+              </Alert>
+
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 font-semibold text-sm">
+                  Vista previa de duplicados (primeros 50 grupos)
+                </div>
+                <div className="max-h-[400px] overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Producto</th>
+                        <th className="px-4 py-2 text-center">Duplicados</th>
+                        <th className="px-4 py-2 text-left">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {duplicateGroups.slice(0, 50).map((group, idx) => (
+                        <tr key={idx} className="border-t hover:bg-muted/50">
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{group.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              ID más reciente: {group.products[0].id.slice(0, 8)}...
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
+                              {group.duplicateCount} {group.duplicateCount === 1 ? 'duplicado' : 'duplicados'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                            Mantener 1, desactivar {group.duplicateCount}
+                          </td>
+                        </tr>
+                      ))}
+                      {duplicateGroups.length > 50 && (
+                        <tr className="border-t bg-muted/30">
+                          <td colSpan={3} className="px-4 py-3 text-center text-muted-foreground">
+                            ... y {duplicateGroups.length - 50} grupos más
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  Grupos duplicados (top 10)
-                </div>
-                <div className="divide-y divide-gray-200">
-                  {duplicateGroups.slice(0, 10).map((group) => (
-                    <div key={group.name} className="px-4 py-3 text-sm">
-                      <p className="font-semibold text-gray-900">{group.name}</p>
-                      <p className="text-gray-600">
-                        {group.duplicateCount} duplicados (total {group.products.length})
-                      </p>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleClean}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  Desactivar {duplicateGroups.reduce((sum, g) => sum + g.duplicateCount, 0)} Duplicados
+                </Button>
               </div>
             </>
           )}
 
           {step === 'cleaning' && (
             <>
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-2">Desactivando duplicados...</p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${cleanProgress}%` }}
-                  />
+              <div className="text-center py-8 space-y-4">
+                <Trash2 className="w-12 h-12 mx-auto text-destructive animate-pulse" />
+                <div>
+                  <p className="font-medium">Desactivando productos duplicados...</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {deactivatedCount} de {duplicateGroups.reduce((sum, g) => sum + g.duplicateCount, 0)} desactivados
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {cleanProgress}% completado ({deactivatedCount} desactivados)
+                <Progress value={cleanProgress} className="w-full" />
+                <p className="text-xs text-muted-foreground">
+                  No cierres esta ventana hasta que termine
                 </p>
               </div>
             </>
           )}
 
           {step === 'complete' && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-              <CheckCircle2 className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <p className="text-sm text-green-700 font-semibold">Limpieza completada</p>
+            <div className="text-center py-8 space-y-4">
+              <CheckCircle2 className="w-12 h-12 mx-auto text-green-600" />
+              <div>
+                <p className="font-medium text-lg">¡Limpieza completada!</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {deactivatedCount} productos duplicados fueron desactivados exitosamente
+                </p>
+              </div>
             </div>
           )}
         </div>
-
-        <div className="flex-shrink-0 border-t border-gray-200 px-4 py-3 bg-white rounded-b-lg">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={step === 'cleaning'}
-              className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              {step === 'complete' ? 'Cerrar' : 'Cancelar'}
-            </button>
-            {step === 'preview' && (
-              <button
-                type="button"
-                onClick={handleClean}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg font-semibold text-sm hover:bg-orange-700"
-              >
-                Limpiar duplicados
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

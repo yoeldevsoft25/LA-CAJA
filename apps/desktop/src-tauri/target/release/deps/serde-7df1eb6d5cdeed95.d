@@ -1,0 +1,14 @@
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/deps/serde-7df1eb6d5cdeed95.d: /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/build/serde-8a42fd6431d24783/out/private.rs
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/deps/libserde-7df1eb6d5cdeed95.rlib: /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/build/serde-8a42fd6431d24783/out/private.rs
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/deps/libserde-7df1eb6d5cdeed95.rmeta: /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/build/serde-8a42fd6431d24783/out/private.rs
+
+/Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/Users/yoeldev/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/build/serde-8a42fd6431d24783/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src-tauri/target/release/build/serde-8a42fd6431d24783/out

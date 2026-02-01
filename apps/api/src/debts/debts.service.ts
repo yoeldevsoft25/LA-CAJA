@@ -756,6 +756,9 @@ export class DebtsService {
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
 
+    const distribution =
+      dto.distribution === 'PROPORTIONAL' ? 'PROPORTIONAL' : 'SEQUENTIAL';
+
     // Procesar pagos en una transacción
     const payments: DebtPayment[] = [];
     const updatedDebts: Debt[] = [];
@@ -763,76 +766,166 @@ export class DebtsService {
     await this.dataSource.transaction(async (manager) => {
       const paymentRepository = manager.getRepository(DebtPayment);
 
-      let remainingToPayUsd =
-        Math.round(paymentUsd * 100) / 100;
+      const debtBalances = sortedDebts
+        .map((debt) => {
+          const totalPaidUsd = (debt.payments || []).reduce(
+            (sum, p) => sum + Number(p.amount_usd),
+            0,
+          );
+          const totalPaidBs = (debt.payments || []).reduce(
+            (sum, p) => sum + Number(p.amount_bs),
+            0,
+          );
+          const remainingUsd = Number(debt.amount_usd) - totalPaidUsd;
+          const remainingBs = Number(debt.amount_bs) - totalPaidBs;
+          return {
+            debt,
+            remainingUsd,
+            remainingBs,
+          };
+        })
+        .filter((entry) => entry.remainingUsd > tolerance);
 
-      for (const debt of sortedDebts) {
-        const totalPaidUsd = (debt.payments || []).reduce(
-          (sum, p) => sum + Number(p.amount_usd),
-          0,
+      const useProportional =
+        isSelective &&
+        distribution === 'PROPORTIONAL' &&
+        paymentUsd < totalRemainingUsd - tolerance;
+
+      if (useProportional) {
+        const paymentCents = Math.round(paymentUsd * 100);
+        const totalRemainingCents = Math.round(totalRemainingUsd * 100);
+        const allocations = debtBalances.map((entry) =>
+          Math.floor((paymentCents * Math.round(entry.remainingUsd * 100)) / totalRemainingCents),
         );
-        const totalPaidBs = (debt.payments || []).reduce(
-          (sum, p) => sum + Number(p.amount_bs),
-          0,
-        );
-        const remainingUsd = Number(debt.amount_usd) - totalPaidUsd;
-        const remainingBs = Number(debt.amount_bs) - totalPaidBs;
-        if (remainingUsd <= 0 || remainingToPayUsd <= tolerance) {
-          continue;
+
+        let allocated = allocations.reduce((sum, v) => sum + v, 0);
+        let remainder = paymentCents - allocated;
+        let guard = 0;
+        while (remainder > 0 && guard < 1000) {
+          let progressed = false;
+          for (let i = 0; i < debtBalances.length && remainder > 0; i += 1) {
+            const capacity =
+              Math.round(debtBalances[i].remainingUsd * 100) - allocations[i];
+            if (capacity > 0) {
+              allocations[i] += 1;
+              remainder -= 1;
+              progressed = true;
+            }
+          }
+          if (!progressed) break;
+          guard += 1;
         }
 
-        const payUsd = Math.min(remainingUsd, remainingToPayUsd);
-        const isFullForDebt = payUsd >= remainingUsd - tolerance;
-        const payBs = !isSelective && isFullForDebt
-          ? Math.round(remainingBs * 100) / 100
-          : Math.round(payUsd * exchangeRate * 100) / 100;
+        for (let i = 0; i < debtBalances.length; i += 1) {
+          const entry = debtBalances[i];
+          const allocCents = allocations[i];
+          if (allocCents <= 0) continue;
 
-        // Crear pago para esta deuda
-        const paymentId = randomUUID();
-        const paidAt = new Date();
+          const payUsd = Math.round(allocCents) / 100;
+          const isFullForDebt = payUsd >= entry.remainingUsd - tolerance;
+          const payBs = isFullForDebt
+            ? Math.round(entry.remainingBs * 100) / 100
+            : Math.round(payUsd * exchangeRate * 100) / 100;
 
-        await manager.query(
-          `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [
-            paymentId,
-            storeId,
-            debt.id,
-            paidAt,
-            payBs,
-            payUsd,
-            dto.method,
-            dto.note || (isSelective ? 'Pago de deudas seleccionadas' : 'Pago completo de todas las deudas'),
-          ],
-        );
+          const paymentId = randomUUID();
+          const paidAt = new Date();
 
-        // Actualizar estado de la deuda
-        const willBePaid = payUsd >= remainingUsd - tolerance;
-        const newStatus = willBePaid ? DebtStatus.PAID : DebtStatus.PARTIAL;
-        await manager
-          .createQueryBuilder()
-          .update(Debt)
-          .set({ status: newStatus })
-          .where('id = :debtId', { debtId: debt.id })
-          .execute();
+          await manager.query(
+            `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              paymentId,
+              storeId,
+              entry.debt.id,
+              paidAt,
+              payBs,
+              payUsd,
+              dto.method,
+              dto.note || 'Pago de deudas seleccionadas (proporcional)',
+            ],
+          );
 
-        // Recargar deuda y pago
-        const updatedDebt = await manager.findOne(Debt, {
-          where: { id: debt.id },
-          relations: ['payments'],
-        });
+          const willBePaid = isFullForDebt;
+          const newStatus = willBePaid ? DebtStatus.PAID : DebtStatus.PARTIAL;
+          await manager
+            .createQueryBuilder()
+            .update(Debt)
+            .set({ status: newStatus })
+            .where('id = :debtId', { debtId: entry.debt.id })
+            .execute();
 
-        const payment = await paymentRepository.findOne({
-          where: { id: paymentId },
-        });
+          const updatedDebt = await manager.findOne(Debt, {
+            where: { id: entry.debt.id },
+            relations: ['payments'],
+          });
 
-        if (updatedDebt && payment) {
-          updatedDebts.push(updatedDebt);
-          payments.push(payment);
+          const payment = await paymentRepository.findOne({
+            where: { id: paymentId },
+          });
+
+          if (updatedDebt && payment) {
+            updatedDebts.push(updatedDebt);
+            payments.push(payment);
+          }
         }
+      } else {
+        let remainingToPayUsd = Math.round(paymentUsd * 100) / 100;
 
-        remainingToPayUsd =
-          Math.round((remainingToPayUsd - payUsd) * 100) / 100;
+        for (const entry of debtBalances) {
+          if (remainingToPayUsd <= tolerance) break;
+
+          const payUsd = Math.min(entry.remainingUsd, remainingToPayUsd);
+          if (payUsd <= 0) continue;
+
+          const isFullForDebt = payUsd >= entry.remainingUsd - tolerance;
+          const payBs = isFullForDebt
+            ? Math.round(entry.remainingBs * 100) / 100
+            : Math.round(payUsd * exchangeRate * 100) / 100;
+
+          const paymentId = randomUUID();
+          const paidAt = new Date();
+
+          await manager.query(
+            `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              paymentId,
+              storeId,
+              entry.debt.id,
+              paidAt,
+              payBs,
+              payUsd,
+              dto.method,
+              dto.note || (isSelective ? 'Pago de deudas seleccionadas' : 'Pago completo de todas las deudas'),
+            ],
+          );
+
+          const willBePaid = isFullForDebt;
+          const newStatus = willBePaid ? DebtStatus.PAID : DebtStatus.PARTIAL;
+          await manager
+            .createQueryBuilder()
+            .update(Debt)
+            .set({ status: newStatus })
+            .where('id = :debtId', { debtId: entry.debt.id })
+            .execute();
+
+          const updatedDebt = await manager.findOne(Debt, {
+            where: { id: entry.debt.id },
+            relations: ['payments'],
+          });
+
+          const payment = await paymentRepository.findOne({
+            where: { id: paymentId },
+          });
+
+          if (updatedDebt && payment) {
+            updatedDebts.push(updatedDebt);
+            payments.push(payment);
+          }
+
+          remainingToPayUsd =
+            Math.round((remainingToPayUsd - payUsd) * 100) / 100;
+        }
       }
 
       if (isSelective && requestedDebtIds && requestedDebtIds.length > 0) {

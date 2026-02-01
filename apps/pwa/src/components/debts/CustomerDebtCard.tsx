@@ -148,12 +148,105 @@ export default function CustomerDebtCard({
       ),
     [debtsArray]
   )
-  const hasPastDebt =
-    !!hasCutoff &&
-    sortedDebts.some((d) => new Date(d.created_at).getTime() <= cutoffDate!.getTime())
-  const hasCurrentDebt =
-    !!hasCutoff &&
-    sortedDebts.some((d) => new Date(d.created_at).getTime() > cutoffDate!.getTime())
+  const currentDebts = hasCutoff
+    ? sortedDebts.filter((d) => new Date(d.created_at).getTime() > cutoffDate!.getTime())
+    : sortedDebts
+  const pastDebts = hasCutoff
+    ? sortedDebts.filter((d) => new Date(d.created_at).getTime() <= cutoffDate!.getTime())
+    : []
+
+  const renderDebtRow = (debt: Debt, isPastSection: boolean) => {
+    const debtCalc = calculateDebtTotals(debt)
+    const status = statusConfig[debt.status] || statusConfig.open
+    const StatusIcon = status.icon
+
+    return (
+      <div key={debt.id} className="p-4 hover:bg-muted/50 transition-colors bg-background group/item">
+        <div className="flex items-start gap-3">
+          <Checkbox
+            checked={selectedDebtIds.has(debt.id)}
+            onCheckedChange={() => toggleSelectedDebt(debt.id)}
+            disabled={debt.status === 'paid'}
+            className="mt-1"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge
+                variant={status.badgeVariant}
+                className={status.badgeClass}
+              >
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {status.label}
+              </Badge>
+              {hasCutoff && isPastSection && (
+                <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                  Pasada
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground flex items-center">
+                <Clock className="w-3 h-3 mr-1" />
+                {format(new Date(debt.created_at), "dd MMM yyyy", { locale: es })}
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-4 mt-2">
+              <div>
+                <span className="text-xs text-muted-foreground block">Monto Original</span>
+                <span className="text-sm font-medium text-foreground">
+                  ${Number(debt.amount_usd).toFixed(2)}
+                </span>
+              </div>
+
+              {debt.status !== 'paid' && (
+                <div>
+                  <span className="text-xs text-muted-foreground block">Saldo</span>
+                  <span className="text-sm font-bold text-warning">
+                    ${debtCalc.remaining_usd.toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {debt.note && (
+              <p className="text-xs text-muted-foreground mt-2 italic border-l-2 pl-2 border-border">
+                "{debt.note}"
+              </p>
+            )}
+          </div>
+
+          {/* Acciones por deuda */}
+          <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewDebt(debt)
+              }}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              title="Ver detalle"
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+            {debt.status !== 'paid' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAddPayment(debt)
+                }}
+                className="h-8 w-8 text-success hover:bg-success/10"
+                title="Agregar abono"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // --- LOGICA DE CREDIT HEALTH ---
   const creditLimit = Number(customer.credit_limit) || 0
@@ -392,120 +485,33 @@ export default function CustomerDebtCard({
                   <p className="text-sm">Historial limpio. Cliente sin deudas.</p>
                 </div>
               ) : (
-                (() => {
-                  let dividerInserted = false
-                  const shouldInsertDivider = hasCutoff && hasPastDebt && hasCurrentDebt
-                  const rows: JSX.Element[] = []
+                <>
+                  <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-background/80 border-b border-border">
+                    Deudas actuales
+                  </div>
+                  {currentDebts.length === 0 ? (
+                    <div className="px-4 py-3 text-xs text-muted-foreground bg-background">
+                      Sin deudas actuales
+                    </div>
+                  ) : (
+                    currentDebts.map((debt) => renderDebtRow(debt, false))
+                  )}
 
-                  sortedDebts.forEach((debt) => {
-                    const debtCalc = calculateDebtTotals(debt)
-                    const status = statusConfig[debt.status] || statusConfig.open
-                    const StatusIcon = status.icon
-                    const isPast =
-                      hasCutoff && new Date(debt.created_at).getTime() <= cutoffDate!.getTime()
-
-                    if (shouldInsertDivider && isPast && !dividerInserted) {
-                      dividerInserted = true
-                      rows.push(
-                        <div
-                          key={`divider-${customer.id}`}
-                          className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-background/80 border-y border-border"
-                        >
-                          Deudas pasadas (corte aplicado)
-                        </div>
-                      )
-                    }
-
-                    rows.push(
-                      <div key={debt.id} className="p-4 hover:bg-muted/50 transition-colors bg-background group/item">
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={selectedDebtIds.has(debt.id)}
-                            onCheckedChange={() => toggleSelectedDebt(debt.id)}
-                            disabled={debt.status === 'paid'}
-                            className="mt-1"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge
-                                variant={status.badgeVariant}
-                                className={status.badgeClass}
-                              >
-                                <StatusIcon className="w-3 h-3 mr-1" />
-                                {status.label}
-                              </Badge>
-                              {shouldInsertDivider && isPast && (
-                                <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                                  Pasada
-                                </Badge>
-                              )}
-                              <span className="text-xs text-muted-foreground flex items-center">
-                                <Clock className="w-3 h-3 mr-1" />
-                                {format(new Date(debt.created_at), "dd MMM yyyy", { locale: es })}
-                              </span>
-                            </div>
-
-                            <div className="flex items-baseline gap-4 mt-2">
-                              <div>
-                                <span className="text-xs text-muted-foreground block">Monto Original</span>
-                                <span className="text-sm font-medium text-foreground">
-                                  ${Number(debt.amount_usd).toFixed(2)}
-                                </span>
-                              </div>
-
-                              {debt.status !== 'paid' && (
-                                <div>
-                                  <span className="text-xs text-muted-foreground block">Saldo</span>
-                                  <span className="text-sm font-bold text-warning">
-                                    ${debtCalc.remaining_usd.toFixed(2)}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {debt.note && (
-                              <p className="text-xs text-muted-foreground mt-2 italic border-l-2 pl-2 border-border">
-                                "{debt.note}"
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Acciones por deuda */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onViewDebt(debt)
-                              }}
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                              title="Ver detalle"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            {debt.status !== 'paid' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onAddPayment(debt)
-                                }}
-                                className="h-8 w-8 text-success hover:bg-success/10"
-                                title="Agregar abono"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+                  {hasCutoff && (
+                    <>
+                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-background/80 border-y border-border">
+                        Deudas pasadas (corte aplicado)
                       </div>
-                    )
-                  })
-
-                  return rows
-                })()
+                      {pastDebts.length === 0 ? (
+                        <div className="px-4 py-3 text-xs text-muted-foreground bg-background">
+                          Sin deudas pasadas
+                        </div>
+                      ) : (
+                        pastDebts.map((debt) => renderDebtRow(debt, true))
+                      )}
+                    </>
+                  )}
+                </>
               )}
             </div>
           </AccordionContent>

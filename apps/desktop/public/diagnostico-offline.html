@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnóstico Offline - LA CAJA</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .ok { background: #10b981; color: white; }
+    .error { background: #ef4444; color: white; }
+    .warning { background: #f59e0b; color: white; }
+    .info { background: #3b82f6; color: white; }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover { background: #2563eb; }
+    pre {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #1f2937;
+      color: #10b981;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Diagnóstico Offline - LA CAJA</h1>
+  
+  <div class="card">
+    <h2>Estado del Sistema</h2>
+    <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Acciones</h2>
+    <button onclick="verificarTodo()">Verificar Todo</button>
+    <button onclick="probarIndexedDB()">Probar IndexedDB</button>
+    <button onclick="verCache()">Ver Cache de Productos</button>
+    <button onclick="limpiarCache()">Limpiar Cache</button>
+    <button onclick="poblarCache()">Poblar Cache de Prueba</button>
+  </div>
+
+  <div class="card">
+    <h2>Log</h2>
+    <div id="log" class="log"></div>
+  </div>
+
+  <script type="module">
+    let logElement = document.getElementById('log');
+    
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const colors = {
+        info: '#3b82f6',
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b'
+      };
+      logElement.innerHTML += `<div style="color: ${colors[type] || colors.info}">[${timestamp}] ${message}</div>`;
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    async function verificarTodo() {
+      log('=== Iniciando verificación completa ===', 'info');
+      
+      // 1. Verificar IndexedDB
+      log('1. Verificando soporte de IndexedDB...', 'info');
+      if ('indexedDB' in window) {
+        log('✅ IndexedDB está disponible', 'success');
+      } else {
+        log('❌ IndexedDB NO está disponible en este navegador', 'error');
+        return;
+      }
+
+      // 2. Verificar Dexie
+      log('2. Verificando Dexie...', 'info');
+      try {
+        const { default: Dexie } = await import('https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.mjs');
+        log('✅ Dexie cargado correctamente', 'success');
+      } catch (e) {
+        log('❌ Error al cargar Dexie: ' + e.message, 'error');
+      }
+
+      // 3. Verificar base de datos
+      log('3. Verificando base de datos LaCajaDB...', 'info');
+      try {
+        const dbName = 'LaCajaDB';
+        const request = indexedDB.open(dbName);
+        
+        request.onsuccess = () => {
+          log('✅ Base de datos abierta correctamente', 'success');
+          const db = request.result;
+          log(`   Versión: ${db.version}`, 'info');
+          log(`   Object Stores: ${Array.from(db.objectStoreNames).join(', ')}`, 'info');
+          db.close();
+        };
+        
+        request.onerror = () => {
+          log('❌ Error al abrir base de datos: ' + request.error, 'error');
+        };
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+
+      // 4. Verificar cache de productos
+      log('4. Verificando cache de productos...', 'info');
+      try {
+        const dbName = 'LaCajaDB';
+        const request = indexedDB.open(dbName);
+        
+        request.onsuccess = () => {
+          const db = request.result;
+          if (db.objectStoreNames.contains('products')) {
+            const tx = db.transaction('products', 'readonly');
+            const store = tx.objectStore('products');
+            const countRequest = store.count();
+            
+            countRequest.onsuccess = () => {
+              log(`✅ Cache de productos: ${countRequest.result} productos almacenados`, 'success');
+              db.close();
+            };
+            
+            countRequest.onerror = () => {
+              log('⚠️ No se pudo contar productos en cache', 'warning');
+              db.close();
+            };
+          } else {
+            log('⚠️ No existe la tabla "products" en la base de datos', 'warning');
+            db.close();
+          }
+        };
+        
+        request.onerror = () => {
+          log('❌ Error al abrir base de datos para verificar cache', 'error');
+        };
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+
+      // 5. Verificar estado de red
+      log('5. Verificando estado de red...', 'info');
+      log(`   navigator.onLine: ${navigator.onLine ? '✅ Online' : '❌ Offline'}`, navigator.onLine ? 'success' : 'warning');
+      log(`   Connection API: ${navigator.connection ? 'Disponible' : 'No disponible'}`, 'info');
+
+      // 6. Verificar Service Worker
+      log('6. Verificando Service Worker...', 'info');
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        log(`   Service Workers registrados: ${registrations.length}`, registrations.length > 0 ? 'success' : 'warning');
+        registrations.forEach((reg, i) => {
+          log(`   SW ${i + 1}: ${reg.scope}`, 'info');
+        });
+      } else {
+        log('⚠️ Service Workers no están disponibles', 'warning');
+      }
+
+      log('=== Verificación completada ===', 'info');
+    }
+
+    async function probarIndexedDB() {
+      log('Probando escritura/lectura en IndexedDB...', 'info');
+      
+      try {
+        const dbName = 'TestDB';
+        const request = indexedDB.open(dbName, 1);
+        
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('test')) {
+            db.createObjectStore('test', { keyPath: 'id' });
+          }
+        };
+        
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction('test', 'readwrite');
+          const store = tx.objectStore('test');
+          
+          // Escribir
+          const writeRequest = store.put({ id: 1, data: 'test', timestamp: Date.now() });
+          writeRequest.onsuccess = () => {
+            log('✅ Escritura exitosa', 'success');
+            
+            // Leer
+            const readRequest = store.get(1);
+            readRequest.onsuccess = () => {
+              log('✅ Lectura exitosa: ' + JSON.stringify(readRequest.result), 'success');
+              db.close();
+              indexedDB.deleteDatabase(dbName);
+              log('✅ Base de datos de prueba eliminada', 'success');
+            };
+          };
+        };
+        
+        request.onerror = () => {
+          log('❌ Error: ' + request.error, 'error');
+        };
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    async function verCache() {
+      log('Consultando cache de productos...', 'info');
+      
+      try {
+        const dbName = 'LaCajaDB';
+        const request = indexedDB.open(dbName);
+        
+        request.onsuccess = () => {
+          const db = request.result;
+          if (db.objectStoreNames.contains('products')) {
+            const tx = db.transaction('products', 'readonly');
+            const store = tx.objectStore('products');
+            const getAllRequest = store.getAll();
+            
+            getAllRequest.onsuccess = () => {
+              const products = getAllRequest.result;
+              log(`✅ Encontrados ${products.length} productos en cache`, 'success');
+              
+              if (products.length > 0) {
+                log('Primeros 5 productos:', 'info');
+                products.slice(0, 5).forEach((p, i) => {
+                  log(`   ${i + 1}. ${p.name} (ID: ${p.id}, Store: ${p.store_id})`, 'info');
+                });
+              } else {
+                log('⚠️ El cache está vacío. Necesitas estar online y cargar productos primero.', 'warning');
+              }
+              
+              db.close();
+            };
+          } else {
+            log('⚠️ No existe la tabla "products"', 'warning');
+            db.close();
+          }
+        };
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    async function limpiarCache() {
+      if (!confirm('¿Estás seguro de limpiar todo el cache?')) return;
+      
+      log('Limpiando cache...', 'info');
+      
+      try {
+        const dbName = 'LaCajaDB';
+        const request = indexedDB.open(dbName);
+        
+        request.onsuccess = () => {
+          const db = request.result;
+          if (db.objectStoreNames.contains('products')) {
+            const tx = db.transaction('products', 'readwrite');
+            const store = tx.objectStore('products');
+            const clearRequest = store.clear();
+            
+            clearRequest.onsuccess = () => {
+              log('✅ Cache de productos limpiado', 'success');
+              db.close();
+            };
+          } else {
+            log('⚠️ No existe la tabla "products"', 'warning');
+            db.close();
+          }
+        };
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    async function poblarCache() {
+      log('Poblando cache con datos de prueba...', 'info');
+      
+      try {
+        const dbName = 'LaCajaDB';
+        const request = indexedDB.open(dbName, 3);
+        
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('products')) {
+            const store = db.createObjectStore('products', { keyPath: 'id' });
+            store.createIndex('store_id', 'store_id', { unique: false });
+            store.createIndex('name', 'name', { unique: false });
+          }
+        };
+        
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction('products', 'readwrite');
+          const store = tx.objectStore('products');
+          
+          const testProducts = [
+            { id: 'test-1', store_id: 'test-store', name: 'Producto Test 1', price_bs: 10, price_usd: 1, is_active: true, cached_at: Date.now(), updated_at: Date.now() },
+            { id: 'test-2', store_id: 'test-store', name: 'Producto Test 2', price_bs: 20, price_usd: 2, is_active: true, cached_at: Date.now(), updated_at: Date.now() },
+          ];
+          
+          const promises = testProducts.map(p => store.put(p));
+          Promise.all(promises).then(() => {
+            log('✅ Cache poblado con 2 productos de prueba', 'success');
+            db.close();
+          });
+        };
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    // Exponer funciones globalmente
+    window.verificarTodo = verificarTodo;
+    window.probarIndexedDB = probarIndexedDB;
+    window.verCache = verCache;
+    window.limpiarCache = limpiarCache;
+    window.poblarCache = poblarCache;
+
+    // Verificación automática al cargar
+    window.addEventListener('load', () => {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `
+        <p><span class="status ${'indexedDB' in window ? 'ok' : 'error'}">IndexedDB: ${'indexedDB' in window ? 'Disponible' : 'No disponible'}</span></p>
+        <p><span class="status ${navigator.onLine ? 'ok' : 'warning'}">Red: ${navigator.onLine ? 'Online' : 'Offline'}</span></p>
+        <p><span class="status ${'serviceWorker' in navigator ? 'ok' : 'warning'}">Service Worker: ${'serviceWorker' in navigator ? 'Disponible' : 'No disponible'}</span></p>
+      `;
+      verificarTodo();
+    });
+  </script>
+</body>
+</html>

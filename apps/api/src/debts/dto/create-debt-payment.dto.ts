@@ -51,4 +51,10 @@ export class CreateDebtPaymentDto {
   @ArrayMinSize(1, { message: 'debt_ids debe tener al menos un elemento' })
   @IsUUID('4', { each: true, message: 'debt_ids debe contener UUIDs válidos' })
   debt_ids?: string[];
+
+  @IsOptional()
+  @IsIn(['SEQUENTIAL', 'PROPORTIONAL'], {
+    message: 'distribution debe ser SEQUENTIAL o PROPORTIONAL',
+  })
+  distribution?: string;
 }

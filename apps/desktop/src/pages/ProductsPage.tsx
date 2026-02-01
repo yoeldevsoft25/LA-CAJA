@@ -1,19 +1,44 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Upload, AlertTriangle, ChevronLeft, ChevronRight, Layers, Boxes, Hash } from 'lucide-react'
-import { productsService, Product } from '@/services/products.service'
-import { inventoryService, StockStatus } from '@/services/inventory.service'
+import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList, Download, Copy, MoreHorizontal, AlertCircle } from 'lucide-react'
+import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
+import { productsCacheService } from '@/services/products-cache.service'
 import { warehousesService } from '@/services/warehouses.service'
-import toast from 'react-hot-toast'
 import { useAuth } from '@/stores/auth.store'
-import ProductFormModal from '@/components/products/ProductFormModal'
+import { useOnline } from '@/hooks/use-online'
+import toast from '@/lib/toast'
+// ⚡ OPTIMIZACIÓN: Lazy load del modal grande
+const ProductFormModal = lazy(() => import('@/components/products/ProductFormModal'))
 import ChangePriceModal from '@/components/products/ChangePriceModal'
-import BulkPriceChangeModal from '@/components/products/BulkPriceChangeModal'
-import ImportCSVModal from '@/components/products/ImportCSVModal'
-import CleanDuplicatesModal from '@/components/products/CleanDuplicatesModal'
-import ProductVariantsModal from '@/components/variants/ProductVariantsModal'
-import ProductLotsModal from '@/components/lots/ProductLotsModal'
-import ProductSerialsModal from '@/components/serials/ProductSerialsModal'
+// ⚡ OPTIMIZACIÓN: Lazy load de modales grandes
+const BulkPriceChangeModal = lazy(() => import('@/components/products/BulkPriceChangeModal'))
+const ProductVariantsModal = lazy(() => import('@/components/variants/ProductVariantsModal'))
+const ProductLotsModal = lazy(() => import('@/components/lots/ProductLotsModal'))
+const ProductSerialsModal = lazy(() => import('@/components/serials/ProductSerialsModal'))
+const ImportCSVModal = lazy(() => import('@/components/products/ImportCSVModal'))
+const CleanDuplicatesModal = lazy(() => import('@/components/products/CleanDuplicatesModal'))
+import ProductCard from '@/components/products/ProductCard'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { inventoryService, StockStatus } from '@/services/inventory.service'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
+import { PullToRefreshIndicator } from '@/components/ui/pull-to-refresh-indicator'
+import { useMobileDetection } from '@/hooks/use-mobile-detection'
+import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 
@@ -29,12 +54,40 @@ const formatKg = (value: number) => {
   return fixed.replace(/\.?0+$/, '')
 }
 
-const formatStockValue = (product: Product, item: StockStatus) => {
-  const isWeight = item.is_weight_product ?? Boolean(product.is_weight_product)
-  if (!isWeight) return `${item.current_stock ?? 0}`
-  const unit = (item.weight_unit || product.weight_unit || 'kg') as WeightUnit
-  const kgValue = (item.current_stock ?? 0) * WEIGHT_UNIT_TO_KG[unit]
+const formatStockValue = (product: Product, item?: StockStatus) => {
+  const isWeight =
+    item?.is_weight_product ?? product.is_weight_product ?? false
+  if (!isWeight) return `${item?.current_stock ?? 0}`
+  const unit = (item?.weight_unit || product.weight_unit || 'kg') as WeightUnit
+  const value = item?.current_stock ?? 0
+  const kgValue = value * WEIGHT_UNIT_TO_KG[unit]
   return `${formatKg(kgValue)} kg`
+}
+
+const getCategoryColor = (category: string): [string, string, string] => {
+  const colorPalette: Array<[string, string, string]> = [
+    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
+    ['bg-green-100', 'text-green-700', 'border-green-300'],
+    ['bg-purple-100', 'text-purple-700', 'border-purple-300'],
+    ['bg-orange-100', 'text-orange-700', 'border-orange-300'],
+    ['bg-pink-100', 'text-pink-700', 'border-pink-300'],
+    ['bg-cyan-100', 'text-cyan-700', 'border-cyan-300'],
+    ['bg-amber-100', 'text-amber-700', 'border-amber-300'],
+    ['bg-indigo-100', 'text-indigo-700', 'border-indigo-300'],
+    ['bg-teal-100', 'text-teal-700', 'border-teal-300'],
+    ['bg-rose-100', 'text-rose-700', 'border-rose-300'],
+    ['bg-violet-100', 'text-violet-700', 'border-violet-300'],
+    ['bg-emerald-100', 'text-emerald-700', 'border-emerald-300'],
+  ]
+
+  let hash = 0
+  for (let i = 0; i < category.length; i++) {
+    hash = ((hash << 5) - hash) + category.charCodeAt(i)
+    hash = hash & hash
+  }
+
+  const index = Math.abs(hash) % colorPalette.length
+  return colorPalette[index]
 }
 
 export default function ProductsPage() {
@@ -42,10 +95,13 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [publicOnly, setPublicOnly] = useState(false)
+  const [productTypeFilter, setProductTypeFilter] = useState<'all' | 'sale_item' | 'ingredient' | 'prepared'>('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(50)
+  const [pageSize] = useState(20)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [duplicatingProduct, setDuplicatingProduct] = useState<Product | null>(null)
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false)
   const [priceProduct, setPriceProduct] = useState<Product | null>(null)
   const [isBulkPriceModalOpen, setIsBulkPriceModalOpen] = useState(false)
@@ -55,57 +111,141 @@ export default function ProductsPage() {
   const [lotsProduct, setLotsProduct] = useState<Product | null>(null)
   const [serialsProduct, setSerialsProduct] = useState<Product | null>(null)
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all')
+  const [editingPriceProductId, setEditingPriceProductId] = useState<string | null>(null)
+  const [editingPriceValue, setEditingPriceValue] = useState<string>('')
+  const isMobile = useMobileDetection()
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() =>
+    window.innerWidth < 640 ? 'cards' : 'table'
+  )
   const queryClient = useQueryClient()
 
-  // Reset page cuando cambia búsqueda o filtros
+  useEffect(() => {
+    if (isMobile) {
+      setViewMode('cards')
+    }
+  }, [isMobile])
+
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, categoryFilter, statusFilter])
+  }, [searchQuery, categoryFilter, statusFilter, publicOnly, productTypeFilter])
 
-  const { data: stockStatus } = useQuery({
-    queryKey: ['inventory', 'status', warehouseFilter],
+  const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined)
+  const { isOnline } = useOnline()
+
+  const { data: lowStockCountData } = useQuery({
+    queryKey: ['inventory', 'low-stock-count', user?.store_id],
     queryFn: () =>
-      inventoryService.getStockStatus({
-        warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
+      inventoryService.getStockStatusPaged({
+        low_stock_only: true,
+        limit: 1,
+        offset: 0,
       }),
-    staleTime: 1000 * 60 * 5,
-  })
-
-  const stockByProduct = (stockStatus || []).reduce<Record<string, StockStatus>>((acc, item) => {
-    acc[item.product_id] = item
-    return acc
-  }, {})
-
-  const { data: warehouses = [] } = useQuery({
-    queryKey: ['warehouses'],
-    queryFn: () => warehousesService.getAll(),
-    staleTime: 1000 * 60 * 5,
+    enabled: !!user?.store_id,
+    staleTime: 1000 * 60 * 10,
   })
 
   const isActiveFilter =
     statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined
-
+  const isVisiblePublicFilter = publicOnly ? true : undefined
+  const productTypeValue = productTypeFilter === 'all' ? undefined : productTypeFilter
   const offset = (currentPage - 1) * pageSize
 
-  // Búsqueda de productos con paginación
+  // Stock status actual
+  const { data: stockStatusData } = useQuery({
+    queryKey: [
+      'inventory',
+      'status',
+      user?.store_id,
+      warehouseFilter,
+      searchQuery,
+      categoryFilter,
+      statusFilter,
+      currentPage,
+      pageSize,
+    ],
+    queryFn: () =>
+      inventoryService.getStockStatusPaged({
+        warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
+        search: searchQuery || undefined,
+        category: categoryFilter || undefined,
+        is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
+        limit: pageSize,
+        offset,
+      }),
+    enabled: !!user?.store_id && isOnline,
+    staleTime: 1000 * 60 * 5,
+    gcTime: Infinity,
+  })
+
+  const stockByProduct = (stockStatusData?.items || []).reduce<Record<string, StockStatus>>(
+    (acc, item) => {
+      acc[item.product_id] = item
+      return acc
+    },
+    {}
+  )
+
+  useEffect(() => {
+    if (user?.store_id) {
+      productsCacheService.getProductsFromCache(user.store_id, {
+        search: searchQuery || undefined,
+        category: categoryFilter || undefined,
+        is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
+        limit: pageSize,
+      }).then(cached => {
+        if (cached.length > 0) {
+          setInitialData({
+            products: cached,
+            total: cached.length,
+          })
+        }
+      }).catch(() => { })
+    }
+  }, [user?.store_id, searchQuery, categoryFilter, isActiveFilter, isVisiblePublicFilter, productTypeValue, pageSize])
+
   const { data: productsData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['products', 'list', user?.store_id, searchQuery, categoryFilter, statusFilter, currentPage, pageSize],
+    queryKey: ['products', 'list', searchQuery, categoryFilter, statusFilter, publicOnly, productTypeFilter, currentPage, pageSize, user?.store_id],
     queryFn: () =>
       productsService.search({
         q: searchQuery || undefined,
         category: categoryFilter || undefined,
         is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
         limit: pageSize,
         offset: offset,
       }, user?.store_id),
+    enabled: !!user?.store_id && isOnline,
     staleTime: 1000 * 60 * 5,
+    gcTime: Infinity,
+    retry: false,
+    initialData: !isOnline ? initialData : undefined,
+    placeholderData: !isOnline ? initialData : undefined,
+  })
+
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ['warehouses'],
+    queryFn: () => warehousesService.getAll(),
+    enabled: !!user?.store_id,
   })
 
   const products = productsData?.products || []
   const total = productsData?.total || 0
-  const totalPages = Math.ceil(total / pageSize)
+  const isOfflineEmpty = !isOnline && products.length === 0
+  const lowStockCount = lowStockCountData?.total || 0
 
-  // Mutación para desactivar producto
+  const pullToRefresh = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch()
+    },
+    enabled: true,
+    threshold: 80,
+  })
+
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => productsService.deactivate(id, user?.store_id),
     onSuccess: () => {
@@ -118,7 +258,6 @@ export default function ProductsPage() {
     },
   })
 
-  // Mutación para activar producto
   const activateMutation = useMutation({
     mutationFn: (id: string) => productsService.activate(id, user?.store_id),
     onSuccess: () => {
@@ -131,12 +270,48 @@ export default function ProductsPage() {
     },
   })
 
+  const inlinePriceMutation = useMutation({
+    mutationFn: ({ productId, priceUsd }: { productId: string; priceUsd: number }) =>
+      productsService.changePrice(productId, {
+        price_usd: priceUsd,
+        price_bs: 0,
+      }, user?.store_id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      toast.success('Precio actualizado exitosamente')
+      setEditingPriceProductId(null)
+      setEditingPriceValue('')
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Error al actualizar el precio'
+      toast.error(message)
+      setEditingPriceProductId(null)
+      setEditingPriceValue('')
+    },
+  })
+
   const handleEdit = (product: Product) => {
     setEditingProduct(product)
+    setDuplicatingProduct(null)
     setIsFormOpen(true)
   }
 
   const handleCreate = () => {
+    setEditingProduct(null)
+    setDuplicatingProduct(null)
+    setIsFormOpen(true)
+  }
+
+  const handleDuplicate = (product: Product) => {
+    const duplicated: Product = {
+      ...product,
+      id: '',
+      name: `${product.name} (Copia)`,
+      sku: '',
+      barcode: '',
+    }
+    setDuplicatingProduct(duplicated)
     setEditingProduct(null)
     setIsFormOpen(true)
   }
@@ -144,6 +319,7 @@ export default function ProductsPage() {
   const handleCloseForm = () => {
     setIsFormOpen(false)
     setEditingProduct(null)
+    setDuplicatingProduct(null)
   }
 
   const handleDeactivate = (product: Product) => {
@@ -163,6 +339,27 @@ export default function ProductsPage() {
     setIsPriceModalOpen(true)
   }
 
+  const handleStartInlinePriceEdit = (product: Product) => {
+    setEditingPriceProductId(product.id)
+    setEditingPriceValue(Number(product.price_usd).toFixed(2))
+  }
+
+  const handleSaveInlinePrice = (productId: string) => {
+    const parsed = parseFloat(editingPriceValue)
+    if (isNaN(parsed) || parsed < 0) {
+      toast.error('El precio debe ser un número válido mayor o igual a 0')
+      setEditingPriceProductId(null)
+      setEditingPriceValue('')
+      return
+    }
+    inlinePriceMutation.mutate({ productId, priceUsd: parsed })
+  }
+
+  const handleCancelInlinePriceEdit = () => {
+    setEditingPriceProductId(null)
+    setEditingPriceValue('')
+  }
+
   const handleManageVariants = (product: Product) => {
     setVariantsProduct(product)
   }
@@ -175,379 +372,720 @@ export default function ProductsPage() {
     setSerialsProduct(product)
   }
 
+  const handleExportProducts = async () => {
+    try {
+      toast.loading('Exportando productos...', { id: 'export-products' })
+      const firstPage = await productsService.search({
+        q: searchQuery || undefined,
+        category: categoryFilter || undefined,
+        is_active: isActiveFilter,
+        is_visible_public: isVisiblePublicFilter,
+        product_type: productTypeValue,
+        limit: 1,
+        offset: 0,
+      }, user?.store_id)
+
+      const totalProducts = firstPage.total || 0
+      if (totalProducts === 0) {
+        toast.error('No hay productos para exportar', { id: 'export-products' })
+        return
+      }
+
+      let allProducts: Product[] = []
+      if (totalProducts <= 5000) {
+        const allProductsData = await productsService.search({
+          q: searchQuery || undefined,
+          category: categoryFilter || undefined,
+          is_active: isActiveFilter,
+          is_visible_public: isVisiblePublicFilter,
+          product_type: productTypeValue,
+          limit: totalProducts + 100,
+          offset: 0,
+        }, user?.store_id)
+        allProducts = allProductsData.products || []
+      } else {
+        const batchSize = 1000
+        const batches = Math.ceil(totalProducts / batchSize)
+        for (let i = 0; i < batches; i++) {
+          const batchData = await productsService.search({
+            q: searchQuery || undefined,
+            category: categoryFilter || undefined,
+            is_active: isActiveFilter,
+            is_visible_public: isVisiblePublicFilter,
+            product_type: productTypeValue,
+            limit: batchSize,
+            offset: i * batchSize,
+          }, user?.store_id)
+          allProducts = [...allProducts, ...(batchData.products || [])]
+          toast.loading(`Exportando productos... ${Math.min((i + 1) * batchSize, totalProducts)}/${totalProducts}`, { id: 'export-products' })
+        }
+      }
+
+      if (allProducts.length === 0) {
+        toast.error('No se pudieron obtener los productos para exportar', { id: 'export-products' })
+        return
+      }
+
+      const stockStatusForExport = await inventoryService.getStockStatus({
+        warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
+      })
+      const stockByProductExport = (stockStatusForExport || []).reduce<Record<string, StockStatus>>((acc, item) => {
+        acc[item.product_id] = item
+        return acc
+      }, {})
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      const csvHeaders = 'nombre,categoria,sku,codigo_barras,precio_bs,precio_usd,costo_bs,costo_usd,stock_minimo'
+
+      const csvRows = allProducts.map((p) => {
+        const escapeCSVValue = (val: string | number): string => {
+          const str = String(val)
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`
+          }
+          return str
+        }
+
+        const nombre = escapeCSVValue(p.name || '')
+        const categoria = escapeCSVValue(p.category || '')
+        const sku = escapeCSVValue(p.sku || '')
+        const codigo_barras = escapeCSVValue(p.barcode || '')
+        const precio_bs = Number(p.price_bs || 0).toFixed(2)
+        const precio_usd = Number(p.price_usd || 0).toFixed(2)
+        const costo_bs = p.cost_bs ? Number(p.cost_bs).toFixed(2) : '0.00'
+        const costo_usd = p.cost_usd ? Number(p.cost_usd).toFixed(2) : '0.00'
+        const stock_minimo = String(stockByProductExport[p.id]?.low_stock_threshold ?? p.low_stock_threshold ?? 10)
+
+        return [nombre, categoria, sku, codigo_barras, precio_bs, precio_usd, costo_bs, costo_usd, stock_minimo].join(',')
+      })
+
+      const csvContent = [csvHeaders, ...csvRows].join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.setAttribute('href', url)
+      link.setAttribute('download', `Productos_${timestamp}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`${allProducts.length} productos exportados a Excel`, { id: 'export-products' })
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al exportar productos', { id: 'export-products' })
+    }
+  }
+
   return (
-    <div className="h-full max-w-7xl mx-auto">
+    <div className="h-full max-w-7xl mx-auto" data-pull-to-refresh>
+      <PullToRefreshIndicator
+        isPulling={pullToRefresh.isPulling}
+        isRefreshing={pullToRefresh.isRefreshing}
+        pullDistance={pullToRefresh.pullDistance}
+        threshold={80}
+      />
+
+      {/* KPI Cards: Minimalist Style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute right-0 top-0 h-32 w-32 bg-primary/5 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
+          <CardContent className="p-6 flex flex-col justify-center relative z-10">
+            <div className="flex items-center justify-between space-x-2">
+              <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Total Productos</span>
+              <div className="p-2.5 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors shadow-sm">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-black tracking-tighter text-foreground">{total}</span>
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Registrados</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute right-0 top-0 h-32 w-32 bg-orange-500/5 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
+          <CardContent className="p-6 flex flex-col justify-center relative z-10">
+            <div className="flex items-center justify-between space-x-2">
+              <span className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">Alertas de Stock</span>
+              <div className="p-2.5 bg-orange-500/10 rounded-xl group-hover:bg-orange-500/20 transition-colors shadow-sm">
+                <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-black tracking-tighter text-foreground">{lowStockCount}</span>
+              <span className={cn(
+                "text-xs font-bold px-2 py-0.5 rounded-lg uppercase tracking-widest",
+                lowStockCount > 0
+                  ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {lowStockCount > 0 ? 'Requieren Atención' : 'Todo en Orden'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Header */}
-      <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Productos</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">
-              {total} {total === 1 ? 'producto' : 'productos'} encontrados
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setIsImportCSVOpen(true)}
-              className="inline-flex items-center justify-center px-3 py-2 bg-gray-600 text-white rounded-lg font-semibold text-sm hover:bg-gray-700 active:bg-gray-800 transition-colors shadow-md touch-manipulation"
-            >
-              <Upload className="w-4 h-4 mr-1.5" />
-              Importar CSV
-            </button>
-            <button
-              onClick={() => setIsCleanDuplicatesOpen(true)}
-              className="inline-flex items-center justify-center px-3 py-2 bg-orange-600 text-white rounded-lg font-semibold text-sm hover:bg-orange-700 active:bg-orange-800 transition-colors shadow-md touch-manipulation"
-            >
-              <AlertTriangle className="w-4 h-4 mr-1.5" />
-              Limpiar Duplicados
-            </button>
-            <button
-              onClick={() => setIsBulkPriceModalOpen(true)}
-              className="inline-flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 active:bg-green-800 transition-colors shadow-md touch-manipulation"
-            >
-              <DollarSign className="w-4 h-4 mr-1.5" />
-              Cambio Masivo
-            </button>
-            <button
-              onClick={handleCreate}
-              className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-md touch-manipulation"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Nuevo Producto
-            </button>
-          </div>
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Gestión de Productos</h1>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Opciones Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-auto px-3 gap-2 bg-background/50 backdrop-blur-sm">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="hidden sm:inline">Opciones</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Acciones Masivas</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportProducts}>
+                <Download className="w-4 h-4 mr-2" /> Exportar Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsImportCSVOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" /> Importar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsCleanDuplicatesOpen(true)}>
+                <Trash2 className="w-4 h-4 mr-2" /> Limpiar Duplicados
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsBulkPriceModalOpen(true)}>
+                <DollarSign className="w-4 h-4 mr-2" /> Cambio Masivo Precios
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            onClick={handleCreate}
+            variant="default"
+            className="shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all font-semibold"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Nuevo Producto
+          </Button>
         </div>
       </div>
 
-      {/* Barra de búsqueda y filtros */}
-      <div className="mb-4 sm:mb-6 space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, SKU o código de barras..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 sm:py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base sm:text-lg"
-            autoFocus
-          />
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <label className="block text-xs text-gray-500 mb-1">Categoría</label>
-            <input
+      {/* Filtros Flotantes */}
+      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/60 backdrop-blur-xl sticky top-0 z-20 transition-all duration-300">
+        <CardContent className="p-3 sm:p-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-5 h-5 z-10" />
+            <Input
               type="text"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Todas las categorías"
+              placeholder="Buscar por nombre, SKU o código de barras..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 h-11 sm:h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm focus:ring-primary/20"
             />
           </div>
-          <div className="w-full sm:w-48">
-            <label className="block text-xs text-gray-500 mb-1">Estado</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">Todos</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-            </select>
-          </div>
-          {warehouses.length > 0 && (
-            <div className="w-full sm:w-56">
-              <label className="block text-xs text-gray-500 mb-1">Stock por bodega</label>
-              <select
-                value={warehouseFilter}
-                onChange={(e) => setWarehouseFilter(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Todas</option>
-                {warehouses
-                  .filter((warehouse) => warehouse.is_active)
-                  .map((warehouse) => (
-                    <option key={warehouse.id} value={warehouse.id}>
-                      {warehouse.name} {warehouse.is_default ? '(Por defecto)' : ''}
-                    </option>
-                  ))}
-              </select>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="w-full sm:max-w-xs">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Categoría</Label>
+              <Input
+                value={categoryFilter}
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                className="mt-1 border-muted/40 bg-white/60"
+                placeholder="Todas"
+              />
             </div>
-          )}
-        </div>
-      </div>
+            <div className="w-full sm:max-w-xs">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Estado</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as 'all' | 'active' | 'inactive')
+                }
+              >
+                <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Activos</SelectItem>
+                  <SelectItem value="inactive">Inactivos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:max-w-xs">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Tipo</Label>
+              <Select
+                value={productTypeFilter}
+                onValueChange={(value) =>
+                  setProductTypeFilter(value as 'all' | 'sale_item' | 'ingredient' | 'prepared')
+                }
+              >
+                <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="sale_item">Producto de venta</SelectItem>
+                  <SelectItem value="prepared">Plato elaborado</SelectItem>
+                  <SelectItem value="ingredient">Ingrediente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:max-w-xs">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Catálogo público</Label>
+              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-white/60 px-3 py-2">
+                <span className="text-sm text-muted-foreground">
+                  Solo visibles
+                </span>
+                <Switch
+                  checked={publicOnly}
+                  onCheckedChange={setPublicOnly}
+                />
+              </div>
+            </div>
+            {warehouses.length > 0 && (
+              <div className="w-full sm:max-w-sm">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Stock por bodega</Label>
+                <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+                  <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                    <SelectValue placeholder="Todas las bodegas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las bodegas</SelectItem>
+                    {warehouses.filter((w) => w.is_active).map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name} {w.is_default ? '(Por defecto)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="hidden sm:flex items-end flex-1 justify-end">
+              <Tabs
+                value={viewMode}
+                onValueChange={(v) => setViewMode(v as 'cards' | 'table')}
+                className="w-auto"
+              >
+                <TabsList className="h-10 bg-muted/40">
+                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <LayoutGrid className="w-4 h-4" />
+                    <span className="hidden sm:inline">Cards</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    <LayoutList className="w-4 h-4" />
+                    <span className="hidden sm:inline">Tabla</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Lista de productos */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        {isError ? (
-          <div className="p-8 text-center text-gray-500">
-            <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-red-400" />
-            <p className="text-lg font-medium mb-2">Error al cargar productos</p>
-            <button
-              onClick={() => refetch()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Reintentar
-            </button>
-          </div>
-        ) : isLoading ? (
-          <div className="p-8 text-center text-gray-500">
-            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300 animate-pulse" />
-            <p>Cargando productos...</p>
-          </div>
-        ) : products.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-lg font-medium mb-1">
-              {searchQuery ? 'No se encontraron productos' : 'No hay productos registrados'}
-            </p>
-            <p className="text-sm">
-              {searchQuery
-                ? 'Intenta con otro término de búsqueda'
-                : 'Haz clic en "Nuevo Producto" para comenzar'}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="divide-y divide-gray-200 overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+      <Card className="border-none premium-shadow overflow-hidden bg-background/50 backdrop-blur-sm ring-1 ring-border/50">
+        <CardContent className="p-0">
+          {isError ? (
+            <div className="p-12 text-center">
+              <div className="flex flex-col items-center justify-center">
+                <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-destructive" />
+                <p className="text-muted-foreground">Error al cargar productos</p>
+                <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+                  Reintentar
+                </Button>
+              </div>
+            </div>
+          ) : isLoading ? (
+            <div className="p-12 text-center">
+              <div className="flex flex-col items-center justify-center">
+                <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30 animate-bounce" />
+                <p className="text-muted-foreground">Cargando productos...</p>
+              </div>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="p-16 text-center">
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+                  <Package className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-1">
+                  {isOfflineEmpty ? 'Sin conexión' : searchQuery ? 'No encontrado' : 'Inventario Vacío'}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-6">
+                  {isOfflineEmpty ? 'Conéctate para ver tus productos.' : searchQuery ? 'Intenta con otro término.' : 'Crea tu primer producto ahora.'}
+                </p>
+                {!searchQuery && !isOfflineEmpty && (
+                  <Button onClick={handleCreate}>
+                    <Plus className="w-4 h-4 mr-2" /> Crear Producto
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : viewMode === 'cards' || isMobile ? (
+            <div className="p-4 bg-transparent">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    stock={stockByProduct[product.id]}
+                    onEdit={handleEdit}
+                    onDuplicate={handleDuplicate}
+                    onChangePrice={handleChangePrice}
+                    onManageVariants={handleManageVariants}
+                    onManageLots={handleManageLots}
+                    onManageSerials={handleManageSerials}
+                    onDeactivate={handleDeactivate}
+                    onActivate={handleActivate}
+                    isDeactivating={deactivateMutation.isPending}
+                    isActivating={activateMutation.isPending}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full sm:table-fixed">
+                <thead className="bg-muted/30">
+                  <tr className="border-b border-border/60">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[45%] sm:w-[40%] pl-6">
                       Producto
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
                       Categoría
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">
                       SKU
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-28 sm:w-32">
                       Precio
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
                       Stock
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider w-24">
                       Estado
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-40 pr-6">
                       Acciones
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {products.map((product) => (
-                    <tr
-                      key={product.id}
-                      className={`hover:bg-gray-50 transition-colors ${
-                        !product.is_active ? 'opacity-60' : ''
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm sm:text-base">{product.name}</p>
-                          {product.barcode && (
-                            <p className="text-xs text-gray-500 mt-0.5">Código: {product.barcode}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">
-                        {product.category || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
-                        {product.sku || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="text-sm sm:text-base">
-                          <p className="font-semibold text-gray-900">
-                            ${Number(product.price_usd).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-gray-500">Bs. {Number(product.price_bs).toFixed(2)}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center hidden sm:table-cell">
-                        {stockByProduct[product.id] ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="text-sm font-semibold">
-                              {formatStockValue(product, stockByProduct[product.id])}
-                            </span>
-                            {stockByProduct[product.id].is_low_stock && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-700">
-                                Bajo
-                              </span>
-                            )}
+                <tbody className="divide-y divide-border/40">
+                  {products.map((product) => {
+                    const initial = product.name.charAt(0).toUpperCase()
+                    const stockItem = stockByProduct[product.id]
+                    const isLowStock = stockItem?.is_low_stock
+
+                    return (
+                      <tr
+                        key={product.id}
+                        className={cn(
+                          "hover:bg-muted/40 transition-colors group",
+                          !product.is_active && 'opacity-60 bg-muted/20'
+                        )}
+                      >
+                        <td className="px-4 py-3 align-middle w-[45%] sm:w-[40%] pl-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-background shrink-0">
+                              {initial}
+                            </div>
+                            <div className="min-w-0 max-w-full">
+                              <p
+                                className="font-semibold text-foreground text-sm sm:text-base break-words leading-snug"
+                                title={product.name}
+                              >
+                                {product.name}
+                              </p>
+                              {product.barcode && (
+                                <p className="text-xs text-muted-foreground mt-0.5 font-mono bg-muted/50 inline-block px-1 rounded">
+                                  {product.barcode}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-xs text-gray-500">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {product.is_active ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Activo
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            Inactivo
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => handleManageVariants(product)}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors touch-manipulation"
-                            title="Variantes"
-                          >
-                            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleManageLots(product)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
-                            title="Lotes"
-                          >
-                            <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleManageSerials(product)}
-                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors touch-manipulation"
-                            title="Seriales"
-                          >
-                            <Hash className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleChangePrice(product)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors touch-manipulation"
-                            title="Cambiar Precio"
-                          >
-                            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(product)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
-                            title="Editar"
-                          >
-                            <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                          {product.is_active ? (
-                            <button
-                              onClick={() => handleDeactivate(product)}
-                              disabled={deactivateMutation.isPending}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
-                              title="Desactivar"
+                        </td>
+                        <td className="px-4 py-3 text-sm hidden sm:table-cell">
+                          {product.category ? (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                ...getCategoryColor(product.category),
+                                "border font-medium text-xs px-2 py-0.5 rounded-full"
+                              )}
                             >
-                              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </button>
+                              {product.category}
+                            </Badge>
                           ) : (
-                            <button
-                              onClick={() => handleActivate(product)}
-                              disabled={activateMutation.isPending}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
-                              title="Activar"
-                            >
-                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </button>
+                            <span className="text-muted-foreground">-</span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell font-mono">
+                          {product.sku || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {editingPriceProductId === product.id ? (
+                            <div className="flex items-center gap-2 justify-end">
+                              <div className="flex items-center gap-1 bg-white dark:bg-slate-800 rounded border p-1 shadow-sm">
+                                <span className="text-sm text-muted-foreground px-1">$</span>
+                                <Input
+                                  type="number"
+                                  inputMode="decimal"
+                                  step="0.01"
+                                  min={0}
+                                  value={editingPriceValue}
+                                  onChange={(e) => setEditingPriceValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveInlinePrice(product.id)
+                                    else if (e.key === 'Escape') handleCancelInlinePriceEdit()
+                                  }}
+                                  onBlur={() => handleSaveInlinePrice(product.id)}
+                                  className="h-7 w-20 text-sm text-right border-none focus-visible:ring-0 p-0"
+                                  autoFocus
+                                  disabled={inlinePriceMutation.isPending}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              className="group/price cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 transition-all text-right"
+                              onDoubleClick={() => handleStartInlinePriceEdit(product)}
+                              title="Doble clic para editar precio"
+                            >
+                              <p className="font-bold text-foreground tabular-nums">
+                                ${Number(product.price_usd).toFixed(2)}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground tabular-nums">Bs. {Number(product.price_bs).toFixed(2)}</p>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center hidden sm:table-cell">
+                          {stockItem ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={cn(
+                                "text-sm font-bold tabular-nums",
+                                isLowStock ? "text-orange-600" : "text-slate-700 dark:text-slate-300"
+                              )}>
+                                {formatStockValue(product, stockItem)}
+                              </span>
+                              {isLowStock && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
+                                  Bajo
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {product.is_active ? (
+                            <div className="w-2.5 h-2.5 rounded-full bg-green-500 mx-auto ring-4 ring-green-500/20" title="Activo" />
+                          ) : (
+                            <Badge variant="secondary" className="text-[10px]">Inactivo</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 pr-6">
+                          <div className="flex items-center justify-end space-x-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleManageVariants(product)}
+                              className="h-8 w-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full"
+                              title="Gestionar Variantes"
+                            >
+                              <Layers className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleChangePrice(product)}
+                              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-full"
+                              title="Cambiar Precio"
+                            >
+                              <DollarSign className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(product)}
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-full"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleDuplicate(product)}>
+                                  <Copy className="w-4 h-4 mr-2" /> Duplicar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleManageLots(product)}>
+                                  <Boxes className="w-4 h-4 mr-2" /> Lotes
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleManageSerials(product)}>
+                                  <Hash className="w-4 h-4 mr-2" /> Seriales
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {product.is_active ? (
+                                  <DropdownMenuItem onClick={() => handleDeactivate(product)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="w-4 h-4 mr-2" /> Desactivar
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onClick={() => handleActivate(product)} className="text-green-600 focus:text-green-600">
+                                    <CheckCircle className="w-4 h-4 mr-2" /> Activar
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+          )}
+        </CardContent>
+      </Card>
 
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  Mostrando {offset + 1} - {Math.min(offset + pageSize, total)} de {total}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <span className="text-sm font-medium">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      {/* Paginación */}
+      {products.length > 0 && total > pageSize && (
+        <div className="mt-4 flex items-center justify-between px-4">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {offset + 1} - {Math.min(offset + pageSize, total)} de {total} productos
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-2 px-3">
+              <span className="text-sm">
+                Página {currentPage} de {Math.ceil(total / pageSize)}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage >= Math.ceil(total / pageSize)}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
 
-      {/* Modal de formulario */}
-      <ProductFormModal
-        isOpen={isFormOpen}
-        onClose={handleCloseForm}
-        product={editingProduct}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['products'] })
-          handleCloseForm()
-        }}
-      />
+      {/* Modales */}
+      {isFormOpen && (
+        <Suspense fallback={<div className="fixed inset-0 bg-background/80 z-50 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+          <ProductFormModal
+            isOpen={isFormOpen}
+            onClose={handleCloseForm}
+            product={editingProduct}
+            templateProduct={duplicatingProduct}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['products'] })
+              queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+              queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
+              handleCloseForm()
+            }}
+          />
+        </Suspense>
+      )}
 
-      {/* Modal de cambio de precio */}
       <ChangePriceModal
         isOpen={isPriceModalOpen}
-        onClose={() => setIsPriceModalOpen(false)}
+        onClose={() => {
+          setIsPriceModalOpen(false)
+          setPriceProduct(null)
+        }}
         product={priceProduct}
-      />
-
-      {/* Modal de cambio masivo de precios */}
-      <BulkPriceChangeModal
-        isOpen={isBulkPriceModalOpen}
-        onClose={() => setIsBulkPriceModalOpen(false)}
-        products={products}
-      />
-
-      {/* Modal de importar CSV */}
-      <ImportCSVModal
-        isOpen={isImportCSVOpen}
-        onClose={() => setIsImportCSVOpen(false)}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['products'] })
+          queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+          setIsPriceModalOpen(false)
+          setPriceProduct(null)
         }}
       />
 
-      {/* Modal de limpiar duplicados */}
-      <CleanDuplicatesModal
-        isOpen={isCleanDuplicatesOpen}
-        onClose={() => setIsCleanDuplicatesOpen(false)}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['products'] })
-        }}
-      />
+      {isBulkPriceModalOpen && (
+        <Suspense fallback={<div className="fixed inset-0 bg-background/80 z-50 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
+          <BulkPriceChangeModal
+            isOpen={isBulkPriceModalOpen}
+            onClose={() => setIsBulkPriceModalOpen(false)}
+            products={products}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['products'] })
+              queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+            }}
+          />
+        </Suspense>
+      )}
 
-      <ProductVariantsModal
-        isOpen={Boolean(variantsProduct)}
-        onClose={() => setVariantsProduct(null)}
-        product={variantsProduct}
-      />
+      {variantsProduct && (
+        <Suspense fallback={null}>
+          <ProductVariantsModal
+            isOpen={!!variantsProduct}
+            onClose={() => setVariantsProduct(null)}
+            product={variantsProduct}
+          />
+        </Suspense>
+      )}
 
-      <ProductLotsModal
-        isOpen={Boolean(lotsProduct)}
-        onClose={() => setLotsProduct(null)}
-        product={lotsProduct}
-      />
+      {lotsProduct && (
+        <Suspense fallback={null}>
+          <ProductLotsModal
+            isOpen={!!lotsProduct}
+            onClose={() => setLotsProduct(null)}
+            product={lotsProduct}
+          />
+        </Suspense>
+      )}
 
-      <ProductSerialsModal
-        isOpen={Boolean(serialsProduct)}
-        onClose={() => setSerialsProduct(null)}
-        product={serialsProduct}
-      />
+      {serialsProduct && (
+        <Suspense fallback={null}>
+          <ProductSerialsModal
+            isOpen={!!serialsProduct}
+            onClose={() => setSerialsProduct(null)}
+            product={serialsProduct}
+          />
+        </Suspense>
+      )}
+
+      {isImportCSVOpen && (
+        <Suspense fallback={null}>
+          <ImportCSVModal
+            isOpen={isImportCSVOpen}
+            onClose={() => setIsImportCSVOpen(false)}
+            onSuccess={() => queryClient.invalidateQueries({ queryKey: ['products'] })}
+          />
+        </Suspense>
+      )}
+
+      {isCleanDuplicatesOpen && (
+        <Suspense fallback={null}>
+          <CleanDuplicatesModal
+            isOpen={isCleanDuplicatesOpen}
+            onClose={() => setIsCleanDuplicatesOpen(false)}
+            onSuccess={() => queryClient.invalidateQueries({ queryKey: ['products'] })}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

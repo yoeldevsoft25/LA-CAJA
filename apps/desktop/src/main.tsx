@@ -1,39 +1,55 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+import './styles/mobile-optimizations.css'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from '@/components/ui/sonner'
+import ErrorBoundary from './components/errors/ErrorBoundary'
+
+// En la versión desktop no usamos Service Workers de la misma forma que en PWA
+// pero mantenemos la estructura para facilitar la paridad de código
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutos
-      retry: 3,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 10,
+      retry: (failureCount, error: any) => {
+        if (error?.response?.status === 401 || error?.isAuthError) {
+          return false;
+        }
+        if (error?.isOffline || error?.code === 'ERR_INTERNET_DISCONNECTED') {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      refetchOnMount: false,
     },
     mutations: {
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        if (error?.response?.status === 401 || error?.isAuthError) {
+          return false;
+        }
+        if (error?.isOffline || error?.code === 'ERR_INTERNET_DISCONNECTED') {
+          return false;
+        }
+        return failureCount < 1;
+      },
     },
   },
-});
+})
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-        }}
-      />
+      <ErrorBoundary>
+        <App />
+        <Toaster />
+      </ErrorBoundary>
     </QueryClientProvider>
   </React.StrictMode>,
-);
-
-
+)

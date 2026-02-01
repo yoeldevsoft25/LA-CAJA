@@ -80,6 +80,7 @@ export interface CreateDebtPaymentDto {
   note?: string
   rollover_remaining?: boolean
   debt_ids?: string[]
+  distribution?: 'SEQUENTIAL' | 'PROPORTIONAL'
   // Meta data para offline
   store_id?: string
   user_id?: string

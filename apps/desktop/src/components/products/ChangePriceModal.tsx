@@ -1,17 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
+import { useAuth } from '@/stores/auth.store'
 import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface ChangePriceModalProps {
   isOpen: boolean
   onClose: () => void
   product: Product | null
+  onSuccess?: () => void
 }
 
 const priceSchema = z.object({
@@ -32,6 +39,7 @@ export default function ChangePriceModal({
   isOpen,
   onClose,
   product,
+  onSuccess,
 }: ChangePriceModalProps) {
   const queryClient = useQueryClient()
   const {
@@ -40,10 +48,10 @@ export default function ChangePriceModal({
     reset,
     control,
     setValue,
+    watch,
     formState: { errors },
-  } = useForm<PriceFormData>({
-    // @ts-ignore - zodResolver tiene problemas de tipos con Zod v4
-    resolver: zodResolver(priceSchema),
+  } = useForm({
+    resolver: zodResolver(priceSchema) as any,
     defaultValues: {
       price_bs: 0,
       price_usd: 0,
@@ -51,12 +59,13 @@ export default function ChangePriceModal({
     },
   })
 
-  // Obtener tasa BCV para cálculo automático
+  // Obtener tasa BCV para cálculo automático (usa cache del prefetch)
   const { data: bcvRateData } = useQuery({
-    queryKey: ['bcvRate'],
+    queryKey: ['exchange', 'bcv'],
     queryFn: () => exchangeService.getBCVRate(),
+    staleTime: 1000 * 60 * 60 * 2, // 2 horas
+    gcTime: Infinity, // Nunca eliminar
     enabled: isOpen,
-    staleTime: 1000 * 60 * 5, // 5 minutos
   })
 
   // Observar cambios en price_usd para calcular automáticamente price_bs
@@ -81,16 +90,21 @@ export default function ChangePriceModal({
     }
   }, [product, reset])
 
+  // Obtener storeId del usuario autenticado
+  const { user } = useAuth()
+
   const changePriceMutation = useMutation({
     mutationFn: (data: PriceFormData) =>
       productsService.changePrice(product!.id, {
         price_usd: data.price_usd,
-        price_bs: data.price_bs ?? 0, // Asegurar que siempre hay un valor
+        price_bs: data.price_bs ?? 0,
         rounding: data.rounding,
-      }),
+      }, user?.store_id),
     onSuccess: () => {
       toast.success('Precio actualizado exitosamente')
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      onSuccess?.()
       onClose()
     },
     onError: (error: any) => {
@@ -112,52 +126,57 @@ export default function ChangePriceModal({
   const isLoading = changePriceMutation.isPending
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-1 sm:p-4">
+      <Card className="max-w-md w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border">
         {/* Header */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between rounded-t-lg">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+        <CardHeader className="flex-shrink-0 border-b border-border px-3 sm:px-4 py-2 sm:py-3 flex flex-row items-center justify-between rounded-t-lg">
+          <CardTitle className="text-lg sm:text-xl">
             Cambiar Precio
-          </h2>
-          <button
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+            className="h-8 w-8"
             aria-label="Cerrar"
           >
             <X className="w-5 h-5" />
-          </button>
-        </div>
+          </Button>
+        </CardHeader>
 
         {/* Form */}
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit as any)}
           className="flex-1 flex flex-col min-h-0 overflow-hidden"
         >
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+          <CardContent className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overscroll-contain">
             {/* Información del producto */}
-            <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-              <p className="text-sm text-gray-600 mb-1">Producto:</p>
-              <p className="font-semibold text-gray-900">{product.name}</p>
-            </div>
+            <Card className="bg-muted/50 border border-border">
+              <CardContent className="p-3 sm:p-4">
+                <p className="text-sm text-muted-foreground mb-1">Producto:</p>
+                <p className="font-semibold text-foreground">{product.name}</p>
+              </CardContent>
+            </Card>
 
             {/* Precio USD */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Precio USD <span className="text-red-500">*</span>
-              </label>
-              <input
+              <Label htmlFor="price_usd" className="text-sm font-semibold">
+                Precio USD <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="price_usd"
                 type="number"
                 step="0.01"
                 {...register('price_usd', { valueAsNumber: true })}
-                className="w-full px-3 sm:px-4 py-2 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-2 text-base"
                 placeholder="0.00"
               />
               {errors.price_usd && (
-                <p className="mt-1 text-xs sm:text-sm text-red-600">
+                <p className="mt-1 text-xs sm:text-sm text-destructive">
                   {errors.price_usd.message}
                 </p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {bcvRateData?.available && bcvRateData.rate
                   ? `Se calcula automáticamente en Bs usando tasa BCV: ${bcvRateData.rate}`
                   : 'El precio en Bs se calculará automáticamente'}
@@ -166,20 +185,21 @@ export default function ChangePriceModal({
 
             {/* Precio Bs (Calculado automáticamente) */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Precio Bs <span className="text-red-500">*</span>
-                <span className="text-xs font-normal text-gray-500 ml-2">(Calculado automáticamente)</span>
-              </label>
-              <input
+              <Label htmlFor="price_bs" className="text-sm font-semibold">
+                Precio Bs <span className="text-destructive">*</span>
+                <span className="text-xs font-normal text-muted-foreground ml-2">(Calculado automáticamente)</span>
+              </Label>
+              <Input
+                id="price_bs"
                 type="number"
                 step="0.01"
                 {...register('price_bs', { valueAsNumber: true })}
-                className="w-full px-3 sm:px-4 py-2 text-base border-2 border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                className="mt-2 text-base bg-muted cursor-not-allowed"
                 placeholder="0.00"
                 readOnly
               />
               {errors.price_bs && (
-                <p className="mt-1 text-xs sm:text-sm text-red-600">
+                <p className="mt-1 text-xs sm:text-sm text-destructive">
                   {errors.price_bs.message}
                 </p>
               )}
@@ -187,46 +207,52 @@ export default function ChangePriceModal({
 
             {/* Redondeo */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <Label htmlFor="rounding" className="text-sm font-semibold">
                 Redondeo (opcional)
-              </label>
-              <select
-                {...register('rounding')}
-                className="w-full px-3 sm:px-4 py-2 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              </Label>
+              <Select
+                value={watch('rounding') || 'none'}
+                onValueChange={(value) => setValue('rounding', value as 'none' | '0.1' | '0.5' | '1')}
               >
-                <option value="none">Sin redondeo</option>
-                <option value="0.1">0.1</option>
-                <option value="0.5">0.5</option>
-                <option value="1">1</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
+                <SelectTrigger id="rounding" className="mt-2">
+                  <SelectValue placeholder="Selecciona redondeo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin redondeo</SelectItem>
+                  <SelectItem value="0.1">0.1</SelectItem>
+                  <SelectItem value="0.5">0.5</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">
                 Aplicar redondeo a los precios después del cambio
               </p>
             </div>
-          </div>
+          </CardContent>
 
           {/* Botones */}
-          <div className="flex-shrink-0 border-t border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-b-lg">
+          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-b-lg">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={onClose}
                 disabled={isLoading}
-                className="flex-1 px-4 py-2.5 sm:py-3 border-2 border-gray-300 rounded-lg font-semibold text-sm sm:text-base text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation"
+                className="flex-1"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1 px-4 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold text-sm sm:text-base hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors touch-manipulation"
+                className="flex-1"
               >
                 {isLoading ? 'Actualizando...' : 'Actualizar Precio'}
-              </button>
+              </Button>
             </div>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }

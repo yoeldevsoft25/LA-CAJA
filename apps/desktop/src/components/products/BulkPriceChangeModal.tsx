@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import toast from 'react-hot-toast'
+import toast from '@/lib/toast'
 import { productsService, Product } from '@/services/products.service'
 import { exchangeService } from '@/services/exchange.service'
 import { X, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface BulkPriceChangeModalProps {
   isOpen: boolean
   onClose: () => void
   products: Product[]
+  onSuccess?: () => void
 }
 
 export default function BulkPriceChangeModal({
   isOpen,
   onClose,
   products,
+  onSuccess,
 }: BulkPriceChangeModalProps) {
   const queryClient = useQueryClient()
   const [mode, setMode] = useState<'percentage' | 'bcv'>('percentage') // Modo: porcentaje o tasa BCV
@@ -53,6 +60,9 @@ export default function BulkPriceChangeModal({
     onSuccess: (data) => {
       toast.success(`Precios actualizados exitosamente: ${data.updated} productos`)
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
+      onSuccess?.()
       onClose()
       // Reset form
       setCategory('')
@@ -153,115 +163,119 @@ export default function BulkPriceChangeModal({
   const isLoading = bulkPriceChangeMutation.isPending
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-1 sm:p-4">
+      <Card className="max-w-md w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border">
         {/* Header */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between rounded-t-lg">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+        <CardHeader className="flex-shrink-0 border-b border-border px-3 sm:px-4 py-2 sm:py-3 flex flex-row items-center justify-between rounded-t-lg">
+          <CardTitle className="text-lg sm:text-xl">
             Cambio Masivo de Precios
-          </h2>
-          <button
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+            className="h-8 w-8"
             aria-label="Cerrar"
           >
             <X className="w-5 h-5" />
-          </button>
-        </div>
+          </Button>
+        </CardHeader>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+        <CardContent className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overscroll-contain">
           {/* Selector de modo */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <Label className="text-sm font-semibold mb-2">
               Tipo de Cambio
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
+            </Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <Button
                 type="button"
+                variant={mode === 'percentage' ? 'default' : 'outline'}
                 onClick={() => {
                   setMode('percentage')
                   setError('')
                 }}
-                className={`p-3 border-2 rounded-lg transition-all ${
-                  mode === 'percentage'
-                    ? 'border-blue-500 bg-blue-50 text-blue-900'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className="p-3"
               >
                 <p className="text-sm font-medium">Por Porcentaje</p>
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={mode === 'bcv' ? 'default' : 'outline'}
                 onClick={() => {
                   setMode('bcv')
                   setError('')
                 }}
-                className={`p-3 border-2 rounded-lg transition-all ${
-                  mode === 'bcv'
-                    ? 'border-blue-500 bg-blue-50 text-blue-900'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className="p-3"
               >
                 <p className="text-sm font-medium">Tasa BCV</p>
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Info según modo */}
           {mode === 'percentage' ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-              <p className="text-sm text-blue-900">
+            <Card className="bg-info/5 border border-info/50">
+              <CardContent className="p-3 sm:p-4">
+                <p className="text-sm text-foreground">
                 Aplica un cambio porcentual a todos los productos activos de una categoría.
                 Ejemplo: +10 para aumentar 10%, -5 para reducir 5%
               </p>
-            </div>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
-              <p className="text-sm text-green-900">
+            <Card className="bg-success/5 border border-success/50">
+              <CardContent className="p-3 sm:p-4">
+                <p className="text-sm text-foreground">
                 Actualiza los precios en Bs usando la tasa del Banco Central de Venezuela.
                 Los precios en USD se mantienen iguales, los precios en Bs se calculan como: USD × Tasa BCV
               </p>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Categoría */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Categoría <span className="text-red-500">*</span>
-            </label>
-            <select
+            <Label htmlFor="category" className="text-sm font-semibold">
+              Categoría <span className="text-destructive">*</span>
+            </Label>
+            <Select
               value={category}
-              onChange={(e) => {
-                setCategory(e.target.value)
+              onValueChange={(value) => {
+                setCategory(value)
                 setError('')
               }}
-              className="w-full px-3 sm:px-4 py-2 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">Selecciona una categoría</option>
-              <option value="TODAS">
+              <SelectTrigger id="category" className="mt-2">
+                <SelectValue placeholder="Selecciona una categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODAS">
                 Todas ({products.filter((p) => p.is_active).length} productos activos)
-              </option>
+                </SelectItem>
               {categories.map((cat) => {
                 const count = products.filter(
                   (p) => p.category === cat && p.is_active
                 ).length
                 return (
-                  <option key={cat} value={cat}>
+                    <SelectItem key={cat} value={cat}>
                     {cat} ({count} productos activos)
-                  </option>
+                    </SelectItem>
                 )
               })}
-            </select>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Porcentaje de cambio o Tasa BCV */}
           {mode === 'percentage' ? (
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Cambio Porcentual (%) <span className="text-red-500">*</span>
-              </label>
-              <input
+              <Label htmlFor="percentageChange" className="text-sm font-semibold">
+                Cambio Porcentual (%) <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="percentageChange"
                 type="number"
                 step="0.1"
                 value={percentageChange}
@@ -269,20 +283,21 @@ export default function BulkPriceChangeModal({
                   setPercentageChange(e.target.value)
                   setError('')
                 }}
-                className="w-full px-3 sm:px-4 py-2 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-2 text-base"
                 placeholder="Ej: 10 (aumentar 10%) o -5 (reducir 5%)"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Usa valores positivos para aumentar y negativos para reducir
               </p>
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tasa BCV (Bs/USD) <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
+              <Label htmlFor="bcvRate" className="text-sm font-semibold">
+                Tasa BCV (Bs/USD) <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative mt-2">
+                <Input
+                  id="bcvRate"
                   type="number"
                   step="0.01"
                   value={bcvRate}
@@ -290,23 +305,23 @@ export default function BulkPriceChangeModal({
                     setBcvRate(e.target.value)
                     setError('')
                   }}
-                  className="w-full px-3 sm:px-4 py-2 pr-10 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pr-10 text-base"
                   placeholder={isLoadingBCV ? 'Obteniendo...' : 'Ej: 36.50'}
                   disabled={isLoadingBCV}
                 />
                 {isLoadingBCV && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                    <RefreshCw className="w-4 h-4 text-primary animate-spin" />
                   </div>
                 )}
                 {!isLoadingBCV && bcvData?.available && bcvData.rate && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <span className="text-xs text-green-600 font-medium">✓ {bcvData.rate}</span>
+                    <span className="text-xs text-success font-medium">✓ {bcvData.rate}</span>
                   </div>
                 )}
               </div>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {isLoadingBCV
                     ? 'Obteniendo tasa del BCV desde DolarAPI...'
                     : bcvData?.available && bcvData.rate
@@ -314,15 +329,17 @@ export default function BulkPriceChangeModal({
                       : 'Ingrese la tasa o use el botón para obtenerla automáticamente'}
                 </p>
                 {!isLoadingBCV && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => refetchBCV()}
-                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 transition-colors"
+                    className="h-auto p-1 text-xs"
                     title="Obtener tasa automáticamente"
                   >
-                    <RefreshCw className="w-3 h-3" />
+                    <RefreshCw className="w-3 h-3 mr-1" />
                     Actualizar
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -330,21 +347,23 @@ export default function BulkPriceChangeModal({
 
           {/* Redondeo */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <Label htmlFor="rounding" className="text-sm font-semibold">
               Redondeo (opcional)
-            </label>
-            <select
+            </Label>
+            <Select
               value={rounding}
-              onChange={(e) =>
-                setRounding(e.target.value as 'none' | '0.1' | '0.5' | '1')
-              }
-              className="w-full px-3 sm:px-4 py-2 text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onValueChange={(value) => setRounding(value as 'none' | '0.1' | '0.5' | '1')}
             >
-              <option value="none">Sin redondeo</option>
-              <option value="0.1">0.1</option>
-              <option value="0.5">0.5</option>
-              <option value="1">1</option>
-            </select>
+              <SelectTrigger id="rounding" className="mt-2">
+                <SelectValue placeholder="Selecciona redondeo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin redondeo</SelectItem>
+                <SelectItem value="0.1">0.1</SelectItem>
+                <SelectItem value="0.5">0.5</SelectItem>
+                <SelectItem value="1">1</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Preview */}
@@ -353,11 +372,12 @@ export default function BulkPriceChangeModal({
               percentageChange &&
               !isNaN(parseFloat(percentageChange))) ||
               (mode === 'bcv' && bcvRate && !isNaN(parseFloat(bcvRate)) && parseFloat(bcvRate) > 0)) && (
-              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                <p className="text-sm font-semibold text-gray-900 mb-2">
+              <Card className="bg-muted/50 border border-border">
+                <CardContent className="p-3 sm:p-4">
+                  <p className="text-sm font-semibold text-foreground mb-2">
                   Vista previa:
                 </p>
-                <p className="text-sm text-gray-700">
+                  <p className="text-sm text-foreground">
                   Se actualizarán{' '}
                   <span className="font-semibold">
                     {
@@ -384,36 +404,40 @@ export default function BulkPriceChangeModal({
                       {' '}actualizando precios en Bs usando la tasa BCV:{' '}
                       <span className="font-semibold">{bcvRate}</span>
                       <br />
-                      <span className="text-xs text-gray-600 mt-1 block">
+                        <span className="text-xs text-muted-foreground mt-1 block">
                         Ejemplo: Producto con precio USD $1.00 → Nuevo precio Bs:{' '}
                         {(1 * parseFloat(bcvRate)).toFixed(2)}
                       </span>
                     </>
                   )}
                 </p>
-              </div>
+                </CardContent>
+              </Card>
             )}
 
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
+            <Card className="border border-destructive/50 bg-destructive/5">
+              <CardContent className="p-3">
+                <p className="text-sm text-destructive">{error}</p>
+              </CardContent>
+            </Card>
           )}
-        </div>
+        </CardContent>
 
         {/* Botones */}
-        <div className="flex-shrink-0 border-t border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-b-lg">
+        <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-b-lg">
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 sm:py-3 border-2 border-gray-300 rounded-lg font-semibold text-sm sm:text-base text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation"
+              className="flex-1"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={handleSubmit}
               disabled={
@@ -423,13 +447,13 @@ export default function BulkPriceChangeModal({
                 (mode === 'percentage' && !percentageChange) ||
                 (mode === 'bcv' && !bcvRate)
               }
-              className="flex-1 px-4 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold text-sm sm:text-base hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors touch-manipulation"
+              className="flex-1"
             >
               {isLoading ? 'Actualizando...' : 'Aplicar Cambio'}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

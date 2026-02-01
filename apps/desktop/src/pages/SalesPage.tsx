@@ -1,18 +1,51 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Search, FileText, Eye, Calendar, DollarSign } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X, Cloud, CloudOff, DollarSign as DollarSignIcon } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { salesService, Sale } from '@/services/sales.service'
 import { useAuth } from '@/stores/auth.store'
 import SaleDetailModal from '@/components/sales/SaleDetailModal'
-import { format } from 'date-fns'
-import toast from 'react-hot-toast'
+import { format, isSameDay } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { exportToCSV } from '@/utils/export-excel'
+import toast from '@/lib/toast'
+import DailySalesChart from '@/components/sales/DailySalesChart'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
+import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
+import { printService } from '@/services/print.service'
+import { SwipeableItem } from '@/components/ui/swipeable-item'
+import { useMobileDetection } from '@/hooks/use-mobile-detection'
+import { StaggerContainer, StaggerItem } from '@/components/ui/motion-wrapper'
 
 const paymentMethodLabels: Record<string, string> = {
   CASH_BS: 'Efectivo Bs',
   CASH_USD: 'Efectivo USD',
   PAGO_MOVIL: 'Pago Móvil',
-  TRANSFER: 'Transferencia',
-  OTHER: 'Otro',
+  TRANSFER: 'Tarjeta',
+  OTHER: 'Biopago',
   SPLIT: 'Mixto',
   FIAO: 'Fiado',
 }
@@ -23,32 +56,79 @@ const currencyLabels: Record<string, string> = {
   MIXED: 'Mixto',
 }
 
+// Componente helper para Date Picker
+function DatePicker({
+  date,
+  onDateChange,
+  label,
+}: {
+  date: Date | undefined
+  onDateChange: (date: Date | undefined) => void
+  label: string
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs sm:text-sm font-semibold">{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              'w-full justify-start text-left font-normal',
+              !date && 'text-muted-foreground'
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {date ? format(date, 'PPP', { locale: es }) : <span>Seleccionar fecha</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={onDateChange}
+            initialFocus
+            locale={es}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 export default function SalesPage() {
   const { user } = useAuth()
-  const [dateFrom, setDateFrom] = useState<string>('')
-  const [dateTo, setDateTo] = useState<string>('')
+  const queryClient = useQueryClient()
+  const isOwner = user?.role === 'owner'
+  const isMobile = useMobileDetection()
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date())
+  const [dateTo, setDateTo] = useState<Date | undefined>(new Date())
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const limit = 20
+  const limit = 10
 
-  // Calcular fechas por defecto (hoy)
-  const getDefaultDateFrom = () => {
-    return new Date().toISOString().split('T')[0]
-  }
+  // Filtros avanzados
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'voided'>('all')
+  const [debtFilter, setDebtFilter] = useState<'all' | 'with_debt' | 'without_debt' | 'paid'>('all')
+  const [minAmountUsd, setMinAmountUsd] = useState<string>('')
+  const [maxAmountUsd, setMaxAmountUsd] = useState<string>('')
+  const [customerSearch, setCustomerSearch] = useState<string>('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
-  const getDefaultDateTo = () => {
-    return new Date().toISOString().split('T')[0]
-  }
-
-  const effectiveDateFrom = dateFrom || getDefaultDateFrom()
-  const effectiveDateTo = dateTo || getDefaultDateTo()
+  // Convertir fechas a formato string para la API (usando zona horaria configurada)
+  const effectiveDateFrom = dateFrom ? formatDateInAppTimeZone(dateFrom) : formatDateInAppTimeZone()
+  const effectiveDateTo = dateTo ? formatDateInAppTimeZone(dateTo) : formatDateInAppTimeZone()
 
   // SIEMPRE usar solo el store_id del usuario - no permitir ver otras tiendas
   const effectiveStoreId = user?.store_id || ''
 
+  // Obtener datos del prefetch como placeholderData (últimas 50 ventas)
+  const prefetchedSales = queryClient.getQueryData<{ sales: Sale[]; total: number }>(['sales', 'list', effectiveStoreId, { limit: 10 }])
+
   // Obtener ventas
-  const { data: salesData, isLoading, error: salesError } = useQuery({
+  const { data: salesData, isLoading, isError, error, refetch } = useQuery<{ sales: Sale[]; total: number }>({
     queryKey: ['sales', 'list', effectiveDateFrom, effectiveDateTo, effectiveStoreId, currentPage],
     queryFn: () =>
       salesService.list({
@@ -58,30 +138,189 @@ export default function SalesPage() {
         limit,
         offset: (currentPage - 1) * limit,
       }),
+    placeholderData: currentPage === 1 && !effectiveDateFrom && !effectiveDateTo ? prefetchedSales : undefined, // Usar cache del prefetch si es la primera página sin filtros
+    staleTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: Infinity, // Nunca eliminar
+    refetchOnMount: false, // Usar cache si existe
   })
 
-  // Manejar errores manualmente
-  if (salesError && (salesError as any).response?.status === 401) {
-    toast.error('No tienes permisos para ver esta información')
-  }
+  useEffect(() => {
+    // Manejar errores de autorización
+    if (salesData === undefined && isLoading === false) {
+      // El error se maneja en el servicio, pero podemos mostrar un toast si es necesario
+    }
+  }, [salesData, isLoading]);
 
-  const sales = (salesData as any)?.sales || []
-  const total = (salesData as any)?.total || 0
+  const rawSales = salesData?.sales || []
+  const total = salesData?.total || 0
+
+  // Verificar si las fechas seleccionadas son del mismo día para mostrar gráfico
+  const isSameDaySelected = useMemo(() => {
+    if (!dateFrom || !dateTo) return false
+    return isSameDay(dateFrom, dateTo)
+  }, [dateFrom, dateTo])
+
+  // Obtener TODAS las ventas del día para el gráfico (sin paginación, solo si es el mismo día y es owner)
+  const { data: allDaySalesData, isLoading: isLoadingAllDaySales } = useQuery<{ sales: Sale[]; total: number }>({
+    queryKey: ['sales', 'list-all-day', effectiveDateFrom, effectiveDateTo, effectiveStoreId],
+    queryFn: () =>
+      salesService.list({
+        date_from: effectiveDateFrom,
+        date_to: effectiveDateTo,
+        limit: 10000, // Obtener todas las ventas del día
+        offset: 0,
+      }),
+    enabled: isOwner && isSameDaySelected && !!effectiveDateFrom && !!effectiveDateTo,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  })
+
+  // Filtrar ventas del día (aplicar mismos filtros que las ventas principales, pero sin anuladas para el gráfico)
+  const daySalesForChart = useMemo(() => {
+    if (!allDaySalesData?.sales) return []
+
+    return allDaySalesData.sales.filter((sale: Sale) => {
+      // No mostrar ventas anuladas en el gráfico
+      if (sale.voided_at) return false
+
+      // Aplicar filtros de método de pago
+      if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
+        return false
+      }
+
+      // Aplicar filtro de deuda
+      if (debtFilter === 'with_debt') {
+        if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'without_debt') {
+        if (sale.debt && (sale.debt.status === 'open' || sale.debt.status === 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'paid') {
+        if (!sale.debt || sale.debt.status !== 'paid') {
+          return false
+        }
+      }
+
+      // Aplicar filtro de rango de montos
+      const amountUsd = Number(sale.totals.total_usd)
+      if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
+        return false
+      }
+      if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+        return false
+      }
+
+      // Aplicar filtro de búsqueda de cliente
+      if (customerSearch.trim()) {
+        const searchLower = customerSearch.toLowerCase().trim()
+        const customerName = sale.customer?.name?.toLowerCase() || ''
+        const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
+        if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [allDaySalesData, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
+
+  // Aplicar filtros avanzados (filtrado en frontend)
+  const sales = rawSales.filter((sale: Sale) => {
+    // Filtro por método de pago
+    if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
+      return false
+    }
+
+    // Filtro por estado (anulada/no anulada)
+    if (statusFilter === 'voided' && !sale.voided_at) {
+      return false
+    }
+    if (statusFilter === 'completed' && sale.voided_at) {
+      return false
+    }
+
+    // Filtro por deuda
+    if (debtFilter === 'with_debt') {
+      if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
+        return false
+      }
+    } else if (debtFilter === 'without_debt') {
+      if (sale.debt && (sale.debt.status === 'open' || sale.debt.status === 'partial')) {
+        return false
+      }
+    } else if (debtFilter === 'paid') {
+      if (!sale.debt || sale.debt.status !== 'paid') {
+        return false
+      }
+    }
+
+    // Filtro por rango de montos (USD)
+    const amountUsd = Number(sale.totals.total_usd)
+    if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
+      return false
+    }
+    if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+      return false
+    }
+
+    // Filtro por búsqueda de cliente
+    if (customerSearch.trim()) {
+      const searchLower = customerSearch.toLowerCase().trim()
+      const customerName = sale.customer?.name?.toLowerCase() || ''
+      const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
+      if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
+        return false
+      }
+    }
+
+    return true
+  })
+
   const totalPages = Math.ceil(total / limit)
 
-  // Calcular totales
+  // Calcular totales (de las ventas filtradas)
   const totalSalesBs = sales.reduce(
-    (sum, sale) => sum + Number(sale.totals.total_bs),
+    (sum: number, sale: Sale) => sum + Number(sale.totals.total_bs),
     0
   )
   const totalSalesUsd = sales.reduce(
-    (sum, sale) => sum + Number(sale.totals.total_usd),
+    (sum: number, sale: Sale) => sum + Number(sale.totals.total_usd),
     0
   )
+
+  // Contar filtros activos
+  const activeFiltersCount = [
+    paymentMethodFilter !== 'all',
+    statusFilter !== 'all',
+    debtFilter !== 'all',
+    minAmountUsd !== '' || maxAmountUsd !== '',
+    customerSearch.trim() !== '',
+  ].filter(Boolean).length
+
+  const handleResetAdvancedFilters = () => {
+    setPaymentMethodFilter('all')
+    setStatusFilter('all')
+    setDebtFilter('all')
+    setMinAmountUsd('')
+    setMaxAmountUsd('')
+    setCustomerSearch('')
+  }
 
   const handleViewDetail = (sale: Sale) => {
     setSelectedSale(sale)
     setIsDetailModalOpen(true)
+  }
+
+  const handlePrint = (sale: Sale) => {
+    try {
+      printService.printSale(sale, {
+        storeName: 'SISTEMA POS',
+        cashierName: sale.sold_by_user?.full_name || undefined,
+      })
+    } catch (err) {
+      console.warn('[Sales] No se pudo imprimir el ticket:', err)
+    }
   }
 
   const handleCloseDetail = () => {
@@ -90,9 +329,93 @@ export default function SalesPage() {
   }
 
   const handleResetDates = () => {
-    setDateFrom('')
-    setDateTo('')
+    setDateFrom(new Date())
+    setDateTo(new Date())
     setCurrentPage(1)
+  }
+
+  // Exportar ventas a Excel
+  const handleExportExcel = () => {
+    if (sales.length === 0) {
+      toast.error('No hay ventas para exportar')
+      return
+    }
+
+    const timestamp = format(new Date(), 'yyyy-MM-dd')
+    const dateRangeStr = dateFrom && dateTo
+      ? `${format(dateFrom, 'dd-MM-yyyy')}_a_${format(dateTo, 'dd-MM-yyyy')}`
+      : timestamp
+
+    exportToCSV(
+      sales,
+      [
+        {
+          header: 'Fecha',
+          accessor: (sale) => format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm'),
+        },
+        {
+          header: 'Factura',
+          accessor: (sale) => sale.invoice_full_number || '-',
+        },
+        {
+          header: 'Productos',
+          accessor: (sale) => sale.items.length,
+          format: 'number',
+        },
+        {
+          header: 'Total Bs',
+          accessor: (sale) => Number(sale.totals.total_bs),
+          format: 'currency',
+        },
+        {
+          header: 'Total USD',
+          accessor: (sale) => Number(sale.totals.total_usd),
+          format: 'currency',
+        },
+        {
+          header: 'Moneda',
+          accessor: (sale) => currencyLabels[sale.currency] || sale.currency,
+        },
+        {
+          header: 'Método de Pago',
+          accessor: (sale) => paymentMethodLabels[sale.payment.method] || sale.payment.method,
+        },
+        {
+          header: 'Responsable',
+          accessor: (sale) => sale.sold_by_user?.full_name || 'N/A',
+        },
+        {
+          header: 'Cliente',
+          accessor: (sale) => sale.customer?.name || '-',
+        },
+        {
+          header: 'Cédula Cliente',
+          accessor: (sale) => sale.customer?.document_id || '-',
+        },
+        {
+          header: 'Estado',
+          accessor: (sale) => sale.voided_at ? 'Anulada' : 'Completada',
+        },
+        {
+          header: 'Estado Deuda',
+          accessor: (sale) => {
+            if (sale.payment.method !== 'FIAO') return '-'
+            if (!sale.debt) return 'Sin deuda'
+            switch (sale.debt.status) {
+              case 'paid': return 'Pagado'
+              case 'partial': return 'Parcial'
+              case 'open': return 'Pendiente'
+              default: return sale.debt.status
+            }
+          },
+        },
+      ],
+      {
+        filename: `Ventas_${dateRangeStr}`,
+      }
+    )
+
+    toast.success(`${sales.length} ventas exportadas a Excel`)
   }
 
   return (
@@ -101,303 +424,653 @@ export default function SalesPage() {
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Historial de Ventas</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">
-              {total} venta{total !== 1 ? 's' : ''} en el período seleccionado
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Historial de Ventas</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              {activeFiltersCount > 0 ? (
+                <>
+                  {sales.length} de {rawSales.length} ventas mostradas
+                  {' · '}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetAdvancedFilters}
+                    className="h-auto p-0 text-xs underline"
+                  >
+                    Limpiar filtros
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {total} venta{total !== 1 ? 's' : ''} en el período seleccionado
+                </>
+              )}
+              {' · '}
+              Zona horaria: {getTimeZoneLabel()}
             </p>
           </div>
           {total > 0 && (
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-right">
-              <div>
-                <p className="text-xs text-gray-500">Total en Bs</p>
-                <p className="text-lg font-bold text-gray-900">
-                  {totalSalesBs.toFixed(2)} Bs
-                </p>
+            <div className="flex flex-col sm:flex-row items-end gap-2 sm:gap-4">
+              <div className="flex gap-4 text-right">
+                <div>
+                  <p className="text-xs text-muted-foreground">Total en Bs</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {totalSalesBs.toFixed(2)} Bs
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total en USD</p>
+                  <p className="text-lg font-bold text-foreground">
+                    ${totalSalesUsd.toFixed(2)}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">Total en USD</p>
-                <p className="text-lg font-bold text-gray-900">
-                  ${totalSalesUsd.toFixed(2)}
-                </p>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportExcel}
+                className="min-h-[44px] min-w-[44px]"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exportar Excel
+              </Button>
             </div>
           )}
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="mb-4 sm:mb-6 bg-white p-3 sm:p-4 rounded-lg border border-gray-200 shadow-sm">
-        <div className="space-y-3 sm:space-y-4">
-          {/* Filtros de fecha */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
-              Desde
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => {
-                  setDateFrom(e.target.value)
+      <Card className="mb-4 sm:mb-6 border border-border">
+        <CardContent className="p-3 sm:p-4">
+          <div className="space-y-3 sm:space-y-4">
+            {/* Filtros de fecha */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <DatePicker
+                date={dateFrom}
+                onDateChange={(date) => {
+                  setDateFrom(date)
                   setCurrentPage(1)
                 }}
-                className="w-full pl-8 pr-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                label="Desde"
               />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1">
-              Hasta
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => {
-                  setDateTo(e.target.value)
+              <DatePicker
+                date={dateTo}
+                onDateChange={(date) => {
+                  setDateTo(date)
                   setCurrentPage(1)
                 }}
-                className="w-full pl-8 pr-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                label="Hasta"
               />
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  onClick={handleResetDates}
+                  className="w-full"
+                >
+                  Reiniciar
+                </Button>
+              </div>
+            </div>
+
+            {/* Filtros avanzados */}
+            <div className="border-t border-border pt-3 sm:pt-4 mt-3 sm:mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="gap-2"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filtros Avanzados
+                  {activeFiltersCount > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+                {activeFiltersCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetAdvancedFilters}
+                    className="text-xs gap-1"
+                  >
+                    <X className="w-3 h-3" />
+                    Limpiar
+                  </Button>
+                )}
+              </div>
+
+              {showAdvancedFilters && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-2">
+                  {/* Método de pago */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Método de Pago
+                    </Label>
+                    <Select
+                      value={paymentMethodFilter}
+                      onValueChange={setPaymentMethodFilter}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Estado */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Estado
+                    </Label>
+                    <Select
+                      value={statusFilter}
+                      onValueChange={(v) => setStatusFilter(v as 'all' | 'completed' | 'voided')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        <SelectItem value="completed">Completadas</SelectItem>
+                        <SelectItem value="voided">Anuladas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Estado de deuda */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Estado de Deuda
+                    </Label>
+                    <Select
+                      value={debtFilter}
+                      onValueChange={(v) => setDebtFilter(v as 'all' | 'with_debt' | 'without_debt' | 'paid')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        <SelectItem value="with_debt">Con deuda pendiente</SelectItem>
+                        <SelectItem value="without_debt">Sin deuda</SelectItem>
+                        <SelectItem value="paid">Deuda pagada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Monto mínimo USD */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Monto Mínimo (USD)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={minAmountUsd}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinAmountUsd(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* Monto máximo USD */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Monto Máximo (USD)
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={maxAmountUsd}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxAmountUsd(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* Búsqueda por cliente */}
+                  <div>
+                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                      Buscar Cliente
+                    </Label>
+                    <Input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
+                      placeholder="Nombre o cédula/RIF"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex items-end">
-            <button
-              onClick={handleResetDates}
-              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-50 transition-colors touch-manipulation"
-            >
-              Reiniciar
-            </button>
-          </div>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Gráfico de ventas del día (solo si es el mismo día y es owner) */}
+      {isOwner && isSameDaySelected && dateFrom && (
+        <DailySalesChart
+          sales={daySalesForChart}
+          date={dateFrom}
+          isLoading={isLoadingAllDaySales}
+        />
+      )}
 
       {/* Lista de ventas */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        {isLoading ? (
-          <div className="p-8 text-center text-gray-500">
-            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300 animate-pulse" />
-            <p>Cargando ventas...</p>
-          </div>
-        ) : sales.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-lg font-medium mb-1">No hay ventas</p>
-            <p className="text-sm">No se encontraron ventas en el período seleccionado</p>
-          </div>
-        ) : (
-          <>
-            <div className="divide-y divide-gray-200 overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Fecha/Hora
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
-                      Productos
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Total
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
-                      Moneda
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-                      Método de Pago
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
-                      Responsable
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
-                      Cliente
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Acción
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {sales.map((sale) => {
+      <Card className="border border-border">
+        <CardContent className="p-0">
+          {isError ? (
+            <div className="p-8 text-center">
+              <div className="flex flex-col items-center justify-center py-8">
+                <AlertCircle className="w-12 h-12 mx-auto mb-3 text-destructive" />
+                <p className="text-muted-foreground">No se pudieron cargar las ventas</p>
+                {error instanceof Error && (
+                  <p className="mt-1 text-xs text-muted-foreground">{error.message}</p>
+                )}
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => refetch()}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </div>
+          ) : isLoading ? (
+            <div className="p-8 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+          ) : rawSales.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm sm:text-base font-medium text-foreground mb-1">
+                  No hay ventas
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  No se encontraron ventas en el período seleccionado
+                </p>
+              </div>
+            </div>
+          ) : sales.length === 0 && activeFiltersCount > 0 ? (
+            <div className="p-8 text-center">
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Filter className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm sm:text-base font-medium text-foreground mb-1">
+                  No hay ventas que coincidan con los filtros
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+                  Se encontraron {rawSales.length} ventas, pero ninguna coincide con los filtros aplicados
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetAdvancedFilters}
+                >
+                  Limpiar filtros
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Vista de cards swipeables para móvil */}
+              {isMobile ? (
+                <StaggerContainer className="space-y-2">
+                  {sales.map((sale: Sale) => {
                     const itemCount = sale.items.length
-                    const totalItems = sale.items.reduce((sum, item) => sum + item.qty, 0)
-                    
-                    // Determinar estado de deuda para FIAO
                     const isFIAO = sale.payment.method === 'FIAO'
                     const debtStatus = sale.debt?.status || null
                     const isPending = isFIAO && (debtStatus === 'open' || debtStatus === 'partial')
                     const isPaid = isFIAO && debtStatus === 'paid'
-                    
-                    // Clases de color para la fila según estado de deuda
-                    let rowBgClass = 'hover:bg-gray-50'
-                    if (isPending) {
-                      rowBgClass = 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-500'
-                    } else if (isPaid) {
-                      rowBgClass = 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500'
-                    }
+                    const isVoided = Boolean(sale.voided_at)
 
                     return (
-                      <tr
-                        key={sale.id}
-                        className={`transition-colors ${rowBgClass}`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="text-sm sm:text-base">
-                            <p className="font-semibold text-gray-900">
-                              {format(new Date(sale.sold_at), 'dd/MM/yyyy')}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {format(new Date(sale.sold_at), 'HH:mm')}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden sm:table-cell">
-                          <div className="text-sm">
-                            <p className="font-medium text-gray-900">
-                              {itemCount} producto{itemCount !== 1 ? 's' : ''}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {totalItems} unidad{totalItems !== 1 ? 'es' : ''} total
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="text-sm sm:text-base">
-                            <p className="font-bold text-gray-900">
-                              {Number(sale.totals.total_bs).toFixed(2)} Bs
-                            </p>
-                            <p className="text-xs sm:text-sm text-gray-600">
-                              ${Number(sale.totals.total_usd).toFixed(2)} USD
-                            </p>
-                            {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
-                              <p className="text-xs font-medium text-orange-600 mt-1">
-                                Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs / ${Number(sale.debt.remaining_usd || 0).toFixed(2)} USD
-                              </p>
+                      <StaggerItem key={sale.id}>
+                        <SwipeableItem
+                          onSwipeRight={() => handleViewDetail(sale)}
+                          // ... rest of swipeable item props
+                          rightAction={
+                            <div className="flex items-center gap-3 px-4">
+                              <Eye className="w-5 h-5" />
+                              <span className="font-medium">Ver Detalles</span>
+                            </div>
+                          }
+                          onSwipeLeft={() => handlePrint(sale)}
+                          leftAction={
+                            <div className="flex items-center gap-3 px-4">
+                              <Printer className="w-5 h-5" />
+                              <span className="font-medium">Imprimir</span>
+                            </div>
+                          }
+                          enabled={isMobile}
+                          threshold={80}
+                        >
+                          <Card
+                            className={cn(
+                              'transition-colors cursor-pointer',
+                              isVoided && 'bg-muted/40 border-muted',
+                              isPending && 'bg-orange-50 border-orange-200 border-l-4',
+                              isPaid && 'bg-green-50 border-green-200 border-l-4'
                             )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center hidden md:table-cell">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {currencyLabels[sale.currency] || sale.currency}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center hidden lg:table-cell">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="text-xs sm:text-sm text-gray-700">
-                              {paymentMethodLabels[sale.payment.method] || sale.payment.method}
-                            </span>
-                            {isFIAO && sale.debt && (
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  debtStatus === 'paid'
-                                    ? 'bg-green-100 text-green-800'
-                                    : debtStatus === 'partial'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-orange-100 text-orange-800'
-                                }`}
-                              >
-                                {debtStatus === 'paid'
-                                  ? 'Pagado'
-                                  : debtStatus === 'partial'
-                                  ? 'Parcial'
-                                  : 'Pendiente'}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <div className="text-sm">
-                            {sale.sold_by_user ? (
-                              <>
-                                <p className="font-medium text-gray-900">
-                                  {sale.sold_by_user.full_name || 'Sin nombre'}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {sale.sold_by_user_id?.substring(0, 8)}...
-                                </p>
-                              </>
-                            ) : (
-                              <p className="text-gray-400 text-xs">N/A</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 hidden xl:table-cell">
-                          <div className="text-sm">
-                            {sale.customer ? (
-                              <>
-                                <p className="font-medium text-gray-900">{sale.customer.name}</p>
-                                {sale.customer.document_id && (
-                                  <p className="text-xs text-gray-500">
-                                    CI: {sale.customer.document_id}
+                            onClick={() => handleViewDetail(sale)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <p className="font-semibold text-foreground text-sm">
+                                      {format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}
+                                    </p>
+                                    {isVoided && (
+                                      <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
+                                        Anulada
+                                      </Badge>
+                                    )}
+                                    {sale.id.startsWith('temp-') || sale.sync_status === 'pending' ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <CloudOff className="w-3.5 h-3.5 text-amber-500" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>Pendiente de sincronizar</TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : (
+                                      <Cloud className="w-3.5 h-3.5 text-success/60" />
+                                    )}
+                                  </div>
+
+                                  {sale.invoice_full_number && (
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <Receipt className="w-3.5 h-3.5 text-primary" />
+                                      <p className="font-mono font-semibold text-primary text-xs">
+                                        {sale.invoice_full_number}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  <p className="text-xs text-muted-foreground mb-2">
+                                    {itemCount} producto{itemCount !== 1 ? 's' : ''}
                                   </p>
+
+                                  {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
+                                    <p className="text-xs font-medium text-orange-600 mt-1">
+                                      Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="text-right flex-shrink-0">
+                                  <p className="font-bold text-foreground text-base">
+                                    {Number(sale.totals.total_bs).toFixed(2)} Bs
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    ${Number(sale.totals.total_usd).toFixed(2)} USD
+                                  </p>
+                                  <Badge variant="secondary" className="mt-1 text-[10px]">
+                                    {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Desliza para acciones →</span>
+                                {sale.customer && (
+                                  <span className="truncate max-w-[150px]">{sale.customer.name}</span>
                                 )}
-                              </>
-                            ) : sale.payment.method === 'FIAO' ? (
-                              <p className="text-orange-600 text-xs font-medium">Fiado</p>
-                            ) : (
-                              <p className="text-gray-400 text-xs">-</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => handleViewDetail(sale)}
-                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
-                            >
-                              <Eye className="w-4 h-4 mr-1.5" />
-                              Ver
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </SwipeableItem>
+                      </StaggerItem>
                     )
                   })}
-                </tbody>
-              </table>
-            </div>
+                </StaggerContainer>
+              ) : (
+                /* Vista de tabla para desktop - Premium Grid */
+                <div className="rounded-xl overflow-x-auto border border-white/10 bg-background/50 backdrop-blur-md shadow-inner">
+                  <Table>
+                    <TableHeader className="bg-muted/30">
+                      <TableRow className="hover:bg-transparent border-white/5">
+                        <TableHead className="w-[180px]">
+                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            <CalendarIcon className="w-3.5 h-3.5" />
+                            Fecha
+                          </div>
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Factura</span>
+                        </TableHead>
+                        <TableHead className="hidden sm:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Resumen</span>
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vista Previa</span>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <div className="flex items-center justify-end gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            <DollarSignIcon className="w-3.5 h-3.5" />
+                            Total
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center hidden md:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pago</span>
+                        </TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vendedor</span>
+                        </TableHead>
+                        <TableHead className="hidden xl:table-cell">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cliente</span>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acciones</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sales.map((sale: Sale) => {
+                        const itemCount = sale.items.length
+                        const totalUnits = sale.items.reduce(
+                          (sum: number, item: any) => sum + (item.is_weight_product ? 0 : item.qty),
+                          0
+                        )
+                        const weightLineItems = sale.items.filter(
+                          (item: any) => item.is_weight_product
+                        ).length
+                        const totalItemsLabel =
+                          weightLineItems > 0
+                            ? totalUnits > 0
+                              ? `${totalUnits} u + ${weightLineItems} peso`
+                              : `${weightLineItems} peso`
+                            : `${totalUnits} u`
 
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="border-t border-gray-200 px-4 py-3 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-700">
-                    Mostrando{' '}
-                    <span className="font-medium">
-                      {(currentPage - 1) * limit + 1}
-                    </span>{' '}
-                    a{' '}
-                    <span className="font-medium">
-                      {Math.min(currentPage * limit, total)}
-                    </span>{' '}
-                    de <span className="font-medium">{total}</span> ventas
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation"
-                    >
-                      Anterior
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation"
-                    >
-                      Siguiente
-                    </button>
+                        // Determinar estado de deuda para FIAO
+                        const isFIAO = sale.payment.method === 'FIAO'
+                        const debtStatus = sale.debt?.status || null
+                        const isPending = isFIAO && (debtStatus === 'open' || debtStatus === 'partial')
+                        const isVoided = Boolean(sale.voided_at)
+
+                        return (
+                          <TableRow
+                            key={sale.id}
+                            className={cn(
+                              'group transition-all duration-200 border-white/5',
+                              isVoided ? 'bg-red-500/5 hover:bg-red-500/10' : 'hover:bg-primary/5'
+                            )}
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col">
+                                <span className="text-sm font-semibold tracking-tight">{format(new Date(sale.sold_at), 'dd MMM yyyy')}</span>
+                                <span className="text-xs text-muted-foreground font-mono">{format(new Date(sale.sold_at), 'HH:mm')}</span>
+                                {isVoided && (
+                                  <Badge variant="outline" className="mt-1 w-fit bg-red-500/10 text-red-500 border-red-500/20 text-[10px] h-5 px-1.5">
+                                    Anulada
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {sale.invoice_full_number ? (
+                                <Badge variant="secondary" className="font-mono text-xs bg-muted/50 text-foreground border-border/50">
+                                  {sale.invoice_full_number}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground/30 text-xs">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-sm font-medium">{itemCount} items</span>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{totalItemsLabel}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              <div className="flex -space-x-2 overflow-x-auto py-1">
+                                {sale.items.slice(0, 4).map((item, idx) => (
+                                  <div key={idx} className="relative z-0 group-hover:z-10 transition-all hover:scale-110">
+                                    <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-[10px] font-bold shadow-sm" title={item.product?.name}>
+                                      {item.product?.name?.substring(0, 2).toUpperCase() || 'P'}
+                                    </div>
+                                  </div>
+                                ))}
+                                {sale.items.length > 4 && (
+                                  <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-[10px] font-bold z-0">
+                                    +{sale.items.length - 4}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex flex-col items-end">
+                                <span className="text-base font-bold font-heading text-foreground tracking-tight">
+                                  ${Number(sale.totals.total_usd).toFixed(2)}
+                                </span>
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  Mi Moneda: {Number(sale.totals.total_bs).toFixed(2)} Bs
+                                </span>
+                                {isFIAO && sale.debt && isPending && (
+                                  <Badge variant="outline" className="mt-1 bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] h-5 px-2 ml-auto whitespace-nowrap">
+                                    Debe: ${Number(sale.debt.remaining_usd || 0).toFixed(2)}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 hover:bg-primary/10">
+                                  {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase">{sale.currency}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {sale.sold_by_user ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                                    {sale.sold_by_user.full_name?.substring(0, 1) || 'U'}
+                                  </div>
+                                  <span className="text-sm truncate max-w-[100px]">{sale.sold_by_user.full_name}</span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">Sistema</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden xl:table-cell">
+                              {sale.customer ? (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">{sale.customer.name}</span>
+                                  <span className="text-[10px] text-muted-foreground font-mono">{sale.customer.document_id}</span>
+                                </div>
+                              ) : isFIAO ? (
+                                <span className="text-xs font-bold text-orange-500">Sin cliente asignado</span>
+                              ) : (
+                                <span className="text-muted-foreground/30 text-xs">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleViewDetail(sale)}
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
+                                  title="Ver detalles"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handlePrint(sale)}
+                                  className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
+                                  title="Imprimir ticket"
+                                >
+                                  <Printer className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="border-t border-border px-4 py-3 sm:px-6">
+                  <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
+                    <div className="text-sm text-muted-foreground">
+                      Mostrando{' '}
+                      <span className="font-medium text-foreground">
+                        {(currentPage - 1) * limit + 1}
+                      </span>{' '}
+                      a{' '}
+                      <span className="font-medium text-foreground">
+                        {Math.min(currentPage * limit, total)}
+                      </span>{' '}
+                      de <span className="font-medium text-foreground">{total}</span> ventas
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modal de detalle */}
       <SaleDetailModal
@@ -408,4 +1081,3 @@ export default function SalesPage() {
     </div>
   )
 }
-

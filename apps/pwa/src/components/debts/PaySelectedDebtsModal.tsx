@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -52,6 +52,10 @@ export default function PaySelectedDebtsModal({
   selectedDebtIds,
   onSuccess,
 }: PaySelectedDebtsModalProps) {
+  const [amountMode, setAmountMode] = useState<'amount' | 'percentage'>('amount')
+  const [percentage, setPercentage] = useState(100)
+  const [distribution, setDistribution] = useState<'SEQUENTIAL' | 'PROPORTIONAL'>('PROPORTIONAL')
+
   const {
     register,
     handleSubmit,
@@ -116,6 +120,9 @@ export default function PaySelectedDebtsModal({
 
   useEffect(() => {
     if (isOpen) {
+      setAmountMode('amount')
+      setDistribution('PROPORTIONAL')
+      setPercentage(100)
       reset({
         amount_usd: totals.totalRemainingUsd,
         amount_bs: totals.totalRemainingBs,
@@ -125,10 +132,23 @@ export default function PaySelectedDebtsModal({
     }
   }, [isOpen, totals, reset])
 
+  useEffect(() => {
+    if (!isOpen) return
+    if (amountMode === 'percentage') {
+      const pct = Math.min(100, Math.max(0, percentage))
+      const computedUsd = Math.round((totals.totalRemainingUsd * pct / 100) * 100) / 100
+      setValue('amount_usd', computedUsd, { shouldValidate: true })
+      setDistribution('PROPORTIONAL')
+    }
+  }, [amountMode, percentage, totals.totalRemainingUsd, isOpen, setValue])
+
   const paySelectedMutation = useMutation({
     mutationFn: (data: CreateDebtPaymentDto) => {
       if (!customer) throw new Error('Cliente no seleccionado')
-      return debtsService.paySelectedDebts(customer.id, selectedDebtIds, data)
+      return debtsService.paySelectedDebts(customer.id, selectedDebtIds, {
+        ...data,
+        distribution,
+      })
     },
     onSuccess: () => {
       toast.success('Deudas seleccionadas pagadas exitosamente')
@@ -150,6 +170,16 @@ export default function PaySelectedDebtsModal({
     if (totals.selectedCount === 0) {
       toast.error('Seleccione al menos una deuda')
       return
+    }
+    if (amountMode === 'percentage') {
+      if (percentage <= 0) {
+        toast.error('El porcentaje debe ser mayor a 0')
+        return
+      }
+      if (percentage > 100) {
+        toast.error('El porcentaje no puede exceder 100%')
+        return
+      }
     }
     if (data.amount_usd > totals.totalRemainingUsd + 0.01) {
       toast.error(
@@ -206,6 +236,61 @@ export default function PaySelectedDebtsModal({
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Modo de abono */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Modo de abono</Label>
+              <RadioGroup
+                value={amountMode}
+                onValueChange={(value) => setAmountMode(value as 'amount' | 'percentage')}
+                className="grid grid-cols-2 gap-3"
+              >
+                <Label
+                  htmlFor="amount-mode"
+                  className={cn(
+                    'flex items-center justify-center px-3 py-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-medium',
+                    amountMode === 'amount'
+                      ? 'border-success bg-success/10 text-success'
+                      : 'border-border hover:border-border/80'
+                  )}
+                >
+                  <RadioGroupItem value="amount" id="amount-mode" className="sr-only" />
+                  Por monto
+                </Label>
+                <Label
+                  htmlFor="percentage-mode"
+                  className={cn(
+                    'flex items-center justify-center px-3 py-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-medium',
+                    amountMode === 'percentage'
+                      ? 'border-success bg-success/10 text-success'
+                      : 'border-border hover:border-border/80'
+                  )}
+                >
+                  <RadioGroupItem value="percentage" id="percentage-mode" className="sr-only" />
+                  Por porcentaje
+                </Label>
+              </RadioGroup>
+            </div>
+
+            {amountMode === 'percentage' && (
+              <div className="space-y-2">
+                <Label htmlFor="percentage">
+                  Porcentaje del total seleccionado
+                </Label>
+                <Input
+                  id="percentage"
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={percentage}
+                  onChange={(e) => setPercentage(Number(e.target.value) || 0)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Equivale a ${amountUsd.toFixed(2)} USD
+                </p>
+              </div>
+            )}
+
             {/* Monto USD */}
             <div className="space-y-2">
               <Label htmlFor="amount_usd">
@@ -222,6 +307,7 @@ export default function PaySelectedDebtsModal({
                   {...register('amount_usd', {
                     valueAsNumber: true,
                   })}
+                  readOnly={amountMode === 'percentage'}
                 />
               </div>
               {errors.amount_usd && (
@@ -272,6 +358,47 @@ export default function PaySelectedDebtsModal({
                   </div>
                 ))}
               </RadioGroup>
+            </div>
+
+            {/* Distribución */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Distribución del abono</Label>
+              {amountMode === 'percentage' ? (
+                <p className="text-xs text-muted-foreground">
+                  Proporcional (automático por porcentaje)
+                </p>
+              ) : (
+                <RadioGroup
+                  value={distribution}
+                  onValueChange={(value) => setDistribution(value as 'SEQUENTIAL' | 'PROPORTIONAL')}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  <Label
+                    htmlFor="dist-seq"
+                    className={cn(
+                      'flex items-center justify-center px-3 py-3 border-2 rounded-lg cursor-pointer transition-all text-xs font-medium',
+                      distribution === 'SEQUENTIAL'
+                        ? 'border-success bg-success/10 text-success'
+                        : 'border-border hover:border-border/80'
+                    )}
+                  >
+                    <RadioGroupItem value="SEQUENTIAL" id="dist-seq" className="sr-only" />
+                    Deuda más vieja
+                  </Label>
+                  <Label
+                    htmlFor="dist-prop"
+                    className={cn(
+                      'flex items-center justify-center px-3 py-3 border-2 rounded-lg cursor-pointer transition-all text-xs font-medium',
+                      distribution === 'PROPORTIONAL'
+                        ? 'border-success bg-success/10 text-success'
+                        : 'border-border hover:border-border/80'
+                    )}
+                  >
+                    <RadioGroupItem value="PROPORTIONAL" id="dist-prop" className="sr-only" />
+                    Proporcional
+                  </Label>
+                </RadioGroup>
+              )}
             </div>
 
             {/* Nota */}

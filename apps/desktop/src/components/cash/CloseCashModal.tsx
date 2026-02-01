@@ -1,9 +1,19 @@
-import { useState, useEffect } from 'react'
-import { X, DollarSign, AlertTriangle, CheckCircle2, Calculator } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { DollarSign, AlertTriangle, CheckCircle2, Calculator, ChevronRight, Printer } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { CashSession, CashSessionSummary, CloseCashSessionRequest } from '@/services/cash.service'
+import { printService } from '@/services/print.service'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
+import DenominationCalculator from '@/components/cash/DenominationCalculator'
 
 const closeCashSchema = z.object({
   counted_bs: z
@@ -41,8 +51,8 @@ export default function CloseCashModal({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
-    reset,
   } = useForm<CloseCashSessionRequest>({
     resolver: zodResolver(closeCashSchema),
     defaultValues: {
@@ -51,6 +61,15 @@ export default function CloseCashModal({
       note: '',
     },
   })
+
+  // Handler para la calculadora de denominaciones
+  const handleDenominationTotalChange = useCallback((currency: 'bs' | 'usd', total: number) => {
+    if (currency === 'bs') {
+      setValue('counted_bs', total, { shouldValidate: true })
+    } else {
+      setValue('counted_usd', total, { shouldValidate: true })
+    }
+  }, [setValue])
 
   const countedBs = watch('counted_bs')
   const countedUsd = watch('counted_usd')
@@ -116,393 +135,417 @@ export default function CloseCashModal({
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 sm:py-4 flex items-center justify-between rounded-t-lg">
-          <div className="flex items-center">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-lg sm:text-xl flex items-center">
             <AlertTriangle
-              className={`w-5 h-5 sm:w-6 sm:h-6 mr-2 ${
-                hasLargeDifference ? 'text-red-600' : 'text-orange-600'
-              }`}
+              className={cn(
+                'w-5 h-5 sm:w-6 sm:h-6 mr-2',
+                hasLargeDifference ? 'text-destructive' : 'text-warning'
+              )}
             />
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                {confirmStep === 1 && 'Cerrar Caja'}
-                {confirmStep === 2 && 'Revisar Diferencias'}
-                {confirmStep === 3 && 'Confirmación Final'}
-              </h2>
-              <p className="text-xs text-gray-500">
-                Paso {confirmStep} de {requiresFinalConfirm ? 3 : 2}
-              </p>
+              {confirmStep === 1 && 'Cerrar Caja'}
+              {confirmStep === 2 && 'Revisar Diferencias'}
+              {confirmStep === 3 && 'Confirmación Final'}
             </div>
+          </DialogTitle>
+          <DialogDescription className="text-xs mt-0.5">
+            Paso {confirmStep} de {requiresFinalConfirm ? 3 : 2}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+            {confirmStep === 1 && (
+              <div className="space-y-4 sm:space-y-6">
+                  {/* Advertencia de seguridad */}
+                  <Alert className="bg-warning/10 border-warning/50">
+                    <AlertTriangle className="w-5 h-5 text-warning" />
+                    <AlertDescription>
+                      <p className="text-sm font-medium text-warning mb-1">
+                        Importante: Verifica los montos cuidadosamente
+                      </p>
+                      <p className="text-xs text-foreground">
+                        Asegúrate de contar físicamente el dinero en la caja antes de ingresar los
+                        valores. Este proceso es irreversible.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Montos esperados */}
+                  <Card className="bg-info/5 border-info/50">
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center text-info">
+                        <Calculator className="w-4 h-4 mr-2" />
+                        Montos Esperados (Calculados)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-info mb-1">Efectivo Esperado en Bs</p>
+                          <p className="text-xl font-bold text-foreground">{expectedBs.toFixed(2)} Bs</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Apertura: {Number(session.opening_amount_bs).toFixed(2)} Bs + Ventas:{' '}
+                            {Number(sessionSummary.cash_flow.sales_bs).toFixed(2)} Bs + Movimientos:{' '}
+                            {Number(sessionSummary.cash_flow.movements_bs).toFixed(2)} Bs
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-info mb-1">Efectivo Esperado en USD</p>
+                          <p className="text-xl font-bold text-foreground">
+                            ${expectedUsd.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Apertura: ${Number(session.opening_amount_usd).toFixed(2)} + Ventas:{' '}
+                            ${Number(sessionSummary.cash_flow.sales_usd).toFixed(2)} + Movimientos:{' '}
+                            ${Number(sessionSummary.cash_flow.movements_usd).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Montos contados */}
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground mb-4">
+                      Montos Contados Físicamente
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="counted_bs" className="mb-2">
+                          Monto Contado en Bs <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                          <Input
+                            id="counted_bs"
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                            max="999999999.99"
+                            {...register('counted_bs', { valueAsNumber: true })}
+                            className={cn(
+                              'pl-10 text-lg font-semibold',
+                              errors.counted_bs && 'border-destructive'
+                            )}
+                            placeholder="0.00"
+                            disabled={isLoading}
+                          />
+                        </div>
+                        {errors.counted_bs && (
+                          <p className="mt-1 text-sm text-destructive">{errors.counted_bs.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="counted_usd" className="mb-2">
+                          Monto Contado en USD <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                          <Input
+                            id="counted_usd"
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                            max="999999999.99"
+                            {...register('counted_usd', { valueAsNumber: true })}
+                            className={cn(
+                              'pl-10 text-lg font-semibold',
+                              errors.counted_usd && 'border-destructive'
+                            )}
+                            placeholder="0.00"
+                            disabled={isLoading}
+                          />
+                        </div>
+                        {errors.counted_usd && (
+                          <p className="mt-1 text-sm text-destructive">{errors.counted_usd.message}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Calculadora de Denominaciones */}
+                    <div className="mt-6 pt-4 border-t border-border">
+                      <DenominationCalculator
+                        onTotalChange={handleDenominationTotalChange}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Usa la calculadora para contar billetes y el total se aplicará automáticamente
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Diferencias en tiempo real */}
+                  {countedBs !== undefined &&
+                    countedUsd !== undefined &&
+                    !isNaN(countedBs) &&
+                    !isNaN(countedUsd) && (
+                      <Alert className={cn(
+                        'border',
+                        hasLargeDifference
+                          ? 'bg-destructive/10 border-destructive/50'
+                          : hasDifference
+                          ? 'bg-warning/10 border-warning/50'
+                          : 'bg-success/10 border-success/50'
+                      )}>
+                        {hasDifference ? (
+                          <AlertTriangle className={cn(
+                            'w-4 h-4',
+                            hasLargeDifference ? 'text-destructive' : 'text-warning'
+                          )} />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 text-success" />
+                        )}
+                        <AlertDescription>
+                          <p className={cn(
+                            'text-sm font-semibold mb-3',
+                            hasLargeDifference ? 'text-destructive' : hasDifference ? 'text-warning' : 'text-success'
+                          )}>
+                            Diferencias
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Diferencia en Bs</p>
+                              <p className={cn(
+                                'text-xl font-bold',
+                                hasLargeDifference ? 'text-destructive' : hasDifference ? 'text-warning' : 'text-success'
+                              )}>
+                                {differenceBs >= 0 ? '+' : ''}
+                                {differenceBs.toFixed(2)} Bs
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Diferencia en USD</p>
+                              <p className={cn(
+                                'text-xl font-bold',
+                                hasLargeDifference ? 'text-destructive' : hasDifference ? 'text-warning' : 'text-success'
+                              )}>
+                                {differenceUsd >= 0 ? '+' : ''}
+                                {differenceUsd.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                          {hasLargeDifference && (
+                            <p className="text-xs text-destructive mt-3 font-medium">
+                              ⚠️ Advertencia: Diferencias significativas detectadas. Se requerirá
+                              confirmación adicional.
+                            </p>
+                          )}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                  {/* Nota */}
+                  <div>
+                    <Label htmlFor="note">Nota (Opcional)</Label>
+                    <Textarea
+                      id="note"
+                      {...register('note')}
+                      rows={3}
+                      className="mt-2 resize-none"
+                      placeholder="Observaciones sobre el cierre, diferencias, etc..."
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {confirmStep === 2 && (
+                <div className="space-y-4 sm:space-y-6">
+                  <Alert className="bg-destructive/10 border-destructive/50">
+                    <AlertTriangle className="w-6 h-6 text-destructive" />
+                    <AlertDescription>
+                      <h3 className="text-lg font-bold text-destructive mb-2">
+                        Diferencias Significativas Detectadas
+                      </h3>
+                      <p className="text-sm text-foreground mb-4">
+                        Has ingresado montos que difieren significativamente de los montos esperados.
+                        Por favor, revisa cuidadosamente:
+                      </p>
+
+                      <Card className="bg-background border-border mt-4">
+                        <CardContent className="p-4 space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2">Esperado vs Contado (Bs)</p>
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-base text-foreground">{expectedBs.toFixed(2)} Bs</span>
+                                <span className="text-2xl font-bold text-destructive">
+                                  {differenceBs >= 0 ? '+' : ''}
+                                  {differenceBs.toFixed(2)} Bs
+                                </span>
+                              </div>
+                              <p className="text-lg font-semibold text-foreground mt-2">
+                                {countedBs.toFixed(2)} Bs
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground mb-2">Esperado vs Contado (USD)</p>
+                              <div className="flex items-baseline justify-between">
+                                <span className="text-base text-foreground">
+                                  ${expectedUsd.toFixed(2)}
+                                </span>
+                                <span className="text-2xl font-bold text-destructive">
+                                  {differenceUsd >= 0 ? '+' : ''}
+                                  {differenceUsd.toFixed(2)}
+                                </span>
+                              </div>
+                              <p className="text-lg font-semibold text-foreground mt-2">
+                                ${countedUsd.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Alert className="mt-4 bg-warning/10 border-warning/50">
+                        <AlertDescription>
+                          <p className="text-sm text-warning font-medium">
+                            ¿Estás seguro de que estos montos son correctos? Verifica físicamente el dinero
+                            antes de continuar.
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              {confirmStep === 3 && (
+                <div className="space-y-4 sm:space-y-6">
+                  <Alert className="bg-info/10 border-info/50">
+                    <CheckCircle2 className="w-6 h-6 text-info" />
+                    <AlertDescription>
+                      <h3 className="text-lg font-bold text-info mb-2">
+                        Confirmación Final Requerida
+                      </h3>
+                      <p className="text-sm text-foreground mb-4">
+                        Estás a punto de cerrar la caja. Este proceso es{' '}
+                        <strong>IRREVERSIBLE</strong>. Por favor, confirma que todos los datos son
+                        correctos:
+                      </p>
+
+                      <Card className="bg-background border-border mt-4">
+                        <CardContent className="p-4 space-y-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Apertura</p>
+                            <p className="text-sm text-foreground">
+                              {Number(session.opening_amount_bs).toFixed(2)} Bs / $
+                              {Number(session.opening_amount_usd).toFixed(2)} USD
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Ventas en Efectivo</p>
+                            <p className="text-sm text-foreground">
+                              {Number(sessionSummary.cash_flow.sales_bs).toFixed(2)} Bs / $
+                              {Number(sessionSummary.cash_flow.sales_usd).toFixed(2)} USD
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Movimientos Netos</p>
+                            <p className="text-sm text-foreground">
+                              {Number(sessionSummary.cash_flow.movements_bs).toFixed(2)} Bs / $
+                              {Number(sessionSummary.cash_flow.movements_usd).toFixed(2)} USD
+                            </p>
+                          </div>
+                          <div className="border-t border-border pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Esperado</p>
+                            <p className="text-lg font-bold text-foreground">
+                              {expectedBs.toFixed(2)} Bs / ${expectedUsd.toFixed(2)} USD
+                            </p>
+                          </div>
+                          <div className="border-t border-border pt-4">
+                            <p className="text-xs text-muted-foreground mb-1">Contado</p>
+                            <p className="text-lg font-bold text-primary">
+                              {countedBs.toFixed(2)} Bs / ${countedUsd.toFixed(2)} USD
+                            </p>
+                          </div>
+                          {hasDifference && (
+                            <Alert className={cn(
+                              'border-t mt-4',
+                              hasLargeDifference ? 'bg-destructive/10 border-destructive/50' : 'bg-warning/10 border-warning/50'
+                            )}>
+                              <AlertDescription>
+                                <p className="text-xs text-muted-foreground mb-1">Diferencia</p>
+                                <p className={cn(
+                                  'text-lg font-bold',
+                                  hasLargeDifference ? 'text-destructive' : 'text-warning'
+                                )}>
+                                  {differenceBs >= 0 ? '+' : ''}
+                                  {differenceBs.toFixed(2)} Bs / {differenceUsd >= 0 ? '+' : ''}
+                                  {differenceUsd.toFixed(2)} USD
+                                </p>
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-            aria-label="Cerrar"
-            disabled={isLoading}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {confirmStep === 1 && (
-            <div className="space-y-6">
-              {/* Advertencia de seguridad */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
-                <div className="flex items-start">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-yellow-900 mb-1">
-                      Importante: Verifica los montos cuidadosamente
-                    </p>
-                    <p className="text-xs text-yellow-800">
-                      Asegúrate de contar físicamente el dinero en la caja antes de ingresar los
-                      valores. Este proceso es irreversible.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Montos esperados */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
-                  <Calculator className="w-4 h-4 mr-2" />
-                  Montos Esperados (Calculados)
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-blue-700 mb-1">Efectivo Esperado en Bs</p>
-                    <p className="text-xl font-bold text-blue-900">{expectedBs.toFixed(2)} Bs</p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Apertura: {Number(session.opening_amount_bs).toFixed(2)} Bs + Ventas:{' '}
-                      {Number(sessionSummary.cash_flow.sales_bs).toFixed(2)} Bs
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-blue-700 mb-1">Efectivo Esperado en USD</p>
-                    <p className="text-xl font-bold text-blue-900">
-                      ${expectedUsd.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      Apertura: ${Number(session.opening_amount_usd).toFixed(2)} + Ventas:{' '}
-                      ${Number(sessionSummary.cash_flow.sales_usd).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Montos contados */}
-              <div>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">
-                  Montos Contados Físicamente
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto Contado en Bs <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="999999999.99"
-                        {...register('counted_bs', { valueAsNumber: true })}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-semibold ${
-                          errors.counted_bs ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="0.00"
-                        disabled={isLoading}
-                      />
-                    </div>
-                    {errors.counted_bs && (
-                      <p className="mt-1 text-sm text-red-600">{errors.counted_bs.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto Contado en USD <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="999999999.99"
-                        {...register('counted_usd', { valueAsNumber: true })}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-semibold ${
-                          errors.counted_usd ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="0.00"
-                        disabled={isLoading}
-                      />
-                    </div>
-                    {errors.counted_usd && (
-                      <p className="mt-1 text-sm text-red-600">{errors.counted_usd.message}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Diferencias en tiempo real */}
-              {countedBs !== undefined &&
-                countedUsd !== undefined &&
-                !isNaN(countedBs) &&
-                !isNaN(countedUsd) && (
-                  <div
-                    className={`rounded-lg p-4 border ${
-                      hasLargeDifference
-                        ? 'bg-red-50 border-red-200'
-                        : hasDifference
-                        ? 'bg-orange-50 border-orange-200'
-                        : 'bg-green-50 border-green-200'
-                    }`}
-                  >
-                    <h3 className="text-sm font-semibold mb-3 flex items-center">
-                      {hasDifference ? (
-                        <AlertTriangle
-                          className={`w-4 h-4 mr-2 ${
-                            hasLargeDifference ? 'text-red-600' : 'text-orange-600'
-                          }`}
-                        />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
-                      )}
-                      Diferencias
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Diferencia en Bs</p>
-                        <p
-                          className={`text-xl font-bold ${
-                            hasLargeDifference
-                              ? 'text-red-900'
-                              : hasDifference
-                              ? 'text-orange-900'
-                              : 'text-green-900'
-                          }`}
-                        >
-                          {differenceBs >= 0 ? '+' : ''}
-                          {differenceBs.toFixed(2)} Bs
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600 mb-1">Diferencia en USD</p>
-                        <p
-                          className={`text-xl font-bold ${
-                            hasLargeDifference
-                              ? 'text-red-900'
-                              : hasDifference
-                              ? 'text-orange-900'
-                              : 'text-green-900'
-                          }`}
-                        >
-                          {differenceUsd >= 0 ? '+' : ''}
-                          {differenceUsd.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    {hasLargeDifference && (
-                      <p className="text-xs text-red-700 mt-3 font-medium">
-                        ⚠️ Advertencia: Diferencias significativas detectadas. Se requerirá
-                        confirmación adicional.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-              {/* Nota */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nota (Opcional)
-                </label>
-                <textarea
-                  {...register('note')}
-                  rows={3}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base resize-none"
-                  placeholder="Observaciones sobre el cierre, diferencias, etc..."
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-          )}
-
-          {confirmStep === 2 && (
-            <div className="space-y-6">
-              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 sm:p-6">
-                <div className="flex items-start mb-4">
-                  <AlertTriangle className="w-6 h-6 text-red-600 mr-3 flex-shrink-0" />
-                  <div>
-                    <h3 className="text-lg font-bold text-red-900 mb-2">
-                      Diferencias Significativas Detectadas
-                    </h3>
-                    <p className="text-sm text-red-800">
-                      Has ingresado montos que difieren significativamente de los montos esperados.
-                      Por favor, revisa cuidadosamente:
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg p-4 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Esperado vs Contado (Bs)</p>
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-base text-gray-700">{expectedBs.toFixed(2)} Bs</span>
-                        <span className="text-2xl font-bold text-red-600">
-                          {differenceBs >= 0 ? '+' : ''}
-                          {differenceBs.toFixed(2)} Bs
-                        </span>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900 mt-2">
-                        {countedBs.toFixed(2)} Bs
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Esperado vs Contado (USD)</p>
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-base text-gray-700">
-                          ${expectedUsd.toFixed(2)}
-                        </span>
-                        <span className="text-2xl font-bold text-red-600">
-                          {differenceUsd >= 0 ? '+' : ''}
-                          {differenceUsd.toFixed(2)}
-                        </span>
-                      </div>
-                      <p className="text-lg font-semibold text-gray-900 mt-2">
-                        ${countedUsd.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded">
-                  <p className="text-sm text-yellow-900 font-medium">
-                    ¿Estás seguro de que estos montos son correctos? Verifica físicamente el dinero
-                    antes de continuar.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {confirmStep === 3 && (
-            <div className="space-y-6">
-              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 sm:p-6">
-                <div className="flex items-start mb-4">
-                  <CheckCircle2 className="w-6 h-6 text-blue-600 mr-3 flex-shrink-0" />
-                  <div>
-                    <h3 className="text-lg font-bold text-blue-900 mb-2">
-                      Confirmación Final Requerida
-                    </h3>
-                    <p className="text-sm text-blue-800">
-                      Estás a punto de cerrar la caja. Este proceso es{' '}
-                      <strong>IRREVERSIBLE</strong>. Por favor, confirma que todos los datos son
-                      correctos:
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg p-4 space-y-4">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Apertura</p>
-                    <p className="text-sm text-gray-700">
-                      {Number(session.opening_amount_bs).toFixed(2)} Bs / $
-                      {Number(session.opening_amount_usd).toFixed(2)} USD
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Ventas en Efectivo</p>
-                    <p className="text-sm text-gray-700">
-                      {Number(sessionSummary.cash_flow.sales_bs).toFixed(2)} Bs / $
-                      {Number(sessionSummary.cash_flow.sales_usd).toFixed(2)} USD
-                    </p>
-                  </div>
-                  <div className="border-t pt-4">
-                    <p className="text-xs text-gray-500 mb-1">Esperado</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {expectedBs.toFixed(2)} Bs / ${expectedUsd.toFixed(2)} USD
-                    </p>
-                  </div>
-                  <div className="border-t pt-4">
-                    <p className="text-xs text-gray-500 mb-1">Contado</p>
-                    <p className="text-lg font-bold text-blue-600">
-                      {countedBs.toFixed(2)} Bs / ${countedUsd.toFixed(2)} USD
-                    </p>
-                  </div>
-                  {hasDifference && (
-                    <div
-                      className={`border-t pt-4 ${
-                        hasLargeDifference ? 'bg-red-50 -mx-4 px-4 py-3 rounded' : 'bg-orange-50 -mx-4 px-4 py-3 rounded'
-                      }`}
-                    >
-                      <p className="text-xs text-gray-600 mb-1">Diferencia</p>
-                      <p
-                        className={`text-lg font-bold ${
-                          hasLargeDifference ? 'text-red-700' : 'text-orange-700'
-                        }`}
-                      >
-                        {differenceBs >= 0 ? '+' : ''}
-                        {differenceBs.toFixed(2)} Bs / {differenceUsd >= 0 ? '+' : ''}
-                        {differenceUsd.toFixed(2)} USD
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-gray-200 px-4 py-4 mt-6 bg-white rounded-b-lg flex gap-3">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex-1 px-4 py-2.5 sm:py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors touch-manipulation disabled:opacity-50"
-              disabled={isLoading}
-            >
-              {confirmStep === 1 ? 'Cancelar' : 'Atrás'}
-            </button>
-            <button
-              type="submit"
-              className={`flex-1 px-4 py-2.5 sm:py-3 rounded-lg font-medium transition-colors touch-manipulation disabled:opacity-50 flex items-center justify-center ${
-                confirmStep === 3
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Cerrando...
-                </>
-              ) : confirmStep === 3 ? (
-                <>
-                  <AlertTriangle className="w-5 h-5 mr-2" />
-                  Confirmar y Cerrar Caja
-                </>
-              ) : (
-                <>
-                  Continuar
-                  <X className="w-5 h-5 ml-2" />
-                </>
-              )}
-            </button>
+          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
+                className="flex-1"
+                disabled={isLoading}
+              >
+                {confirmStep === 1 ? 'Cancelar' : 'Atrás'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => printService.printCashSessionSummary(sessionSummary)}
+                className="flex items-center justify-center gap-2"
+                disabled={isLoading}
+              >
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">Imprimir</span>
+              </Button>
+              <Button
+                type="submit"
+                className={cn(
+                  'flex-1 flex items-center justify-center',
+                  confirmStep === 3
+                    ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+                    : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                )}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Cerrando...
+                  </>
+                ) : confirmStep === 3 ? (
+                  <>
+                    <AlertTriangle className="w-5 h-5 mr-2" />
+                    Confirmar y Cerrar Caja
+                  </>
+                ) : (
+                  <>
+                    Continuar
+                    <ChevronRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
-

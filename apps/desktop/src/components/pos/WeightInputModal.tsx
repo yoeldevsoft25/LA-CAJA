@@ -1,5 +1,17 @@
-import { useState, useEffect, useRef } from 'react'
-import { Scale, Calculator, X } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { Scale, Calculator } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 export interface WeightProduct {
   id: string
@@ -39,223 +51,223 @@ export default function WeightInputModal({
   onConfirm,
 }: WeightInputModalProps) {
   const [weightInput, setWeightInput] = useState('')
-  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Reset cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
       setWeightInput('')
-      setError(null)
-      // Focus en el input después de que el modal se abra
-      setTimeout(() => {
-        inputRef.current?.focus()
-      }, 100)
+      setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [isOpen])
 
-  if (!isOpen || !product) return null
+  const pricePerWeightUsd = useMemo(
+    () => (Number.isFinite(Number(product?.price_per_weight_usd)) ? Number(product?.price_per_weight_usd) : 0),
+    [product?.price_per_weight_usd]
+  )
+  const pricePerWeightBs = useMemo(
+    () => (Number.isFinite(Number(product?.price_per_weight_bs)) ? Number(product?.price_per_weight_bs) : 0),
+    [product?.price_per_weight_bs]
+  )
 
-  const weightValue = parseFloat(weightInput) || 0
+  const sanitize = useCallback((raw: string) => {
+    const s = String(raw).replace(/[^0-9.]/g, '')
+    const parts = s.split('.')
+    return parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : s
+  }, [])
+
+  const handleInputChange = useCallback((value: string) => {
+    setWeightInput(sanitize(value))
+  }, [sanitize])
+
+  /** En dispositivos/teléfonos el "input" a veces no dispara al INSERTAR dígitos (sí al borrar).
+   * Sincronizar desde el DOM después de tecla o paste asegura que el cálculo se actualice. */
+  const syncFromInput = useCallback(() => {
+    const el = inputRef.current
+    if (!el) return
+    const next = sanitize(el.value)
+    setWeightInput(next)
+  }, [sanitize])
+
+  const handleQuickWeight = useCallback((w: number) => {
+    setWeightInput(String(w))
+  }, [])
+
+  if (!product) return null
+
+  const nW = parseFloat(weightInput)
+  const weightValue = Number.isFinite(nW) ? nW : 0
   const unit = product.weight_unit || 'kg'
-  const pricePerWeightUsd = Number(product.price_per_weight_usd) || 0
-  const pricePerWeightBs = Number(product.price_per_weight_bs) || 0
   const unitPriceDecimals = unit === 'g' || unit === 'oz' ? 4 : 2
 
-  // Calcular totales
   const totalUsd = weightValue * pricePerWeightUsd
   const totalBs = weightValue * pricePerWeightBs
 
-  // Validar peso
   const validateWeight = (value: number): string | null => {
-    if (value <= 0) {
-      return 'El peso debe ser mayor a 0'
-    }
-    if (product.min_weight && value < product.min_weight) {
-      return `Peso mínimo: ${product.min_weight} ${UNIT_SHORT[unit]}`
-    }
-    if (product.max_weight && value > product.max_weight) {
-      return `Peso máximo: ${product.max_weight} ${UNIT_SHORT[unit]}`
-    }
+    if (value <= 0) return 'El peso debe ser mayor a 0'
+    if (product.min_weight != null && value < product.min_weight) return `Peso mínimo: ${product.min_weight} ${UNIT_SHORT[unit]}`
+    if (product.max_weight != null && value > product.max_weight) return `Peso máximo: ${product.max_weight} ${UNIT_SHORT[unit]}`
     return null
   }
 
-  const handleInputChange = (value: string) => {
-    // Solo permitir números y punto decimal
-    const sanitized = value.replace(/[^0-9.]/g, '')
-    // Evitar múltiples puntos decimales
-    const parts = sanitized.split('.')
-    const formatted = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : sanitized
-    setWeightInput(formatted)
-
-    const numValue = parseFloat(formatted) || 0
-    if (numValue > 0) {
-      setError(validateWeight(numValue))
-    } else {
-      setError(null)
-    }
-  }
+  const error = weightValue > 0 ? validateWeight(weightValue) : null
 
   const handleConfirm = () => {
-    const validationError = validateWeight(weightValue)
-    if (validationError) {
-      setError(validationError)
-      return
-    }
-    onConfirm(weightValue)
+    if (validateWeight(weightValue)) return
+    const rounded = Math.round(weightValue * 10000) / 10000
+    onConfirm(rounded)
     onClose()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && weightValue > 0 && !error) {
+    const canSubmit = weightValue > 0 && !error && (pricePerWeightUsd > 0 || pricePerWeightBs > 0)
+    if (e.key === 'Enter' && canSubmit) {
       handleConfirm()
+      return
     }
-    if (e.key === 'Escape') {
-      onClose()
-    }
+    // En tablets/móviles el "input" a veces no dispara al insertar; sincronizar desde el DOM.
+    setTimeout(syncFromInput, 0)
   }
 
-  // Botones de acceso rápido para pesos comunes
-  const quickWeights = unit === 'g'
+  // Pesos rápidos: más opciones en gramos (15,25,50,75) para evitar escribir
+  const quickWeightsRow1 = unit === 'g'
     ? [100, 250, 500, 1000]
     : unit === 'kg'
-    ? [0.25, 0.5, 1, 2]
-    : unit === 'lb'
-    ? [0.25, 0.5, 1, 2]
-    : [1, 2, 4, 8] // oz
+      ? [0.25, 0.5, 1, 2]
+      : unit === 'lb'
+        ? [0.25, 0.5, 1, 2]
+        : [1, 2, 4, 8]
+  const quickWeightsRow2 = unit === 'g' ? [15, 25, 50, 75] : null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Scale className="w-5 h-5 text-blue-600" />
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Scale className="w-5 h-5 text-primary" />
             Producto por Peso
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Introduce el peso del producto para calcular el precio final.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 py-4">
           {/* Nombre del producto */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="font-medium text-gray-900">{product.name}</p>
-            <p className="text-sm text-gray-500 mt-1">
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="font-medium text-foreground">{product.name}</p>
+            <p className="text-sm text-muted-foreground mt-1">
               ${pricePerWeightUsd.toFixed(unitPriceDecimals)} / {UNIT_SHORT[unit]} • Bs. {pricePerWeightBs.toFixed(unitPriceDecimals)} / {UNIT_SHORT[unit]}
             </p>
           </div>
 
           {/* Input de peso */}
           <div className="space-y-2">
-            <label htmlFor="weight-input" className="block text-sm font-medium text-gray-700">
+            <Label htmlFor="weight-input">
               Peso en {UNIT_LABELS[unit]}
-            </label>
+            </Label>
             <div className="relative">
-              <input
+              <Input
                 ref={inputRef}
                 id="weight-input"
                 type="text"
                 inputMode="decimal"
+                autoComplete="off"
                 placeholder={`Ej: ${unit === 'g' ? '500' : '1.5'}`}
                 value={weightInput}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className={`w-full pr-12 text-lg h-12 px-4 border-2 rounded-lg focus:outline-none focus:ring-2 ${
-                  error
-                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                }`}
+                onPaste={() => setTimeout(syncFromInput, 0)}
+                className={cn(
+                  "pr-12 text-lg h-12",
+                  error && "border-destructive focus-visible:ring-destructive"
+                )}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
                 {UNIT_SHORT[unit]}
               </span>
             </div>
             {error && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-destructive">{error}</p>
             )}
-            {(product.min_weight || product.max_weight) && (
-              <p className="text-xs text-gray-500">
+            {product.min_weight || product.max_weight ? (
+              <p className="text-xs text-muted-foreground">
                 {product.min_weight && `Mín: ${product.min_weight} ${UNIT_SHORT[unit]}`}
                 {product.min_weight && product.max_weight && ' • '}
                 {product.max_weight && `Máx: ${product.max_weight} ${UNIT_SHORT[unit]}`}
               </p>
-            )}
+            ) : null}
           </div>
 
-          {/* Botones de peso rápido */}
+          {/* Botones de peso rápido: dos filas en gramos para 15,25,50,75 */}
           <div className="space-y-2">
-            <label className="block text-xs text-gray-500">Peso rápido</label>
+            <Label className="text-xs text-muted-foreground">Peso rápido</Label>
             <div className="grid grid-cols-4 gap-2">
-              {quickWeights.map((w) => (
-                <button
+              {quickWeightsRow1.map((w) => (
+                <Button
                   key={w}
                   type="button"
-                  onClick={() => handleInputChange(w.toString())}
-                  className="h-9 px-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickWeight(w)}
+                  className="h-9"
                 >
                   {w} {UNIT_SHORT[unit]}
-                </button>
+                </Button>
+              ))}
+              {quickWeightsRow2?.map((w) => (
+                <Button
+                  key={w}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleQuickWeight(w)}
+                  className="h-9"
+                >
+                  {w} {UNIT_SHORT[unit]}
+                </Button>
               ))}
             </div>
           </div>
 
-          {/* Resumen de cálculo */}
+          {/* Resumen de cálculo: se muestra en cuanto hay peso > 0 */}
           {weightValue > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calculator className="w-4 h-4" />
                 <span>Cálculo</span>
               </div>
               <div className="flex items-baseline justify-between">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {weightValue} {UNIT_SHORT[unit]} × ${pricePerWeightUsd.toFixed(unitPriceDecimals)}
                 </span>
-                <span className="text-xl font-bold text-gray-900">
-                  ${totalUsd.toFixed(2)}
+                <span className="text-xl font-bold text-foreground tabular-nums">
+                  ${(totalUsd > 0 && totalUsd < 0.01) ? totalUsd.toFixed(4) : totalUsd.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-baseline justify-between text-sm">
-                <span className="text-gray-500">
+                <span className="text-muted-foreground">
                   {weightValue} {UNIT_SHORT[unit]} × Bs. {pricePerWeightBs.toFixed(unitPriceDecimals)}
                 </span>
-                <span className="font-medium text-gray-600">
-                  Bs. {totalBs.toFixed(2)}
+                <span className="font-medium text-muted-foreground tabular-nums">
+                  Bs. {(totalBs > 0 && totalBs < 0.01) ? totalBs.toFixed(4) : totalBs.toFixed(2)}
                 </span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleConfirm}
-            disabled={weightValue <= 0 || !!error}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            disabled={weightValue <= 0 || !!error || (pricePerWeightUsd <= 0 && pricePerWeightBs <= 0)}
           >
             Agregar al Carrito
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

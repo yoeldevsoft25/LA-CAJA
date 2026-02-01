@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Hash, Plus, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Hash, Plus, Edit, RotateCcw, AlertTriangle } from 'lucide-react'
 import {
   productSerialsService,
   ProductSerial,
@@ -8,9 +8,38 @@ import {
   CreateSerialsBatchRequest,
   SerialStatus,
 } from '@/services/product-serials.service'
-import toast from 'react-hot-toast'
-import { format } from 'date-fns'
+import toast from '@/lib/toast'
 import ProductSerialModal from './ProductSerialModal'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { format } from 'date-fns'
 
 interface ProductSerialsListProps {
   productId: string
@@ -23,60 +52,67 @@ const statusLabels: Record<SerialStatus, string> = {
   damaged: 'Dañado',
 }
 
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  if (error instanceof Error) {
-    return error.message || fallback
-  }
-  return fallback
+const statusColors: Record<SerialStatus, string> = {
+  available: 'default',
+  sold: 'secondary',
+  returned: 'default',
+  damaged: 'destructive',
 }
 
 export default function ProductSerialsList({ productId }: ProductSerialsListProps) {
   const queryClient = useQueryClient()
+  const [selectedSerial, setSelectedSerial] = useState<ProductSerial | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [serialToReturn, setSerialToReturn] = useState<ProductSerial | null>(null)
+  const [serialToMarkDamaged, setSerialToMarkDamaged] = useState<ProductSerial | null>(null)
   const [statusFilter, setStatusFilter] = useState<SerialStatus | 'all'>('all')
 
-  const { data: serials = [], isLoading } = useQuery({
+  const { data: serials, isLoading } = useQuery({
     queryKey: ['product-serials', productId, statusFilter],
     queryFn: () =>
       productSerialsService.getSerialsByProduct(
         productId,
         statusFilter === 'all' ? undefined : statusFilter
       ),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutos
   })
 
   const createMutation = useMutation({
     mutationFn: (data: CreateProductSerialRequest) => productSerialsService.createSerial(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-serials', productId] })
+      queryClient.invalidateQueries({ queryKey: ['product-serials'] })
       toast.success('Serial creado correctamente')
       setIsModalOpen(false)
+      setSelectedSerial(null)
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Error al crear el serial'))
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al crear el serial')
     },
   })
 
   const batchCreateMutation = useMutation({
-    mutationFn: (data: CreateSerialsBatchRequest) => productSerialsService.createSerialsBatch(data),
+    mutationFn: (data: CreateSerialsBatchRequest) =>
+      productSerialsService.createSerialsBatch(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-serials', productId] })
+      queryClient.invalidateQueries({ queryKey: ['product-serials'] })
       toast.success('Seriales creados correctamente')
       setIsModalOpen(false)
+      setSelectedSerial(null)
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Error al crear los seriales'))
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al crear los seriales')
     },
   })
 
   const returnMutation = useMutation({
     mutationFn: (id: string) => productSerialsService.returnSerial(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-serials', productId] })
+      queryClient.invalidateQueries({ queryKey: ['product-serials'] })
       toast.success('Serial devuelto correctamente')
+      setSerialToReturn(null)
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Error al devolver el serial'))
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al devolver el serial')
     },
   })
 
@@ -84,13 +120,24 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
     mutationFn: ({ id, note }: { id: string; note?: string }) =>
       productSerialsService.markSerialAsDamaged(id, note),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-serials', productId] })
+      queryClient.invalidateQueries({ queryKey: ['product-serials'] })
       toast.success('Serial marcado como dañado')
+      setSerialToMarkDamaged(null)
     },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'Error al marcar el serial como dañado'))
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al marcar el serial como dañado')
     },
   })
+
+  const handleEdit = (serial: ProductSerial) => {
+    setSelectedSerial(serial)
+    setIsModalOpen(true)
+  }
+
+  const handleAdd = () => {
+    setSelectedSerial(null)
+    setIsModalOpen(true)
+  }
 
   const handleConfirm = (data: CreateProductSerialRequest) => {
     createMutation.mutate(data)
@@ -100,137 +147,228 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
     batchCreateMutation.mutate(data)
   }
 
-  const handleReturn = (serial: ProductSerial) => {
-    if (window.confirm(`¿Marcar serial ${serial.serial_number} como devuelto?`)) {
-      returnMutation.mutate(serial.id)
-    }
-  }
-
-  const handleDamaged = (serial: ProductSerial) => {
-    if (window.confirm(`¿Marcar serial ${serial.serial_number} como dañado?`)) {
-      markDamagedMutation.mutate({ id: serial.id })
-    }
-  }
-
   if (isLoading) {
-    return <div className="p-6 text-sm text-gray-500">Cargando seriales...</div>
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Skeleton className="h-4 w-32" />
+        </CardContent>
+      </Card>
+    )
   }
 
-  const availableCount = serials.filter((serial) => serial.status === 'available').length
-  const soldCount = serials.filter((serial) => serial.status === 'sold').length
-  const returnedCount = serials.filter((serial) => serial.status === 'returned').length
-  const damagedCount = serials.filter((serial) => serial.status === 'damaged').length
+  const availableCount = serials?.filter((s) => s.status === 'available').length || 0
+  const soldCount = serials?.filter((s) => s.status === 'sold').length || 0
+  const returnedCount = serials?.filter((s) => s.status === 'returned').length || 0
+  const damagedCount = serials?.filter((s) => s.status === 'damaged').length || 0
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Hash className="w-5 h-5 text-gray-700" />
-          <h3 className="text-lg font-semibold text-gray-900">Seriales ({serials.length})</h3>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Agregar Serial
-        </button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-4">
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className="px-2 py-1 rounded-full bg-green-100 text-green-800">Disponibles: {availableCount}</span>
-          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700">Vendidos: {soldCount}</span>
-          <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700">Devueltos: {returnedCount}</span>
-          <span className="px-2 py-1 rounded-full bg-red-100 text-red-700">Dañados: {damagedCount}</span>
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as SerialStatus | 'all')}
-          className="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">Todos</option>
-          <option value="available">Disponibles</option>
-          <option value="sold">Vendidos</option>
-          <option value="returned">Devueltos</option>
-          <option value="damaged">Dañados</option>
-        </select>
-      </div>
-
-      {serials.length === 0 ? (
-        <div className="p-6 text-center text-gray-500">
-          No hay seriales configurados. Agrega seriales para rastrear productos.
-        </div>
-      ) : (
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Serial</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase hidden md:table-cell">
-                  Recepción
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase hidden md:table-cell">
-                  Venta
-                </th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {serials.map((serial) => (
-                <tr key={serial.id}>
-                  <td className="px-4 py-2 font-semibold text-gray-900">
-                    {serial.serial_number}
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                      {statusLabels[serial.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 hidden md:table-cell">
-                    {format(new Date(serial.received_at), 'dd/MM/yyyy')}
-                  </td>
-                  <td className="px-4 py-2 hidden md:table-cell">
-                    {serial.sold_at ? format(new Date(serial.sold_at), 'dd/MM/yyyy') : '-'}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="inline-flex items-center gap-2">
-                      {serial.status === 'sold' && (
-                        <button
-                          onClick={() => handleReturn(serial)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="Marcar como devuelto"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                      )}
-                      {serial.status === 'available' && (
-                        <button
-                          onClick={() => handleDamaged(serial)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Marcar como dañado"
-                        >
-                          <AlertTriangle className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg sm:text-xl flex items-center">
+            <Hash className="w-5 h-5 mr-2" />
+            Seriales del Producto ({serials?.length || 0})
+          </CardTitle>
+          <Button onClick={handleAdd} size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Agregar Serial
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {serials && serials.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">
+              No hay seriales configurados. Agrega seriales para rastrear productos individuales
+              por número de serie.
+            </div>
+          ) : (
+            <>
+              <div className="px-4 sm:px-6 py-3 border-b border-border">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="default">{availableCount} Disponibles</Badge>
+                    <Badge variant="secondary">{soldCount} Vendidos</Badge>
+                    <Badge variant="default">{returnedCount} Devueltos</Badge>
+                    <Badge variant="destructive">{damagedCount} Dañados</Badge>
+                  </div>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) => setStatusFilter(value as SerialStatus | 'all')}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filtrar por estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="available">Disponibles</SelectItem>
+                      <SelectItem value="sold">Vendidos</SelectItem>
+                      <SelectItem value="returned">Devueltos</SelectItem>
+                      <SelectItem value="damaged">Dañados</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Número de Serie</TableHead>
+                      <TableHead className="hidden sm:table-cell">Recepción</TableHead>
+                      <TableHead className="hidden md:table-cell">Venta</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {serials?.map((serial) => (
+                      <TableRow key={serial.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-foreground font-mono">
+                              {serial.serial_number}
+                            </p>
+                            {serial.note && (
+                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {serial.note}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(serial.received_at), 'dd/MM/yyyy')}
+                          </p>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {serial.sold_at ? (
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(serial.sold_at), 'dd/MM/yyyy')}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">-</p>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusColors[serial.status] as any}>
+                            {statusLabels[serial.status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {serial.status === 'sold' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSerialToReturn(serial)}
+                                className="text-primary hover:text-primary hover:bg-primary/10"
+                                title="Devolver"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {serial.status === 'available' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSerialToMarkDamaged(serial)}
+                                className="text-warning hover:text-warning hover:bg-warning/10"
+                                title="Marcar como dañado"
+                              >
+                                <AlertTriangle className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(serial)}
+                              className="text-primary hover:text-primary hover:bg-primary/10"
+                            >
+                              <Edit className="w-4 h-4 mr-1.5" />
+                              Editar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <ProductSerialModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedSerial(null)
+        }}
         productId={productId}
+        serial={selectedSerial}
         onConfirm={handleConfirm}
         onBatchConfirm={handleBatchConfirm}
-        isSubmitting={createMutation.isPending || batchCreateMutation.isPending}
+        isLoading={createMutation.isPending || batchCreateMutation.isPending}
       />
+
+      <AlertDialog open={!!serialToReturn} onOpenChange={() => setSerialToReturn(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Devolver serial?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción marcará el serial{' '}
+              {serialToReturn && (
+                <>
+                  <strong>{serialToReturn.serial_number}</strong> como devuelto y lo dejará
+                  disponible nuevamente.
+                </>
+              )}{' '}
+              ¿Estás seguro?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => serialToReturn && returnMutation.mutate(serialToReturn.id)}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Devolver
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!serialToMarkDamaged}
+        onOpenChange={() => setSerialToMarkDamaged(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Marcar como dañado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción marcará el serial{' '}
+              {serialToMarkDamaged && (
+                <>
+                  <strong>{serialToMarkDamaged.serial_number}</strong> como dañado.
+                </>
+              )}{' '}
+              ¿Estás seguro?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                serialToMarkDamaged && markDamagedMutation.mutate({ id: serialToMarkDamaged.id })
+              }
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Marcar como Dañado
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
+

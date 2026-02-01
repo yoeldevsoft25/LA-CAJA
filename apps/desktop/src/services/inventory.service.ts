@@ -22,6 +22,10 @@ export interface StockStatusSearchParams {
   product_id?: string
   warehouse_id?: string
   search?: string
+  category?: string
+  is_active?: boolean
+  is_visible_public?: boolean
+  product_type?: 'sale_item' | 'ingredient' | 'prepared'
   low_stock_only?: boolean
   limit?: number
   offset?: number
@@ -32,7 +36,7 @@ export interface InventoryMovement {
   store_id: string
   product_id: string
   product_name?: string | null
-  movement_type: 'received' | 'adjust' | 'sale'
+  movement_type: 'received' | 'adjust' | 'sold' | 'sale'
   qty_delta: number
   unit_cost_bs: number | string
   unit_cost_usd: number | string
@@ -47,6 +51,7 @@ export interface StockReceivedRequest {
   unit_cost_bs: number
   unit_cost_usd: number
   note?: string
+  warehouse_id?: string | null
   ref?: {
     supplier?: string
     invoice?: string
@@ -58,6 +63,7 @@ export interface StockAdjustedRequest {
   qty_delta: number
   reason: 'loss' | 'damage' | 'count' | 'other'
   note?: string
+  warehouse_id?: string | null
 }
 
 export interface ProductStock {
@@ -70,11 +76,21 @@ export interface MovementsResponse {
   total: number
 }
 
+export interface MovementsParams {
+  product_id?: string
+  warehouse_id?: string
+  limit?: number
+  offset?: number
+  include_pending?: boolean
+  start_date?: string
+  end_date?: string
+}
+
 export const inventoryService = {
   /**
    * Obtener estado del stock (todos los productos o uno específico)
    */
-  async getStockStatus(params?: { product_id?: string; warehouse_id?: string }): Promise<StockStatus[]> {
+  async getStockStatus(params: StockStatusSearchParams = {}): Promise<StockStatus[]> {
     const response = await api.get<StockStatus[] | StockStatusResponse>(
       '/inventory/stock/status',
       { params }
@@ -127,12 +143,77 @@ export const inventoryService = {
   /**
    * Obtener movimientos de inventario
    */
-  async getMovements(productId?: string, limit = 50, offset = 0): Promise<MovementsResponse> {
-    const params: any = { limit, offset }
-    if (productId) {
-      params.product_id = productId
+  async getMovements(params: MovementsParams = {}): Promise<MovementsResponse> {
+    const {
+      product_id,
+      warehouse_id,
+      limit = 50,
+      offset = 0,
+      include_pending,
+      start_date,
+      end_date,
+    } = params
+    const queryParams: Record<string, any> = { limit, offset }
+    if (product_id) {
+      queryParams.product_id = product_id
     }
-    const response = await api.get<MovementsResponse>('/inventory/movements', { params })
+    if (warehouse_id) {
+      queryParams.warehouse_id = warehouse_id
+    }
+    if (include_pending !== undefined) {
+      queryParams.include_pending = include_pending
+    }
+    if (start_date) {
+      queryParams.start_date = start_date
+    }
+    if (end_date) {
+      queryParams.end_date = end_date
+    }
+    const response = await api.get<MovementsResponse>('/inventory/movements', {
+      params: queryParams,
+    })
+    return response.data
+  },
+
+  /**
+   * Vaciar el stock de un producto específico (poner a 0)
+   * Solo owners pueden ejecutar esta acción
+   */
+  async resetProductStock(productId: string, note?: string): Promise<{ ok: boolean; message: string }> {
+    const response = await api.post<{ ok: boolean; message: string }>(
+      `/inventory/stock/reset/${productId}`,
+      { note }
+    )
+    return response.data
+  },
+
+  /**
+   * Reconciliar warehouse_stock desde movimientos (received/adjust/sold).
+   * Corrige el stock cuando recepciones se guardaron pero no se actualizó la bodega. Solo owners.
+   */
+  async reconcileStock(): Promise<{ ok: boolean; message: string }> {
+    const response = await api.post<{ ok: boolean; message: string }>(
+      '/inventory/stock/reconcile'
+    )
+    return response.data
+  },
+
+  /**
+   * Vaciar TODO el inventario de la tienda
+   * Solo owners pueden ejecutar esta acción - PELIGROSO
+   */
+  async resetAllStock(note?: string): Promise<{ ok: boolean; message: string; reset_count: number }> {
+    const response = await api.post<{ ok: boolean; message: string; reset_count: number }>(
+      '/inventory/stock/reset-all',
+      { note, confirm: true }
+    )
+    return response.data
+  },
+  /**
+   * Reconciliar inventario físico (Live Inventory)
+   */
+  async reconcilePhysicalStock(items: { product_id: string; quantity: number; counted_at: string }[]) {
+    const response = await api.post('/inventory/stock/reconcile-physical', { items })
     return response.data
   },
 }

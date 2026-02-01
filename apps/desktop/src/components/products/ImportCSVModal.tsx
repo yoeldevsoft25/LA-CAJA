@@ -1,6 +1,10 @@
 import { useState, useRef } from 'react'
 import { Upload, FileText, AlertCircle, CheckCircle2, X } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/components/ui/progress'
+import toast from '@/lib/toast'
 import { productsService } from '@/services/products.service'
 import { useAuth } from '@/stores/auth.store'
 
@@ -29,13 +33,6 @@ interface ImportCSVModalProps {
   onSuccess: () => void
 }
 
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  if (error instanceof Error) {
-    return error.message || fallback
-  }
-  return fallback
-}
-
 export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSVModalProps) {
   const { user } = useAuth()
   const [file, setFile] = useState<File | null>(null)
@@ -56,30 +53,37 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
     }
 
     setFile(selectedFile)
-    void parseCSV(selectedFile)
+    parseCSV(selectedFile)
   }
 
-  const parseCSV = async (selectedFile: File) => {
+  const parseCSV = async (file: File) => {
     setIsProcessing(true)
     setErrors([])
     setParsedProducts([])
 
     try {
-      const text = await selectedFile.text()
-      const lines = text.split(/\r?\n/).filter((line) => line.trim())
+      const text = await file.text()
+      // Remover BOM (Byte Order Mark) si está presente
+      const textWithoutBOM = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text
+      const lines = textWithoutBOM.split('\n').filter(line => line.trim())
 
       if (lines.length < 2) {
         toast.error('El archivo CSV está vacío o no tiene datos')
+        setIsProcessing(false)
         return
       }
 
-      const headers = lines[0].split(',').map((header) => header.trim().toLowerCase())
+      // Parsear header - asegurar que se lean correctamente
+      const headerLine = lines[0].trim()
+      const headers = headerLine.split(',').map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''))
 
+      // Validar headers requeridos
       const requiredHeaders = ['nombre', 'precio_bs', 'precio_usd']
-      const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header))
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
 
       if (missingHeaders.length > 0) {
         toast.error(`Faltan columnas requeridas: ${missingHeaders.join(', ')}`)
+        setIsProcessing(false)
         return
       }
 
@@ -87,8 +91,9 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
       const validationErrors: ValidationError[] = []
       let skippedRows = 0
 
+      // Parsear cada línea
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map((value) => value.trim())
+        const values = lines[i].split(',').map(v => v.trim())
         const row = i + 1
 
         const product: ParsedProduct = {
@@ -118,26 +123,25 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
               product.barcode = value || undefined
               break
             case 'precio_bs':
-              product.price_bs = Number.parseFloat(value) || 0
+              product.price_bs = parseFloat(value) || 0
               break
             case 'precio_usd':
-              product.price_usd = Number.parseFloat(value) || 0
+              product.price_usd = parseFloat(value) || 0
               break
             case 'costo_bs':
-              product.cost_bs = Number.parseFloat(value) || undefined
+              product.cost_bs = parseFloat(value) || undefined
               break
             case 'costo_usd':
-              product.cost_usd = Number.parseFloat(value) || undefined
+              product.cost_usd = parseFloat(value) || undefined
               break
             case 'stock_minimo':
             case 'umbral_stock':
-              product.low_stock_threshold = Number.parseInt(value, 10) || undefined
-              break
-            default:
+              product.low_stock_threshold = parseInt(value) || undefined
               break
           }
         })
 
+        // Validaciones - SI HAY ERRORES, OMITIR ESTA FILA
         let hasErrors = false
 
         if (!product.name || product.name.trim() === '') {
@@ -167,6 +171,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
           hasErrors = true
         }
 
+        // Solo agregar producto si NO tiene errores
         if (!hasErrors) {
           products.push(product)
         } else {
@@ -177,96 +182,142 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
       setParsedProducts(products)
       setErrors(validationErrors)
 
+      // Mostrar resumen detallado
+      console.log('[CSV Import] Resultado del parsing:', {
+        total_filas: lines.length - 1,
+        productos_validos: products.length,
+        filas_omitidas: skippedRows,
+        errores: validationErrors.length
+      })
+
       if (validationErrors.length === 0) {
         setStep('preview')
         toast.success(`${products.length} productos listos para importar`)
       } else if (products.length > 0) {
+        // Hay productos válidos Y errores - permitir continuar con los válidos
         setStep('preview')
+
+        // Agrupar errores por tipo para mostrar al usuario
+        const errorsByType = validationErrors.reduce((acc, error) => {
+          const key = error.message
+          acc[key] = (acc[key] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
+
+        console.log('[CSV Import] Errores por tipo:', errorsByType)
+
         toast.success(
           `${products.length} productos válidos listos para importar. ${skippedRows} filas omitidas por errores.`,
           { duration: 7000 }
         )
       } else {
-        toast.error('Todas las filas tienen errores. Revisa el archivo y corrige los errores.')
+        // TODOS los productos tienen errores
+        toast.error(`Todas las filas tienen errores. Revisa el archivo y corrige los errores.`)
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Error al leer el archivo CSV'))
+      console.error('Error parsing CSV:', error)
+      toast.error('Error al leer el archivo CSV')
     } finally {
       setIsProcessing(false)
     }
   }
 
   const handleImport = async () => {
-    if (parsedProducts.length === 0) return
+    if (!user?.store_id || parsedProducts.length === 0) return
 
     setStep('importing')
     setImportProgress(0)
 
-    let existingProducts: Array<{ name: string; sku?: string | null; barcode?: string | null }> = []
+    console.log('[CSV Import] Iniciando importación de', parsedProducts.length, 'productos')
+
+    // 🔍 PASO 1: Obtener TODOS los productos existentes para detectar duplicados
+    console.log('[CSV Import] 🔍 Cargando productos existentes para detectar duplicados...')
+    let existingProducts: any[] = []
     try {
-      const response = await productsService.search({ limit: 100000 }, user?.store_id)
+      const response = await productsService.search({ limit: 100000 }, user.store_id)
       existingProducts = response.products
+      console.log('[CSV Import] ✅ Productos existentes cargados:', existingProducts.length)
     } catch (error) {
-      console.warn('[CSV Import] No se pudieron cargar productos existentes:', error)
+      console.warn('[CSV Import] ⚠️ No se pudieron cargar productos existentes, continuando sin verificación:', error)
     }
 
+    // Función auxiliar para verificar si un producto ya existe
     const productExists = (product: ParsedProduct): boolean => {
-      return existingProducts.some((existing) => {
-        const nameMatch =
-          existing.name.toLowerCase().trim() === product.name.toLowerCase().trim()
-        const skuMatch =
-          product.sku &&
-          existing.sku &&
+      return existingProducts.some(existing => {
+        // Coincidencia exacta por nombre (case-insensitive)
+        const nameMatch = existing.name.toLowerCase().trim() === product.name.toLowerCase().trim()
+
+        // Coincidencia por SKU (si ambos tienen SKU)
+        const skuMatch = product.sku && existing.sku &&
           existing.sku.toLowerCase().trim() === product.sku.toLowerCase().trim()
-        const barcodeMatch =
-          product.barcode &&
-          existing.barcode &&
+
+        // Coincidencia por código de barras (si ambos tienen)
+        const barcodeMatch = product.barcode && existing.barcode &&
           existing.barcode.toLowerCase().trim() === product.barcode.toLowerCase().trim()
 
-        return Boolean(nameMatch || skuMatch || barcodeMatch)
+        return nameMatch || skuMatch || barcodeMatch
       })
     }
 
-    const importProductWithRetry = async (
-      product: ParsedProduct,
-      maxRetries = 10
-    ): Promise<boolean> => {
-      let lastError: unknown = null
+    // Función para importar UN producto con reintentos automáticos y backoff agresivo
+    const importProductWithRetry = async (product: ParsedProduct, maxRetries = 10): Promise<boolean> => {
+      let lastError: any = null
 
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          await productsService.create({
-            name: product.name,
-            category: product.category || null,
-            sku: product.sku || null,
-            barcode: product.barcode || null,
-            price_bs: product.price_bs,
-            price_usd: product.price_usd,
-            cost_bs: product.cost_bs || 0,
-            cost_usd: product.cost_usd || 0,
-            low_stock_threshold: product.low_stock_threshold || 10,
-          }, user?.store_id)
+          await productsService.create(
+            {
+              name: product.name,
+              category: product.category || null,
+              sku: product.sku || null,
+              barcode: product.barcode || null,
+              price_bs: product.price_bs,
+              price_usd: product.price_usd,
+              cost_bs: product.cost_bs || 0,
+              cost_usd: product.cost_usd || 0,
+              low_stock_threshold: product.low_stock_threshold || 10,
+            },
+            user.store_id
+          )
 
+          // ✅ ÉXITO - Sin delay entre productos (máxima velocidad)
+          // La pausa de 65s cada 60 productos es suficiente para evitar rate limit
           return true
-        } catch (error) {
-          lastError = error
-          const status = (error as { response?: { status?: number } })?.response?.status
+        } catch (err: any) {
+          lastError = err
+          const status = err?.response?.status
 
-          if (status === 429 || status === 500) {
+          // 🔐 Si es 401 (token expirado), el interceptor de API ya manejó el refresh automáticamente
+          // Si llega aquí un 401, significa que el refresh falló y la sesión expiró completamente
+          // En ese caso, el interceptor ya redirigió al login, así que no reintentamos
+
+          // Si es 429 (rate limit) o 500 (server error), reintentar con backoff AGRESIVO
+          if (status === 429 || status === 500 || err?.code === 'ECONNABORTED') {
+            // Backoff exponencial: 2s → 4s → 8s → 16s → 30s (máximo)
             const baseWait = 2000 * Math.pow(2, attempt - 1)
-            const waitTime = Math.min(baseWait, 30000)
-            await new Promise((resolve) => setTimeout(resolve, waitTime))
-            continue
+            const waitTime = Math.min(baseWait, 30000) // Máximo 30 segundos
+
+            console.warn(
+              `[CSV Import] ⚠️ Rate limit en fila ${product.row} (intento ${attempt}/${maxRetries}), ` +
+              `esperando ${(waitTime / 1000).toFixed(1)}s...`
+            )
+            await new Promise(resolve => setTimeout(resolve, waitTime))
+            continue // Reintentar
           }
 
+          // Otros errores (400, 404, etc.) no se reintentan
+          console.error(`[CSV Import] Error NO retriable en fila ${product.row}:`, {
+            status,
+            message: err?.message,
+            data: err?.response?.data
+          })
           return false
         }
       }
 
-      console.error('[CSV Import] Fila fallida:', {
-        row: product.row,
-        name: product.name,
-        error: lastError,
+      // Si llegamos aquí, agotamos todos los reintentos
+      console.error(`[CSV Import] ❌ Fila ${product.row} (${product.name}) FALLÓ después de ${maxRetries} intentos`, {
+        status: lastError?.response?.status
       })
       return false
     }
@@ -276,40 +327,83 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
       let errorCount = 0
       let skippedCount = 0
 
+      // Procesar productos de UNO EN UNO con reintentos automáticos
       for (let i = 0; i < parsedProducts.length; i++) {
         const product = parsedProducts[i]
 
+        // 🔍 VERIFICAR SI YA EXISTE ANTES DE INTENTAR CREAR
         if (productExists(product)) {
+          console.log(`[CSV Import] ⏭️ OMITIENDO fila ${product.row} (${product.name}) - Ya existe`)
           skippedCount++
+
+          // Actualizar progreso (cuenta como procesado)
           const progress = Math.round(((i + 1) / parsedProducts.length) * 100)
           setImportProgress(progress)
           continue
         }
 
+        console.log(`[CSV Import] Procesando ${i + 1}/${parsedProducts.length}: ${product.name}`)
+
         const success = await importProductWithRetry(product)
+
         if (success) {
           successCount++
         } else {
           errorCount++
         }
 
+        // Actualizar progreso
         const progress = Math.round(((i + 1) / parsedProducts.length) * 100)
         setImportProgress(progress)
 
-        if ((i + 1) % 60 === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 65000))
+        // Log cada 50 productos
+        if ((i + 1) % 50 === 0) {
+          console.log(`[CSV Import] ✅ Progreso: ${i + 1}/${parsedProducts.length} (${successCount} éxitos, ${errorCount} errores, ${skippedCount} omitidos)`)
+        }
+
+        // 🚨 RENDER FREE TIER: Pausar cada 100 productos para evitar rate limit
+        // Render Free Tier permite ~100 req/min, así que pausamos después de 100 creaciones exitosas
+        if (successCount > 0 && successCount % 100 === 0) {
+          console.warn(`[CSV Import] ⏸️ PAUSA AUTOMÁTICA: ${successCount} productos creados. Esperando 65 segundos para reiniciar ventana de rate limit...`)
+          await new Promise(resolve => setTimeout(resolve, 65000)) // 65 segundos de pausa
+          console.log(`[CSV Import] ▶️ Reanudando importación...`)
         }
       }
 
-      toast.success(
-        `Importación completada. Éxitos: ${successCount}, Omitidos: ${skippedCount}, Errores: ${errorCount}`,
-        { duration: 7000 }
-      )
+      console.log('[CSV Import] Importación completada:', {
+        total: parsedProducts.length,
+        exitos: successCount,
+        errores: errorCount,
+        omitidos: skippedCount
+      })
 
       setStep('complete')
-      onSuccess()
+
+      if (errorCount === 0 && skippedCount === 0) {
+        toast.success(`✅ ${successCount} productos importados exitosamente`, {
+          duration: 5000
+        })
+      } else if (errorCount === 0 && skippedCount > 0) {
+        toast.success(`✅ ${successCount} productos nuevos importados. ${skippedCount} ya existían y fueron omitidos`, {
+          duration: 6000
+        })
+      } else if (skippedCount > 0) {
+        toast.success(`${successCount} productos importados, ${errorCount} con errores, ${skippedCount} omitidos (ya existían)`, {
+          duration: 7000
+        })
+      } else {
+        toast.success(`${successCount} productos importados, ${errorCount} con errores`, {
+          duration: 6000
+        })
+      }
+
+      setTimeout(() => {
+        onSuccess()
+        handleClose()
+      }, 3000)
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Error al importar productos'))
+      console.error('[CSV Import] Error crítico durante importación:', error)
+      toast.error('Error al importar productos')
       setStep('preview')
     }
   }
@@ -327,216 +421,202 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
   }
 
   const downloadTemplate = () => {
-    const template =
-      'nombre,categoria,sku,codigo_barras,precio_bs,precio_usd,costo_bs,costo_usd,stock_minimo\n' +
+    const template = 'nombre,categoria,sku,codigo_barras,precio_bs,precio_usd,costo_bs,costo_usd,stock_minimo\n' +
       'Producto Ejemplo,Electrónica,SKU001,123456789,100.00,25.00,80.00,20.00,10\n' +
       'Producto 2,Ropa,SKU002,987654321,50.00,12.50,40.00,10.00,5'
 
     const blob = new Blob([template], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'plantilla_productos.csv'
-    link.click()
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'plantilla_productos.csv'
+    a.click()
     URL.revokeObjectURL(url)
     toast.success('Plantilla descargada')
   }
 
-  if (!isOpen) return null
-
-  const errorsByType = errors.reduce<Record<string, number>>((acc, error) => {
-    acc[error.message] = (acc[error.message] || 0) + 1
-    return acc
-  }, {})
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between rounded-t-lg">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Importar Productos desde CSV</h2>
-            <p className="text-sm text-gray-600">Importa múltiples productos a la vez</p>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-            aria-label="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Importar Productos desde CSV</DialogTitle>
+          <DialogDescription>
+            Importa múltiples productos a la vez desde un archivo CSV
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+        <div className="space-y-6 py-4">
+          {/* Step: Upload */}
           {step === 'upload' && (
             <>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start gap-2">
-                  <FileText className="w-4 h-4 text-gray-600 mt-0.5" />
-                  <div className="text-sm text-gray-700 space-y-1">
-                    <p className="font-semibold">Formato CSV:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li><strong>Requeridas:</strong> nombre, precio_bs, precio_usd</li>
-                      <li><strong>Opcionales:</strong> categoria, sku, codigo_barras, costo_bs, costo_usd, stock_minimo</li>
-                      <li>Separador decimal: punto (.)</li>
+              <Alert>
+                <FileText className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p className="font-medium">Formato del archivo CSV:</p>
+                    <ul className="text-sm list-disc list-inside space-y-1 ml-2">
+                      <li><strong>Columnas requeridas:</strong> nombre, precio_bs, precio_usd</li>
+                      <li><strong>Columnas opcionales:</strong> categoria, sku, codigo_barras, costo_bs, costo_usd, stock_minimo</li>
+                      <li>Los nombres de las columnas deben estar en la primera fila</li>
+                      <li>Los valores numéricos deben usar punto como separador decimal</li>
                     </ul>
                   </div>
-                </div>
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={downloadTemplate}
+                  className="flex-1"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Descargar Plantilla
+                </Button>
               </div>
 
-              <button
-                type="button"
-                onClick={downloadTemplate}
-                className="inline-flex items-center justify-center px-4 py-2 border-2 border-gray-300 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Descargar Plantilla
-              </button>
-
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept=".csv"
                   onChange={handleFileSelect}
                   className="hidden"
-                  id="csv-upload-desktop"
+                  id="csv-upload"
                 />
-                <label htmlFor="csv-upload-desktop" className="cursor-pointer">
-                  <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <label htmlFor="csv-upload" className="cursor-pointer">
+                  <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-lg font-medium mb-2">
                     {file ? file.name : 'Selecciona un archivo CSV'}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     Haz clic para seleccionar o arrastra el archivo aquí
                   </p>
                 </label>
               </div>
 
               {isProcessing && (
-                <div className="text-center text-sm text-gray-500">Procesando archivo...</div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Procesando archivo...</p>
+                </div>
               )}
 
               {errors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-600 mt-0.5" />
-                    <div className="text-sm text-red-700">
-                      <p className="font-semibold mb-2">Errores de validación:</p>
-                      <ul className="space-y-1 max-h-40 overflow-y-auto">
-                        {errors.slice(0, 10).map((error, idx) => (
-                          <li key={`${error.row}-${idx}`}>
-                            Fila {error.row}, {error.field}: {error.message}
-                          </li>
-                        ))}
-                        {errors.length > 10 && (
-                          <li className="font-semibold">... y {errors.length - 10} errores más</li>
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <p className="font-medium mb-2">Errores de validación:</p>
+                    <ul className="text-sm space-y-1 max-h-40 overflow-y-auto">
+                      {errors.slice(0, 10).map((error, idx) => (
+                        <li key={idx}>
+                          Fila {error.row}, {error.field}: {error.message}
+                        </li>
+                      ))}
+                      {errors.length > 10 && (
+                        <li className="font-medium">... y {errors.length - 10} errores más</li>
+                      )}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
               )}
             </>
           )}
 
+          {/* Step: Preview */}
           {step === 'preview' && (
             <>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
-                  <div className="text-sm text-green-700">
-                    <p className="font-semibold">Productos listos para importar</p>
-                    <p>Se importarán {parsedProducts.length} productos válidos.</p>
-                  </div>
-                </div>
+              <Alert>
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <AlertDescription>
+                  <p className="font-medium">
+                    {parsedProducts.length} productos listos para importar
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Revisa los datos antes de continuar
+                  </p>
+                </AlertDescription>
+              </Alert>
+
+              <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Nombre</th>
+                      <th className="px-4 py-2 text-left">Categoría</th>
+                      <th className="px-4 py-2 text-right">Precio Bs</th>
+                      <th className="px-4 py-2 text-right">Precio USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedProducts.slice(0, 100).map((product, idx) => (
+                      <tr key={idx} className="border-t hover:bg-muted/50">
+                        <td className="px-4 py-2">{product.name}</td>
+                        <td className="px-4 py-2">{product.category || '-'}</td>
+                        <td className="px-4 py-2 text-right">{product.price_bs.toFixed(2)}</td>
+                        <td className="px-4 py-2 text-right">{product.price_usd.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                    {parsedProducts.length > 100 && (
+                      <tr className="border-t bg-muted/30">
+                        <td colSpan={4} className="px-4 py-3 text-center text-muted-foreground">
+                          ... y {parsedProducts.length - 100} productos más (mostrando primeros 100)
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
 
-              {Object.keys(errorsByType).length > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-sm font-semibold text-yellow-800 mb-2">Resumen de errores:</p>
-                  <ul className="text-sm text-yellow-700 space-y-1">
-                    {Object.entries(errorsByType).map(([message, count]) => (
-                      <li key={message}>- {message}: {count}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700">
-                  Vista previa (primeros 5 productos)
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left font-semibold text-gray-600">Nombre</th>
-                        <th className="px-4 py-2 text-left font-semibold text-gray-600">Categoría</th>
-                        <th className="px-4 py-2 text-right font-semibold text-gray-600">Bs</th>
-                        <th className="px-4 py-2 text-right font-semibold text-gray-600">USD</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {parsedProducts.slice(0, 5).map((product) => (
-                        <tr key={product.row}>
-                          <td className="px-4 py-2">{product.name}</td>
-                          <td className="px-4 py-2">{product.category || '-'}</td>
-                          <td className="px-4 py-2 text-right">{product.price_bs.toFixed(2)}</td>
-                          <td className="px-4 py-2 text-right">{product.price_usd.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setStep('upload')}
+                  className="flex-1"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleImport}
+                  className="flex-1"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Importar {parsedProducts.length} Productos
+                </Button>
               </div>
             </>
           )}
 
+          {/* Step: Importing */}
           {step === 'importing' && (
             <>
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-2">Importando productos...</p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${importProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">{importProgress}% completado</p>
+              <div className="text-center space-y-4">
+                <p className="text-lg font-medium">Importando productos...</p>
+                <Progress value={importProgress} className="w-full" />
+                <p className="text-sm text-muted-foreground">{importProgress}% completado</p>
               </div>
             </>
           )}
 
+          {/* Step: Complete */}
           {step === 'complete' && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-              <CheckCircle2 className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <p className="text-sm text-green-700 font-semibold">Importación completada</p>
-            </div>
+            <>
+              <Alert>
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <AlertDescription>
+                  <p className="font-medium text-lg">¡Importación completada!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Los productos han sido importados exitosamente
+                  </p>
+                </AlertDescription>
+              </Alert>
+            </>
           )}
         </div>
-
-        <div className="flex-shrink-0 border-t border-gray-200 px-4 py-3 bg-white rounded-b-lg">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isProcessing || step === 'importing'}
-              className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              {step === 'complete' ? 'Cerrar' : 'Cancelar'}
-            </button>
-            {step === 'preview' && (
-              <button
-                type="button"
-                onClick={handleImport}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700"
-              >
-                Importar {parsedProducts.length} productos
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

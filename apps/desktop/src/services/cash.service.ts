@@ -54,6 +54,8 @@ export interface CashSessionSummary {
     opening_usd: number
     sales_bs: number
     sales_usd: number
+    movements_bs: number
+    movements_usd: number
     expected_bs: number
     expected_usd: number
   }
@@ -106,4 +108,3 @@ export const cashService = {
     return response.data
   },
 }
-

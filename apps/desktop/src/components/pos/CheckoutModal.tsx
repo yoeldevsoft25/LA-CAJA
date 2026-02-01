@@ -1,33 +1,91 @@
-import { useState, useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { X, CreditCard, Wallet, Banknote, User, Search, Check, Calculator } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { X, Loader2, ShoppingBag } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { CartItem } from '@/stores/cart.store'
-import { exchangeService } from '@/services/exchange.service'
-import { customersService } from '@/services/customers.service'
-import { calculateRoundedChange, roundToNearestDenomination, calculateChange, formatChangeBreakdown } from '@/utils/vzla-denominations'
+import { useAuth } from '@/stores/auth.store'
+import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNearestDenominationUp } from '@/utils/vzla-denominations'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { cn } from '@/lib/utils'
+import SerialSelector from '@/components/serials/SerialSelector'
+import SplitPaymentManager from './SplitPaymentManager'
+import { SplitPaymentItem, PaymentMethod } from '@/types/split-payment.types'
+
+// Nuevos componentes modulares
+import PaymentMethodSelector from './checkout/PaymentMethodSelector'
+import CashPaymentSection from './checkout/CashPaymentSection'
+import CustomerSearchSection from './checkout/CustomerSearchSection'
+import InvoiceConfigSection from './checkout/InvoiceConfigSection'
+import CheckoutSummary from './checkout/CheckoutSummary'
+import { QuickActionsBar } from './checkout/QuickActionsBar'
+
+// Nuevos hooks
+import { useCheckoutState } from '@/hooks/pos/useCheckoutState'
+import { useCheckoutData } from '@/hooks/pos/useCheckoutData'
+import { useCheckoutValidation } from '@/hooks/pos/useCheckoutValidation'
+
+// Tipo de pago dividido para el backend
+interface SplitPaymentForBackend {
+  method: PaymentMethod
+  amount_usd?: number
+  amount_bs?: number
+  reference?: string
+  bank_code?: string
+  phone?: string
+  card_last_4?: string
+  note?: string
+}
 
 interface CheckoutModalProps {
   isOpen: boolean
   onClose: () => void
   items: CartItem[]
-  total: { bs: number; usd: number }
+  total: {
+    usd: number
+    bs: number
+  }
   onConfirm: (data: {
-    payment_method: 'CASH_BS' | 'CASH_USD' | 'PAGO_MOVIL' | 'TRANSFER' | 'OTHER' | 'FIAO'
+    payment_method: 'CASH_BS' | 'CASH_USD' | 'PAGO_MOVIL' | 'TRANSFER' | 'OTHER' | 'FIAO' | 'SPLIT'
     currency: 'BS' | 'USD' | 'MIXED'
     exchange_rate: number
     cash_payment?: {
       received_usd: number
       change_bs?: number
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+        exact_change_bs: number
+        rounded_change_bs: number
+        adjustment_bs: number
+        consented?: boolean
+      }
     }
     cash_payment_bs?: {
       received_bs: number
       change_bs?: number
+      change_rounding?: {
+        mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT'
+        exact_change_bs: number
+        rounded_change_bs: number
+        adjustment_bs: number
+        consented?: boolean
+      }
     }
+    split_payments?: SplitPaymentForBackend[]
     customer_id?: string
     customer_name?: string
     customer_document_id?: string
     customer_phone?: string
     customer_note?: string
+    note?: string
+    serials?: Record<string, string[]>
+    invoice_series_id?: string | null
+    price_list_id?: string | null
+    promotion_id?: string | null
+    warehouse_id?: string | null
   }) => void
   isLoading?: boolean
 }
@@ -40,792 +98,571 @@ export default function CheckoutModal({
   onConfirm,
   isLoading = false,
 }: CheckoutModalProps) {
-  const [selectedMethod, setSelectedMethod] = useState<'CASH_BS' | 'CASH_USD' | 'PAGO_MOVIL' | 'TRANSFER' | 'OTHER' | 'FIAO'>('CASH_USD')
-  const [exchangeRate, setExchangeRate] = useState<number>(36) // Tasa de cambio por defecto
-  const [customerName, setCustomerName] = useState<string>('')
-  const [customerDocumentId, setCustomerDocumentId] = useState<string>('')
-  const [customerPhone, setCustomerPhone] = useState<string>('')
-  const [customerNote, setCustomerNote] = useState<string>('')
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
-  const [customerSearch, setCustomerSearch] = useState<string>('')
-  const [showCustomerResults, setShowCustomerResults] = useState(false)
-  const customerSearchRef = useRef<HTMLDivElement>(null)
-  const [error, setError] = useState<string>('')
-  
-  // Estados para manejo de efectivo USD con cambio en Bs
-  const [receivedUsd, setReceivedUsd] = useState<number>(0)
-  const [giveChangeInBs, setGiveChangeInBs] = useState<boolean>(false)
-  
-  // Estados para manejo de efectivo Bs con cambio en Bs
-  const [receivedBs, setReceivedBs] = useState<number>(0)
+  const { user } = useAuth()
+  const storeId = user?.store_id || null
 
-  // Obtener tasa BCV automáticamente cuando se abre el modal
-  const { data: bcvRateData, isLoading: isLoadingBCV } = useQuery({
-    queryKey: ['bcvRate'],
-    queryFn: () => exchangeService.getBCVRate(),
-    enabled: isOpen, // Solo obtener cuando el modal está abierto
-    staleTime: 1000 * 60 * 5, // 5 minutos de cache
-    refetchOnWindowFocus: false,
-  })
+  // Hooks personalizados
+  const { state, actions } = useCheckoutState()
+  const checkoutData = useCheckoutData(storeId || undefined, isOpen)
+  const validation = useCheckoutValidation()
 
-  // Prellenar la tasa cuando se obtiene del backend
+  // Estados locales para pagos divididos y seriales
+  const [splitPayments, setSplitPayments] = useState<SplitPaymentItem[]>([])
+  const [selectedSerials, setSelectedSerials] = useState<Record<string, string[]>>({})
+  const [serialSelectorItem, setSerialSelectorItem] = useState<{ productId: string; productName: string; quantity: number } | null>(null)
+
+  // Detectar si es móvil
+  const [isMobile, setIsMobile] = useState(false)
+
   useEffect(() => {
-    if (isOpen && bcvRateData?.available && bcvRateData?.rate) {
-      setExchangeRate(bcvRateData.rate)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
     }
-  }, [isOpen, bcvRateData])
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
-  // Buscar clientes cuando se escribe en el campo de búsqueda
-  const { data: customerSearchResults = [], isLoading: isLoadingCustomers } = useQuery({
-    queryKey: ['customers', 'search', customerSearch],
-    queryFn: () => customersService.search(customerSearch),
-    enabled: isOpen && customerSearch.trim().length >= 2, // Buscar solo si hay 2+ caracteres
-    staleTime: 1000 * 30, // 30 segundos de cache
-  })
-
-    // Limpiar campos cuando se cierra el modal
+  // Resetear estado al abrir/cerrar
   useEffect(() => {
-    if (!isOpen) {
-      setCustomerName('')
-      setCustomerDocumentId('')
-      setCustomerPhone('')
-      setCustomerNote('')
-      setSelectedCustomerId(null)
-      setCustomerSearch('')
-      setShowCustomerResults(false)
-      setError('')
-      setReceivedUsd(0)
-      setGiveChangeInBs(false)
-      setReceivedBs(0)
+    if (isOpen) {
+      actions.reset()
+      setSplitPayments([])
+      setSelectedSerials({})
     }
   }, [isOpen])
 
-  // Cuando cambia el método de pago, resetear los montos recibidos
-  useEffect(() => {
-    if (selectedMethod === 'CASH_USD') {
-      setReceivedBs(0)
-      if (receivedUsd === 0) {
-        // Prellenar con el total exacto
-        setReceivedUsd(total.usd)
-      }
-    } else if (selectedMethod === 'CASH_BS') {
-      setReceivedUsd(0)
-      setGiveChangeInBs(false)
-      if (receivedBs === 0) {
-        // Prellenar con el total en Bs según la tasa
-        setReceivedBs(Math.round(total.usd * exchangeRate * 100) / 100)
-      }
-    } else {
-      setReceivedUsd(0)
-      setGiveChangeInBs(false)
-      setReceivedBs(0)
-    }
-  }, [selectedMethod, total.usd, exchangeRate])
+  // Calcular montos restantes para pagos divididos con useMemo
+  const { splitRemainingUsd, splitRemainingBs, splitIsComplete } = useMemo(() => {
+    const remainingUsd = total.usd - splitPayments.reduce((sum, p) => {
+      const usd = p.amount_usd || 0
+      const bs = p.amount_bs || 0
+      return sum + usd + (bs / checkoutData.exchangeRate)
+    }, 0)
 
-  // Cerrar resultados al hacer click fuera
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (customerSearchRef.current && !customerSearchRef.current.contains(event.target as Node)) {
-        setShowCustomerResults(false)
-      }
+    return {
+      splitRemainingUsd: remainingUsd,
+      splitRemainingBs: remainingUsd * checkoutData.exchangeRate,
+      splitIsComplete: Math.abs(remainingUsd) < 0.01
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [total.usd, splitPayments, checkoutData.exchangeRate])
+
+  // Handlers para pagos divididos (memoizados)
+  const handleAddSplitPayment = useCallback((payment: Omit<SplitPaymentItem, 'id'>) => {
+    const newPayment: SplitPaymentItem = {
+      ...payment,
+      id: `payment-${Date.now()}-${Math.random()}`
+    }
+    setSplitPayments(prev => [...prev, newPayment])
   }, [])
 
-  // Seleccionar cliente de los resultados
-  const handleSelectCustomer = (customer: { id: string; name: string; document_id: string | null; phone: string | null; note: string | null }) => {
-    setSelectedCustomerId(customer.id)
-    setCustomerName(customer.name)
-    setCustomerDocumentId(customer.document_id || '')
-    setCustomerPhone(customer.phone || '')
-    setCustomerNote(customer.note || '')
-    setCustomerSearch(customer.name)
-    setShowCustomerResults(false)
-    setError('')
-  }
+  const handleRemoveSplitPayment = useCallback((paymentId: string) => {
+    setSplitPayments(prev => prev.filter(p => p.id !== paymentId))
+  }, [])
 
-  // Calcular totales según la tasa de cambio
-  // Arriba: Total USD + Equivalente en Bs (USD * tasa)
-  // Abajo: Total Bs según tasa (USD * tasa) + Equivalente en USD (Bs / tasa)
-  const calculatedTotal = {
-    // Total USD original
-    usd: total.usd,
-    // Equivalente en Bs según la tasa (USD * tasa)
-    bsFromUsd: total.usd * exchangeRate,
-    // Total Bs según la tasa (igual al equivalente de arriba)
-    bsFromTasa: total.usd * exchangeRate,
-    // Equivalente en USD del total Bs calculado (Bs / tasa = USD)
-    usdFromBsCalculado: exchangeRate > 0 ? (total.usd * exchangeRate) / exchangeRate : total.usd,
-  }
+  const handleUpdateSplitPayment = useCallback((paymentId: string, updates: Partial<Omit<SplitPaymentItem, 'id'>>) => {
+    setSplitPayments(prev => prev.map(p => p.id === paymentId ? { ...p, ...updates } : p))
+  }, [])
 
-  // Calcular cambio cuando se paga con USD físico
-  const changeUsd = receivedUsd > 0 && receivedUsd >= total.usd 
-    ? Math.round((receivedUsd - total.usd) * 100) / 100 
-    : 0
-  
-  // Calcular cambio en Bs cuando se paga con USD físico (cambio en Bs)
-  const totalBsFromUsd = total.usd * exchangeRate
-  const roundedChangeResultUsd = giveChangeInBs && changeUsd > 0 && exchangeRate > 0
-    ? calculateRoundedChange(changeUsd, exchangeRate)
-    : { changeBs: 0, breakdown: {}, breakdownFormatted: '' }
-  
-  // Calcular cambio cuando se paga con Bs físico
-  const totalBs = total.usd * exchangeRate
-  const changeBsRaw = receivedBs > 0 && receivedBs >= totalBs
-    ? Math.round((receivedBs - totalBs) * 100) / 100
-    : 0
-  
-  // Redondear el cambio en Bs según denominaciones (favoreciendo al POS)
-  const roundedChangeBs = changeBsRaw > 0 
-    ? roundToNearestDenomination(changeBsRaw)
-    : 0
-  
-  // Desglose del cambio en Bs
-  const changeBsBreakdown = roundedChangeBs > 0 
-    ? calculateChange(roundedChangeBs) 
-    : {}
-  const changeBsBreakdownFormatted = Object.keys(changeBsBreakdown).length > 0
-    ? formatChangeBreakdown(changeBsBreakdown)
-    : ''
-  
-  // Para USD con cambio en Bs
-  const changeBsFromUsd = roundedChangeResultUsd.changeBs
-  const changeBreakdownFromUsd = roundedChangeResultUsd.breakdown
-  const changeBreakdownFormattedFromUsd = roundedChangeResultUsd.breakdownFormatted
-  
-  // Calcular excedente para USD con cambio en Bs (diferencia entre cambio exacto y redondeado)
-  const changeBsExactFromUsd = giveChangeInBs && changeUsd > 0 
-    ? Math.round(changeUsd * exchangeRate * 100) / 100 
-    : 0
-  const excessFromUsd = changeBsExactFromUsd > 0 && changeBsFromUsd > 0
-    ? Math.round((changeBsExactFromUsd - changeBsFromUsd) * 100) / 100
-    : 0
-  
-  // Calcular excedente para CASH_BS (diferencia entre cambio exacto y redondeado)
-  // Si el cambio es menor a 5, roundedChangeBs será 0, pero aún hay excedente
-  const excessFromBs = changeBsRaw > 0
-    ? Math.round((changeBsRaw - roundedChangeBs) * 100) / 100
-    : 0
+  // Handler para selección de seriales (memoizado)
+  const handleSerialSelect = useCallback((serials: string[]) => {
+    if (serialSelectorItem) {
+      setSelectedSerials(prev => ({
+        ...prev,
+        [serialSelectorItem.productId]: serials
+      }))
+      setSerialSelectorItem(null)
+    }
+  }, [serialSelectorItem])
 
-  if (!isOpen) return null
-
+  // Validación y confirmación
   const handleConfirm = () => {
-    // Validación: Si hay nombre, la cédula es obligatoria
-    if (customerName.trim() && !customerDocumentId.trim()) {
-      setError('Si proporcionas el nombre del cliente, la cédula es obligatoria')
+    // Validar método de pago
+    if (state.paymentMode === 'SINGLE') {
+      const methodValidation = validation.validatePaymentMethod(state.selectedMethod, state.customerData.selectedId)
+      if (!methodValidation.valid) {
+        actions.setError(methodValidation.error!)
+        return
+      }
+
+      // Validar efectivo
+      if (state.selectedMethod === 'CASH_USD') {
+        const cashValidation = validation.validateCashUsd(state.cash.receivedUsd, total.usd)
+        if (!cashValidation.valid) {
+          actions.setError(cashValidation.error!)
+          return
+        }
+      } else if (state.selectedMethod === 'CASH_BS') {
+        const cashValidation = validation.validateCashBs(state.cash.receivedBs, total.usd * checkoutData.exchangeRate)
+        if (!cashValidation.valid) {
+          actions.setError(cashValidation.error!)
+          return
+        }
+      }
+    } else {
+      // Validar pagos divididos
+      const splitValidation = validation.validateSplit(total.usd, splitPayments, checkoutData.exchangeRate)
+      if (!splitValidation.valid) {
+        actions.setError(splitValidation.error!)
+        return
+      }
+    }
+
+    // Validar consentimiento para redondeo a favor de la tienda
+    if (
+      state.paymentMode === 'SINGLE' &&
+      (state.selectedMethod === 'CASH_BS' || (state.selectedMethod === 'CASH_USD' && state.cash.giveChangeInBs)) &&
+      state.cash.changeRoundingMode === 'MERCHANT' &&
+      !state.cash.changeRoundingConsent
+    ) {
+      actions.setError('Debes confirmar que el cliente acepta el redondeo a favor de la tienda.')
       return
     }
 
-    // Validación FIAO: requiere información del cliente
-    if (selectedMethod === 'FIAO' && !customerName.trim() && !customerDocumentId.trim()) {
-      setError('Para ventas FIAO debes ingresar al menos el nombre y la cédula del cliente')
-      return
+    // Preparar datos para enviar
+    const confirmData: any = {
+      payment_method: state.paymentMode === 'SPLIT' ? 'SPLIT' : state.selectedMethod,
+      currency: state.paymentMode === 'SPLIT' ? 'MIXED' : (state.selectedMethod === 'CASH_BS' ? 'BS' : 'USD'),
+      exchange_rate: checkoutData.exchangeRate,
+      note: state.saleNote || undefined,
+      serials: Object.keys(selectedSerials).length > 0 ? selectedSerials : undefined,
+      invoice_series_id: state.invoice.seriesId || null,
+      price_list_id: state.invoice.priceListId || null,
+      promotion_id: state.invoice.promotionId || null,
+      warehouse_id: state.invoice.warehouseId || null,
+      generate_fiscal_invoice: state.invoice.generateFiscalInvoice,
     }
 
-    // Validación CASH_USD: verificar que el monto recibido sea suficiente
-    if (selectedMethod === 'CASH_USD' && receivedUsd < total.usd) {
-      setError(`El monto recibido ($${receivedUsd.toFixed(2)}) debe ser mayor o igual al total ($${total.usd.toFixed(2)})`)
-      return
-    }
+    if (state.paymentMode === 'SPLIT') {
+      confirmData.split_payments = splitPayments.map(p => ({
+        method: p.method,
+        amount_usd: p.amount_usd,
+        amount_bs: p.amount_bs,
+        reference: p.reference,
+        phone: p.phone,
+        card_last_4: p.card_last_4,
+      }))
+    } else {
+      if (state.selectedMethod === 'CASH_USD') {
+        const changeUsd = state.cash.receivedUsd - total.usd
+        const roundingResult = state.cash.giveChangeInBs
+          ? calculateRoundedChangeWithMode(changeUsd, checkoutData.exchangeRate, state.cash.changeRoundingMode)
+          : undefined
 
-    // Determinar currency basado en el método de pago
-    let currency: 'BS' | 'USD' | 'MIXED' = 'USD'
-    if (selectedMethod === 'CASH_BS' || selectedMethod === 'PAGO_MOVIL' || selectedMethod === 'TRANSFER') {
-      currency = 'BS'
-    } else if (selectedMethod === 'CASH_USD') {
-      currency = 'USD'
-    }
+        confirmData.cash_payment = {
+          received_usd: state.cash.receivedUsd,
+          change_bs: roundingResult?.changeBs
+        }
 
-    // Preparar información de pago en efectivo USD
-    // IMPORTANTE: Solo enviamos change_bs si es > 0 (redondeado)
-    // Si es 0, no se envía, y el backend NO descuenta nada (excedente a favor del POS)
-    let cashPayment: { received_usd: number; change_bs?: number } | undefined = undefined
-    if (selectedMethod === 'CASH_USD' && receivedUsd > 0) {
-      cashPayment = {
-        received_usd: Math.round(receivedUsd * 100) / 100,
+        if (roundingResult) {
+          confirmData.cash_payment.change_rounding = {
+            mode: state.cash.changeRoundingMode,
+            exact_change_bs: roundingResult.exactChangeBs,
+            rounded_change_bs: roundingResult.changeBs,
+            adjustment_bs: roundingResult.adjustmentBs,
+            consented: state.cash.changeRoundingMode === 'MERCHANT' ? state.cash.changeRoundingConsent : undefined,
+          }
+        }
+      } else if (state.selectedMethod === 'CASH_BS') {
+        const totalBs = total.usd * checkoutData.exchangeRate
+        const changeBsRaw = Math.max(0, state.cash.receivedBs - totalBs)
+        let roundedChangeBs = changeBsRaw
+        if (state.cash.changeRoundingMode === 'MERCHANT') {
+          roundedChangeBs = changeBsRaw > 0 ? roundToNearestDenomination(changeBsRaw) : 0
+        } else if (state.cash.changeRoundingMode === 'CUSTOMER') {
+          roundedChangeBs = changeBsRaw > 0 ? roundToNearestDenominationUp(changeBsRaw) : 0
+        }
+        const adjustmentBs = Math.round((changeBsRaw - roundedChangeBs) * 100) / 100
+        confirmData.cash_payment_bs = {
+          received_bs: state.cash.receivedBs,
+          change_bs: roundedChangeBs
+        }
+
+        if (changeBsRaw > 0) {
+          confirmData.cash_payment_bs.change_rounding = {
+            mode: state.cash.changeRoundingMode,
+            exact_change_bs: Math.round(changeBsRaw * 100) / 100,
+            rounded_change_bs: Math.round(roundedChangeBs * 100) / 100,
+            adjustment_bs: adjustmentBs,
+            consented: state.cash.changeRoundingMode === 'MERCHANT' ? state.cash.changeRoundingConsent : undefined,
+          }
+        }
       }
-      
-      // Solo incluir change_bs si es mayor a 0 (cambio redondeado)
-      // Si es 0, el excedente queda a favor del POS y NO se descuenta de la caja
-      if (giveChangeInBs && changeBsFromUsd > 0) {
-        cashPayment.change_bs = Math.round(changeBsFromUsd * 100) / 100
-      }
     }
 
-    // Preparar información de pago en efectivo Bs
-    // IMPORTANTE: Solo enviamos change_bs si es > 0 (redondeado)
-    // Si es 0, no se envía, y el backend NO descuenta nada (excedente a favor del POS)
-    let cashPaymentBs: { received_bs: number; change_bs?: number } | undefined = undefined
-    if (selectedMethod === 'CASH_BS' && receivedBs > 0) {
-      cashPaymentBs = {
-        received_bs: Math.round(receivedBs * 100) / 100,
-      }
-      
-      // Solo incluir change_bs si es mayor a 0 (cambio redondeado)
-      // Si es 0, el excedente queda a favor del POS y NO se descuenta de la caja
-      if (roundedChangeBs > 0) {
-        cashPaymentBs.change_bs = Math.round(roundedChangeBs * 100) / 100
-      }
+    if (state.customerData.selectedId) {
+      confirmData.customer_id = state.customerData.selectedId
     }
 
-    onConfirm({
-      payment_method: selectedMethod,
-      currency,
-      exchange_rate: exchangeRate,
-      cash_payment: cashPayment,
-      cash_payment_bs: cashPaymentBs,
-      customer_id: selectedCustomerId || undefined,
-      customer_name: customerName.trim() || undefined,
-      customer_document_id: customerDocumentId.trim() || undefined,
-      customer_phone: customerPhone.trim() || undefined,
-      customer_note: customerNote.trim() || undefined,
-    })
-    setError('')
+    onConfirm(confirmData)
   }
 
-  const methods = [
-    { id: 'CASH_USD', label: 'Efectivo USD', icon: Banknote, color: 'text-green-600' },
-    { id: 'CASH_BS', label: 'Efectivo Bs', icon: Banknote, color: 'text-green-600' },
-    { id: 'PAGO_MOVIL', label: 'Pago Móvil', icon: Wallet, color: 'text-blue-600' },
-    { id: 'TRANSFER', label: 'Transferencia', icon: Wallet, color: 'text-purple-600' },
-    { id: 'OTHER', label: 'Otro', icon: CreditCard, color: 'text-gray-600' },
-    { id: 'FIAO', label: 'FIAO', icon: User, color: 'text-orange-600' },
-  ]
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md lg:max-w-4xl xl:max-w-5xl h-[90vh] lg:h-[85vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex items-center justify-between z-10">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Procesar Venta</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-            aria-label="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content - Two columns on desktop */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 lg:p-6">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 sm:space-y-6 lg:space-y-0">
-            {/* LEFT COLUMN - Resumen + Método de pago + Efectivo */}
-            <div className="space-y-4 sm:space-y-6">
-          {/* Resumen */}
-          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Resumen de la venta</h3>
-            <div className="space-y-3 text-sm">
-              {/* Lista de productos */}
-              <div className="space-y-2 h-24 sm:h-28 lg:h-40 lg:max-h-48 overflow-y-auto">
-                {items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-start pb-2 border-b border-gray-200 last:border-0">
-                    <div className="flex-1 min-w-0 mr-2">
-                      <p className="font-medium text-gray-900 truncate" title={item.product_name}>
-                        {item.product_name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        ${Number(item.unit_price_usd).toFixed(2)} c/u
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-semibold text-gray-900">x{item.qty}</p>
-                      <p className="text-xs text-gray-500">
-                        ${(item.qty * Number(item.unit_price_usd)).toFixed(2)}
-                      </p>
-                    </div>
+  const modalContent = (
+    <>
+      <CardContent className="p-3 sm:p-4 lg:p-6 overflow-y-auto flex-1 min-h-0 overscroll-contain">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 sm:space-y-6 lg:space-y-0">
+          {/* LEFT COLUMN */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Resumen de venta */}
+            <Card className="border border-border/40 bg-gradient-to-br from-card/50 to-card backdrop-blur-sm shadow-lg">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <ShoppingBag className="w-4 h-4 text-primary" />
                   </div>
-                ))}
-              </div>
-              
-              {/* Resumen de cantidades */}
-              <div className="flex justify-between pt-2 border-t border-gray-300">
-                <span className="text-gray-600 font-medium">Total Items:</span>
-                <span className="font-semibold text-gray-900">
-                  {items.reduce((sum, item) => sum + item.qty, 0)} unidades
-                </span>
-              </div>
-              <div className="border-t border-gray-200 pt-2 mt-2">
-                <div className="flex justify-between text-base font-semibold mb-1">
-                  <span>Total USD:</span>
-                  <span>${calculatedTotal.usd.toFixed(2)}</span>
+                  <h3 className="font-bold text-foreground text-base">Resumen de la venta</h3>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Equivalente en Bs (tasa {exchangeRate.toFixed(2)}):</span>
-                  <span>Bs. {calculatedTotal.bsFromUsd.toFixed(2)}</span>
-                </div>
-              </div>
-              <div className="border-t border-gray-200 pt-2 mt-2">
-                <div className="flex justify-between text-base font-semibold mb-1">
-                  <span>Total Bs (tasa {exchangeRate.toFixed(2)}):</span>
-                  <span>Bs. {calculatedTotal.bsFromTasa.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Equivalente en USD:</span>
-                  <span>${calculatedTotal.usdFromBsCalculado.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Método de pago */}
-          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Método de pago
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {methods.map((method) => {
-                const Icon = method.icon
-                const isSelected = selectedMethod === method.id
-                return (
-                  <button
-                    key={method.id}
-                    onClick={() => {
-                      setSelectedMethod(method.id as any)
-                      setError('')
-                    }}
-                    className={`
-                      p-3 border-2 rounded-lg transition-all
-                      ${isSelected
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <Icon className={`w-5 h-5 mx-auto mb-2 ${isSelected ? method.color : 'text-gray-400'}`} />
-                    <p className={`text-xs font-medium ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
-                      {method.label}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Captura de efectivo USD con cálculo de cambio */}
-          {selectedMethod === 'CASH_USD' && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
-              <div className="flex items-center mb-3">
-                <Calculator className="w-5 h-5 text-green-600 mr-2" />
-                <h3 className="text-sm font-semibold text-green-900">Pago en Efectivo USD</h3>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Monto Recibido (USD) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={total.usd}
-                    value={receivedUsd || ''}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0
-                      setReceivedUsd(value)
-                      setError('')
-                    }}
-                    className="w-full pl-8 pr-4 py-2.5 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-semibold"
-                    placeholder={total.usd.toFixed(2)}
-                    disabled={isLoading}
-                  />
-                </div>
-                {receivedUsd > 0 && receivedUsd < total.usd && (
-                  <p className="text-xs text-red-600 mt-1">
-                    El monto debe ser al menos ${total.usd.toFixed(2)}
-                  </p>
-                )}
-              </div>
-
-              {changeUsd > 0 && (
-                <div className="space-y-3">
-                  <div className="bg-white rounded-lg p-3 border border-green-300">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Cambio en USD:</span>
-                      <span className="text-lg font-bold text-green-700">
-                        ${changeUsd.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="giveChangeInBs"
-                      checked={giveChangeInBs}
-                      onChange={(e) => {
-                        setGiveChangeInBs(e.target.checked)
-                        setError('')
-                      }}
-                      className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                      disabled={isLoading}
-                    />
-                    <label htmlFor="giveChangeInBs" className="ml-2 text-sm font-medium text-gray-700">
-                      Dar cambio en Bolívares (usando tasa BCV)
-                    </label>
-                  </div>
-
-                  {giveChangeInBs && changeBsFromUsd > 0 && (
-                    <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-blue-900">Cambio en Bs:</span>
-                        <span className="text-xl font-bold text-blue-700">
-                          {changeBsFromUsd.toFixed(2)} Bs
-                        </span>
-                      </div>
-                      {excessFromUsd > 0 && excessFromUsd <= 5 && (
-                        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-2 mt-2">
-                          <p className="text-xs text-yellow-800 font-medium">
-                            💡 Excedente mínimo de {excessFromUsd.toFixed(2)} Bs a nuestro favor. Considera dar un dulce como gesto de cortesía.
-                          </p>
-                        </div>
-                      )}
-                      <div className="text-xs text-blue-700">
-                        <p className="font-medium mb-1">Desglose por denominaciones:</p>
-                        <p className="text-blue-800">{changeBreakdownFormattedFromUsd || 'Sin desglose disponible'}</p>
-                        <p className="text-blue-600 mt-2">
-                          Calculado: ${changeUsd.toFixed(2)} USD × {exchangeRate.toFixed(2)} (tasa BCV) = {changeBsFromUsd.toFixed(2)} Bs
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Captura de efectivo Bs con cálculo de cambio */}
-          {selectedMethod === 'CASH_BS' && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
-              <div className="flex items-center mb-3">
-                <Calculator className="w-5 h-5 text-green-600 mr-2" />
-                <h3 className="text-sm font-semibold text-green-900">Pago en Efectivo Bs</h3>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Monto Recibido (Bs) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">Bs.</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min={totalBs}
-                    value={receivedBs || ''}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0
-                      setReceivedBs(value)
-                      setError('')
-                    }}
-                    className="w-full pl-12 pr-4 py-2.5 border-2 border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-semibold"
-                    placeholder={totalBs.toFixed(2)}
-                    disabled={isLoading}
-                  />
-                </div>
-                {receivedBs > 0 && receivedBs < totalBs && (
-                  <p className="text-xs text-red-600 mt-1">
-                    El monto debe ser al menos Bs. {totalBs.toFixed(2)}
-                  </p>
-                )}
-              </div>
-
-              {changeBsRaw > 0 && (
-                <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 space-y-2">
-                  {roundedChangeBs > 0 ? (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-blue-900">Cambio en Bs (redondeado):</span>
-                        <span className="text-xl font-bold text-blue-700">
-                          {roundedChangeBs.toFixed(2)} Bs
-                        </span>
-                      </div>
-                      {excessFromBs > 0 && excessFromBs <= 5 && (
-                        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-2 mt-2">
-                          <p className="text-xs text-yellow-800 font-medium">
-                            💡 Excedente mínimo de {excessFromBs.toFixed(2)} Bs a nuestro favor. Considera dar un dulce como gesto de cortesía.
-                          </p>
-                        </div>
-                      )}
-                      {changeBsRaw !== roundedChangeBs && excessFromBs > 5 && (
-                        <div className="text-xs text-orange-600 mb-2">
-                          Cambio exacto: {changeBsRaw.toFixed(2)} Bs → Redondeado a: {roundedChangeBs.toFixed(2)} Bs (favorece al POS)
-                        </div>
-                      )}
-                      <div className="text-xs text-blue-700">
-                        <p className="font-medium mb-1">Desglose por denominaciones:</p>
-                        <p className="text-blue-800">{changeBsBreakdownFormatted || 'Sin desglose disponible'}</p>
-                      </div>
-                    </>
-                  ) : (
-                    // Cuando el cambio es menor a 5 y se redondea a 0
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-semibold text-blue-900">Cambio exacto:</span>
-                        <span className="text-lg font-bold text-blue-700">
-                          {changeBsRaw.toFixed(2)} Bs
-                        </span>
-                      </div>
-                      <div className="text-xs text-blue-600 mb-2">
-                        No se dará cambio (menor a la menor denominación común)
-                      </div>
-                      {excessFromBs > 0 && excessFromBs <= 5 && (
-                        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-2 mt-2">
-                          <p className="text-xs text-yellow-800 font-medium">
-                            💡 Excedente mínimo de {excessFromBs.toFixed(2)} Bs a nuestro favor. Considera dar un dulce como gesto de cortesía.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-            </div>
-
-            {/* RIGHT COLUMN - Tasa + Cliente */}
-            <div className="space-y-4 sm:space-y-6">
-          {/* Tasa de cambio */}
-          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Tasa de Cambio (Bs/USD)
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                step="0.01"
-                value={exchangeRate}
-                onChange={(e) => {
-                  const rate = parseFloat(e.target.value) || 0
-                  setExchangeRate(rate)
-                  setError('')
-                }}
-                className="w-full px-3 sm:px-4 py-2 text-base sm:text-lg border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="36.00"
-                disabled={isLoadingBCV}
-              />
-              {isLoadingBCV && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <span className="text-xs text-gray-500">Obteniendo...</span>
-                </div>
-              )}
-              {!isLoadingBCV && bcvRateData?.available && bcvRateData?.rate && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <span className="text-xs text-green-600 font-medium">
-                    ✓ Tasa BCV: {bcvRateData.rate}
-                  </span>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {isLoadingBCV
-                ? 'Obteniendo tasa oficial del BCV...'
-                : bcvRateData?.available && bcvRateData?.rate
-                  ? 'Tasa obtenida automáticamente del BCV. Puede ajustarla si lo desea.'
-                  : 'Tasa de cambio oficial del BCV. Usada para calcular totales mixtos'}
-            </p>
-          </div>
-
-          {/* Información del Cliente (Opcional para todas las ventas) */}
-          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-semibold text-gray-700">
-                Información del Cliente (Opcional)
-              </label>
-              {selectedMethod === 'FIAO' && (
-                <span className="text-xs text-orange-600 font-medium">Requerido para FIAO</span>
-              )}
-            </div>
-            <div className="space-y-3">
-              {/* Búsqueda de cliente existente */}
-              <div className="relative" ref={customerSearchRef}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Buscar Cliente (por nombre o cédula)
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={customerSearch}
-                    onChange={(e) => {
-                      setCustomerSearch(e.target.value)
-                      setShowCustomerResults(e.target.value.trim().length >= 2)
-                      if (!e.target.value.trim()) {
-                        // Si se borra la búsqueda, limpiar cliente seleccionado
-                        setSelectedCustomerId(null)
-                        setCustomerName('')
-                        setCustomerDocumentId('')
-                        setCustomerPhone('')
-                        setCustomerNote('')
-                      }
-                      setError('')
-                    }}
-                    placeholder="Escribe nombre o cédula para buscar..."
-                    className="w-full pl-10 pr-3 sm:px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                {/* Resultados de búsqueda */}
-                {showCustomerResults && customerSearch.trim().length >= 2 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {isLoadingCustomers ? (
-                      <div className="p-3 text-center text-sm text-gray-500">
-                        Buscando...
-                      </div>
-                    ) : customerSearchResults.length === 0 ? (
-                      <div className="p-3 text-center text-sm text-gray-500">
-                        No se encontraron clientes
-                      </div>
-                    ) : (
-                      <div className="py-1">
-                        {customerSearchResults.map((customer) => (
-                          <button
-                            key={customer.id}
-                            type="button"
-                            onClick={() => handleSelectCustomer(customer)}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
-                              selectedCustomerId === customer.id ? 'bg-blue-100' : ''
-                            }`}
+                <div className="space-y-4 text-sm">
+                  {/* Lista de productos */}
+                  <div className="h-24 sm:h-28 lg:h-40 lg:max-h-48 rounded-lg border border-border/30 bg-muted/20 p-2">
+                    <ScrollArea className="h-full pr-2">
+                      <div className="space-y-2">
+                        {items.map((item, index) => (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              "flex justify-between items-start p-2 rounded-lg hover:bg-muted/40 transition-colors",
+                              index < items.length - 1 && "border-b border-border/30"
+                            )}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-gray-900 truncate">{customer.name}</p>
-                                {customer.document_id && (
-                                  <p className="text-xs text-gray-500">CI: {customer.document_id}</p>
+                            <div className="flex-1 min-w-0 mr-3">
+                              <p
+                                className="font-semibold text-foreground text-sm break-words leading-snug"
+                                title={item.product_name}
+                              >
+                                {item.product_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {item.is_weight_product ? (
+                                  <>
+                                    ${Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
+                                      (item.weight_unit === 'g' || item.weight_unit === 'oz') ? 4 : 2
+                                    )} / {item.weight_unit || 'kg'}
+                                  </>
+                                ) : (
+                                  <>${Number(item.unit_price_usd).toFixed(2)} c/u</>
                                 )}
-                                {customer.phone && (
-                                  <p className="text-xs text-gray-500">Tel: {customer.phone}</p>
-                                )}
-                              </div>
-                              {selectedCustomerId === customer.id && (
-                                <Check className="w-4 h-4 text-blue-600 flex-shrink-0 ml-2" />
-                              )}
+                              </p>
                             </div>
-                          </button>
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-bold text-foreground text-sm">
+                                {item.is_weight_product
+                                  ? (() => {
+                                    const safeUnit = item.weight_unit || 'kg'
+                                    const decimals = safeUnit === 'g' || safeUnit === 'oz' ? 0 : 3
+                                    const safeValue = Number.isFinite(item.qty) ? item.qty : 0
+                                    const fixed = safeValue.toFixed(decimals)
+                                    const trimmed = fixed.replace(/\.?0+$/, '')
+                                    return `${trimmed} ${safeUnit}`
+                                  })()
+                                  : `x${item.qty}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+                                ${(item.qty * Number(item.unit_price_usd)).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    )}
+                    </ScrollArea>
                   </div>
-                )}
-              </div>
 
-              {/* Campos de cliente (se llenan automáticamente o manualmente) */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Nombre {customerName.trim() && <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => {
-                    setCustomerName(e.target.value)
-                    if (selectedCustomerId) {
-                      // Si se modifica manualmente, deseleccionar cliente
-                      setSelectedCustomerId(null)
-                      setCustomerSearch('')
-                    }
-                    setError('')
-                  }}
-                  placeholder="Nombre completo del cliente"
-                  className="w-full px-3 sm:px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required={selectedMethod === 'FIAO'}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Cédula de Identidad {customerName.trim() && <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="text"
-                  value={customerDocumentId}
-                  onChange={(e) => {
-                    setCustomerDocumentId(e.target.value)
-                    if (selectedCustomerId) {
-                      // Si se modifica manualmente, deseleccionar cliente
-                      setSelectedCustomerId(null)
-                      setCustomerSearch('')
-                    }
-                    setError('')
-                  }}
-                  placeholder="Ej: V-12345678"
-                  className="w-full px-3 sm:px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required={customerName.trim().length > 0}
-                />
-                {customerName.trim() && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Obligatorio cuando se proporciona el nombre
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Teléfono <span className="text-gray-400">(Opcional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={customerPhone}
-                  onChange={(e) => {
-                    setCustomerPhone(e.target.value)
-                    setError('')
-                  }}
-                  placeholder="Ej: 0412-1234567"
-                  className="w-full px-3 sm:px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Notas <span className="text-gray-400">(Opcional)</span>
-                </label>
-                <textarea
-                  value={customerNote}
-                  onChange={(e) => {
-                    setCustomerNote(e.target.value)
-                    setError('')
-                  }}
-                  placeholder="Notas adicionales sobre el cliente"
-                  rows={2}
-                  className="w-full px-3 sm:px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {selectedMethod === 'FIAO'
-                ? 'Los datos del cliente son requeridos para ventas FIAO (nombre y cédula)'
-                : 'Opcional: Si proporcionas el nombre, la cédula es obligatoria'}
-            </p>
+                  {/* Resumen de cantidades */}
+                  <div className="flex justify-between items-center pt-3 border-t border-border/40">
+                    <span className="text-muted-foreground font-medium text-sm">Total Items:</span>
+                    <span className="font-bold text-foreground">
+                      {(() => {
+                        const totalUnits = items.reduce(
+                          (sum, item) => sum + (item.is_weight_product ? 0 : item.qty),
+                          0
+                        )
+                        const weightLineItems = items.filter((item) => item.is_weight_product).length
+                        return weightLineItems > 0
+                          ? totalUnits > 0
+                            ? `${totalUnits} unidades + ${weightLineItems} por peso`
+                            : `${weightLineItems} por peso`
+                          : `${totalUnits} unidades`
+                      })()}
+                    </span>
+                  </div>
+                  <div className="rounded-lg bg-primary/5 p-3 border border-primary/20">
+                    <div className="flex justify-between items-baseline mb-2">
+                      <span className="text-foreground font-semibold">Total USD:</span>
+                      <span className="text-xl font-bold text-primary tabular-nums">${total.usd.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Equivalente en Bs (tasa {checkoutData.exchangeRate.toFixed(2)}):</span>
+                      <span className="tabular-nums">Bs. {(total.usd * checkoutData.exchangeRate).toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-muted/30 p-3 border border-border/30">
+                    <div className="flex justify-between items-baseline mb-2">
+                      <span className="text-foreground font-semibold">Total Bs:</span>
+                      <span className="text-lg font-bold text-foreground tabular-nums">Bs. {(total.usd * checkoutData.exchangeRate).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Tasa: {checkoutData.exchangeRate.toFixed(2)}</span>
+                      <span className="tabular-nums">${total.usd.toFixed(2)} USD</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Resumen de totales */}
+            <CheckoutSummary
+              subtotal={total.usd}
+              discount={0}
+              total={total.usd}
+              currency="USD"
+              exchangeRate={checkoutData.exchangeRate}
+            />
+
+            {/* Pagos divididos */}
+            {/* Pagos divididos (MOVIDO A LA DERECHA) */}
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-            </div>
+          {/* RIGHT COLUMN */}
+          <div className="space-y-4 sm:space-y-6">
+
+            {/* Quick Actions Bar */}
+            <QuickActionsBar
+              isSplitPayment={state.paymentMode === 'SPLIT'}
+              onToggleSplitPayment={() => actions.setPaymentMode(state.paymentMode === 'SPLIT' ? 'SINGLE' : 'SPLIT')}
+              generateFiscalInvoice={state.invoice.generateFiscalInvoice}
+              hasFiscalConfig={checkoutData.invoiceSeries.length > 0}
+              onToggleFiscalInvoice={actions.setGenerateFiscalInvoice}
+              promotions={checkoutData.promotions as any || []}
+              selectedPromotionId={state.invoice.promotionId}
+              onPromotionChange={actions.setPromotion}
+              customers={checkoutData.customers}
+              selectedCustomerId={state.customerData.selectedId}
+              onCustomerChange={actions.setCustomerId}
+              customerSearchTerm={state.customerData.search}
+              onCustomerSearchChange={actions.setCustomerSearch}
+            />
+
+            {state.paymentMode === 'SPLIT' ? (
+              <SplitPaymentManager
+                payments={splitPayments}
+                remainingUsd={splitRemainingUsd}
+                remainingBs={splitRemainingBs}
+                exchangeRate={checkoutData.exchangeRate}
+                isComplete={splitIsComplete}
+                onAddPayment={handleAddSplitPayment}
+                onRemovePayment={handleRemoveSplitPayment}
+                onUpdatePayment={handleUpdateSplitPayment}
+              />
+            ) : (
+              <>
+                {/* Selector de método de pago */}
+                <PaymentMethodSelector
+                  value={state.selectedMethod}
+                  onChange={actions.setPaymentMethod}
+                  disabled={false}
+                />
+
+                {/* Sección de efectivo USD */}
+                {state.selectedMethod === 'CASH_USD' && (
+                  <CashPaymentSection
+                    mode="USD"
+                    totalAmount={total.usd}
+                    exchangeRate={checkoutData.exchangeRate}
+                    receivedAmount={state.cash.receivedUsd}
+                    onAmountChange={actions.setReceivedUsd}
+                    giveChangeInBs={state.cash.giveChangeInBs}
+                    onGiveChangeInBsChange={actions.setGiveChangeInBs}
+                    roundingMode={state.cash.changeRoundingMode}
+                    onRoundingModeChange={actions.setChangeRoundingMode}
+                    roundingConsent={state.cash.changeRoundingConsent}
+                    onRoundingConsentChange={actions.setChangeRoundingConsent}
+                  />
+                )}
+
+                {/* Sección de efectivo BS */}
+                {state.selectedMethod === 'CASH_BS' && (
+                  <CashPaymentSection
+                    mode="BS"
+                    totalAmount={total.usd * checkoutData.exchangeRate}
+                    exchangeRate={checkoutData.exchangeRate}
+                    receivedAmount={state.cash.receivedBs}
+                    onAmountChange={actions.setReceivedBs}
+                    roundingMode={state.cash.changeRoundingMode}
+                    onRoundingModeChange={actions.setChangeRoundingMode}
+                    roundingConsent={state.cash.changeRoundingConsent}
+                    onRoundingConsentChange={actions.setChangeRoundingConsent}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Búsqueda de cliente */}
+            {(state.selectedMethod === 'FIAO' || state.paymentMode === 'SPLIT') && (
+              <CustomerSearchSection
+                customers={checkoutData.customers}
+                selectedCustomerId={state.customerData.selectedId}
+                onSelectCustomer={actions.setCustomerId}
+                searchValue={state.customerData.search}
+                onSearchChange={actions.setCustomerSearch}
+                required={state.selectedMethod === 'FIAO'}
+              />
+            )}
+
+            {/* Configuración de factura */}
+            <InvoiceConfigSection
+              invoiceSeries={checkoutData.invoiceSeries as any}
+              priceLists={checkoutData.priceLists}
+              warehouses={checkoutData.warehouses}
+              selectedSeriesId={state.invoice.seriesId}
+              selectedPriceListId={state.invoice.priceListId}
+              selectedWarehouseId={state.invoice.warehouseId}
+              onSeriesChange={actions.setInvoiceSeries}
+              onPriceListChange={actions.setPriceList}
+              onWarehouseChange={actions.setWarehouse}
+              generateFiscalInvoice={state.invoice.generateFiscalInvoice}
+              onGenerateFiscalInvoiceChange={actions.setGenerateFiscalInvoice}
+            />
+
+            {/* Nota de venta */}
+            <Card>
+              <CardContent className="p-4">
+                <Label htmlFor="sale-note">Nota de venta (opcional)</Label>
+                <Input
+                  id="sale-note"
+                  type="text"
+                  placeholder="Agregar nota o comentario..."
+                  value={state.saleNote}
+                  onChange={(e) => actions.setSaleNote(e.target.value)}
+                  className="mt-2"
+                />
+              </CardContent>
+            </Card>
           </div>
         </div>
+      </CardContent>
 
-        <div className="flex-shrink-0 border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:max-w-md lg:ml-auto">
-            <button
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-4 py-2.5 sm:py-3 border-2 border-gray-300 rounded-lg font-semibold text-sm sm:text-base text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-manipulation"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={isLoading || items.length === 0 || exchangeRate <= 0}
-              className="flex-1 px-4 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg font-semibold text-sm sm:text-base hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors touch-manipulation"
-            >
-              {isLoading ? 'Procesando...' : 'Confirmar Venta'}
-            </button>
+      {/* Footer con botones */}
+      <div className="p-3 sm:p-4 lg:p-6 border-t bg-muted/30">
+        {state.error && (
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+            {state.error}
           </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={isLoading || items.length === 0}
+            className="flex-1"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Procesando...
+              </>
+            ) : (
+              `Confirmar $${total.usd.toFixed(2)}`
+            )}
+          </Button>
         </div>
       </div>
-    </div>
+    </>
+  )
+
+  // Renderizar modal o sheet según dispositivo
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col">
+          <SheetHeader className="p-3 sm:p-4 border-b flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-lg sm:text-xl">Finalizar Venta</SheetTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <SheetDescription className="text-xs text-muted-foreground">
+              Confirma los detalles del pago y procesa la venta
+            </SheetDescription>
+          </SheetHeader>
+          {modalContent}
+          {serialSelectorItem && (
+            <SerialSelector
+              isOpen={!!serialSelectorItem}
+              onClose={() => setSerialSelectorItem(null)}
+              productId={serialSelectorItem.productId}
+              productName={serialSelectorItem.productName}
+              quantity={serialSelectorItem.quantity}
+              onSelect={handleSerialSelect}
+            />
+          )
+          }
+        </SheetContent >
+      </Sheet >
+    )
+  }
+
+  return (
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99]"
+              onClick={onClose}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: "-45%", x: "-50%" }}
+              animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
+              exit={{ opacity: 0, scale: 0.95, y: "-45%" }}
+              transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
+              className="fixed left-1/2 top-1/2 z-[100] w-[95vw] max-w-6xl"
+            >
+              <Card className="w-full max-h-[90vh] flex flex-col shadow-2xl border-white/10 dark:bg-card/95 backdrop-blur-xl">
+                <div className="p-4 lg:p-6 border-b flex items-center justify-between flex-shrink-0">
+                  <h2 className="text-xl lg:text-2xl font-bold">Finalizar Venta</h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onClose}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {modalContent}
+              </Card>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {serialSelectorItem && (
+        <SerialSelector
+          isOpen={!!serialSelectorItem}
+          onClose={() => setSerialSelectorItem(null)}
+          productId={serialSelectorItem.productId}
+          productName={serialSelectorItem.productName}
+          quantity={serialSelectorItem.quantity}
+          onSelect={handleSerialSelect}
+        />
+      )}
+    </>
   )
 }
