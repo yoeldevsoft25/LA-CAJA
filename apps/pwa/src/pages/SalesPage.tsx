@@ -315,7 +315,7 @@ export default function SalesPage() {
   const handlePrint = (sale: Sale) => {
     try {
       printService.printSale(sale, {
-        storeName: 'SISTEMA POS',
+        storeName: 'Velox POS',
         cashierName: sale.sold_by_user?.full_name || undefined,
       })
     } catch (err) {

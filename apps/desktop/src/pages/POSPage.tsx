@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, lazy, Suspense, useEffect, useState } from 'react'
+import { useRef, useCallback, useMemo, useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { CatalogHeader } from '@/components/pos/catalog/CatalogHeader'
 import { ProductCatalog } from '@/components/pos/catalog/ProductCatalog'
@@ -13,6 +13,10 @@ import { productsCacheService } from '@/services/products-cache.service'
 import { salesService } from '@/services/sales.service'
 import { exchangeService } from '@/services/exchange.service'
 import { cashService } from '@/services/cash.service'
+import { paymentsService } from '@/services/payments.service'
+import { invoiceSeriesService } from '@/services/invoice-series.service'
+import { priceListsService } from '@/services/price-lists.service'
+import { promotionsService } from '@/services/promotions.service'
 import { useCart, CartItem, CART_IDS } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
 import { inventoryService } from '@/services/inventory.service'
@@ -24,8 +28,7 @@ import { usePOSCartActions } from '@/hooks/pos/usePOSCartActions'
 import { usePOSScanner } from '@/hooks/pos/usePOSScanner'
 import { usePOSHotkeys } from '@/hooks/pos/usePOSHotkeys'
 
-// ⚡ OPTIMIZACIÓN: Lazy load del modal grande
-const CheckoutModal = lazy(() => import('@/components/pos/CheckoutModal'))
+import CheckoutModal from '@/components/pos/CheckoutModal'
 import VariantSelector from '@/components/variants/VariantSelector'
 import WeightInputModal from '@/components/pos/WeightInputModal'
 import POSCart from '@/components/pos/cart/POSCart'
@@ -79,9 +82,33 @@ export default function POSPage() {
   } = useCart()
 
   useEffect(() => {
-    if (items.length === 0) return
-    void import('@/components/pos/CheckoutModal')
-  }, [items.length])
+    if (!isOnline || !user?.store_id || items.length === 0) return
+    queryClient.prefetchQuery({
+      queryKey: ['payment-configs', user.store_id],
+      queryFn: () => paymentsService.getPaymentMethodConfigs(),
+      staleTime: 1000 * 60 * 10,
+    })
+    queryClient.prefetchQuery({
+      queryKey: ['invoice-series', user.store_id],
+      queryFn: () => invoiceSeriesService.getSeriesByStore(),
+      staleTime: 1000 * 60 * 10,
+    })
+    queryClient.prefetchQuery({
+      queryKey: ['price-lists', user.store_id],
+      queryFn: () => priceListsService.getAll(),
+      staleTime: 1000 * 60 * 10,
+    })
+    queryClient.prefetchQuery({
+      queryKey: ['promotions', user.store_id],
+      queryFn: () => promotionsService.getActive(),
+      staleTime: 1000 * 60 * 5,
+    })
+    queryClient.prefetchQuery({
+      queryKey: ['warehouses', user.store_id],
+      queryFn: () => warehousesService.getAll(),
+      staleTime: 1000 * 60 * 10,
+    })
+  }, [isOnline, user?.store_id, items.length, queryClient])
 
   const cartSummaries = useMemo(() => {
     return CART_IDS.map((id) => {
@@ -568,16 +595,48 @@ export default function POSPage() {
 
   // Crear venta
   const createSaleMutation = useMutation({
-    mutationFn: salesService.create,
+    mutationFn: (payload) => salesService.create(payload, { returnMode: 'minimal' }),
     // Necesitamos ejecutar la mutación incluso en modo offline para encolar la venta
     // y usar el fallback local. Si queda en 'online', react-query la pausa
     // hasta que vuelva la conexión y el botón se queda en "Procesando...".
     networkMode: 'always',
-    onSuccess: async (sale) => {
+    onSuccess: (sale) => {
       const isOnline = navigator.onLine
+      const serialsToAssign = pendingSerials
+      const shouldPrintNow = shouldPrint
+      const saleItemsForCache = (sale.items || []).map((item) => {
+        if (item.product?.name) return item
+        const fallback = lastCartSnapshot.current.find(
+          (cartItem) => cartItem.product_id === item.product_id
+        )
+        if (!fallback) return item
+        return {
+          ...item,
+          product: {
+            id: item.product_id,
+            name: fallback.product_name,
+          },
+        }
+      })
+      const saleForCache = {
+        ...sale,
+        items: saleItemsForCache,
+        sold_by_user:
+          sale.sold_by_user ||
+          (user
+            ? {
+              id: user.user_id,
+              full_name: user.full_name,
+            }
+            : undefined),
+      }
 
       // Activar animación de éxito premium central y evitar toast duplicado en online
       setSuccessSaleId(sale.id.slice(0, 8))
+
+      // Cerrar y limpiar inmediato para no bloquear UI
+      clear()
+      setShowCheckout(false)
 
       if (!isOnline) {
         toast.success(
@@ -592,56 +651,57 @@ export default function POSPage() {
         // Prepend the new sale and maintain limit
         return {
           ...old,
-          sales: [sale, ...old.sales].slice(0, 50),
+          sales: [saleForCache, ...old.sales].slice(0, 50),
           total: (old.total || 0) + 1,
         }
       })
 
-      // Asignar seriales si hay
-      if (pendingSerials && Object.keys(pendingSerials).length > 0 && isOnline) {
-        try {
-          // Obtener los items de la venta para mapear seriales
-          const saleItems = sale.items || []
-          for (const [productId, serialNumbers] of Object.entries(pendingSerials)) {
-            const saleItem = saleItems.find((item) => item.product_id === productId)
-            if (saleItem && serialNumbers.length > 0) {
-              await productSerialsService.assignSerialsToSale({
-                sale_id: sale.id,
-                sale_item_id: saleItem.id,
-                serial_numbers: serialNumbers,
-              })
+      // Asignar seriales sin bloquear UI
+      if (serialsToAssign && Object.keys(serialsToAssign).length > 0 && isOnline) {
+        void (async () => {
+          try {
+            // Obtener los items de la venta para mapear seriales
+            const saleItems = sale.items || []
+            for (const [productId, serialNumbers] of Object.entries(serialsToAssign)) {
+              const saleItem = saleItems.find((item) => item.product_id === productId)
+              if (saleItem && serialNumbers.length > 0) {
+                await productSerialsService.assignSerialsToSale({
+                  sale_id: sale.id,
+                  sale_item_id: saleItem.id,
+                  serial_numbers: serialNumbers,
+                })
+              }
             }
+            setPendingSerials({}) // Limpiar seriales pendientes
+          } catch (err) {
+            console.error('[POS] Error al asignar seriales:', err)
+            toast.error('Venta creada pero hubo un error al asignar seriales')
           }
-          setPendingSerials({}) // Limpiar seriales pendientes
-        } catch (err) {
-          console.error('[POS] Error al asignar seriales:', err)
-          toast.error('Venta creada pero hubo un error al asignar seriales')
-        }
+        })()
       }
 
-      // Intentar imprimir ticket
-      if (shouldPrint) {
-        try {
-          printService.printSale(sale, {
-            storeName: 'SISTEMA POS',
-            cartItems: lastCartSnapshot.current.map((ci) => ({
-              product_id: ci.product_id,
-              product_name: ci.product_name,
-              qty: ci.qty,
-              unit_price_bs: ci.unit_price_bs,
-              unit_price_usd: ci.unit_price_usd,
-              discount_bs: ci.discount_bs,
-              discount_usd: ci.discount_usd,
-            })),
-            cashierName: user?.full_name || undefined,
-          })
-        } catch (err) {
-          console.warn('[POS] No se pudo imprimir el ticket:', err)
-        }
+      // Intentar imprimir ticket sin bloquear UI
+      if (shouldPrintNow) {
+        void (async () => {
+          try {
+            printService.printSale(sale, {
+              storeName: 'Velox POS',
+              cartItems: lastCartSnapshot.current.map((ci) => ({
+                product_id: ci.product_id,
+                product_name: ci.product_name,
+                qty: ci.qty,
+                unit_price_bs: ci.unit_price_bs,
+                unit_price_usd: ci.unit_price_usd,
+                discount_bs: ci.discount_bs,
+                discount_usd: ci.discount_usd,
+              })),
+              cashierName: user?.full_name || undefined,
+            })
+          } catch (err) {
+            console.warn('[POS] No se pudo imprimir el ticket:', err)
+          }
+        })()
       }
-
-      clear()
-      setShowCheckout(false)
     },
     onError: (error: any) => {
       console.error('[POS] ❌ Error en createSaleMutation:', {
@@ -947,28 +1007,15 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* Modal de checkout - Lazy loaded para reducir bundle inicial */}
-      {
-        showCheckout && (
-          <Suspense fallback={
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-              <div className="flex flex-col items-center gap-2">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-sm text-muted-foreground">Cargando checkout...</p>
-              </div>
-            </div>
-          }>
-            <CheckoutModal
-              isOpen={showCheckout}
-              onClose={() => setShowCheckout(false)}
-              items={items}
-              total={total}
-              onConfirm={handleCheckout}
-              isLoading={createSaleMutation.isPending}
-            />
-          </Suspense>
-        )
-      }
+      {/* Modal de checkout */}
+      <CheckoutModal
+        isOpen={showCheckout}
+        onClose={() => setShowCheckout(false)}
+        items={items}
+        total={total}
+        onConfirm={handleCheckout}
+        isLoading={createSaleMutation.isPending}
+      />
 
       {/* Selector de variantes */}
       {

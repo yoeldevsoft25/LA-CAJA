@@ -621,7 +621,7 @@ export class HealthController {
       <div class="header-content">
         <h1>Health Dashboard</h1>
         <p>Monitoreo en tiempo real del sistema Velox POS</p>
-        <div class="header-subtitle">Sistema POS Offline-First para Venezuela</div>
+        <div class="header-subtitle">Velox POS Offline-First para Venezuela</div>
         <div id="overall-status" class="status-badge loading">
           <span class="loading-spinner"></span>
           <span>Cargando servicios...</span>

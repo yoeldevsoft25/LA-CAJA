@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { X, Loader2, ShoppingBag } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { CartItem } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
 import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNearestDenominationUp } from '@/utils/vzla-denominations'
@@ -137,14 +136,13 @@ export default function CheckoutModal({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Resetear estado al abrir/cerrar
+  // Resetear estado al abrir
   useEffect(() => {
-    if (isOpen) {
-      actions.reset()
-      setSplitPayments([])
-      setSelectedSerials({})
-    }
-  }, [isOpen])
+    if (!isOpen) return
+    actions.reset()
+    setSplitPayments([])
+    setSelectedSerials({})
+  }, [isOpen, actions.reset])
 
   // Calcular montos restantes para pagos divididos con useMemo
   const { splitRemainingUsd, splitRemainingBs, splitIsComplete } = useMemo(() => {
@@ -631,42 +629,30 @@ export default function CheckoutModal({
 
   return (
     <>
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99]"
-              onClick={onClose}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: "-45%", x: "-50%" }}
-              animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
-              exit={{ opacity: 0, scale: 0.95, y: "-45%" }}
-              transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
-              className="fixed left-1/2 top-1/2 z-[100] w-[95vw] max-w-6xl"
-            >
-              <Card className="w-full max-h-[90vh] flex flex-col shadow-2xl border-white/10 dark:bg-card/95 backdrop-blur-xl">
-                <div className="p-4 lg:p-6 border-b flex items-center justify-between flex-shrink-0">
-                  <h2 className="text-xl lg:text-2xl font-bold">Finalizar Venta</h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onClose}
-                    className="h-8 w-8"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                {modalContent}
-              </Card>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99]"
+            onClick={onClose}
+          />
+          <div className="fixed left-1/2 top-1/2 z-[100] w-[95vw] max-w-6xl -translate-x-1/2 -translate-y-1/2">
+            <Card className="w-full max-h-[90vh] flex flex-col shadow-2xl border-white/10 dark:bg-card/95 backdrop-blur-xl">
+              <div className="p-4 lg:p-6 border-b flex items-center justify-between flex-shrink-0">
+                <h2 className="text-xl lg:text-2xl font-bold">Finalizar Venta</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              {modalContent}
+            </Card>
+          </div>
+        </>
+      )}
       {serialSelectorItem && (
         <SerialSelector
           isOpen={!!serialSelectorItem}

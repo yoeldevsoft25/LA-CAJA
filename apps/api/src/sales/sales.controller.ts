@@ -33,7 +33,11 @@ export class SalesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateSaleDto, @Request() req: any) {
+  async create(
+    @Body() dto: CreateSaleDto,
+    @Request() req: any,
+    @Query('return') returnMode?: string,
+  ) {
     // ⚠️ VALIDACIÓN CRÍTICA: Verificar que req.user existe y tiene los datos necesarios
     if (!req.user) {
       throw new UnauthorizedException('Usuario no autenticado');
@@ -57,7 +61,16 @@ export class SalesController {
       );
     }
 
-    return this.salesService.create(storeId, dto, userId, userRole);
+    const normalizedReturnMode =
+      returnMode && returnMode.toLowerCase() === 'minimal' ? 'minimal' : 'full';
+
+    return this.salesService.create(
+      storeId,
+      dto,
+      userId,
+      userRole,
+      normalizedReturnMode,
+    );
   }
 
   @Get()

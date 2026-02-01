@@ -961,6 +961,7 @@ export class SalesService {
     dto: CreateSaleDto,
     userId?: string,
     userRole?: string,
+    returnMode: 'full' | 'minimal' = 'full',
   ): Promise<Sale> {
     const startTime = Date.now();
     const effectiveUserRole = userRole || 'cashier';
@@ -1750,6 +1751,38 @@ export class SalesService {
           totalBs,
           dto.exchange_rate,
         );
+      }
+
+      if (returnMode === 'minimal') {
+        // Respuesta mínima para acelerar el checkout (sin joins pesados)
+        for (const item of items) {
+          const product = productMap.get(item.product_id);
+          if (product && !(item as any).product) {
+            (item as any).product = {
+              id: product.id,
+              name: product.name,
+              sku: product.sku || null,
+              barcode: product.barcode || null,
+            };
+          }
+        }
+
+        const minimalSale = savedSale as any;
+        minimalSale.items = items;
+        minimalSale.debt = debt
+          ? {
+            id: debt.id,
+            status: debt.status,
+            amount_bs: Number(debt.amount_bs || 0),
+            amount_usd: Number(debt.amount_usd || 0),
+            total_paid_bs: 0,
+            total_paid_usd: 0,
+            remaining_bs: Number(debt.amount_bs || 0),
+            remaining_usd: Number(debt.amount_usd || 0),
+          }
+          : null;
+        minimalSale.fiscal_invoice = null;
+        return minimalSale;
       }
 
       // ⚡ OPTIMIZACIÓN: Query simplificada con todos los datos necesarios en una sola query

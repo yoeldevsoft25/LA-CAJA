@@ -112,7 +112,7 @@ export class WhatsAppMessagingService {
         where: { id: storeId },
       });
 
-      const storeName = store?.name || 'SISTEMA POS';
+      const storeName = store?.name || 'Velox POS';
 
       // Formatear mensaje
       const message = this.whatsappConfigService.formatSaleMessage(
@@ -191,7 +191,7 @@ export class WhatsAppMessagingService {
         where: { id: storeId },
       });
 
-      const storeName = store?.name || 'SISTEMA POS';
+      const storeName = store?.name || 'Velox POS';
 
       // Formatear mensaje
       const debtForMessage = {
@@ -312,7 +312,7 @@ export class WhatsAppMessagingService {
         where: { id: storeId },
       });
 
-      const storeName = store?.name || 'SISTEMA POS';
+      const storeName = store?.name || 'Velox POS';
 
       // Formatear mensaje
       const message = this.whatsappConfigService.formatDebtReminderMessage(
@@ -368,7 +368,7 @@ export class WhatsAppMessagingService {
         where: { id: storeId },
       });
 
-      const storeName = store?.name || 'SISTEMA POS';
+      const storeName = store?.name || 'Velox POS';
 
       // Formatear mensaje
       const message = this.whatsappConfigService.formatCustomerMessage(

@@ -56,7 +56,7 @@ function resolveItemsForPrint(sale: Sale, cartItems?: CartSnapshotItem[]) {
 }
 
 function buildHtml(sale: Sale, opts?: { storeName?: string; cartItems?: CartSnapshotItem[]; cashierName?: string }) {
-  const storeName = opts?.storeName || 'SISTEMA POS'
+  const storeName = opts?.storeName || 'Velox POS'
   const cashier = opts?.cashierName || sale.sold_by_user?.full_name || 'Cajero'
   const items = resolveItemsForPrint(sale, opts?.cartItems)
   const soldAt = new Date(sale.sold_at || new Date()).toLocaleString('es-VE')
@@ -148,7 +148,7 @@ function buildHtml(sale: Sale, opts?: { storeName?: string; cartItems?: CartSnap
 }
 
 function buildCashSessionHtml(summary: CashSessionSummary, opts?: { storeName?: string; cashierName?: string }) {
-  const storeName = opts?.storeName || 'SISTEMA POS'
+  const storeName = opts?.storeName || 'Velox POS'
   const cashier = opts?.cashierName || 'Cajero'
   const { session, sales_count, sales, cash_flow, closing } = summary
   const openedAt = new Date(session.opened_at).toLocaleString('es-VE')
@@ -254,7 +254,7 @@ function buildCashSessionHtml(summary: CashSessionSummary, opts?: { storeName?: 
 }
 
 function buildShiftSummaryHtml(summary: ShiftSummary, opts?: { storeName?: string; cashierName?: string }) {
-  const storeName = opts?.storeName || 'SISTEMA POS'
+  const storeName = opts?.storeName || 'Velox POS'
   const cashier = opts?.cashierName || 'Cajero'
   const { shift, sales_count, cuts_count, summary: shiftSummary } = summary
   const openedAt = new Date(shift.opened_at).toLocaleString('es-VE')

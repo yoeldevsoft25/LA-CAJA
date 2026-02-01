@@ -130,7 +130,7 @@ async function bootstrap() {
     const config = new DocumentBuilder()
       .setTitle('Velox POS API')
       .setDescription(
-        'Sistema POS Offline-First para Venezuela - Documentación completa de la API',
+        'Velox POS Offline-First para Venezuela - Documentación completa de la API',
       )
       .setVersion('1.0.0')
       .addBearerAuth(
