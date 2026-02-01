@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import { Activity, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { getApiBaseUrl } from '@/lib/api';
 
 export function RealTimeMetrics() {
   const [connected, setConnected] = useState(false);
@@ -10,7 +11,7 @@ export function RealTimeMetrics() {
 
   useEffect(() => {
     // Obtener URL del API
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const apiUrl = getApiBaseUrl();
     const token = localStorage.getItem('auth_token');
 
     if (!token) {
@@ -22,7 +23,10 @@ export function RealTimeMetrics() {
       auth: {
         token,
       },
-      transports: ['websocket'],
+      extraHeaders: {
+        'ngrok-skip-browser-warning': '1',
+      },
+      transports: ['polling', 'websocket'],
     });
 
     newSocket.on('connect', () => {

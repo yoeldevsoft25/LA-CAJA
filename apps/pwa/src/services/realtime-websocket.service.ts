@@ -51,7 +51,10 @@ class RealtimeWebSocketService {
       auth: {
         token,
       },
-      transports: ['websocket', 'polling'],
+      extraHeaders: {
+        'ngrok-skip-browser-warning': '1',
+      },
+      transports: ['polling', 'websocket'], // Priorizar polling para mayor compatibilidad (ej. ngrok)
       reconnection: true,
       reconnectionDelay: this.reconnectDelay,
       reconnectionAttempts: this.maxReconnectAttempts,

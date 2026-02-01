@@ -35,7 +35,10 @@ class NotificationsWebSocketService {
     // El namespace /notifications se agrega automáticamente
     this.socket = io(`${apiUrl}/notifications`, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      extraHeaders: {
+        'ngrok-skip-browser-warning': '1',
+      },
+      transports: ['polling', 'websocket'], // Priorizar polling para mayor compatibilidad (ej. ngrok)
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
