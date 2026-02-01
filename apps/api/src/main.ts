@@ -128,7 +128,7 @@ async function bootstrap() {
   const swaggerEnabled = configService.get<string>('SWAGGER_ENABLED') !== 'false';
   if (swaggerEnabled) {
     const config = new DocumentBuilder()
-      .setTitle('LA CAJA API')
+      .setTitle('Velox POS API')
       .setDescription(
         'Sistema POS Offline-First para Venezuela - Documentación completa de la API',
       )
@@ -168,7 +168,7 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document, {
-      customSiteTitle: 'LA CAJA API - Documentación',
+      customSiteTitle: 'Velox POS API - Documentación',
       customCss: `
         .swagger-ui .topbar { display: none; }
         .swagger-ui .info { margin: 20px 0; }

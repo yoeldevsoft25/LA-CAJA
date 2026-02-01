@@ -25,7 +25,7 @@ export class HealthController {
     private bullmq: BullMQHealthIndicator,
     private externalApis: ExternalApisHealthIndicator,
     private websocket: WebSocketHealthIndicator,
-  ) {}
+  ) { }
 
   @Get()
   @HealthCheck()
@@ -125,7 +125,7 @@ export class HealthController {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LA CAJA - Health Dashboard</title>
+  <title>Velox POS - Health Dashboard</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
@@ -620,7 +620,7 @@ export class HealthController {
     <div class="header">
       <div class="header-content">
         <h1>Health Dashboard</h1>
-        <p>Monitoreo en tiempo real del sistema LA CAJA</p>
+        <p>Monitoreo en tiempo real del sistema Velox POS</p>
         <div class="header-subtitle">Sistema POS Offline-First para Venezuela</div>
         <div id="overall-status" class="status-badge loading">
           <span class="loading-spinner"></span>
@@ -860,7 +860,7 @@ export class HealthController {
 </body>
 </html>
     `;
-    
+
     res.type('text/html').send(html);
   }
 }

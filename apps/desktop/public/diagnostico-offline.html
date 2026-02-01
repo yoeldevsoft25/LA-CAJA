@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diagnóstico Offline - LA CAJA</title>
+  <title>Diagnóstico Offline - Velox POS</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -12,13 +13,15 @@
       padding: 20px;
       background: #f5f5f5;
     }
+
     .card {
       background: white;
       border-radius: 8px;
       padding: 20px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+
     .status {
       display: inline-block;
       padding: 4px 12px;
@@ -26,10 +29,27 @@
       font-size: 14px;
       font-weight: 600;
     }
-    .ok { background: #10b981; color: white; }
-    .error { background: #ef4444; color: white; }
-    .warning { background: #f59e0b; color: white; }
-    .info { background: #3b82f6; color: white; }
+
+    .ok {
+      background: #10b981;
+      color: white;
+    }
+
+    .error {
+      background: #ef4444;
+      color: white;
+    }
+
+    .warning {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .info {
+      background: #3b82f6;
+      color: white;
+    }
+
     button {
       background: #3b82f6;
       color: white;
@@ -40,7 +60,11 @@
       font-size: 16px;
       margin: 5px;
     }
-    button:hover { background: #2563eb; }
+
+    button:hover {
+      background: #2563eb;
+    }
+
     pre {
       background: #f3f4f6;
       padding: 15px;
@@ -48,6 +72,7 @@
       overflow-x: auto;
       font-size: 12px;
     }
+
     .log {
       max-height: 300px;
       overflow-y: auto;
@@ -60,9 +85,10 @@
     }
   </style>
 </head>
+
 <body>
-  <h1>🔍 Diagnóstico Offline - LA CAJA</h1>
-  
+  <h1>🔍 Diagnóstico Offline - Velox POS</h1>
+
   <div class="card">
     <h2>Estado del Sistema</h2>
     <div id="status"></div>
@@ -84,7 +110,7 @@
 
   <script type="module">
     let logElement = document.getElementById('log');
-    
+
     function log(message, type = 'info') {
       const timestamp = new Date().toLocaleTimeString();
       const colors = {
@@ -99,7 +125,7 @@
 
     async function verificarTodo() {
       log('=== Iniciando verificación completa ===', 'info');
-      
+
       // 1. Verificar IndexedDB
       log('1. Verificando soporte de IndexedDB...', 'info');
       if ('indexedDB' in window) {
@@ -123,7 +149,7 @@
       try {
         const dbName = 'LaCajaDB';
         const request = indexedDB.open(dbName);
-        
+
         request.onsuccess = () => {
           log('✅ Base de datos abierta correctamente', 'success');
           const db = request.result;
@@ -131,7 +157,7 @@
           log(`   Object Stores: ${Array.from(db.objectStoreNames).join(', ')}`, 'info');
           db.close();
         };
-        
+
         request.onerror = () => {
           log('❌ Error al abrir base de datos: ' + request.error, 'error');
         };
@@ -144,19 +170,19 @@
       try {
         const dbName = 'LaCajaDB';
         const request = indexedDB.open(dbName);
-        
+
         request.onsuccess = () => {
           const db = request.result;
           if (db.objectStoreNames.contains('products')) {
             const tx = db.transaction('products', 'readonly');
             const store = tx.objectStore('products');
             const countRequest = store.count();
-            
+
             countRequest.onsuccess = () => {
               log(`✅ Cache de productos: ${countRequest.result} productos almacenados`, 'success');
               db.close();
             };
-            
+
             countRequest.onerror = () => {
               log('⚠️ No se pudo contar productos en cache', 'warning');
               db.close();
@@ -166,7 +192,7 @@
             db.close();
           }
         };
-        
+
         request.onerror = () => {
           log('❌ Error al abrir base de datos para verificar cache', 'error');
         };
@@ -196,28 +222,28 @@
 
     async function probarIndexedDB() {
       log('Probando escritura/lectura en IndexedDB...', 'info');
-      
+
       try {
         const dbName = 'TestDB';
         const request = indexedDB.open(dbName, 1);
-        
+
         request.onupgradeneeded = (e) => {
           const db = e.target.result;
           if (!db.objectStoreNames.contains('test')) {
             db.createObjectStore('test', { keyPath: 'id' });
           }
         };
-        
+
         request.onsuccess = () => {
           const db = request.result;
           const tx = db.transaction('test', 'readwrite');
           const store = tx.objectStore('test');
-          
+
           // Escribir
           const writeRequest = store.put({ id: 1, data: 'test', timestamp: Date.now() });
           writeRequest.onsuccess = () => {
             log('✅ Escritura exitosa', 'success');
-            
+
             // Leer
             const readRequest = store.get(1);
             readRequest.onsuccess = () => {
@@ -228,7 +254,7 @@
             };
           };
         };
-        
+
         request.onerror = () => {
           log('❌ Error: ' + request.error, 'error');
         };
@@ -239,22 +265,22 @@
 
     async function verCache() {
       log('Consultando cache de productos...', 'info');
-      
+
       try {
         const dbName = 'LaCajaDB';
         const request = indexedDB.open(dbName);
-        
+
         request.onsuccess = () => {
           const db = request.result;
           if (db.objectStoreNames.contains('products')) {
             const tx = db.transaction('products', 'readonly');
             const store = tx.objectStore('products');
             const getAllRequest = store.getAll();
-            
+
             getAllRequest.onsuccess = () => {
               const products = getAllRequest.result;
               log(`✅ Encontrados ${products.length} productos en cache`, 'success');
-              
+
               if (products.length > 0) {
                 log('Primeros 5 productos:', 'info');
                 products.slice(0, 5).forEach((p, i) => {
@@ -263,7 +289,7 @@
               } else {
                 log('⚠️ El cache está vacío. Necesitas estar online y cargar productos primero.', 'warning');
               }
-              
+
               db.close();
             };
           } else {
@@ -278,20 +304,20 @@
 
     async function limpiarCache() {
       if (!confirm('¿Estás seguro de limpiar todo el cache?')) return;
-      
+
       log('Limpiando cache...', 'info');
-      
+
       try {
         const dbName = 'LaCajaDB';
         const request = indexedDB.open(dbName);
-        
+
         request.onsuccess = () => {
           const db = request.result;
           if (db.objectStoreNames.contains('products')) {
             const tx = db.transaction('products', 'readwrite');
             const store = tx.objectStore('products');
             const clearRequest = store.clear();
-            
+
             clearRequest.onsuccess = () => {
               log('✅ Cache de productos limpiado', 'success');
               db.close();
@@ -308,11 +334,11 @@
 
     async function poblarCache() {
       log('Poblando cache con datos de prueba...', 'info');
-      
+
       try {
         const dbName = 'LaCajaDB';
         const request = indexedDB.open(dbName, 3);
-        
+
         request.onupgradeneeded = (e) => {
           const db = e.target.result;
           if (!db.objectStoreNames.contains('products')) {
@@ -321,17 +347,17 @@
             store.createIndex('name', 'name', { unique: false });
           }
         };
-        
+
         request.onsuccess = () => {
           const db = request.result;
           const tx = db.transaction('products', 'readwrite');
           const store = tx.objectStore('products');
-          
+
           const testProducts = [
             { id: 'test-1', store_id: 'test-store', name: 'Producto Test 1', price_bs: 10, price_usd: 1, is_active: true, cached_at: Date.now(), updated_at: Date.now() },
             { id: 'test-2', store_id: 'test-store', name: 'Producto Test 2', price_bs: 20, price_usd: 2, is_active: true, cached_at: Date.now(), updated_at: Date.now() },
           ];
-          
+
           const promises = testProducts.map(p => store.put(p));
           Promise.all(promises).then(() => {
             log('✅ Cache poblado con 2 productos de prueba', 'success');
@@ -362,4 +388,5 @@
     });
   </script>
 </body>
+
 </html>
