@@ -95,7 +95,7 @@ export function TwoFactorSetup() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'la-caja-backup-codes.txt'
+    a.download = 'velox-pos-backup-codes.txt'
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Códigos de respaldo descargados')

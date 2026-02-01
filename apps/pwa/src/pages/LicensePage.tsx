@@ -267,7 +267,7 @@ export default function LicensePage() {
           Mi Licencia
         </h1>
         <p className="text-muted-foreground mt-1">
-          Gestiona tu suscripción y planes de LA-CAJA
+          Gestiona tu suscripción y planes de Velox POS
         </p>
       </div>
 

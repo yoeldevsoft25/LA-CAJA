@@ -2,7 +2,7 @@
  * Design System - Color Tokens
  *
  * Centralizamos los colores del brand para uso consistente en toda la app.
- * El color principal es rgb(13, 129, 206) - el azul del logo de LA CAJA.
+ * El color principal es rgb(13, 129, 206) - el azul de Velox POS.
  */
 
 export const colors = {
