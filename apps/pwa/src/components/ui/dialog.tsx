@@ -42,6 +42,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
+  const ariaDescribedBy = props['aria-describedby']
   // Detectar mobile para optimizar animaciones
   const [isMobile, setIsMobile] = React.useState(false)
 
@@ -90,6 +91,7 @@ const DialogContent = React.forwardRef<
             e.preventDefault()
           }
         }}
+        aria-describedby={ariaDescribedBy ?? undefined}
         {...props}
       >
         {children}

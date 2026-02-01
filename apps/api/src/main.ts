@@ -120,6 +120,7 @@ async function bootstrap() {
       'Authorization',
       'x-admin-key',
       'x-seniat-audit-key',
+      'ngrok-skip-browser-warning',
     ],
   });
 

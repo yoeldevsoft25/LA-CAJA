@@ -97,6 +97,8 @@ export const api = axios.create({
   timeout: 30000, // Timeout de 30 segundos (aumentado para importaciones largas)
 });
 
+export const getApiBaseUrl = () => api.defaults.baseURL || API_URL;
+
 const setApiBaseUrl = (nextBaseUrl: string) => {
   api.defaults.baseURL = nextBaseUrl;
   localStorage.setItem(API_BASE_STORAGE_KEY, nextBaseUrl);

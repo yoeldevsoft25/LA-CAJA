@@ -6,6 +6,7 @@ import {
   ExchangeRateUpdate,
 } from '@/types/realtime-analytics.types'
 import { createLogger } from '@/lib/logger'
+import { getApiBaseUrl } from '@/lib/api'
 
 const logger = createLogger('RealtimeWebSocket')
 
@@ -42,33 +43,7 @@ class RealtimeWebSocketService {
       return
     }
 
-    // Obtener URL del API (usar la misma lógica que api.ts)
-    let apiUrl = import.meta.env.VITE_API_URL
-    if (!apiUrl) {
-      // Si estamos en localhost o preview local, usar localhost
-      if (
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        window.location.port === '4173' || // Vite preview
-        window.location.port === '5173'    // Vite dev server
-      ) {
-        apiUrl = 'http://localhost:3000'
-      } else if (import.meta.env.PROD) {
-        // En producción, intentar detectar automáticamente
-        const hostname = window.location.hostname
-        if (hostname.includes('netlify.app')) {
-          apiUrl = 'https://la-caja-8i4h.onrender.com'
-        } else {
-          const protocol = window.location.protocol
-          const port = protocol === 'https:' ? '' : ':3000'
-          apiUrl = `${protocol}//${hostname}${port}`
-        }
-      } else {
-        // En desarrollo, usar la misma IP para el API
-        const hostname = window.location.hostname
-        apiUrl = `http://${hostname}:3000`
-      }
-    }
+    const apiUrl = getApiBaseUrl()
 
     // Socket.IO funciona con HTTP/HTTPS, no necesita ws://
     // El namespace /realtime se agrega automáticamente
@@ -278,4 +253,3 @@ class RealtimeWebSocketService {
 
 // Singleton instance
 export const realtimeWebSocketService = new RealtimeWebSocketService()
-
