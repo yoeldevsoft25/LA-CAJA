@@ -67,7 +67,7 @@ export function exportToCSV<T>(
 ): void {
   // Construir encabezados
   const headers = columns.map((col) => escapeCSV(col.header))
-  
+
   // Construir filas
   const rows = data.map((row) =>
     columns.map((col) => {
@@ -89,7 +89,7 @@ export function exportToCSV<T>(
   // Crear blob y descargar
   const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
-  
+
   const link = document.createElement('a')
   link.setAttribute('href', url)
   link.setAttribute('download', `${options.filename}.csv`)
@@ -119,7 +119,7 @@ export function exportDashboardToExcel(
   dateRange?: { start?: string; end?: string }
 ): void {
   const timestamp = new Date().toISOString().split('T')[0]
-  const filename = `LA-CAJA-Reporte-${timestamp}`
+  const filename = `Velox-POS-Reporte-${timestamp}`
 
   // Preparar datos de ventas por día
   const salesData = trends.sales_trend.map((day) => ({
@@ -190,7 +190,7 @@ export function exportDashboardToExcel(
   // Descargar
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
-  
+
   const link = document.createElement('a')
   link.setAttribute('href', url)
   link.setAttribute('download', `${filename}.csv`)

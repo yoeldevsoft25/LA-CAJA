@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Limpiar Cache - LA CAJA</title>
+  <title>Limpiar Cache - Velox POS</title>
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -12,12 +13,14 @@
       padding: 20px;
       background: #f5f5f5;
     }
+
     .container {
       background: white;
       padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
+
     button {
       background: #2563eb;
       color: white;
@@ -28,20 +31,24 @@
       font-size: 16px;
       margin: 10px 5px;
     }
+
     button:hover {
       background: #1d4ed8;
     }
+
     #status {
       margin-top: 20px;
       padding: 15px;
       border-radius: 6px;
       display: none;
     }
+
     .success {
       background: #d1fae5;
       color: #065f46;
       border: 1px solid #10b981;
     }
+
     .error {
       background: #fee2e2;
       color: #991b1b;
@@ -49,15 +56,16 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
-    <h1>🧹 Limpiar Cache - LA CAJA</h1>
+    <h1>🧹 Limpiar Cache - Velox POS</h1>
     <p>Si los cambios no se reflejan en el móvil, usa estos botones para limpiar el cache:</p>
-    
+
     <button onclick="clearServiceWorker()">1. Desregistrar Service Worker</button>
     <button onclick="clearCache()">2. Limpiar Cache del Navegador</button>
     <button onclick="clearAll()">3. Limpiar Todo</button>
-    
+
     <div id="status"></div>
   </div>
 
@@ -112,5 +120,5 @@
     }
   </script>
 </body>
-</html>
 
+</html>

@@ -88,7 +88,7 @@ export default function VerifyEmailPage() {
             Email Verificado
           </h1>
           <p className="text-slate-500 mb-6">
-            Tu email ha sido verificado exitosamente. Ya puedes usar todas las funcionalidades de LA-CAJA.
+            Tu email ha sido verificado exitosamente. Ya puedes usar todas las funcionalidades de Velox POS.
           </p>
 
           <Button

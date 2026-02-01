@@ -358,7 +358,7 @@ export default function RegisterPage() {
                 }}
               />
               <img
-                src="/favicon.svg"
+                src="/logo-velox.svg"
                 alt="Velox POS Logo"
                 className="relative w-20 h-20 rounded-2xl shadow-xl"
                 style={{
@@ -398,340 +398,340 @@ export default function RegisterPage() {
           <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
             <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-[#fbfaf8]">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Store Name */}
-            <motion.div
-              className="space-y-3"
-              variants={motionVariants.staggerItem}
-              initial="hidden"
-              animate="visible"
-            >
-              <Label
-                htmlFor="store_name"
-                className="text-sm font-semibold text-slate-700 flex items-center gap-2"
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: colors.brand.primary }}
-                />
-                Nombre de la Tienda
-              </Label>
-
-              <Input
-                id="store_name"
-                type="text"
-                placeholder="Ej: Mi Tienda"
-                className={cn(
-                  'h-12 text-base border-2 transition-all duration-200',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
-                  errors.store_name
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
-                )}
-                {...register('store_name')}
-                autoFocus
-              />
-
-              <AnimatePresence>
-                {errors.store_name && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
+                {/* Store Name */}
+                <motion.div
+                  className="space-y-3"
+                  variants={motionVariants.staggerItem}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Label
+                    htmlFor="store_name"
+                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
                   >
-                    {errors.store_name.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: colors.brand.primary }}
+                    />
+                    Nombre de la Tienda
+                  </Label>
 
-            {/* Owner Name */}
-            <motion.div
-              className="space-y-3"
-              variants={motionVariants.staggerItem}
-              initial="hidden"
-              animate="visible"
-            >
-              <Label
-                htmlFor="owner_name"
-                className="text-sm font-semibold text-slate-700 flex items-center gap-2"
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: colors.brand.primary }}
-                />
-                Nombre del Dueño
-              </Label>
-
-              <Input
-                id="owner_name"
-                type="text"
-                placeholder="Ej: Juan Pérez"
-                className={cn(
-                  'h-12 text-base border-2 transition-all duration-200',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
-                  errors.owner_name
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
-                )}
-                {...register('owner_name')}
-              />
-
-              <AnimatePresence>
-                {errors.owner_name && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                  >
-                    {errors.owner_name.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </motion.div>
-
-            {/* Owner Email */}
-            <motion.div
-              className="space-y-3"
-              variants={motionVariants.staggerItem}
-              initial="hidden"
-              animate="visible"
-            >
-              <Label
-                htmlFor="owner_email"
-                className="text-sm font-semibold text-slate-700 flex items-center gap-2"
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: colors.brand.primary }}
-                />
-                Email del Dueño
-              </Label>
-
-              <Input
-                id="owner_email"
-                type="email"
-                placeholder="Ej: juan@example.com"
-                className={cn(
-                  'h-12 text-base border-2 transition-all duration-200',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
-                  errors.owner_email
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
-                )}
-                {...register('owner_email')}
-              />
-
-              <AnimatePresence>
-                {errors.owner_email && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                  >
-                    {errors.owner_email.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              <p className="text-xs text-muted-foreground">
-                Te enviaremos un email de verificación a esta dirección
-              </p>
-            </motion.div>
-
-            {/* Owner PIN */}
-            <motion.div
-              className="space-y-3"
-              variants={motionVariants.staggerItem}
-              initial="hidden"
-              animate="visible"
-            >
-              <Label
-                htmlFor="owner_pin"
-                className="text-sm font-semibold text-slate-700 flex items-center gap-2"
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: colors.brand.primary }}
-                />
-                PIN del Administrador
-              </Label>
-
-              <Input
-                id="owner_pin"
-                type="password"
-                placeholder="••••"
-                maxLength={8}
-                className={cn(
-                  'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
-                  errors.owner_pin
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'
-                )}
-                {...register('owner_pin')}
-              />
-
-              <AnimatePresence>
-                {errors.owner_pin && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                  >
-                    {errors.owner_pin.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              <p className="text-xs text-muted-foreground">
-                El PIN del administrador debe tener entre 6 y 8 caracteres (letras y números)
-              </p>
-            </motion.div>
-
-            {/* Cashier Name */}
-            <motion.div
-              className="space-y-3"
-              variants={motionVariants.staggerItem}
-              initial="hidden"
-              animate="visible"
-            >
-              <Label
-                htmlFor="cashier_name"
-                className="text-sm font-semibold text-slate-700 flex items-center gap-2"
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: colors.brand.primary }}
-                />
-                Nombre del Cajero
-              </Label>
-
-              <Input
-                id="cashier_name"
-                type="text"
-                placeholder="Ej: María González"
-                className={cn(
-                  'h-12 text-base border-2 transition-all duration-200',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
-                  errors.cashier_name
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
-                )}
-                {...register('cashier_name')}
-              />
-
-              <AnimatePresence>
-                {errors.cashier_name && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                  >
-                    {errors.cashier_name.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </motion.div>
-
-            {/* Cashier PIN */}
-            <motion.div
-              className="space-y-3"
-              variants={motionVariants.staggerItem}
-              initial="hidden"
-              animate="visible"
-            >
-              <Label
-                htmlFor="cashier_pin"
-                className="text-sm font-semibold text-slate-700 flex items-center gap-2"
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: colors.brand.primary }}
-                />
-                PIN del Cajero
-              </Label>
-
-              <Input
-                id="cashier_pin"
-                type="password"
-                placeholder="••••"
-                maxLength={8}
-                className={cn(
-                  'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
-                  errors.cashier_pin
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'
-                )}
-                {...register('cashier_pin')}
-              />
-
-              <AnimatePresence>
-                {errors.cashier_pin && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                  >
-                    {errors.cashier_pin.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              <p className="text-xs text-muted-foreground">
-                El PIN debe tener entre 6 y 8 caracteres (letras y números)
-              </p>
-            </motion.div>
-
-            {/* Submit Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Button
-                type="submit"
-                className={cn(
-                  'w-full h-14 text-base font-semibold shadow-lg transition-all duration-300 relative overflow-hidden',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
-                )}
-                style={{
-                  background: colors.gradients.primary,
-                  boxShadow: colors.shadows.lg,
-                }}
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Creando cuenta...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Store className="h-5 w-5" />
-                    Crear Cuenta
-                  </span>
-                )}
-
-                {/* Shimmer effect */}
-                {!mutation.isPending && (
-                  <motion.span
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '200%' }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      repeatDelay: 2,
-                      ease: 'easeInOut',
-                    }}
+                  <Input
+                    id="store_name"
+                    type="text"
+                    placeholder="Ej: Mi Tienda"
+                    className={cn(
+                      'h-12 text-base border-2 transition-all duration-200',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
+                      errors.store_name
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                    )}
+                    {...register('store_name')}
+                    autoFocus
                   />
-                )}
-              </Button>
-            </motion.div>
+
+                  <AnimatePresence>
+                    {errors.store_name && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.store_name.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                {/* Owner Name */}
+                <motion.div
+                  className="space-y-3"
+                  variants={motionVariants.staggerItem}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Label
+                    htmlFor="owner_name"
+                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: colors.brand.primary }}
+                    />
+                    Nombre del Dueño
+                  </Label>
+
+                  <Input
+                    id="owner_name"
+                    type="text"
+                    placeholder="Ej: Juan Pérez"
+                    className={cn(
+                      'h-12 text-base border-2 transition-all duration-200',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
+                      errors.owner_name
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                    )}
+                    {...register('owner_name')}
+                  />
+
+                  <AnimatePresence>
+                    {errors.owner_name && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.owner_name.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                {/* Owner Email */}
+                <motion.div
+                  className="space-y-3"
+                  variants={motionVariants.staggerItem}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Label
+                    htmlFor="owner_email"
+                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: colors.brand.primary }}
+                    />
+                    Email del Dueño
+                  </Label>
+
+                  <Input
+                    id="owner_email"
+                    type="email"
+                    placeholder="Ej: juan@example.com"
+                    className={cn(
+                      'h-12 text-base border-2 transition-all duration-200',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
+                      errors.owner_email
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                    )}
+                    {...register('owner_email')}
+                  />
+
+                  <AnimatePresence>
+                    {errors.owner_email && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.owner_email.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                  <p className="text-xs text-muted-foreground">
+                    Te enviaremos un email de verificación a esta dirección
+                  </p>
+                </motion.div>
+
+                {/* Owner PIN */}
+                <motion.div
+                  className="space-y-3"
+                  variants={motionVariants.staggerItem}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Label
+                    htmlFor="owner_pin"
+                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: colors.brand.primary }}
+                    />
+                    PIN del Administrador
+                  </Label>
+
+                  <Input
+                    id="owner_pin"
+                    type="password"
+                    placeholder="••••"
+                    maxLength={8}
+                    className={cn(
+                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
+                      errors.owner_pin
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'
+                    )}
+                    {...register('owner_pin')}
+                  />
+
+                  <AnimatePresence>
+                    {errors.owner_pin && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.owner_pin.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                  <p className="text-xs text-muted-foreground">
+                    El PIN del administrador debe tener entre 6 y 8 caracteres (letras y números)
+                  </p>
+                </motion.div>
+
+                {/* Cashier Name */}
+                <motion.div
+                  className="space-y-3"
+                  variants={motionVariants.staggerItem}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Label
+                    htmlFor="cashier_name"
+                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: colors.brand.primary }}
+                    />
+                    Nombre del Cajero
+                  </Label>
+
+                  <Input
+                    id="cashier_name"
+                    type="text"
+                    placeholder="Ej: María González"
+                    className={cn(
+                      'h-12 text-base border-2 transition-all duration-200',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
+                      errors.cashier_name
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                    )}
+                    {...register('cashier_name')}
+                  />
+
+                  <AnimatePresence>
+                    {errors.cashier_name && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.cashier_name.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                {/* Cashier PIN */}
+                <motion.div
+                  className="space-y-3"
+                  variants={motionVariants.staggerItem}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Label
+                    htmlFor="cashier_pin"
+                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: colors.brand.primary }}
+                    />
+                    PIN del Cajero
+                  </Label>
+
+                  <Input
+                    id="cashier_pin"
+                    type="password"
+                    placeholder="••••"
+                    maxLength={8}
+                    className={cn(
+                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
+                      errors.cashier_pin
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'
+                    )}
+                    {...register('cashier_pin')}
+                  />
+
+                  <AnimatePresence>
+                    {errors.cashier_pin && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.cashier_pin.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                  <p className="text-xs text-muted-foreground">
+                    El PIN debe tener entre 6 y 8 caracteres (letras y números)
+                  </p>
+                </motion.div>
+
+                {/* Submit Button */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Button
+                    type="submit"
+                    className={cn(
+                      'w-full h-14 text-base font-semibold shadow-lg transition-all duration-300 relative overflow-hidden',
+                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
+                    style={{
+                      background: colors.gradients.primary,
+                      boxShadow: colors.shadows.lg,
+                    }}
+                    disabled={mutation.isPending}
+                  >
+                    {mutation.isPending ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Creando cuenta...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Store className="h-5 w-5" />
+                        Crear Cuenta
+                      </span>
+                    )}
+
+                    {/* Shimmer effect */}
+                    {!mutation.isPending && (
+                      <motion.span
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                        initial={{ x: '-100%' }}
+                        animate={{ x: '200%' }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          repeatDelay: 2,
+                          ease: 'easeInOut',
+                        }}
+                      />
+                    )}
+                  </Button>
+                </motion.div>
               </form>
             </CardContent>
           </Card>

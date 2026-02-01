@@ -1,8 +1,8 @@
 [package]
 name = "la-caja-desktop"
 version = "1.0.0"
-description = "LA CAJA Desktop App"
-authors = ["LA CAJA Team"]
+description = "Velox POS Desktop App"
+authors = ["Velox POS Team"]
 license = "MIT"
 repository = ""
 edition = "2021"

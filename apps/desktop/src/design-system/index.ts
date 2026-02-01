@@ -1,5 +1,5 @@
 /**
- * LA CAJA Design System
+ * Velox POS Design System
  *
  * Este módulo centraliza todos los tokens, utilidades y configuraciones
  * del design system para mantener consistencia visual en toda la aplicación.
