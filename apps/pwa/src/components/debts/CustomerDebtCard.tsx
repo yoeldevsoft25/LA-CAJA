@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import PayAllDebtsModal from './PayAllDebtsModal'
 import PaySelectedDebtsModal from './PaySelectedDebtsModal'
 import SelectDebtsForWhatsAppModal from './SelectDebtsForWhatsAppModal'
+import DebtTimelineModal from './DebtTimelineModal'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface CustomerDebtCardProps {
@@ -63,6 +64,7 @@ export default function CustomerDebtCard({
   const [isPayAllModalOpen, setIsPayAllModalOpen] = useState(false)
   const [isPaySelectedModalOpen, setIsPaySelectedModalOpen] = useState(false)
   const [isSelectDebtsWhatsAppOpen, setIsSelectDebtsWhatsAppOpen] = useState(false)
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
   const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
 
   // Obtener resumen del cliente
@@ -369,8 +371,23 @@ export default function CustomerDebtCard({
                   )}
                 </div>
 
-                {/* Botones de Acción Rápida (Solo visible si expandido en desktop, o siempre visible? Mejor siempre visible para acción rápida) */}
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setIsTimelineOpen(true)}
+                          className="h-10 w-10 rounded-full border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+                        >
+                          <ListChecks className="w-5 h-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Ver Historial de Pagos</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
                   {hasOpenDebts && customer.phone && (
                     <TooltipProvider>
                       <Tooltip>
@@ -549,6 +566,13 @@ export default function CustomerDebtCard({
         customer={customer}
         openDebts={openDebts}
         onSuccess={onPaymentSuccess}
+      />
+
+      <DebtTimelineModal
+        isOpen={isTimelineOpen}
+        onClose={() => setIsTimelineOpen(false)}
+        customerId={customer.id}
+        customerName={customer.name}
       />
     </Card>
   )

@@ -6,7 +6,6 @@ import { z } from 'zod'
 import {
   Plus,
   Search,
-  ChevronRight,
   Check,
   Filter,
   ShoppingBag,
@@ -74,7 +73,7 @@ export default function OrderItemModal({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { },
     reset,
     watch,
     setValue,

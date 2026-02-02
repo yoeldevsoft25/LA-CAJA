@@ -159,12 +159,13 @@ export default function PayAllDebtsModal({
   })
 
   const onSubmit = (data: PaymentFormData) => {
-    if (data.amount_usd < totals.totalRemainingUsd) {
-      toast.error(
-        `El monto debe ser al menos $${totals.totalRemainingUsd.toFixed(2)} USD (total pendiente)`
-      )
-      return
-    }
+    // Permitir pagos parciales
+    // if (data.amount_usd < totals.totalRemainingUsd) {
+    //   toast.error(
+    //     `El monto debe ser al menos $${totals.totalRemainingUsd.toFixed(2)} USD (total pendiente)`
+    //   )
+    //   return
+    // }
 
     payAllMutation.mutate(data)
   }
@@ -208,12 +209,12 @@ export default function PayAllDebtsModal({
 
           {/* Alerta si el monto es menor */}
           {amountUsd > 0 && amountUsd < totals.totalRemainingUsd && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
+            <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800">
+              <AlertTriangle className="h-4 w-4 text-blue-600" />
               <AlertTitle>Atención</AlertTitle>
               <AlertDescription>
-                El monto ingresado (${amountUsd.toFixed(2)}) es menor al total pendiente (
-                ${totals.totalRemainingUsd.toFixed(2)}). Por favor, ingrese el monto completo.
+                Se realizará un abono parcial de ${amountUsd.toFixed(2)} al total pendiente.
+                Se aplicará a las deudas más antiguas primero.
               </AlertDescription>
             </Alert>
           )}
@@ -235,8 +236,8 @@ export default function PayAllDebtsModal({
                   {...register('amount_usd', {
                     valueAsNumber: true,
                     min: {
-                      value: totals.totalRemainingUsd,
-                      message: `El monto mínimo es $${totals.totalRemainingUsd.toFixed(2)}`,
+                      value: 0.01,
+                      message: 'El monto debe ser mayor a 0',
                     },
                   })}
                 />
@@ -328,14 +329,14 @@ export default function PayAllDebtsModal({
               <Button
                 type="submit"
                 className="flex-1 bg-success hover:bg-success/90 text-white"
-                disabled={payAllMutation.isPending || amountUsd < totals.totalRemainingUsd}
+                disabled={payAllMutation.isPending || amountUsd <= 0}
               >
                 {payAllMutation.isPending ? (
                   'Procesando...'
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Pagar Todas las Deudas
+                    {amountUsd < totals.totalRemainingUsd ? 'Abonar a Deuda Total' : 'Pagar Todas las Deudas'}
                   </>
                 )}
               </Button>

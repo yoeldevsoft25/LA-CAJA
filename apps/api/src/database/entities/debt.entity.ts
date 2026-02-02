@@ -43,6 +43,13 @@ export class Debt {
   @Column('uuid')
   customer_id: string;
 
+  @ManyToOne(() => Debt, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'parent_debt_id' })
+  parent_debt: Debt | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  parent_debt_id: string | null;
+
   @Column({ type: 'timestamptz' })
   created_at: Date;
 
