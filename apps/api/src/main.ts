@@ -162,7 +162,7 @@ async function bootstrap() {
       .addTag('fiscal', 'Facturación fiscal')
       .addTag('reports', 'Reportes y análisis')
       .addTag('backup', 'Respaldo de datos')
-      .addServer('https://veloxpos.share.zrok.io', 'Servidor de desarrollo (Zrok)')
+      .addServer('https://veloxpos2.share.zrok.io', 'Servidor de desarrollo (Zrok)')
       .addServer('http://localhost:3000', 'Servidor de desarrollo')
       .addServer('https://la-caja-8i4h.onrender.com', 'Servidor de Producción (Render)')
       .build();
