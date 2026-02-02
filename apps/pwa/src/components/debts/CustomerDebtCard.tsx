@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CreditCard, Clock, CheckCircle, AlertCircle, Eye, Plus, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ListChecks } from 'lucide-react'
+import { CreditCard, Clock, CheckCircle, AlertCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals } from '@/services/debts.service'
-import { format, startOfWeek, endOfWeek, subWeeks, isWithinInterval } from 'date-fns'
+import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import PayAllDebtsModal from './PayAllDebtsModal'
 import PaySelectedDebtsModal from './PaySelectedDebtsModal'
 import SelectDebtsForWhatsAppModal from './SelectDebtsForWhatsAppModal'
-import DebtTimelineModal from './DebtTimelineModal'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface CustomerDebtCardProps {
@@ -26,45 +24,19 @@ interface CustomerDebtCardProps {
   onPaymentSuccess?: () => void
 }
 
-const statusConfig = {
-  open: {
-    label: 'Pendiente',
-    bgColor: 'bg-warning/10',
-    textColor: 'text-warning',
-    icon: AlertCircle,
-    badgeVariant: 'default' as const,
-    badgeClass: 'bg-warning text-white',
-  },
-  partial: {
-    label: 'Parcial',
-    bgColor: 'bg-warning/10',
-    textColor: 'text-warning',
-    icon: Clock,
-    badgeVariant: 'secondary' as const,
-    badgeClass: 'bg-warning/20 text-warning',
-  },
-  paid: {
-    label: 'Pagado',
-    bgColor: 'bg-success/10',
-    textColor: 'text-success',
-    icon: CheckCircle,
-    badgeVariant: 'default' as const,
-    badgeClass: 'bg-success text-white',
-  },
-}
-
 export default function CustomerDebtCard({
   customer,
   debts,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onViewDebt,
-  onAddPayment,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onAddPayment: _propOnAddPayment,
   onPaymentSuccess,
 }: CustomerDebtCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isPayAllModalOpen, setIsPayAllModalOpen] = useState(false)
   const [isPaySelectedModalOpen, setIsPaySelectedModalOpen] = useState(false)
   const [isSelectDebtsWhatsAppOpen, setIsSelectDebtsWhatsAppOpen] = useState(false)
-  const [isTimelineOpen, setIsTimelineOpen] = useState(false)
   const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
 
   // Obtener resumen del cliente
@@ -74,9 +46,22 @@ export default function CustomerDebtCard({
     enabled: debts && debts.length > 0,
   })
 
+  // Obtener línea de tiempo (historial trazable)
+  const { data: timelineData, isLoading: isLoadingTimeline } = useQuery({
+    queryKey: ['debtTimeline', customer.id],
+    queryFn: () => debtsService.getCustomerDebtTimeline(customer.id),
+    enabled: isExpanded, // Solo cargar cuando se expande la tarjeta
+  })
+
+  // Totales
   const debtsArray = debts || []
   const openDebts = debtsArray.filter((d) => d.status !== 'paid')
   const hasOpenDebts = openDebts.length > 0
+
+  const totalRemainingUsd = useMemo(
+    () => openDebts.reduce((acc, debt) => acc + calculateDebtTotals(debt).remaining_usd, 0),
+    [openDebts]
+  )
 
   useEffect(() => {
     setSelectedDebtIds((prev) => {
@@ -89,165 +74,14 @@ export default function CustomerDebtCard({
     })
   }, [openDebts])
 
-  // Calcular totales localmente si no hay summary
-  const totalRemainingUsd = summary
-    ? summary.remaining_usd
-    : debtsArray.reduce(
-      (acc, debt) => acc + calculateDebtTotals(debt).remaining_usd,
-      0
-    )
-
   const selectedDebts = useMemo(
     () => openDebts.filter((d) => selectedDebtIds.has(d.id)),
     [openDebts, selectedDebtIds]
   )
 
-  const selectedTotalUsd = selectedDebts.reduce(
-    (sum, debt) => sum + calculateDebtTotals(debt).remaining_usd,
-    0
-  )
-
-  const toggleSelectedDebt = (id: string) => {
-    setSelectedDebtIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const selectAllOpen = () => setSelectedDebtIds(new Set(openDebts.map((d) => d.id)))
-  const clearSelection = () => setSelectedDebtIds(new Set())
-
-  const selectThisWeek = () => {
-    const now = new Date()
-    const start = startOfWeek(now, { weekStartsOn: 1 })
-    const end = endOfWeek(now, { weekStartsOn: 1 })
-    const ids = openDebts
-      .filter((d) => isWithinInterval(new Date(d.created_at), { start, end }))
-      .map((d) => d.id)
-    setSelectedDebtIds(new Set(ids))
-  }
-
-  const selectLastWeek = () => {
-    const now = new Date()
-    const lastWeek = subWeeks(now, 1)
-    const start = startOfWeek(lastWeek, { weekStartsOn: 1 })
-    const end = endOfWeek(lastWeek, { weekStartsOn: 1 })
-    const ids = openDebts
-      .filter((d) => isWithinInterval(new Date(d.created_at), { start, end }))
-      .map((d) => d.id)
-    setSelectedDebtIds(new Set(ids))
-  }
-
-  const cutoffDate = customer.debt_cutoff_at ? new Date(customer.debt_cutoff_at) : null
-  const hasCutoff = cutoffDate && !isNaN(cutoffDate.getTime())
-  const sortedDebts = useMemo(
-    () =>
-      [...debtsArray].sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ),
-    [debtsArray]
-  )
-  const currentDebts = hasCutoff
-    ? sortedDebts.filter((d) => new Date(d.created_at).getTime() > cutoffDate!.getTime())
-    : sortedDebts
-  const pastDebts = hasCutoff
-    ? sortedDebts.filter((d) => new Date(d.created_at).getTime() <= cutoffDate!.getTime())
-    : []
-
-  const renderDebtRow = (debt: Debt, isPastSection: boolean) => {
-    const debtCalc = calculateDebtTotals(debt)
-    const status = statusConfig[debt.status] || statusConfig.open
-    const StatusIcon = status.icon
-
-    return (
-      <div key={debt.id} className="p-4 hover:bg-muted/50 transition-colors bg-background group/item">
-        <div className="flex items-start gap-3">
-          <Checkbox
-            checked={selectedDebtIds.has(debt.id)}
-            onCheckedChange={() => toggleSelectedDebt(debt.id)}
-            disabled={debt.status === 'paid'}
-            className="mt-1"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge
-                variant={status.badgeVariant}
-                className={status.badgeClass}
-              >
-                <StatusIcon className="w-3 h-3 mr-1" />
-                {status.label}
-              </Badge>
-              {hasCutoff && isPastSection && (
-                <Badge variant="secondary" className="bg-muted text-muted-foreground">
-                  Pasada
-                </Badge>
-              )}
-              <span className="text-xs text-muted-foreground flex items-center">
-                <Clock className="w-3 h-3 mr-1" />
-                {format(new Date(debt.created_at), "dd MMM yyyy", { locale: es })}
-              </span>
-            </div>
-
-            <div className="flex items-baseline gap-4 mt-2">
-              <div>
-                <span className="text-xs text-muted-foreground block">Monto Original</span>
-                <span className="text-sm font-medium text-foreground">
-                  ${Number(debt.amount_usd).toFixed(2)}
-                </span>
-              </div>
-
-              {debt.status !== 'paid' && (
-                <div>
-                  <span className="text-xs text-muted-foreground block">Saldo</span>
-                  <span className="text-sm font-bold text-warning">
-                    ${debtCalc.remaining_usd.toFixed(2)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {debt.note && (
-              <p className="text-xs text-muted-foreground mt-2 italic border-l-2 pl-2 border-border">
-                "{debt.note}"
-              </p>
-            )}
-          </div>
-
-          {/* Acciones por deuda */}
-          <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation()
-                onViewDebt(debt)
-              }}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="Ver detalle"
-            >
-              <Eye className="w-4 h-4" />
-            </Button>
-            {debt.status !== 'paid' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onAddPayment(debt)
-                }}
-                className="h-8 w-8 text-success hover:bg-success/10"
-                title="Agregar abono"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    )
+  const onAddPayment = (debt: Debt) => {
+    setSelectedDebtIds(new Set([debt.id]))
+    setIsPaySelectedModalOpen(true)
   }
 
   // --- LOGICA DE CREDIT HEALTH ---
@@ -372,22 +206,6 @@ export default function CustomerDebtCard({
                 </div>
 
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setIsTimelineOpen(true)}
-                          className="h-10 w-10 rounded-full border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
-                        >
-                          <ListChecks className="w-5 h-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Ver Historial de Pagos</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
                   {hasOpenDebts && customer.phone && (
                     <TooltipProvider>
                       <Tooltip>
@@ -467,34 +285,13 @@ export default function CustomerDebtCard({
               )}
             </div>
 
-            {/* Lista de deudas individual */}
-            <div className="divide-y divide-border border-t border-border">
-              {hasOpenDebts && (
-                <div className="px-4 py-3 bg-muted/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex flex-wrap gap-2 text-xs text-primary">
-                    <button onClick={selectAllOpen} className="hover:underline">Todas</button>
-                    <button onClick={clearSelection} className="hover:underline">Ninguna</button>
-                    <button onClick={selectThisWeek} className="hover:underline">Esta semana</button>
-                    <button onClick={selectLastWeek} className="hover:underline">Semana pasada</button>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
-                      Seleccionadas: {selectedDebts.length} • ${selectedTotalUsd.toFixed(2)}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={selectedDebts.length === 0}
-                      onClick={() => setIsPaySelectedModalOpen(true)}
-                      className="h-8"
-                    >
-                      <ListChecks className="w-4 h-4 mr-1" />
-                      Pagar/Abonar
-                    </Button>
-                  </div>
+            {/* Lista de deudas (Timeline View) */}
+            <div className="divide-y divide-border border-t border-border bg-slate-50/30">
+              {isLoadingTimeline ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  Cargando historial...
                 </div>
-              )}
-              {debtsArray.length === 0 ? (
+              ) : !timelineData || timelineData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground bg-background">
                   <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
                     <ShieldCheck className="w-6 h-6 text-muted-foreground/50" />
@@ -502,49 +299,98 @@ export default function CustomerDebtCard({
                   <p className="text-sm">Historial limpio. Cliente sin deudas.</p>
                 </div>
               ) : (
-                <>
-                  <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-background/80 border-b border-border">
-                    Deudas actuales
-                  </div>
-                  {currentDebts.length === 0 ? (
-                    <div className="px-4 py-3 text-xs text-muted-foreground bg-background">
-                      Sin deudas actuales
-                    </div>
-                  ) : (
-                    currentDebts.map((debt) => renderDebtRow(debt, false))
-                  )}
+                <div className="p-4 space-y-6">
+                  {timelineData.map((chain: any, chainIndex: number) => (
+                    <div key={chainIndex} className="relative border rounded-lg bg-white shadow-sm overflow-hidden">
+                      {/* Chain Header (Index or Status) */}
+                      <div className="absolute top-0 left-0 w-1 h-full bg-slate-200" />
 
-                  {hasCutoff && (
-                    <>
-                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-background/80 border-y border-border">
-                        Deudas pasadas (corte aplicado)
+                      <div className="p-4 pl-6 space-y-6">
+                        {chain.items.map((item: any, itemIndex: number) => {
+                          const isDebt = item.type === 'debt'
+                          const date = new Date(item.data.created_at || item.data.paid_at)
+                          // Determine styling based on type
+                          const iconBg = isDebt ? 'bg-orange-100 text-orange-600 border-orange-200' :
+                            (item.data.method === 'ROLLOVER' ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-green-100 text-green-600 border-green-200')
+                          const Icon = isDebt ? CreditCard : (item.data.method === 'ROLLOVER' ? Clock : CheckCircle)
+
+                          return (
+                            <div key={itemIndex} className="relative flex gap-4">
+                              {/* Connector Line */}
+                              {itemIndex < chain.items.length - 1 && (
+                                <div className="absolute left-[15px] top-8 bottom-[-24px] w-[2px] bg-slate-100" />
+                              )}
+
+                              <div className={`relative z-10 w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="font-medium text-sm text-foreground">
+                                      {isDebt ? 'Deuda' : (item.data.method === 'ROLLOVER' ? 'Corte (Rollover)' : 'Abono')}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {format(date, "d MMM yyyy, h:mm a", { locale: es })}
+                                    </p>
+                                  </div>
+                                  <Badge variant="outline" className={isDebt ? 'bg-orange-50' : 'bg-green-50'}>
+                                    ${Number(item.data.amount_usd).toFixed(2)}
+                                  </Badge>
+                                </div>
+
+                                {/* Details */}
+                                {isDebt && (
+                                  <div className="mt-2 text-xs bg-slate-50 p-2 rounded border border-slate-100">
+                                    <div className="flex justify-between">
+                                      <span>Estado: <span className="font-semibold">{item.data.status === 'open' ? 'Pendiente' : (item.data.status === 'paid' ? 'Pagada' : 'Parcial')}</span></span>
+                                      {item.data.status !== 'paid' && (
+                                        <span className="text-orange-600 font-bold">Saldo: ${(Number(item.data.amount_usd) - (item.data.payments?.reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0) || 0)).toFixed(2)}</span>
+                                      )}
+                                    </div>
+                                    {item.data.note && <p className="mt-1 italic text-muted-foreground">"{item.data.note}"</p>}
+                                  </div>
+                                )}
+                                {!isDebt && item.data.note && (
+                                  <p className="mt-1 text-xs text-muted-foreground italic">
+                                    "{item.data.note}"
+                                  </p>
+                                )}
+
+                                {/* Action Button for specific debt */}
+                                {isDebt && item.data.status !== 'paid' && (
+                                  <div className="mt-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50"
+                                      onClick={() => onAddPayment(item.data)}
+                                    >
+                                      Abonar
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                      {pastDebts.length === 0 ? (
-                        <div className="px-4 py-3 text-xs text-muted-foreground bg-background">
-                          Sin deudas pasadas
-                        </div>
-                      ) : (
-                        pastDebts.map((debt) => renderDebtRow(debt, true))
-                      )}
-                    </>
-                  )}
-                </>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
 
-      {/* Modal de pago completo */}
       <PayAllDebtsModal
         isOpen={isPayAllModalOpen}
         onClose={() => setIsPayAllModalOpen(false)}
         customer={customer}
-        debts={debtsArray}
-        onSuccess={() => {
-          onPaymentSuccess?.()
-          setIsPayAllModalOpen(false)
-        }}
+        debts={openDebts}
+        onSuccess={onPaymentSuccess}
       />
 
       <PaySelectedDebtsModal
@@ -554,8 +400,8 @@ export default function CustomerDebtCard({
         openDebts={openDebts}
         selectedDebtIds={Array.from(selectedDebtIds)}
         onSuccess={() => {
-          onPaymentSuccess?.()
-          setIsPaySelectedModalOpen(false)
+          setSelectedDebtIds(new Set())
+          onPaymentSuccess?.() // Added optional chain just in case
         }}
       />
 
@@ -566,13 +412,6 @@ export default function CustomerDebtCard({
         customer={customer}
         openDebts={openDebts}
         onSuccess={onPaymentSuccess}
-      />
-
-      <DebtTimelineModal
-        isOpen={isTimelineOpen}
-        onClose={() => setIsTimelineOpen(false)}
-        customerId={customer.id}
-        customerName={customer.name}
       />
     </Card>
   )
