@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList, Download, Copy, MoreHorizontal, AlertCircle } from 'lucide-react'
 import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
@@ -179,12 +179,16 @@ export default function ProductsPage() {
     gcTime: Infinity,
   })
 
-  const stockByProduct = (stockStatusData?.items || []).reduce<Record<string, StockStatus>>(
-    (acc, item) => {
-      acc[item.product_id] = item
-      return acc
-    },
-    {}
+  const stockByProduct = useMemo(
+    () =>
+      (stockStatusData?.items || []).reduce<Record<string, StockStatus>>(
+        (acc, item) => {
+          acc[item.product_id] = item
+          return acc
+        },
+        {}
+      ),
+    [stockStatusData?.items]
   )
 
   useEffect(() => {
@@ -231,6 +235,8 @@ export default function ProductsPage() {
     queryKey: ['warehouses'],
     queryFn: () => warehousesService.getAll(),
     enabled: !!user?.store_id,
+    staleTime: 1000 * 60 * 30, // 30 minutos
+    gcTime: Infinity,
   })
 
   const products = productsData?.products || []
@@ -249,7 +255,8 @@ export default function ProductsPage() {
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => productsService.deactivate(id, user?.store_id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['products', 'list'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'], exact: false })
       toast.success('Producto desactivado exitosamente')
     },
     onError: (error: any) => {
@@ -261,7 +268,8 @@ export default function ProductsPage() {
   const activateMutation = useMutation({
     mutationFn: (id: string) => productsService.activate(id, user?.store_id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['products', 'list'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'], exact: false })
       toast.success('Producto activado exitosamente')
     },
     onError: (error: any) => {
@@ -277,8 +285,8 @@ export default function ProductsPage() {
         price_bs: 0,
       }, user?.store_id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['products', 'list'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status', user?.store_id], exact: false })
       toast.success('Precio actualizado exitosamente')
       setEditingPriceProductId(null)
       setEditingPriceValue('')
@@ -478,7 +486,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="h-full max-w-7xl mx-auto" data-pull-to-refresh>
+    <div className="h-full max-w-7xl mx-auto overflow-y-auto p-4 pb-20" data-pull-to-refresh>
       <PullToRefreshIndicator
         isPulling={pullToRefresh.isPulling}
         isRefreshing={pullToRefresh.isRefreshing}
@@ -573,7 +581,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filtros Flotantes */}
-      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/60 backdrop-blur-xl sticky top-0 z-20 transition-all duration-300">
+      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/95 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-5 h-5 z-10" />

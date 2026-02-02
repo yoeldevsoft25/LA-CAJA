@@ -584,10 +584,10 @@ export const productsService = {
               data.is_recipe === false
                 ? []
                 : ingredients.map((ingredient) => ({
-                    ingredient_product_id: ingredient.ingredient_product_id,
-                    qty: Number(ingredient.qty),
-                    unit: ingredient.unit ?? null,
-                  })),
+                  ingredient_product_id: ingredient.ingredient_product_id,
+                  qty: Number(ingredient.qty),
+                  unit: ingredient.unit ?? null,
+                })),
           },
         });
       }
@@ -743,4 +743,50 @@ export const productsService = {
     )
     return response.data
   },
+
+  /**
+   * Sincroniza productos activos en segundo plano para optimizar el escáner (Barcode Index)
+   * Estrategia "Cache-Ahead": Trae todos los productos activos para que el escaneo sea local e instantáneo.
+   */
+  async syncActiveProducts(storeId: string): Promise<void> {
+    const isOnline = navigator.onLine;
+    if (!isOnline) return;
+
+    const SYNC_KEY = `last_product_sync_${storeId}`;
+    const COOLDOWN_MS = 1000 * 60 * 30; // 30 minutos de cooldown
+    const now = Date.now();
+
+    try {
+      const lastSync = localStorage.getItem(SYNC_KEY);
+      if (lastSync && now - parseInt(lastSync) < COOLDOWN_MS) {
+        // Enfriamiento activo, solo asegurar que el índice esté caliente con lo que ya hay
+        await productsCacheService.warmBarcodeIndex(storeId);
+        return;
+      }
+
+      logger.info('Iniciando sincronización background de productos activos...');
+
+      // Traer todos los productos activos (límite alto)
+      // Nota: Si el catálogo es > 2000, considerar paginación
+      const response = await api.get<ProductSearchResponse>('/products', {
+        params: {
+          is_active: true,
+          limit: 2000
+        }
+      });
+
+      const products = response.data?.products ?? [];
+      if (products.length > 0) {
+        await productsCacheService.cacheProducts(products, storeId);
+        // El warmBarcodeIndex se llama automáticamente si ya estaba inicializado, 
+        // pero lo forzamos para asegurar consistencia
+        await productsCacheService.warmBarcodeIndex(storeId);
+
+        localStorage.setItem(SYNC_KEY, now.toString());
+        logger.info('Sincronización de productos optimizada completada', { count: products.length });
+      }
+    } catch (error) {
+      logger.warn('Error en sincronización background de productos', { error });
+    }
+  }
 }

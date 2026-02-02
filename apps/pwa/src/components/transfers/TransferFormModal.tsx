@@ -170,15 +170,15 @@ export function TransferFormModal({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
-                <DialogHeader className="px-6 py-4 border-b bg-muted/20">
-                    <div className="flex items-center justify-between">
-                        <DialogTitle>Nueva Transferencia de Inventario</DialogTitle>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-background px-3 py-1 rounded-full border">
-                            <span className={cn("font-medium", step >= 1 ? "text-primary" : "")}>1. Ruta</span>
-                            <ArrowRight className="w-3 h-3" />
-                            <span className={cn("font-medium", step >= 2 ? "text-primary" : "")}>2. Items</span>
-                            <ArrowRight className="w-3 h-3" />
-                            <span className={cn("font-medium", step >= 3 ? "text-primary" : "")}>3. Detalles</span>
+                <DialogHeader className="px-6 py-4 border-b bg-muted/20 pr-12">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <DialogTitle className="text-base sm:text-lg">Nueva Transferencia de Inventario</DialogTitle>
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground bg-background px-2.5 sm:px-3 py-1 rounded-full border w-fit">
+                            <span className={cn("font-medium whitespace-nowrap", step >= 1 ? "text-primary" : "")}>1. Ruta</span>
+                            <ArrowRight className="w-3 h-3 shrink-0" />
+                            <span className={cn("font-medium whitespace-nowrap", step >= 2 ? "text-primary" : "")}>2. Items</span>
+                            <ArrowRight className="w-3 h-3 shrink-0" />
+                            <span className={cn("font-medium whitespace-nowrap", step >= 3 ? "text-primary" : "")}>3. Detalles</span>
                         </div>
                     </div>
                 </DialogHeader>
@@ -188,7 +188,7 @@ export function TransferFormModal({
                         <div className="flex-1 overflow-y-auto px-6 py-6">
                             {step === 1 && (
                                 <div className="space-y-6 max-w-2xl mx-auto">
-                                    <div className="grid grid-cols-2 gap-8 items-start">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 items-start">
                                         <FormField
                                             control={form.control}
                                             name="from_warehouse_id"
@@ -218,7 +218,13 @@ export function TransferFormModal({
                                             )}
                                         />
 
-                                        <div className="flex justify-center pt-24">
+                                        {/* Flecha - Horizontal en mobile, vertical en desktop */}
+                                        <div className="flex sm:hidden justify-center py-2">
+                                            <div className="p-2 bg-muted rounded-full rotate-90">
+                                                <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                                            </div>
+                                        </div>
+                                        <div className="hidden sm:flex justify-center pt-24">
                                             <div className="p-2 bg-muted rounded-full">
                                                 <ArrowRight className="w-6 h-6 text-muted-foreground" />
                                             </div>
@@ -260,7 +266,7 @@ export function TransferFormModal({
                                         render={({ field }) => (
                                             <FormItem className="pt-6">
                                                 <FormLabel>Prioridad del Envío</FormLabel>
-                                                <div className="grid grid-cols-4 gap-4">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                                     {['low', 'normal', 'high', 'urgent'].map((p) => (
                                                         <div
                                                             key={p}
@@ -270,7 +276,7 @@ export function TransferFormModal({
                                                                 field.value === p ? "ring-2 ring-primary border-primary bg-accent" : ""
                                                             )}
                                                         >
-                                                            <div className="capitalize font-medium text-sm">
+                                                            <div className="capitalize font-medium text-xs sm:text-sm">
                                                                 {p === 'low' ? 'Baja' : p === 'normal' ? 'Normal' : p === 'high' ? 'Alta' : 'Urgente'}
                                                             </div>
                                                         </div>
@@ -321,7 +327,8 @@ export function TransferFormModal({
                                     </div>
 
                                     <div className="border rounded-lg overflow-hidden">
-                                        <div className="bg-muted/50 px-4 py-3 text-xs font-medium text-muted-foreground grid grid-cols-12 gap-4">
+                                        {/* Header - Solo visible en desktop */}
+                                        <div className="hidden sm:grid bg-muted/50 px-4 py-3 text-xs font-medium text-muted-foreground grid-cols-12 gap-4">
                                             <div className="col-span-6">PRODUCTO</div>
                                             <div className="col-span-4 text-center">CANTIDAD</div>
                                             <div className="col-span-2 text-right">ACCIONES</div>
@@ -330,56 +337,109 @@ export function TransferFormModal({
                                             {items.length === 0 ? (
                                                 <div className="p-8 text-center text-muted-foreground">
                                                     <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                                                    <p>No hay items agregados a la transferencia</p>
+                                                    <p className="text-sm">No hay items agregados a la transferencia</p>
                                                 </div>
                                             ) : items.map((item, index) => (
-                                                <div key={item.product_id} className="p-4 grid grid-cols-12 gap-4 items-center hover:bg-muted/10 transition-colors">
-                                                    <div className="col-span-6">
-                                                        <p className="font-medium text-sm">{item.product_name}</p>
-                                                    </div>
-                                                    <div className="col-span-4 flex justify-center">
-                                                        <div className="flex items-center border rounded-md shadow-sm">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newItems = [...items];
-                                                                    if (newItems[index].quantity > 1) {
-                                                                        newItems[index].quantity -= 1;
+                                                <div key={item.product_id} className="p-3 sm:p-4 hover:bg-muted/10 transition-colors">
+                                                    {/* Mobile Layout - Vertical */}
+                                                    <div className="flex sm:hidden flex-col gap-3">
+                                                        <div className="flex items-start justify-between">
+                                                            <p className="font-medium text-sm flex-1">{item.product_name}</p>
+                                                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 -mt-1" onClick={() => removeItem(index)}>
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-muted-foreground font-medium">Cantidad:</span>
+                                                            <div className="flex items-center border rounded-md shadow-sm">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const newItems = [...items];
+                                                                        if (newItems[index].quantity > 1) {
+                                                                            newItems[index].quantity -= 1;
+                                                                            form.setValue('items', newItems);
+                                                                        }
+                                                                    }}
+                                                                    className="px-3 py-1.5 hover:bg-accent border-r text-sm"
+                                                                >
+                                                                    -
+                                                                </button>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity}
+                                                                    onChange={(e) => {
+                                                                        const val = parseInt(e.target.value) || 0;
+                                                                        const newItems = [...items];
+                                                                        newItems[index].quantity = val;
                                                                         form.setValue('items', newItems);
-                                                                    }
-                                                                }}
-                                                                className="px-3 py-1 hover:bg-accent border-r"
-                                                            >
-                                                                -
-                                                            </button>
-                                                            <input
-                                                                type="number"
-                                                                value={item.quantity}
-                                                                onChange={(e) => {
-                                                                    const val = parseInt(e.target.value) || 0;
-                                                                    const newItems = [...items];
-                                                                    newItems[index].quantity = val;
-                                                                    form.setValue('items', newItems);
-                                                                }}
-                                                                className="w-16 text-center text-sm border-none focus:ring-0 appearance-none bg-transparent"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newItems = [...items];
-                                                                    newItems[index].quantity += 1;
-                                                                    form.setValue('items', newItems);
-                                                                }}
-                                                                className="px-3 py-1 hover:bg-accent border-l"
-                                                            >
-                                                                +
-                                                            </button>
+                                                                    }}
+                                                                    className="w-16 text-center text-sm border-none focus:ring-0 appearance-none bg-transparent"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const newItems = [...items];
+                                                                        newItems[index].quantity += 1;
+                                                                        form.setValue('items', newItems);
+                                                                    }}
+                                                                    className="px-3 py-1.5 hover:bg-accent border-l text-sm"
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div className="col-span-2 text-right">
-                                                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeItem(index)}>
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
+
+                                                    {/* Desktop Layout - Horizontal */}
+                                                    <div className="hidden sm:grid grid-cols-12 gap-4 items-center">
+                                                        <div className="col-span-6">
+                                                            <p className="font-medium text-sm">{item.product_name}</p>
+                                                        </div>
+                                                        <div className="col-span-4 flex justify-center">
+                                                            <div className="flex items-center border rounded-md shadow-sm">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const newItems = [...items];
+                                                                        if (newItems[index].quantity > 1) {
+                                                                            newItems[index].quantity -= 1;
+                                                                            form.setValue('items', newItems);
+                                                                        }
+                                                                    }}
+                                                                    className="px-3 py-1 hover:bg-accent border-r"
+                                                                >
+                                                                    -
+                                                                </button>
+                                                                <input
+                                                                    type="number"
+                                                                    value={item.quantity}
+                                                                    onChange={(e) => {
+                                                                        const val = parseInt(e.target.value) || 0;
+                                                                        const newItems = [...items];
+                                                                        newItems[index].quantity = val;
+                                                                        form.setValue('items', newItems);
+                                                                    }}
+                                                                    className="w-16 text-center text-sm border-none focus:ring-0 appearance-none bg-transparent"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const newItems = [...items];
+                                                                        newItems[index].quantity += 1;
+                                                                        form.setValue('items', newItems);
+                                                                    }}
+                                                                    className="px-3 py-1 hover:bg-accent border-l"
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-span-2 text-right">
+                                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeItem(index)}>
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -444,23 +504,30 @@ export function TransferFormModal({
                             )}
                         </div>
 
-                        <DialogFooter className="px-6 py-4 border-t bg-muted/20 flex justify-between items-center sm:justify-between">
-                            <Button type="button" variant="ghost" onClick={() => step === 1 ? onOpenChange(false) : prevStep()}>
-                                {step === 1 ? 'Cancelar' : 'Atrás'}
-                            </Button>
+                        <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-muted/20">
+                            <div className="flex flex-col-reverse sm:flex-row w-full gap-2 sm:gap-0 sm:justify-between sm:items-center">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => step === 1 ? onOpenChange(false) : prevStep()}
+                                    className="w-full sm:w-auto"
+                                >
+                                    {step === 1 ? 'Cancelar' : 'Atrás'}
+                                </Button>
 
-                            <div className="flex gap-2">
-                                {step < 3 ? (
-                                    <Button type="button" onClick={nextStep}>
-                                        Siguiente
-                                        <ArrowRight className="ml-2 w-4 h-4" />
-                                    </Button>
-                                ) : (
-                                    <Button type="submit" disabled={isSubmitting}>
-                                        {isSubmitting ? 'Creando...' : 'Confirmar Transferencia'}
-                                        <Check className="ml-2 w-4 h-4" />
-                                    </Button>
-                                )}
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                    {step < 3 ? (
+                                        <Button type="button" onClick={nextStep} className="flex-1 sm:flex-none">
+                                            Siguiente
+                                            <ArrowRight className="ml-2 w-4 h-4" />
+                                        </Button>
+                                    ) : (
+                                        <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+                                            {isSubmitting ? 'Creando...' : 'Confirmar'}
+                                            <Check className="ml-2 w-4 h-4" />
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </DialogFooter>
                     </form>
