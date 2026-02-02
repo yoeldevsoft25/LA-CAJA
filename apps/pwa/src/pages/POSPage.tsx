@@ -19,6 +19,7 @@ import { priceListsService } from '@/services/price-lists.service'
 import { promotionsService } from '@/services/promotions.service'
 import { useCart, CartItem, CART_IDS } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
+import { usePOSStore } from '@/stores/pos.store'
 import { inventoryService } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
 import toast from '@/lib/toast'
@@ -49,10 +50,11 @@ export default function POSPage() {
   const MAX_QTY_PER_PRODUCT = 999
 
   const queryClient = useQueryClient()
-  const [searchQuery, setSearchQuery] = useState('')
+  // Usar store persistente para UI State
+  const { searchQuery, isCheckoutOpen: showCheckout, setSearchQuery, setIsCheckoutOpen: setShowCheckout } = usePOSStore()
+
   const mobileSearchRef = useRef<HTMLDivElement | null>(null)
   const [mobileResultsTop, setMobileResultsTop] = useState<number | null>(null)
-  const [showCheckout, setShowCheckout] = useState(false)
   const [shouldPrint, setShouldPrint] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
