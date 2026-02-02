@@ -34,7 +34,7 @@ export class DebtsService {
     private exchangeService: ExchangeService,
     private accountingService: AccountingService,
     private whatsappMessagingService: WhatsAppMessagingService,
-  ) {}
+  ) { }
 
   async createDebtFromSale(
     storeId: string,
@@ -730,11 +730,12 @@ export class DebtsService {
     if (paymentUsd <= 0) {
       throw new BadRequestException('El monto del pago debe ser mayor a cero');
     }
-    if (!isSelective && paymentUsd < totalRemainingUsd - tolerance) {
-      throw new BadRequestException(
-        `El monto del pago ($${paymentUsd.toFixed(2)}) es menor al total pendiente ($${totalRemainingUsd.toFixed(2)})`,
-      );
-    }
+    // Permitir abonos al total (pago parcial distribuido)
+    // if (!isSelective && paymentUsd < totalRemainingUsd - tolerance) {
+    //   throw new BadRequestException(
+    //     `El monto del pago ($${paymentUsd.toFixed(2)}) es menor al total pendiente ($${totalRemainingUsd.toFixed(2)})`,
+    //   );
+    // }
     if (isSelective && paymentUsd > totalRemainingUsd + tolerance) {
       throw new BadRequestException(
         `El monto del pago ($${paymentUsd.toFixed(2)}) excede el total seleccionado ($${totalRemainingUsd.toFixed(2)})`,
@@ -925,6 +926,61 @@ export class DebtsService {
 
           remainingToPayUsd =
             Math.round((remainingToPayUsd - payUsd) * 100) / 100;
+
+          // LOGICA DE CORTE: Si la deuda no fue pagada totalmente (es parcial) y ya no hay más dinero para pagar
+          // entonces debemos hacer el "rollover" (traslado) del saldo restante a una nueva deuda
+          // y marcar la deuda actual como PAGADA.
+          if (!isFullForDebt && remainingToPayUsd <= tolerance) {
+            const remainingDebtUsd = Math.round((entry.remainingUsd - payUsd) * 100) / 100;
+            const remainingDebtBs = Math.round((entry.remainingBs - payBs) * 100) / 100;
+
+            if (remainingDebtUsd > tolerance) {
+              const rolloverDebtId = randomUUID();
+
+              // 1. Crear la nueva deuda con el saldo restante
+              await manager.query(
+                `INSERT INTO debts (id, store_id, sale_id, customer_id, created_at, amount_bs, amount_usd, note, status, parent_debt_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                [
+                  rolloverDebtId,
+                  storeId,
+                  null, // Sin venta asociada directa, es un saldo arrastrado
+                  customerId,
+                  new Date(), // Fecha actual
+                  remainingDebtBs,
+                  remainingDebtUsd,
+                  `Saldo traslado de deuda ${entry.debt.sale_id ? 'Venta' : ''} (${new Date(entry.debt.created_at).toLocaleDateString()})`,
+                  DebtStatus.OPEN,
+                  entry.debt.id // ID de la deuda padre
+                ],
+              );
+
+              // 2. Registrar el pago interno "ROLLOVER" para cerrar la deuda original
+              const rolloverPaymentId = randomUUID();
+              await manager.query(
+                `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [
+                  rolloverPaymentId,
+                  storeId,
+                  entry.debt.id,
+                  paidAt,
+                  remainingDebtBs,
+                  remainingDebtUsd,
+                  'ROLLOVER',
+                  `Traslado a nueva deuda (Corte)`,
+                ],
+              );
+
+              // 3. Marcar la deuda original como PAGADA
+              await manager
+                .createQueryBuilder()
+                .update(Debt)
+                .set({ status: DebtStatus.PAID })
+                .where('id = :debtId', { debtId: entry.debt.id })
+                .execute();
+            }
+          }
         }
       }
 
@@ -948,5 +1004,63 @@ export class DebtsService {
     );
 
     return { debts: updatedDebts, payments };
+  }
+
+  async getCustomerDebtTimeline(storeId: string, customerId: string): Promise<any[]> {
+    // 1. Obtener todas las deudas del cliente (incluyendo pagadas)
+    const allDebts = await this.debtRepository.find({
+      where: { store_id: storeId, customer_id: customerId },
+      relations: ['payments', 'parent_debt'],
+      order: { created_at: 'ASC' },
+    });
+
+    // 2. Construir el árbol/línea de tiempo
+    // Queremos agrupar "cadenas" de deudas: Deuda Original -> Rollover -> Deuda Nueva
+
+    const timeline: any[] = [];
+    const processedDebts = new Set<string>();
+
+    for (const debt of allDebts) {
+      if (processedDebts.has(debt.id)) continue;
+
+      // Si tiene padre, probablemente ya fue procesada como hija de otra cadena
+      // Pero si es una deuda raiz (sin padre), iniciamos una nueva cadena
+      if (!debt.parent_debt_id) {
+        const chain: any[] = [];
+        let current: Debt | null = debt;
+
+        while (current) {
+          processedDebts.add(current.id);
+          chain.push({
+            type: 'debt',
+            data: current,
+          });
+
+          // Agregar pagos de esta deuda a la cadena
+          if (current.payments && current.payments.length > 0) {
+            current.payments.forEach(p => {
+              chain.push({
+                type: 'payment',
+                data: p,
+                debtId: current?.id
+              })
+            })
+          }
+
+          // Buscar si esta deuda tuvo un hijo (fue rollover)
+          // La forma eficiente seria tener un mapa, pero por simplicidad buscamos en el array en memoria
+          const child = allDebts.find(d => d.parent_debt_id === current?.id);
+          current = child || null;
+        }
+        timeline.push({ type: 'chain', items: chain });
+      }
+    }
+
+    // Ordenar timeline por fecha del primer elemento de la cadena
+    return timeline.sort((a, b) => {
+      const dateA = new Date(a.items[0].data.created_at).getTime();
+      const dateB = new Date(b.items[0].data.created_at).getTime();
+      return dateB - dateA; // Más recientes primero
+    });
   }
 }

@@ -18,31 +18,31 @@ interface OrderProgressBarProps {
 }
 
 const STATUS_STEPS = [
-  { 
-    key: 'pending' as const, 
-    label: 'Recibido', 
-    icon: Clock, 
-    color: 'text-slate-600', 
+  {
+    key: 'pending' as const,
+    label: 'Recibido',
+    icon: Clock,
+    color: 'text-slate-600',
     bgColor: 'bg-slate-100',
     activeBgColor: 'bg-slate-200',
     borderColor: 'border-slate-300',
     gradient: 'from-slate-400 to-slate-500',
   },
-  { 
-    key: 'preparing' as const, 
-    label: 'En Cocina', 
-    icon: ChefHat, 
-    color: 'text-orange-600', 
+  {
+    key: 'preparing' as const,
+    label: 'En Cocina',
+    icon: ChefHat,
+    color: 'text-orange-600',
     bgColor: 'bg-orange-50',
     activeBgColor: 'bg-orange-100',
     borderColor: 'border-orange-400',
     gradient: 'from-orange-400 to-orange-500',
   },
-  { 
-    key: 'ready' as const, 
-    label: 'Listo', 
-    icon: CheckCircle2, 
-    color: 'text-green-600', 
+  {
+    key: 'ready' as const,
+    label: 'Listo',
+    icon: CheckCircle2,
+    color: 'text-green-600',
     bgColor: 'bg-green-50',
     activeBgColor: 'bg-green-100',
     borderColor: 'border-green-400',
@@ -64,8 +64,8 @@ export default function OrderProgressBar({
 
   // Estado general de la orden - calcular progreso total incluyendo preparación
   // Progreso = (items preparando * 0.5 + items listos * 1.0) / total
-  const overallProgress = totalItems > 0 
-    ? ((preparingItems * 0.5 + readyItems * 1.0) / totalItems) * 100 
+  const overallProgress = totalItems > 0
+    ? ((preparingItems * 0.5 + readyItems * 1.0) / totalItems) * 100
     : 0
   const isComplete = readyItems === totalItems && totalItems > 0
 
@@ -85,35 +85,16 @@ export default function OrderProgressBar({
         {/* Timeline compacta con pasos */}
         <div className="relative flex items-center justify-between">
           {/* Línea de conexión - conecta puntos sin tocar círculos */}
-          <div 
-            className="absolute top-5 h-0.5 bg-muted z-0"
-            style={{ 
-              left: 'calc(16.666% + 20px)', // Empieza después del primer círculo
-              right: 'calc(16.666% + 20px)', // Termina antes del último círculo
-            }} 
+          <div
+            className="absolute top-5 left-[20px] right-[20px] h-0.5 bg-muted z-0"
           />
           {(() => {
-            // Calcular ancho de conexión entre círculos
-            const connectionWidth = 'calc(33.333% - 40px)'
-            let progressWidth = '0%'
-            const leftOffset = 'calc(16.666% + 20px)'
-            
-            if (completedSteps >= 1 && pendingItems === 0) {
-              progressWidth = connectionWidth // Primera conexión
-            }
-            if (completedSteps >= 2) {
-              progressWidth = 'calc(66.666% - 40px)' // Dos conexiones
-            }
-            if (completedSteps >= 3) {
-              progressWidth = 'calc(66.666% - 40px)' // Completo
-            }
-            
-            return progressWidth !== '0%' ? (
-              <div 
-                className="absolute top-5 h-0.5 bg-gradient-to-r from-slate-400 via-orange-400 to-green-400 transition-all duration-700 ease-out z-10"
-                style={{ 
-                  left: leftOffset,
-                  width: progressWidth,
+            const stepFactor = completedSteps - 1
+            return stepFactor > 0 ? (
+              <div
+                className="absolute top-5 left-[20px] h-0.5 bg-gradient-to-r from-slate-400 via-orange-400 to-green-400 transition-all duration-700 ease-out z-10"
+                style={{
+                  width: `calc((${stepFactor} / 2) * (100% - 40px))`,
                 }}
               />
             ) : null
@@ -153,7 +134,7 @@ export default function OrderProgressBar({
                       isCurrent && 'scale-110'
                     )}
                   />
-                  
+
                   {/* Badge con contador */}
                   {hasItems && (
                     <div
@@ -191,44 +172,21 @@ export default function OrderProgressBar({
       {/* Timeline principal con pasos grandes */}
       <div className="relative">
         {/* Línea de fondo - conecta puntos pero sin tocar los círculos */}
-        <div 
-          className="absolute top-6 sm:top-8 h-1 bg-muted rounded-full z-0"
-          style={{ 
-            left: 'calc(16.666% + 32px)', // Empieza después del primer círculo (ancho ~24px + padding)
-            right: 'calc(16.666% + 32px)', // Termina antes del último círculo
-          }} 
+        <div
+          className="absolute top-6 sm:top-8 left-[32px] right-[32px] h-1 bg-muted rounded-full z-0"
         />
-        
+
         {/* Línea de progreso animada - conecta puntos sin tocar círculos */}
         {(() => {
-          // Calcular cuánto conecta según pasos completados
-          // Cada conexión es aproximadamente 33.333% menos los espacios de círculos
-          const connectionWidth = 'calc(33.333% - 64px)' // Ancho entre círculos
-          let progressWidth = '0%'
-          const leftOffset = 'calc(16.666% + 32px)'
-          
-          if (completedSteps >= 1 && pendingItems === 0) {
-            // Conecta del primer al segundo punto
-            progressWidth = connectionWidth
-          }
-          if (completedSteps >= 2) {
-            // Conecta del primer al tercer punto (2 conexiones)
-            progressWidth = 'calc(66.666% - 64px)'
-          }
-          if (completedSteps >= 3) {
-            // Conecta todo
-            progressWidth = 'calc(66.666% - 64px)'
-          }
-          
-          return progressWidth !== '0%' ? (
-            <div 
+          const stepFactor = completedSteps - 1
+          return stepFactor > 0 ? (
+            <div
               className={cn(
-                "absolute top-6 sm:top-8 h-1 rounded-full transition-all duration-1000 ease-out z-10",
+                "absolute top-6 sm:top-8 left-[32px] h-1 rounded-full transition-all duration-1000 ease-out z-10",
                 "bg-gradient-to-r from-slate-400 via-orange-400 to-green-400"
               )}
-              style={{ 
-                left: leftOffset,
-                width: progressWidth,
+              style={{
+                width: `calc((${stepFactor} / 2) * (100% - 64px))`,
               }}
             />
           ) : null
@@ -246,15 +204,15 @@ export default function OrderProgressBar({
             const isCompleted = index < completedSteps
             const isCurrent = index === currentStepIndex && count > 0
             const hasItems = count > 0
-            const stepProgress = index === 0 
-              ? pendingPercent 
-              : index === 1 
-              ? preparingPercent 
-              : readyPercent
+            const stepProgress = index === 0
+              ? pendingPercent
+              : index === 1
+                ? preparingPercent
+                : readyPercent
 
             return (
-              <div 
-                key={step.key} 
+              <div
+                key={step.key}
                 className="relative z-10 flex flex-col items-center flex-1"
               >
                 {/* Círculo del paso con efecto glassmorphism */}
@@ -289,8 +247,8 @@ export default function OrderProgressBar({
                         'absolute -top-1 -right-1 rounded-full min-w-[20px] h-5 px-1.5',
                         'flex items-center justify-center text-xs font-bold text-white',
                         'shadow-lg animate-in zoom-in duration-300',
-                        isCompleted 
-                          ? `bg-gradient-to-br ${step.gradient}` 
+                        isCompleted
+                          ? `bg-gradient-to-br ${step.gradient}`
                           : 'bg-muted-foreground/70'
                       )}
                     >
@@ -324,7 +282,7 @@ export default function OrderProgressBar({
                     >
                       {count} item{count !== 1 ? 's' : ''}
                     </p>
-                    
+
                     {/* Barra de progreso individual del paso (opcional) */}
                     {isCurrent && stepProgress > 0 && (
                       <div className="w-full max-w-[80px] mx-auto mt-1.5">
@@ -375,7 +333,7 @@ export default function OrderProgressBar({
               }}
             />
           )}
-          
+
           {/* Indicador de porcentaje */}
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-xs sm:text-sm font-black text-foreground bg-background/90 px-2 py-0.5 rounded-full shadow-sm">
@@ -400,7 +358,7 @@ export default function OrderProgressBar({
 
       {/* Mensaje de estado mejorado con animación */}
       {isComplete && (
-        <div 
+        <div
           className={cn(
             "flex items-center justify-center gap-2 sm:gap-3",
             "bg-gradient-to-r from-green-50 to-emerald-50",

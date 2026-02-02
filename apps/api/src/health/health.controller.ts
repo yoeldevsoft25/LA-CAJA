@@ -14,9 +14,14 @@ import { BullMQHealthIndicator } from './indicators/bullmq-health.indicator';
 import { ExternalApisHealthIndicator } from './indicators/external-apis-health.indicator';
 import { WebSocketHealthIndicator } from './indicators/websocket-health.indicator';
 
+import { Cron } from '@nestjs/schedule';
+import { Logger } from '@nestjs/common';
+
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
+  private readonly logger = new Logger(HealthController.name);
+
   constructor(
     private health: HealthCheckService,
     private db: TypeOrmHealthIndicator,
@@ -29,9 +34,21 @@ export class HealthController {
   ) { }
 
   // Cache simple para mejorar rendimiento
-  private cachedResult: any = null;
-  private lastCheckTime: number = 0;
+  private cache: Map<string, { result: any, time: number }> = new Map();
   private readonly CACHE_TTL = 30000; // 30 segundos (aumentado para reducir carga)
+
+  private async checkWithCache(key: string, checkFn: () => Promise<any>) {
+    const now = Date.now();
+    const cached = this.cache.get(key);
+
+    if (cached && (now - cached.time < this.CACHE_TTL)) {
+      return cached.result;
+    }
+
+    const result = await checkFn();
+    this.cache.set(key, { result, time: now });
+    return result;
+  }
 
   @Get()
   @HealthCheck()
@@ -39,11 +56,11 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Sistema saludable' })
   @ApiResponse({ status: 503, description: 'Sistema no saludable' })
   check() {
-    return this.health.check([
+    return this.checkWithCache('general', () => this.health.check([
       () => this.db.pingCheck('database'),
       () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024), // 300MB
       () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024), // 500MB
-    ]);
+    ]));
   }
 
   @Get('database')
@@ -52,9 +69,9 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Base de datos saludable' })
   @ApiResponse({ status: 503, description: 'Base de datos no disponible' })
   checkDatabase() {
-    return this.health.check([
+    return this.checkWithCache('database', () => this.health.check([
       () => this.db.pingCheck('database'),
-    ]);
+    ]));
   }
 
   @Get('redis')
@@ -63,9 +80,9 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Redis saludable' })
   @ApiResponse({ status: 503, description: 'Redis no disponible' })
   checkRedis() {
-    return this.health.check([
+    return this.checkWithCache('redis', () => this.health.check([
       () => this.redis.isHealthy('redis'),
-    ]);
+    ]));
   }
 
   @Get('queues')
@@ -74,9 +91,9 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Colas saludables' })
   @ApiResponse({ status: 503, description: 'Colas con problemas' })
   checkQueues() {
-    return this.health.check([
+    return this.checkWithCache('queues', () => this.health.check([
       () => this.bullmq.isHealthy('bullmq'),
-    ]);
+    ]));
   }
 
   @Get('external')
@@ -85,9 +102,9 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'APIs externas saludables' })
   @ApiResponse({ status: 503, description: 'Algunas APIs externas no disponibles' })
   checkExternal() {
-    return this.health.check([
+    return this.checkWithCache('external', () => this.health.check([
       () => this.externalApis.isHealthy('external_apis'),
-    ]);
+    ]));
   }
 
   @Get('websocket')
@@ -95,9 +112,9 @@ export class HealthController {
   @ApiOperation({ summary: 'Health check de WebSocket' })
   @ApiResponse({ status: 200, description: 'WebSocket operacional' })
   checkWebSocket() {
-    return this.health.check([
+    return this.checkWithCache('websocket', () => this.health.check([
       () => this.websocket.isHealthy('websocket'),
-    ]);
+    ]));
   }
 
 
@@ -107,12 +124,7 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Todos los servicios saludables' })
   @ApiResponse({ status: 503, description: 'Algunos servicios no saludables' })
   async checkDetailed() {
-    const now = Date.now();
-    if (this.cachedResult && (now - this.lastCheckTime < this.CACHE_TTL)) {
-      return this.cachedResult;
-    }
-
-    const result = await this.health.check([
+    return this.checkWithCache('detailed', () => this.health.check([
       () => this.db.pingCheck('database'),
       () => this.redis.isHealthy('redis'),
       () => this.bullmq.isHealthy('bullmq'),
@@ -124,11 +136,39 @@ export class HealthController {
           path: path.resolve('/'),
           thresholdPercent: 0.9, // 90% de uso máximo
         }),
-    ]);
+    ]));
+  }
 
-    this.cachedResult = result;
-    this.lastCheckTime = now;
-    return result;
+  @Cron('*/45 * * * * *') // Run every 45 seconds to keep cache fresh (TTL is 30s but we stretch a bit to avoid overlap)
+  // Actually, TTL is 30s. If we run every 45s, we have gaps. 
+  // Let's run every 25s to ensure ALWAYS warm.
+  @Cron('*/25 * * * * *')
+  async warmUpCache() {
+    this.logger.debug('Warming up health check cache...');
+
+    // Ejecutar verificaciones en background para llenar la cache
+    // No esperamos el resultado, solo iniciamos
+    try {
+      // 1. Warm ups individuales
+      void this.checkWithCache('database', () => this.health.check([() => this.db.pingCheck('database')]));
+      void this.checkWithCache('redis', () => this.health.check([() => this.redis.isHealthy('redis')]));
+      void this.checkWithCache('queues', () => this.health.check([() => this.bullmq.isHealthy('bullmq')]));
+      void this.checkWithCache('websocket', () => this.health.check([() => this.websocket.isHealthy('websocket')]));
+
+      // 2. Warm up external (only if not recently checked, handled by checkWithCache logic)
+      void this.checkWithCache('external', () => this.health.check([() => this.externalApis.isHealthy('external_apis')]));
+
+      // 3. Warm up detailed (uses cached individual checks mostly, but re-aggregates)
+      // Note: checkDetailed calls the same internal checks.
+      // Ideally we should cache the RESULTS of the underlying indicators, not just the controller response.
+      // But our current 'checkWithCache' caches the controller response.
+      // So calling checkDetailed here is good.
+      await this.checkDetailed();
+
+      this.logger.debug('Health check cache warmed up successfully');
+    } catch (e) {
+      this.logger.warn('Error warming up health cache (background)', e);
+    }
   }
 
   @Get('dashboard')

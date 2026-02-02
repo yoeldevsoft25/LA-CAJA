@@ -946,10 +946,9 @@ export default function SaleDetailModal({
                 variant="outline"
                 onClick={() => setShowReturnModal(true)}
                 className={cn(
-                  "border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700",
-                  isMobile ? "w-full" : "flex-1"
+                  "border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-semibold",
+                  isMobile ? "w-full h-12 order-3" : "flex-1"
                 )}
-                size={isMobile ? "lg" : "default"}
               >
                 <Undo2 className="w-4 h-4 mr-2" />
                 Devolución Parcial
@@ -960,15 +959,17 @@ export default function SaleDetailModal({
                 variant="destructive"
                 onClick={() => setShowVoidDialog(true)}
                 disabled={!canVoid}
-                className={isMobile ? "w-full" : "flex-1"}
-                size={isMobile ? "lg" : "default"}
+                className={cn(
+                  "font-semibold",
+                  isMobile ? "w-full h-12 order-4" : "flex-1"
+                )}
               >
                 <Ban className="w-4 h-4 mr-2" />
                 Anular Venta
               </Button>
             )}
             <Button
-              variant="outline"
+              variant="default"
               onClick={() => {
                 try {
                   printService.printSale(sale, {
@@ -981,8 +982,10 @@ export default function SaleDetailModal({
                   console.error('[SaleDetail] Error printing:', error)
                 }
               }}
-              className={isMobile ? "w-full" : "flex-1"}
-              size={isMobile ? "lg" : "default"}
+              className={cn(
+                "font-bold shadow-md",
+                isMobile ? "w-full h-12 order-1" : "flex-1"
+              )}
             >
               <Printer className="w-4 h-4 mr-2" />
               Reimprimir Ticket
@@ -1001,16 +1004,21 @@ export default function SaleDetailModal({
                   console.error('[SaleDetail] Error sharing to WhatsApp:', error)
                 }
               }}
-              className={isMobile ? "w-full" : "flex-1"}
-              size={isMobile ? "lg" : "default"}
+              className={cn(
+                "border-green-500 text-green-600 hover:bg-green-50 font-semibold",
+                isMobile ? "w-full h-12 order-2" : "flex-1"
+              )}
             >
               <MessageCircle className="w-4 h-4 mr-2" />
-              Compartir por WhatsApp
+              Compartir WhatsApp
             </Button>
             <Button
+              variant="ghost"
               onClick={onClose}
-              className={isMobile ? "w-full" : "flex-1"}
-              size={isMobile ? "lg" : "default"}
+              className={cn(
+                "text-muted-foreground font-medium",
+                isMobile ? "w-full h-12 order-5" : "flex-1"
+              )}
             >
               Cerrar
             </Button>

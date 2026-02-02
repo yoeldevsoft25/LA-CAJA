@@ -37,10 +37,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Usamos las variables actuales como fallback si no hay secrets configurados
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://denver-unbrooded-miley.ngrok-free.dev' }}
-          VITE_PRIMARY_API_URL: ${{ secrets.VITE_PRIMARY_API_URL || 'https://denver-unbrooded-miley.ngrok-free.dev' }}
-          VITE_FALLBACK_API_URL: ${{ secrets.VITE_FALLBACK_API_URL || 'https://la-caja-8i4h.onrender.com' }}
-          VITE_WS_URL: ${{ secrets.VITE_WS_URL || 'wss://denver-unbrooded-miley.ngrok-free.dev' }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://desktop-0kscckj.tail501d29.ts.net' }}
+          VITE_PRIMARY_API_URL: ${{ secrets.VITE_PRIMARY_API_URL || 'https://desktop-0kscckj.tail501d29.ts.net' }}
+          VITE_FALLBACK_API_URL: ${{ secrets.VITE_FALLBACK_API_URL || 'https://macbook-pro-de-yoel.tail501d29.ts.net/' }}
+          VITE_TERTIARY_API_URL: ${{ secrets.VITE_TERTIARY_API_URL || 'https://la-caja-8i4h.onrender.com' }}
+          VITE_WS_URL: ${{ secrets.VITE_WS_URL || 'wss://desktop-0kscckj.tail501d29.ts.net' }}
           VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY || 'BEpghdUBOMHoCmFDd1YlATkAT65cnu7HUfYg7chIJekLVAYLTZa3Rdc230_O729hz8qcYuqN4EH2EkI_kRBOJCM' }}
         with:
           projectPath: apps/desktop

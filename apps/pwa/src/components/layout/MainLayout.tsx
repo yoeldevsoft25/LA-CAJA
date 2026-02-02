@@ -56,7 +56,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useNotifications } from '@/stores/notifications.store'
 import { useOnline } from '@/hooks/use-online'
 import { inventoryService } from '@/services/inventory.service'
@@ -965,7 +965,7 @@ export default function MainLayout() {
         <main
           id="main-content"
           className={cn(
-            "flex-1 overflow-x-hidden touch-pan-y overscroll-contain min-h-0",
+            "flex-1 overflow-x-hidden touch-pan-y overscroll-contain min-h-0 scroll-smooth",
             location.pathname.includes('/pos') ? "overflow-hidden" : "overflow-y-auto"
           )}
           data-pull-to-refresh
@@ -978,27 +978,13 @@ export default function MainLayout() {
               <Outlet />
             </div>
           ) : (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                transition={{
-                  duration: 0.25,
-                  ease: [0.4, 0, 0.2, 1] // ease-out cubic bezier para transición más suave
-                }}
-                className={cn(
-                  "p-6 lg:p-8"
-                )}
-              >
-                {/* Breadcrumbs removed per user request to save space */}
-                {/* <div className="hidden md:block mb-4">
-                  <Breadcrumbs />
-                </div> */}
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            <div className="p-4 lg:p-8">
+              {/* Breadcrumbs removed per user request to save space */}
+              {/* <div className="hidden md:block mb-4">
+                <Breadcrumbs />
+              </div> */}
+              <Outlet />
+            </div>
           )}
         </main>
       </div>

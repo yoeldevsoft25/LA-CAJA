@@ -24,7 +24,7 @@ import { DebtStatus } from '../database/entities/debt.entity';
 export class DebtsController {
   private readonly logger = new Logger(DebtsController.name);
 
-  constructor(private readonly debtsService: DebtsService) {}
+  constructor(private readonly debtsService: DebtsService) { }
 
   @Post('from-sale/:saleId')
   @HttpCode(HttpStatus.CREATED)
@@ -119,5 +119,14 @@ export class DebtsController {
   ) {
     const storeId = req.user.store_id;
     return this.debtsService.payAllDebts(storeId, customerId, dto);
+  }
+
+  @Get('customer/:customerId/timeline')
+  async getCustomerDebtTimeline(
+    @Param('customerId') customerId: string,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    return this.debtsService.getCustomerDebtTimeline(storeId, customerId);
   }
 }

@@ -354,4 +354,10 @@ export const debtsService = {
     const response = await api.post<Debt>('/debts/legacy', payload)
     return response.data
   },
+
+  // Obtener línea de tiempo de deudas
+  async getCustomerDebtTimeline(customerId: string): Promise<any[]> {
+    const response = await api.get<any[]>(`/debts/customer/${customerId}/timeline`)
+    return response.data
+  },
 }

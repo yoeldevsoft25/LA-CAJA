@@ -29,6 +29,7 @@ const tableSchema = z.object({
   name: z.string().max(100).nullable().optional(),
   capacity: z.number().min(1).nullable().optional(),
   status: z.enum(['available', 'occupied', 'reserved', 'cleaning', 'out_of_service']).optional(),
+  type: z.enum(['table', 'bar', 'corridor', 'wall', 'zone']),
   note: z.string().max(1000).nullable().optional(),
 })
 
@@ -58,7 +59,7 @@ export default function TableModal({
   isLoading,
 }: TableModalProps) {
   const [showQRModal, setShowQRModal] = useState(false)
-  
+
   const {
     register,
     handleSubmit,
@@ -73,6 +74,7 @@ export default function TableModal({
       name: null,
       capacity: null,
       status: 'available',
+      type: 'table',
       note: null,
     },
   })
@@ -86,6 +88,7 @@ export default function TableModal({
         name: table.name || null,
         capacity: table.capacity || null,
         status: table.status,
+        type: table.coordinates?.type || 'table',
         note: table.note || null,
       })
     } else {
@@ -94,6 +97,7 @@ export default function TableModal({
         name: null,
         capacity: null,
         status: 'available',
+        type: 'table',
         note: null,
       })
     }
@@ -106,6 +110,14 @@ export default function TableModal({
       capacity: data.capacity || null,
       status: data.status,
       note: data.note || null,
+      coordinates: table?.coordinates ? {
+        ...table.coordinates,
+        type: data.type
+      } : {
+        x: 100,
+        y: 100,
+        type: data.type
+      }
     }
     onConfirm(requestData)
   }
@@ -113,8 +125,8 @@ export default function TableModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
+          <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <Square className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             {table ? 'Editar Mesa' : 'Crear Mesa'}
           </DialogTitle>
@@ -134,69 +146,99 @@ export default function TableModal({
               </Alert>
 
               {/* Número de mesa */}
-              <div>
-                <Label htmlFor="table_number">
+              <div className="space-y-2">
+                <Label htmlFor="table_number" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
                   Número de Mesa <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="table_number"
                   {...register('table_number')}
-                  className="mt-2"
+                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm"
                   placeholder="Ej: 1, A, Barra 1"
                   maxLength={20}
                   disabled={isLoading}
                 />
                 {errors.table_number && (
-                  <p className="mt-1 text-sm text-destructive">{errors.table_number.message}</p>
+                  <p className="mt-1 text-sm text-destructive font-medium">{errors.table_number.message}</p>
                 )}
               </div>
 
+              {/* Tipo de Elemento */}
+              <div className="space-y-2">
+                <Label htmlFor="type" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Tipo de Elemento
+                </Label>
+                <Select
+                  value={watch('type') || 'table'}
+                  onValueChange={(value) => setValue('type', value as any)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="table">Mesa de Comensales</SelectItem>
+                    <SelectItem value="bar">Barra / Mostrador</SelectItem>
+                    <SelectItem value="corridor">Pasillo / Tránsito</SelectItem>
+                    <SelectItem value="wall">Muro / Obstáculo</SelectItem>
+                    <SelectItem value="zone">Etiqueta de Zona</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Nombre */}
-              <div>
-                <Label htmlFor="name">Nombre (Opcional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Nombre (Opcional)
+                </Label>
                 <Input
                   id="name"
                   {...register('name')}
-                  className="mt-2"
+                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm"
                   placeholder="Ej: Mesa VIP, Barra Principal"
                   maxLength={100}
                   disabled={isLoading}
                 />
                 {errors.name && (
-                  <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>
+                  <p className="mt-1 text-sm text-destructive font-medium">{errors.name.message}</p>
                 )}
               </div>
 
               {/* Capacidad */}
-              <div>
-                <Label htmlFor="capacity">Capacidad (Opcional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="capacity" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Capacidad (Opcional)
+                </Label>
                 <Input
                   id="capacity"
                   type="number"
+                  inputMode="numeric"
                   step="1"
                   min="1"
                   {...register('capacity', { valueAsNumber: true })}
-                  className="mt-2"
+                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm"
                   placeholder="Ej: 4"
                   disabled={isLoading}
                 />
                 {errors.capacity && (
-                  <p className="mt-1 text-sm text-destructive">{errors.capacity.message}</p>
+                  <p className="mt-1 text-sm text-destructive font-medium">{errors.capacity.message}</p>
                 )}
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground font-medium ml-1">
                   Número de personas que puede acomodar la mesa
                 </p>
               </div>
 
               {/* Estado */}
-              <div>
-                <Label htmlFor="status">Estado</Label>
+              <div className="space-y-2">
+                <Label htmlFor="status" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Estado
+                </Label>
                 <Select
                   value={status || 'available'}
                   onValueChange={(value) => setValue('status', value as TableStatus)}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="mt-2">
+                  <SelectTrigger className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -210,39 +252,41 @@ export default function TableModal({
               </div>
 
               {/* Nota */}
-              <div>
-                <Label htmlFor="note">Nota (Opcional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="note" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Nota (Opcional)
+                </Label>
                 <Textarea
                   id="note"
                   {...register('note')}
                   rows={3}
-                  className="mt-2 resize-none"
+                  className="text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm resize-none"
                   placeholder="Notas adicionales sobre la mesa..."
                   maxLength={1000}
                   disabled={isLoading}
                 />
                 {errors.note && (
-                  <p className="mt-1 text-sm text-destructive">{errors.note.message}</p>
+                  <p className="mt-1 text-sm text-destructive font-medium">{errors.note.message}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-muted/20">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={onClose}
-                className="flex-1"
+                className="h-12 flex-1 font-semibold text-muted-foreground hover:text-foreground hover:bg-white transition-all px-6"
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="h-12 flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 px-8 transition-all"
                 disabled={isLoading}
               >
                 {isLoading ? (

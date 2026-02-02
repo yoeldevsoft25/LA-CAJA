@@ -171,11 +171,11 @@ export function WarehouseFormModal({
                     <Form {...form}>
                         <form id="warehouse-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                             <Tabs defaultValue="general" className="w-full">
-                                <TabsList className="grid w-full grid-cols-4 mb-4">
-                                    <TabsTrigger value="general">General</TabsTrigger>
-                                    <TabsTrigger value="location">Ubicación</TabsTrigger>
-                                    <TabsTrigger value="operations">Operaciones</TabsTrigger>
-                                    <TabsTrigger value="notes">Notas</TabsTrigger>
+                                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 h-auto">
+                                    <TabsTrigger value="general" className="text-xs sm:text-sm">General</TabsTrigger>
+                                    <TabsTrigger value="location" className="text-xs sm:text-sm">Ubicación</TabsTrigger>
+                                    <TabsTrigger value="operations" className="text-xs sm:text-sm">Operaciones</TabsTrigger>
+                                    <TabsTrigger value="notes" className="text-xs sm:text-sm">Notas</TabsTrigger>
                                 </TabsList>
 
                                 {/* TAB: GENERAL */}
@@ -328,7 +328,7 @@ export function WarehouseFormModal({
                                         )}
                                     />
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
                                             name="city"
@@ -493,35 +493,42 @@ export function WarehouseFormModal({
                     </Form>
                 </div>
 
-                <DialogFooter className="px-6 py-4 border-t border-border flex-shrink-0 bg-muted/40 flex justify-between items-center sm:justify-between">
-                    <div className="flex items-center">
-                        {initialData && onDelete && (
+                <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0 bg-muted/40">
+                    <div className="flex flex-col-reverse sm:flex-row w-full gap-2 sm:gap-0 sm:justify-between sm:items-center">
+                        {/* Botón Eliminar - Izquierda en desktop, abajo en mobile */}
+                        <div className="flex justify-center sm:justify-start">
+                            {initialData && onDelete && (
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => onDelete(initialData)}
+                                    className="w-full sm:w-auto"
+                                >
+                                    Eliminar Bodega
+                                </Button>
+                            )}
+                        </div>
+
+                        {/* Botones Cancelar/Guardar - Derecha en desktop, arriba en mobile */}
+                        <div className="flex gap-2 w-full sm:w-auto">
                             <Button
                                 type="button"
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => onDelete(initialData)}
-                                className="mr-auto"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                className="flex-1 sm:flex-none"
                             >
-                                Eliminar
+                                Cancelar
                             </Button>
-                        )}
-                    </div>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="submit"
-                            form="warehouse-form"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? 'Guardando...' : (initialData ? 'Actualizar' : 'Crear Bodega')}
-                        </Button>
+                            <Button
+                                type="submit"
+                                form="warehouse-form"
+                                disabled={isSubmitting}
+                                className="flex-1 sm:flex-none"
+                            >
+                                {isSubmitting ? 'Guardando...' : (initialData ? 'Actualizar' : 'Crear')}
+                            </Button>
+                        </div>
                     </div>
                 </DialogFooter>
             </DialogContent>
