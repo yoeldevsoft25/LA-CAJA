@@ -1,4 +1,4 @@
-import { api, getApiBaseUrl } from '@/lib/api';
+import { api, ensurePrimaryPreferred, getApiBaseUrl } from '@/lib/api';
 import axios from 'axios';
 
 const ADMIN_KEY_STORAGE = 'admin_key';
@@ -13,15 +13,16 @@ const adminApi = axios.create({
 });
 
 // Interceptor para agregar admin key
-adminApi.interceptors.request.use((config) => {
+adminApi.interceptors.request.use(async (config) => {
+  await ensurePrimaryPreferred();
   const baseUrl = getApiBaseUrl();
   config.baseURL = baseUrl;
   if (baseUrl.includes('ngrok-free.dev')) {
-    if (config.headers) {
-      config.headers['ngrok-skip-browser-warning'] = '1';
-    }
+    config.headers = config.headers ?? {};
+    config.headers['ngrok-skip-browser-warning'] = '1';
   }
   const key = getAdminKey();
+  config.headers = config.headers ?? {};
   if (key) {
     config.headers['x-admin-key'] = key;
   }
