@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { DollarSign, AlertTriangle, CheckCircle } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { DollarSign, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals, PaymentMethod, CreateDebtPaymentDto } from '@/services/debts.service'
 import { exchangeService } from '@/services/exchange.service'
@@ -55,6 +55,9 @@ export default function PayAllDebtsModal({
   onSuccess,
 }: PayAllDebtsModalProps) {
   const { isOnline } = useOnline()
+  const queryClient = useQueryClient()
+  const [isRefreshingRate, setIsRefreshingRate] = useState(false)
+
   const {
     register,
     handleSubmit,
@@ -72,8 +75,8 @@ export default function PayAllDebtsModal({
     },
   })
 
-  // Obtener tasa BCV (siempre fresca mientras el modal esté abierto)
-  const { data: bcvRateData } = useQuery({
+  // Obtener tasa BCV
+  const { data: bcvRateData, refetch: refetchRate } = useQuery({
     queryKey: ['exchange', 'bcv'],
     queryFn: () => exchangeService.getBCVRate(true),
     staleTime: 0,
@@ -86,6 +89,14 @@ export default function PayAllDebtsModal({
   })
 
   const exchangeRate = bcvRateData?.rate || 0
+
+  const handleRefreshRate = async () => {
+    setIsRefreshingRate(true)
+    await queryClient.invalidateQueries({ queryKey: ['exchange', 'bcv'] })
+    await refetchRate()
+    setIsRefreshingRate(false)
+    toast.success('Tasa actualizada')
+  }
 
   // Calcular totales pendientes
   const totals = useMemo(() => {
@@ -111,26 +122,45 @@ export default function PayAllDebtsModal({
       ? roundCurrency(totals.totalRemainingUsd * exchangeRate)
       : totals.totalRemainingBsLegacy
 
-  // Observar cambios en amount_usd para calcular amount_bs
+  // Observar valores para validaciones / display (pero no para cálculo automático via useEffect)
   const amountUsd = watch('amount_usd')
   const selectedMethod = watch('method')
 
-  useEffect(() => {
-    if (amountUsd > 0 && exchangeRate > 0) {
-      const calculatedBs = Math.round(amountUsd * exchangeRate * 100) / 100
-      setValue('amount_bs', calculatedBs, { shouldValidate: false })
-    } else if (amountUsd <= 0) {
-      setValue('amount_bs', 0, { shouldValidate: false })
-    }
-  }, [amountUsd, exchangeRate, setValue])
+  // Manejadores de cambio bidireccional
+  const handleUsdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value)
+    setValue('amount_usd', isNaN(val) ? 0 : val) // Update source field
 
-  // Reset form cuando se abre el modal
+    if (!isNaN(val) && exchangeRate > 0) {
+      const calculatedBs = roundCurrency(val * exchangeRate)
+      setValue('amount_bs', calculatedBs, { shouldValidate: true })
+    } else {
+      setValue('amount_bs', 0)
+    }
+  }
+
+  const handleBsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value)
+    setValue('amount_bs', isNaN(val) ? 0 : val) // Update source field
+
+    if (!isNaN(val) && exchangeRate > 0) {
+      const calculatedUsd = roundCurrency(val / exchangeRate)
+      setValue('amount_usd', calculatedUsd, { shouldValidate: true })
+    } else {
+      setValue('amount_usd', 0)
+    }
+  }
+
+
+  // Reset form cuando se abre el modal (INICIALIZACIÓN)
   useEffect(() => {
     if (isOpen && totals.totalRemainingUsd > 0) {
       const initialAmountBs =
         exchangeRate > 0
           ? roundCurrency(totals.totalRemainingUsd * exchangeRate)
           : totals.totalRemainingBsLegacy
+
+      // Usamos reset para establecer valores iniciales limpios
       reset({
         amount_usd: totals.totalRemainingUsd,
         amount_bs: initialAmountBs,
@@ -140,6 +170,9 @@ export default function PayAllDebtsModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, totals.totalRemainingUsd, totals.totalRemainingBsLegacy, reset])
+  // Nota: Quitamos exchangeRate de dependencias para evitar overwrite si cambia la tasa mientras editas,
+  // aunque idealmente si cambia la tasa DEBERIA actualizarse, pero en form bidireccional es complejo.
+  // Con el botón de refresh manual el usuario tiene control.
 
   const payAllMutation = useMutation({
     mutationFn: (data: CreateDebtPaymentDto) => {
@@ -159,14 +192,6 @@ export default function PayAllDebtsModal({
   })
 
   const onSubmit = (data: PaymentFormData) => {
-    // Permitir pagos parciales
-    // if (data.amount_usd < totals.totalRemainingUsd) {
-    //   toast.error(
-    //     `El monto debe ser al menos $${totals.totalRemainingUsd.toFixed(2)} USD (total pendiente)`
-    //   )
-    //   return
-    // }
-
     payAllMutation.mutate(data)
   }
 
@@ -208,7 +233,7 @@ export default function PayAllDebtsModal({
           </Card>
 
           {/* Alerta si el monto es menor */}
-          {amountUsd > 0 && amountUsd < totals.totalRemainingUsd && (
+          {amountUsd > 0 && amountUsd < totals.totalRemainingUsd - 0.05 && (
             <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800">
               <AlertTriangle className="h-4 w-4 text-blue-600" />
               <AlertTitle>Atención</AlertTitle>
@@ -233,13 +258,16 @@ export default function PayAllDebtsModal({
                   step="0.01"
                   min="0"
                   className={cn('pl-9', errors.amount_usd && 'border-destructive')}
-                  {...register('amount_usd', {
-                    valueAsNumber: true,
-                    min: {
-                      value: 0.01,
-                      message: 'El monto debe ser mayor a 0',
-                    },
-                  })}
+                  {...(() => {
+                    const { onChange, ...rest } = register('amount_usd', { valueAsNumber: true })
+                    return {
+                      ...rest,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        onChange(e)
+                        handleUsdChange(e)
+                      }
+                    }
+                  })()}
                 />
               </div>
               {errors.amount_usd && (
@@ -249,9 +277,30 @@ export default function PayAllDebtsModal({
 
             {/* Monto Bs */}
             <div className="space-y-2">
-              <Label htmlFor="amount_bs">
-                Monto en Bs <span className="text-destructive">*</span>
-              </Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="amount_bs">
+                  Monto en Bs <span className="text-destructive">*</span>
+                </Label>
+                {exchangeRate > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Tasa BCV: {exchangeRate.toFixed(2)} Bs/USD
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={handleRefreshRate}
+                      disabled={isRefreshingRate || !isOnline}
+                      title="Actualizar Tasa"
+                    >
+                      <RefreshCw className={cn("w-3 h-3", isRefreshingRate && "animate-spin")} />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -260,18 +309,20 @@ export default function PayAllDebtsModal({
                   step="0.01"
                   min="0"
                   className={cn('pl-9', errors.amount_bs && 'border-destructive')}
-                  {...register('amount_bs', {
-                    valueAsNumber: true,
-                  })}
+                  {...(() => {
+                    const { onChange, ...rest } = register('amount_bs', { valueAsNumber: true })
+                    return {
+                      ...rest,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        onChange(e)
+                        handleBsChange(e)
+                      }
+                    }
+                  })()}
                 />
               </div>
               {errors.amount_bs && (
                 <p className="text-sm text-destructive">{errors.amount_bs.message}</p>
-              )}
-              {exchangeRate > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Tasa BCV: {exchangeRate.toFixed(2)} Bs/USD
-                </p>
               )}
             </div>
 
@@ -336,7 +387,7 @@ export default function PayAllDebtsModal({
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    {amountUsd < totals.totalRemainingUsd ? 'Abonar a Deuda Total' : 'Pagar Todas las Deudas'}
+                    {amountUsd < totals.totalRemainingUsd - 0.05 ? 'Abonar a Deuda Total' : 'Pagar Todas las Deudas'}
                   </>
                 )}
               </Button>

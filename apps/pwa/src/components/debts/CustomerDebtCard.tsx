@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CreditCard, Clock, CheckCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ArrowDown } from 'lucide-react'
+import { CreditCard, Clock, CheckCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ArrowDown, ShoppingBag } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals } from '@/services/debts.service'
 import { format } from 'date-fns'
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import PayAllDebtsModal from './PayAllDebtsModal'
 import PaySelectedDebtsModal from './PaySelectedDebtsModal'
 import SelectDebtsForWhatsAppModal from './SelectDebtsForWhatsAppModal'
+import DebtItemsModal from './DebtItemsModal'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface CustomerDebtCardProps {
@@ -39,6 +40,11 @@ export default function CustomerDebtCard({
   const [isSelectDebtsWhatsAppOpen, setIsSelectDebtsWhatsAppOpen] = useState(false)
   const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
 
+  // Estado para el modal de artículos
+  const [isItemsModalOpen, setIsItemsModalOpen] = useState(false)
+  const [itemsModalTitle, setItemsModalTitle] = useState('')
+  const [itemsModalItems, setItemsModalItems] = useState<any[]>([])
+
   // Obtener resumen del cliente
   const { data: summary } = useQuery({
     queryKey: ['debtSummary', customer.id],
@@ -55,7 +61,7 @@ export default function CustomerDebtCard({
 
   // Totales
   const debtsArray = debts || []
-  const openDebts = debtsArray.filter((d) => d.status !== 'paid')
+  const openDebts = useMemo(() => debtsArray.filter((d) => d.status !== 'paid'), [debtsArray])
   const hasOpenDebts = openDebts.length > 0
 
   const totalRemainingUsd = useMemo(
@@ -67,18 +73,54 @@ export default function CustomerDebtCard({
     setSelectedDebtIds((prev) => {
       const openIds = new Set(openDebts.map((d) => d.id))
       const next = new Set<string>()
+      let changed = false
+
       prev.forEach((id) => {
-        if (openIds.has(id)) next.add(id)
+        if (openIds.has(id)) {
+          next.add(id)
+        } else {
+          changed = true
+        }
       })
-      return next
+
+      if (prev.size !== next.size) changed = true
+
+      return changed ? next : prev
     })
   }, [openDebts])
-
 
 
   const onAddPayment = (debt: Debt) => {
     setSelectedDebtIds(new Set([debt.id]))
     setIsPaySelectedModalOpen(true)
+  }
+
+  // Abrir modal de artículos consolidados
+  const handleViewAllOpenItems = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const allItems = openDebts.flatMap((d: any) => d.sale?.items || [])
+    setItemsModalTitle('Artículos en Deuda Actual')
+    setItemsModalItems(allItems)
+    setIsItemsModalOpen(true)
+  }
+
+  // Abrir modal de artículos para una deuda específica
+  const handleViewDebtItems = (debt: any) => {
+    const items = debt.sale?.items || []
+    setItemsModalTitle('Artículos de la Deuda')
+    setItemsModalItems(items)
+    setIsItemsModalOpen(true)
+  }
+
+  // Abrir modal de artículos asociados a un abono (buscar la deuda raiz de la cadena)
+  const handleViewPaymentItems = (_payment: any, chain: any) => {
+    // Buscar cualquier deuda en la cadena que tenga items (priorizando la raiz)
+    const debtWithItems = chain.items.find((i: any) => i.type === 'debt' && i.data.sale?.items?.length > 0)
+    const items = debtWithItems?.data.sale?.items || []
+
+    setItemsModalTitle('Artículos asociados al Abono')
+    setItemsModalItems(items)
+    setIsItemsModalOpen(true)
   }
 
   // --- LOGICA DE CREDIT HEALTH ---
@@ -208,12 +250,15 @@ export default function CustomerDebtCard({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
+                            asChild
                             variant="outline"
                             size="icon"
                             onClick={() => setIsSelectDebtsWhatsAppOpen(true)}
                             className="h-10 w-10 rounded-full border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
                           >
-                            <MessageCircle className="w-5 h-5" />
+                            <div role="button">
+                              <MessageCircle className="w-5 h-5" />
+                            </div>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Cobrar por WhatsApp</TooltipContent>
@@ -270,16 +315,29 @@ export default function CustomerDebtCard({
                 </div>
               </div>
 
-              {/* Botón de pago completo grande */}
-              {hasOpenDebts && totalRemainingUsd > 0 && (
-                <Button
-                  onClick={() => setIsPayAllModalOpen(true)}
-                  className="w-full bg-success hover:bg-success/90 text-white font-semibold h-11 shadow-sm"
-                >
-                  <Receipt className="w-4 h-4 mr-2" />
-                  Pagar Saldo Total (${totalRemainingUsd.toFixed(2)})
-                </Button>
-              )}
+              {/* Botón de pago completo grande y Ver Artículos */}
+              <div className="flex flex-col gap-2">
+                {hasOpenDebts && (
+                  <Button
+                    variant="outline"
+                    onClick={handleViewAllOpenItems}
+                    className="w-full h-10 border-dashed text-muted-foreground hover:text-foreground"
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-2" />
+                    Ver todos los artículos en deuda
+                  </Button>
+                )}
+
+                {hasOpenDebts && totalRemainingUsd > 0 && (
+                  <Button
+                    onClick={() => setIsPayAllModalOpen(true)}
+                    className="w-full bg-success hover:bg-success/90 text-white font-semibold h-11 shadow-sm"
+                  >
+                    <Receipt className="w-4 h-4 mr-2" />
+                    Pagar Saldo Total (${totalRemainingUsd.toFixed(2)})
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Lista de deudas (Timeline View) */}
@@ -370,31 +428,53 @@ export default function CustomerDebtCard({
                                         </div>
                                         {item.data.note && <p className="italic text-slate-600 border-l-2 border-slate-300 pl-2 py-1 mt-2">"{item.data.note}"</p>}
 
-                                        {/* Action Button for specific debt */}
-                                        {item.data.status !== 'paid' && (
-                                          <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end">
+                                        {/* Acciones Deuda: Abonar | Ver Artículos */}
+                                        <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                                            onClick={() => handleViewDebtItems(item.data)}
+                                          >
+                                            <ShoppingBag className="w-3 h-3 mr-1.5" />
+                                            Ver Artículos
+                                          </Button>
+
+                                          {item.data.status !== 'paid' && (
                                             <Button
                                               size="sm"
                                               className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white shadow-sm"
                                               onClick={() => onAddPayment(item.data)}
                                             >
                                               <Receipt className="w-3 h-3 mr-1.5" />
-                                              Abonar a esta deuda
+                                              Abonar
                                             </Button>
-                                          </div>
-                                        )}
+                                          )}
+                                        </div>
                                       </div>
                                     )}
 
                                     {!isDebt && (
                                       <div className="text-xs text-muted-foreground">
-                                        {item.data.note && <p className="italic border-l-2 border-slate-300 pl-2">"{item.data.note}"</p>}
+                                        {item.data.note && <p className="italic border-l-2 border-slate-300 pl-2 mb-2">"{item.data.note}"</p>}
                                         {item.data.method === 'ROLLOVER' && (
                                           <div className="flex items-center gap-2 mt-2 text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
                                             <ArrowDown className="w-3 h-3" />
                                             <span>Saldo trasladado a nueva deuda superior.</span>
                                           </div>
                                         )}
+                                        {/* Botón Ver Articulos para Abonos */}
+                                        <div className="flex justify-end mt-2">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                                            onClick={() => handleViewPaymentItems(item.data, chain)}
+                                          >
+                                            <ShoppingBag className="w-3 h-3 mr-1.5" />
+                                            Ver Artículos Asociados
+                                          </Button>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -440,6 +520,14 @@ export default function CustomerDebtCard({
         customer={customer}
         openDebts={openDebts}
         onSuccess={onPaymentSuccess}
+      />
+
+      {/* Modal de Items */}
+      <DebtItemsModal
+        isOpen={isItemsModalOpen}
+        onClose={() => setIsItemsModalOpen(false)}
+        title={itemsModalTitle}
+        items={itemsModalItems}
       />
     </Card>
   )
