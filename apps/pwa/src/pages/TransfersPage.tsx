@@ -511,7 +511,7 @@ export default function TransfersPage() {
           {selectedTransfer && (
             <div className="space-y-6">
               {/* Header Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/20 rounded-lg text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 bg-muted/20 rounded-lg text-sm">
                 <div>
                   <span className="text-xs text-muted-foreground block">Origen</span>
                   <span className="font-medium">{selectedTransfer.from_warehouse?.name}</span>
@@ -532,23 +532,23 @@ export default function TransfersPage() {
 
               {/* Logistics Info if shipped */}
               {(selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'completed') && (
-                <div className="border rounded-lg p-3 space-y-2">
+                <div className="border rounded-lg p-3 space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Truck className="w-4 h-4" />
                     Datos de Logística
                   </h4>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                     <div>
-                      <span className="text-xs text-muted-foreground">Conductor:</span>
-                      <div>{selectedTransfer.driver_name || '-'}</div>
+                      <span className="text-xs text-muted-foreground block mb-1">Conductor:</span>
+                      <div className="font-medium">{selectedTransfer.driver_name || '-'}</div>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Placa:</span>
-                      <div>{selectedTransfer.vehicle_plate || '-'}</div>
+                      <span className="text-xs text-muted-foreground block mb-1">Placa:</span>
+                      <div className="font-medium">{selectedTransfer.vehicle_plate || '-'}</div>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Tracking:</span>
-                      <div>{selectedTransfer.tracking_number || '-'}</div>
+                      <span className="text-xs text-muted-foreground block mb-1">Tracking:</span>
+                      <div className="font-medium">{selectedTransfer.tracking_number || '-'}</div>
                     </div>
                   </div>
                 </div>
@@ -556,7 +556,8 @@ export default function TransfersPage() {
 
               {/* Items Table */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-muted px-4 py-2 text-xs font-medium grid grid-cols-12 gap-4">
+                {/* Header - Solo desktop */}
+                <div className="hidden sm:grid bg-muted px-4 py-2 text-xs font-medium grid-cols-12 gap-4">
                   <div className="col-span-6">Producto</div>
                   <div className="col-span-2 text-center">Solicitado</div>
                   <div className="col-span-2 text-center">Enviado</div>
@@ -564,16 +565,42 @@ export default function TransfersPage() {
                 </div>
                 <div className="divide-y max-h-[300px] overflow-y-auto">
                   {selectedTransfer.items.map(item => (
-                    <div key={item.id} className="p-3 grid grid-cols-12 gap-4 text-sm items-center">
-                      <div className="col-span-6 font-medium">
-                        {item.product?.name}
+                    <div key={item.id} className="p-3">
+                      {/* Mobile Layout - Vertical */}
+                      <div className="flex sm:hidden flex-col gap-2">
+                        <div className="font-medium text-sm">{item.product?.name}</div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="text-center">
+                            <div className="text-muted-foreground mb-1">Solicitado</div>
+                            <div className="font-bold">{item.quantity}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-muted-foreground mb-1">Enviado</div>
+                            <div className="font-bold text-blue-600">{item.quantity_shipped}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-muted-foreground mb-1">Recibido</div>
+                            <div className={cn("font-bold",
+                              item.quantity_received === item.quantity_shipped ? "text-green-600" : "text-amber-600"
+                            )}>
+                              {item.quantity_received}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="col-span-2 text-center">{item.quantity}</div>
-                      <div className="col-span-2 text-center text-muted-foreground">{item.quantity_shipped}</div>
-                      <div className={cn("col-span-2 text-center font-bold",
-                        item.quantity_received === item.quantity_shipped ? "text-green-600" : "text-amber-600"
-                      )}>
-                        {item.quantity_received}
+
+                      {/* Desktop Layout - Horizontal */}
+                      <div className="hidden sm:grid grid-cols-12 gap-4 text-sm items-center">
+                        <div className="col-span-6 font-medium">
+                          {item.product?.name}
+                        </div>
+                        <div className="col-span-2 text-center">{item.quantity}</div>
+                        <div className="col-span-2 text-center text-muted-foreground">{item.quantity_shipped}</div>
+                        <div className={cn("col-span-2 text-center font-bold",
+                          item.quantity_received === item.quantity_shipped ? "text-green-600" : "text-amber-600"
+                        )}>
+                          {item.quantity_received}
+                        </div>
                       </div>
                     </div>
                   ))}

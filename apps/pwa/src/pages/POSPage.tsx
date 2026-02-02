@@ -445,7 +445,16 @@ export default function POSPage() {
       }
     }
 
+    const syncScannerCache = async () => {
+      try {
+        await productsService.syncActiveProducts(user?.store_id);
+      } catch (e) {
+        console.warn('[POS] Background sync failed', e);
+      }
+    }
+
     void prefetchFrequentProducts()
+    void syncScannerCache()
   }, [fastCheckoutConfig?.enabled, isOnline, queryClient, recentSales, user?.store_id])
 
 
