@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_API_URL: string;
   readonly VITE_PRIMARY_API_URL: string;
   readonly VITE_FALLBACK_API_URL: string;
+  readonly VITE_TERTIARY_API_URL: string;
   // más variables de entorno...
 }
 
