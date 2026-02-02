@@ -436,6 +436,9 @@ export class DebtsService {
       .createQueryBuilder('debt')
       .leftJoinAndSelect('debt.payments', 'payments')
       .leftJoinAndSelect('debt.sale', 'sale')
+      .leftJoinAndSelect('sale.items', 'saleItems')
+      .leftJoinAndSelect('saleItems.product', 'saleProduct')
+      .leftJoinAndSelect('saleItems.variant', 'saleVariant')
       .where('debt.store_id = :storeId', { storeId })
       .andWhere('debt.customer_id = :customerId', { customerId })
       .andWhere(
@@ -522,6 +525,9 @@ export class DebtsService {
       .leftJoinAndSelect('debt.customer', 'customer')
       .leftJoinAndSelect('debt.payments', 'payments')
       .leftJoinAndSelect('debt.sale', 'sale')
+      .leftJoinAndSelect('sale.items', 'saleItems')
+      .leftJoinAndSelect('saleItems.product', 'saleProduct')
+      .leftJoinAndSelect('saleItems.variant', 'saleVariant')
       .where('debt.store_id = :storeId', { storeId })
       .andWhere(
         `(debt.sale_id IS NULL OR NOT EXISTS (
@@ -1010,7 +1016,7 @@ export class DebtsService {
     // 1. Obtener todas las deudas del cliente (incluyendo pagadas)
     const allDebts = await this.debtRepository.find({
       where: { store_id: storeId, customer_id: customerId },
-      relations: ['payments', 'parent_debt'],
+      relations: ['payments', 'parent_debt', 'sale', 'sale.items', 'sale.items.product', 'sale.items.variant'],
       order: { created_at: 'ASC' },
     });
 
