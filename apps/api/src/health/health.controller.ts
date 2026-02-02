@@ -1,5 +1,6 @@
 import { Controller, Get, Res, Header } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
+import * as path from 'path';
 import {
   HealthCheckService,
   HealthCheck,
@@ -26,6 +27,11 @@ export class HealthController {
     private externalApis: ExternalApisHealthIndicator,
     private websocket: WebSocketHealthIndicator,
   ) { }
+
+  // Cache simple para mejorar rendimiento
+  private cachedResult: any = null;
+  private lastCheckTime: number = 0;
+  private readonly CACHE_TTL = 30000; // 30 segundos (aumentado para reducir carga)
 
   @Get()
   @HealthCheck()
@@ -94,13 +100,19 @@ export class HealthController {
     ]);
   }
 
+
   @Get('detailed')
   @HealthCheck()
   @ApiOperation({ summary: 'Health check detallado de todos los servicios' })
   @ApiResponse({ status: 200, description: 'Todos los servicios saludables' })
   @ApiResponse({ status: 503, description: 'Algunos servicios no saludables' })
-  checkDetailed() {
-    return this.health.check([
+  async checkDetailed() {
+    const now = Date.now();
+    if (this.cachedResult && (now - this.lastCheckTime < this.CACHE_TTL)) {
+      return this.cachedResult;
+    }
+
+    const result = await this.health.check([
       () => this.db.pingCheck('database'),
       () => this.redis.isHealthy('redis'),
       () => this.bullmq.isHealthy('bullmq'),
@@ -109,10 +121,14 @@ export class HealthController {
       () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024),
       () =>
         this.disk.checkStorage('storage', {
-          path: '/',
+          path: path.resolve('/'),
           thresholdPercent: 0.9, // 90% de uso máximo
         }),
     ]);
+
+    this.cachedResult = result;
+    this.lastCheckTime = now;
+    return result;
   }
 
   @Get('dashboard')

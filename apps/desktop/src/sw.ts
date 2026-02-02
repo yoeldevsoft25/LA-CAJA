@@ -159,7 +159,8 @@ async function syncEvents() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                ...getNgrokHeaders(apiUrl),
             },
             body: JSON.stringify(payload)
         })
@@ -218,6 +219,10 @@ async function syncEvents() {
         console.error('[SW] Error en sincronización:', error)
         // No relanzar error para evitar reintentos infinitos inmediatos del navegador
     }
+}
+
+function getNgrokHeaders(url: string): Record<string, string> {
+    return url.includes('ngrok-free.dev') ? { 'ngrok-skip-browser-warning': '1' } : {}
 }
 
 async function getDeviceId(): Promise<string> {
