@@ -10,7 +10,7 @@ import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.serv
 import { printService } from '@/services/print.service'
 import { productSerialsService } from '@/services/product-serials.service'
 import { productsCacheService } from '@/services/products-cache.service'
-import { salesService } from '@/services/sales.service'
+import { salesService, CreateSaleRequest, Sale } from '@/services/sales.service'
 import { exchangeService } from '@/services/exchange.service'
 import { cashService } from '@/services/cash.service'
 import { paymentsService } from '@/services/payments.service'
@@ -595,12 +595,12 @@ export default function POSPage() {
 
   // Crear venta
   const createSaleMutation = useMutation({
-    mutationFn: (payload) => salesService.create(payload, { returnMode: 'minimal' }),
+    mutationFn: (payload: CreateSaleRequest) => salesService.create(payload, { returnMode: 'minimal' }),
     // Necesitamos ejecutar la mutación incluso en modo offline para encolar la venta
     // y usar el fallback local. Si queda en 'online', react-query la pausa
     // hasta que vuelva la conexión y el botón se queda en "Procesando...".
     networkMode: 'always',
-    onSuccess: (sale) => {
+    onSuccess: (sale: Sale) => {
       const isOnline = navigator.onLine
       const serialsToAssign = pendingSerials
       const shouldPrintNow = shouldPrint
