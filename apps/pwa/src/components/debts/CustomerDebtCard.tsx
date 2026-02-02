@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CreditCard, Clock, CheckCircle, AlertCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { CreditCard, Clock, CheckCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ArrowDown } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals } from '@/services/debts.service'
 import { format } from 'date-fns'
@@ -28,7 +28,7 @@ export default function CustomerDebtCard({
   customer,
   debts,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onViewDebt,
+  onViewDebt: _onViewDebt,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onAddPayment: _propOnAddPayment,
   onPaymentSuccess,
@@ -74,10 +74,7 @@ export default function CustomerDebtCard({
     })
   }, [openDebts])
 
-  const selectedDebts = useMemo(
-    () => openDebts.filter((d) => selectedDebtIds.has(d.id)),
-    [openDebts, selectedDebtIds]
-  )
+
 
   const onAddPayment = (debt: Debt) => {
     setSelectedDebtIds(new Set([debt.id]))
@@ -299,85 +296,116 @@ export default function CustomerDebtCard({
                   <p className="text-sm">Historial limpio. Cliente sin deudas.</p>
                 </div>
               ) : (
-                <div className="p-4 space-y-6">
-                  {timelineData.map((chain: any, chainIndex: number) => (
-                    <div key={chainIndex} className="relative border rounded-lg bg-white shadow-sm overflow-hidden">
-                      {/* Chain Header (Index or Status) */}
-                      <div className="absolute top-0 left-0 w-1 h-full bg-slate-200" />
+                <div className="p-4 space-y-8"> {/* Increased Space from space-y-6 to space-y-8 */}
+                  {timelineData.map((chain: any, chainIndex: number) => {
+                    const firstItemDate = chain.items.length > 0 ? new Date(chain.items[chain.items.length - 1].data.created_at || chain.items[chain.items.length - 1].data.paid_at) : new Date();
+                    const chainStatus = chain.items.find((i: any) => i.type === 'debt' && i.data.status !== 'paid') ? 'Activo' : 'Completado';
 
-                      <div className="p-4 pl-6 space-y-6">
-                        {chain.items.map((item: any, itemIndex: number) => {
-                          const isDebt = item.type === 'debt'
-                          const date = new Date(item.data.created_at || item.data.paid_at)
-                          // Determine styling based on type
-                          const iconBg = isDebt ? 'bg-orange-100 text-orange-600 border-orange-200' :
-                            (item.data.method === 'ROLLOVER' ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-green-100 text-green-600 border-green-200')
-                          const Icon = isDebt ? CreditCard : (item.data.method === 'ROLLOVER' ? Clock : CheckCircle)
+                    return (
+                      <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-blue-200 ring-1 ring-blue-50')}>
 
-                          return (
-                            <div key={itemIndex} className="relative flex gap-4">
-                              {/* Connector Line */}
-                              {itemIndex < chain.items.length - 1 && (
-                                <div className="absolute left-[15px] top-8 bottom-[-24px] w-[2px] bg-slate-100" />
-                              )}
+                        {/* Chain Header */}
+                        <div className={cn("px-4 py-2 border-b flex justify-between items-center", chainStatus === 'Completado' ? 'bg-slate-100' : 'bg-blue-50/50')}>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Ciclo iniciado el {format(firstItemDate, "d MMM yyyy", { locale: es })}
+                          </span>
+                          <Badge variant={chainStatus === 'Completado' ? 'secondary' : 'default'} className={chainStatus === 'Completado' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 shadow-none'}>
+                            {chainStatus}
+                          </Badge>
+                        </div>
 
-                              <div className={`relative z-10 w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                                <Icon className="w-4 h-4" />
-                              </div>
+                        <div className="p-4 pl-8 space-y-0"> {/* Reduced space-y within chain, handled manually for structure */}
+                          {chain.items.map((item: any, itemIndex: number) => {
+                            const isDebt = item.type === 'debt'
+                            const date = new Date(item.data.created_at || item.data.paid_at)
+                            const isLast = itemIndex === chain.items.length - 1
+                            // Determine styling based on type
+                            const iconBg = isDebt ? 'bg-orange-100 text-orange-600 border-orange-200' :
+                              (item.data.method === 'ROLLOVER' ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-green-100 text-green-600 border-green-200')
+                            const Icon = isDebt ? CreditCard : (item.data.method === 'ROLLOVER' ? Clock : CheckCircle)
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className="font-medium text-sm text-foreground">
-                                      {isDebt ? 'Deuda' : (item.data.method === 'ROLLOVER' ? 'Corte (Rollover)' : 'Abono')}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {format(date, "d MMM yyyy, h:mm a", { locale: es })}
-                                    </p>
-                                  </div>
-                                  <Badge variant="outline" className={isDebt ? 'bg-orange-50' : 'bg-green-50'}>
-                                    ${Number(item.data.amount_usd).toFixed(2)}
-                                  </Badge>
+                            return (
+                              <div key={itemIndex} className="relative flex gap-4 pb-8 last:pb-0 group">
+                                {/* Connector Line */}
+                                {!isLast && (
+                                  <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-slate-200 group-hover:bg-slate-300 transition-colors" />
+                                )}
+
+                                {/* Timeline Node */}
+                                <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 shadow-sm ${iconBg}`}>
+                                  <Icon className="w-4 h-4" />
                                 </div>
 
-                                {/* Details */}
-                                {isDebt && (
-                                  <div className="mt-2 text-xs bg-slate-50 p-2 rounded border border-slate-100">
-                                    <div className="flex justify-between">
-                                      <span>Estado: <span className="font-semibold">{item.data.status === 'open' ? 'Pendiente' : (item.data.status === 'paid' ? 'Pagada' : 'Parcial')}</span></span>
-                                      {item.data.status !== 'paid' && (
-                                        <span className="text-orange-600 font-bold">Saldo: ${(Number(item.data.amount_usd) - (item.data.payments?.reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0) || 0)).toFixed(2)}</span>
-                                      )}
+                                <div className="flex-1 min-w-0 pt-0.5">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-semibold text-sm text-foreground">
+                                        {isDebt ? 'Nueva Deuda' : (item.data.method === 'ROLLOVER' ? 'Corte Automático (Rollover)' : 'Abono Recibido')}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground flex items-center mt-0.5">
+                                        {format(date, "d MMM yyyy, h:mm a", { locale: es })}
+                                      </p>
                                     </div>
-                                    {item.data.note && <p className="mt-1 italic text-muted-foreground">"{item.data.note}"</p>}
+                                    <Badge variant="outline" className={cn(
+                                      "font-bold tabular-nums",
+                                      isDebt ? 'bg-orange-50 border-orange-200 text-orange-700' :
+                                        (item.data.method === 'ROLLOVER' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-green-50 border-green-200 text-green-700')
+                                    )}>
+                                      ${Number(item.data.amount_usd).toFixed(2)}
+                                    </Badge>
                                   </div>
-                                )}
-                                {!isDebt && item.data.note && (
-                                  <p className="mt-1 text-xs text-muted-foreground italic">
-                                    "{item.data.note}"
-                                  </p>
-                                )}
 
-                                {/* Action Button for specific debt */}
-                                {isDebt && item.data.status !== 'paid' && (
-                                  <div className="mt-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50"
-                                      onClick={() => onAddPayment(item.data)}
-                                    >
-                                      Abonar
-                                    </Button>
+                                  {/* Details Box */}
+                                  <div className="mt-3">
+                                    {isDebt && (
+                                      <div className="text-xs bg-slate-50 p-3 rounded-md border border-slate-100 shadow-sm">
+                                        <div className="flex justify-between items-center mb-1">
+                                          <span className="text-muted-foreground">Estado: <span className="font-medium text-foreground">{item.data.status === 'open' ? 'Pendiente' : (item.data.status === 'paid' ? 'Pagada' : 'Parcial')}</span></span>
+                                          {item.data.status !== 'paid' && (
+                                            <span className="text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-100">
+                                              Saldo: ${(Number(item.data.amount_usd) - (item.data.payments?.reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0) || 0)).toFixed(2)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {item.data.note && <p className="italic text-slate-600 border-l-2 border-slate-300 pl-2 py-1 mt-2">"{item.data.note}"</p>}
+
+                                        {/* Action Button for specific debt */}
+                                        {item.data.status !== 'paid' && (
+                                          <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end">
+                                            <Button
+                                              size="sm"
+                                              className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                              onClick={() => onAddPayment(item.data)}
+                                            >
+                                              <Receipt className="w-3 h-3 mr-1.5" />
+                                              Abonar a esta deuda
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {!isDebt && (
+                                      <div className="text-xs text-muted-foreground">
+                                        {item.data.note && <p className="italic border-l-2 border-slate-300 pl-2">"{item.data.note}"</p>}
+                                        {item.data.method === 'ROLLOVER' && (
+                                          <div className="flex items-center gap-2 mt-2 text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
+                                            <ArrowDown className="w-3 h-3" />
+                                            <span>Saldo trasladado a nueva deuda superior.</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
+                                </div>
                               </div>
-                            </div>
-                          )
-                        })}
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
