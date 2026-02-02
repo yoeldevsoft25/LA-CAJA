@@ -18,13 +18,15 @@ adminApi.interceptors.request.use(async (config) => {
   const baseUrl = getApiBaseUrl();
   config.baseURL = baseUrl;
   if (baseUrl.includes('ngrok-free.dev')) {
-    config.headers = config.headers ?? {};
-    config.headers['ngrok-skip-browser-warning'] = '1';
+    if (config.headers) {
+      config.headers['ngrok-skip-browser-warning'] = '1';
+    }
   }
   const key = getAdminKey();
-  config.headers = config.headers ?? {};
-  if (key) {
-    config.headers['x-admin-key'] = key;
+  if (config.headers) {
+    if (key) {
+      config.headers['x-admin-key'] = key;
+    }
   }
   return config;
 });
