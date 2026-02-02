@@ -11,6 +11,9 @@ import {
   CheckCircle,
   Coffee,
   Users,
+  Clock,
+  ReceiptText,
+  AlertCircle
 } from 'lucide-react'
 import { ordersService, Order, AddOrderItemRequest, CreatePartialPaymentRequest } from '@/services/orders.service'
 import { CreateSaleRequest } from '@/services/sales.service'
@@ -22,8 +25,6 @@ import PartialPaymentModal from './PartialPaymentModal'
 import SplitBillModal from './SplitBillModal'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -57,7 +58,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
 
   // Optimización: diferir carga en mobile para mejor percepción de rendimiento
   const [shouldLoad, setShouldLoad] = useState(false)
-  
+
   useEffect(() => {
     if (isOpen && order) {
       const delay = window.innerWidth < 640 ? 100 : 0
@@ -81,7 +82,6 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     let totalBs = 0
     let totalUsd = 0
 
-    // Verificar que items exista y sea un array
     if (order.items && Array.isArray(order.items)) {
       order.items.forEach((item) => {
         const itemTotalBs =
@@ -93,7 +93,6 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
       })
     }
 
-    // Restar pagos parciales (verificar que payments exista y sea un array)
     if (order.payments && Array.isArray(order.payments)) {
       order.payments.forEach((payment) => {
         totalBs -= Number(payment.amount_bs)
@@ -105,26 +104,26 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
   }
 
   const totals = currentOrder ? calculateOrderTotal(currentOrder) : { bs: 0, usd: 0 }
-  
-  // Validaciones defensivas para evitar errores
   const orderItems = currentOrder?.items || []
   const orderPayments = currentOrder?.payments || []
 
   const addItemMutation = useMutation({
-    mutationFn: (data: AddOrderItemRequest) => {
+    mutationFn: async (items: AddOrderItemRequest[]) => {
       if (!currentOrder) throw new Error('No hay orden seleccionada')
-      return ordersService.addOrderItem(currentOrder.id, data)
+      for (const item of items) {
+        await ordersService.addOrderItem(currentOrder.id, item)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', currentOrder?.id] })
       queryClient.invalidateQueries({ queryKey: ['orders', 'open'] })
       queryClient.invalidateQueries({ queryKey: ['tables'] })
-      toast.success('Item agregado correctamente')
+      toast.success('Items agregados correctamente')
       setIsItemModalOpen(false)
       refetchOrder()
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Error al agregar el item')
+      toast.error(error.response?.data?.message || 'Error al agregar los items')
     },
   })
 
@@ -195,7 +194,6 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     },
   })
 
-
   const partialPaymentMutation = useMutation({
     mutationFn: (data: CreatePartialPaymentRequest) => {
       if (!currentOrder) throw new Error('No hay orden seleccionada')
@@ -231,10 +229,6 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     },
   })
 
-  const handleAddItem = (data: AddOrderItemRequest) => {
-    addItemMutation.mutate(data)
-  }
-
   const handleUpdateQty = async (itemId: string, newQty: number) => {
     if (newQty <= 0) {
       handleRemoveItem(itemId)
@@ -249,7 +243,6 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
       return
     }
 
-    // Solo validar si se está aumentando la cantidad y estamos online
     if (newQty > item.qty && isOnline) {
       try {
         const stockInfo = await inventoryService.getProductStock(item.product_id)
@@ -263,7 +256,6 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
           return
         }
       } catch (error) {
-        // Si falla la verificación, permitir el cambio
         console.warn('[OrderModal] No se pudo verificar stock:', error)
       }
     }
@@ -271,26 +263,17 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     updateItemQuantityMutation.mutate({ itemId, qty: newQty })
   }
 
+  const handleAddItem = (items: AddOrderItemRequest[]) => {
+    addItemMutation.mutate(items)
+  }
+
   const handleRemoveItem = (itemId: string) => {
     removeItemMutation.mutate(itemId)
   }
 
-  const handlePause = () => {
-    pauseMutation.mutate()
-  }
-
-  const handleResume = () => {
-    resumeMutation.mutate()
-  }
-
-
-  const handlePartialPayment = (data: CreatePartialPaymentRequest) => {
-    partialPaymentMutation.mutate(data)
-  }
-
-  const handleCancel = () => {
-    cancelMutation.mutate()
-  }
+  const handlePause = () => pauseMutation.mutate()
+  const handleResume = () => resumeMutation.mutate()
+  const handleCancel = () => cancelMutation.mutate()
 
   const handleCloseOrder = (saleData: CreateSaleRequest) => {
     if (!currentOrder) return
@@ -298,13 +281,11 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     ordersService
       .closeOrder(currentOrder.id, saleData)
       .then(() => {
-        // Invalidar todas las queries relacionadas
         queryClient.invalidateQueries({ queryKey: ['order', currentOrder.id] })
         queryClient.invalidateQueries({ queryKey: ['orders', 'open'] })
         queryClient.invalidateQueries({ queryKey: ['tables'] })
         queryClient.invalidateQueries({ queryKey: ['sales'] })
         queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
-        queryClient.invalidateQueries({ queryKey: ['inventory', 'stock-status'] })
         toast.success('Orden cerrada y venta generada correctamente')
         onOrderUpdated?.()
         onClose()
@@ -320,7 +301,6 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
   const canPause = currentOrder.status === 'open'
   const canResume = currentOrder.status === 'paused'
 
-  // Convertir items de orden a items de carrito para CheckoutModal (formato CartItem)
   const cartItems = orderItems.map((item) => ({
     id: item.id,
     product_id: item.product_id,
@@ -332,337 +312,285 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
     discount_usd: Number(item.discount_usd || 0),
     variant_id: item.variant_id || null,
     variant_name: item.variant ? `${item.variant.variant_type}: ${item.variant.variant_value}` : null,
-    is_weight_product: false, // Las órdenes no manejan productos por peso por ahora
+    is_weight_product: false,
   }))
 
   return (
     <>
-      <Dialog
-        open={isOpen}
-        onOpenChange={onClose}
-        modal={!isCloseModalOpen}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl h-[95vh] sm:h-[85vh] flex flex-col p-0 gap-0 overflow-hidden border-none bg-white shadow-2xl">
+          {/* Header Glassmorphic */}
+          <DialogHeader className="px-6 py-4 flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-100 relative z-10 pr-14">
             <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-lg sm:text-xl flex items-center">
-                  <Coffee className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
-                  Orden {currentOrder.order_number}
-                </DialogTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge
-                    variant={
-                      currentOrder.status === 'open'
-                        ? 'default'
-                        : currentOrder.status === 'paused'
-                          ? 'secondary'
-                          : 'outline'
-                    }
-                  >
-                    {currentOrder.status === 'open'
-                      ? 'Abierta'
-                      : currentOrder.status === 'paused'
-                        ? 'Pausada'
-                        : currentOrder.status === 'closed'
-                          ? 'Cerrada'
-                          : 'Cancelada'}
-                  </Badge>
-                  {currentOrder.table && (
-                    <Badge variant="outline">
-                      Mesa {currentOrder.table.table_number}
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  <ReceiptText className="w-7 h-7" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+                    Orden #{currentOrder.order_number}
+                  </DialogTitle>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge
+                      className={cn(
+                        "font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border-2",
+                        currentOrder.status === 'open' ? "bg-green-100 text-green-700 border-green-200" :
+                          currentOrder.status === 'paused' ? "bg-amber-100 text-amber-700 border-amber-200" :
+                            "bg-slate-100 text-slate-700 border-slate-200"
+                      )}
+                    >
+                      {currentOrder.status === 'open' ? 'Activa' :
+                        currentOrder.status === 'paused' ? 'Pausada' :
+                          currentOrder.status.toUpperCase()}
                     </Badge>
-                  )}
+                    {currentOrder.table && (
+                      <Badge variant="outline" className="bg-white/50 font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border-slate-200">
+                        Mesa {currentOrder.table.table_number}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
-              {/* El botón X se maneja automáticamente por DialogContent, no necesita duplicado */}
+
+              <div className="hidden sm:flex flex-col items-end text-right">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Abierta hace {format(new Date(currentOrder.opened_at), 'HH:mm')}</span>
+                </div>
+                {currentOrder.paused_at && (
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1">
+                    Pausada: {format(new Date(currentOrder.paused_at), 'HH:mm')}
+                  </p>
+                )}
+              </div>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-            <div className="space-y-4">
-              {/* Información de la orden */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Abierta:</p>
-                  <p className="font-medium text-foreground">
-                    {format(new Date(currentOrder.opened_at), 'dd/MM/yyyy HH:mm')}
-                  </p>
-                </div>
-                {currentOrder.paused_at && (
-                  <div>
-                    <p className="text-muted-foreground">Pausada:</p>
-                    <p className="font-medium text-foreground">
-                      {format(new Date(currentOrder.paused_at), 'dd/MM/yyyy HH:mm')}
-                    </p>
-                  </div>
+          <div className="flex-1 flex flex-col sm:flex-row min-h-0 overflow-hidden bg-muted/20">
+            {/* Lista de Items - Estilo Recibo Digital */}
+            <div className="flex-1 flex flex-col min-h-0 relative px-4 py-4 sm:p-6 lg:p-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Resumen del Pedido ({orderItems.length})
+                </h3>
+                {canPause && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsItemModalOpen(true)}
+                    className="bg-primary/10 hover:bg-primary/20 text-primary font-black text-[10px] uppercase tracking-widest h-8 px-4 rounded-xl border-none transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Agregar
+                  </Button>
                 )}
               </div>
 
-              {/* Items de la orden */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-foreground">Items ({orderItems.length})</h3>
-                  {canPause && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsItemModalOpen(true)}
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Agregar Item
-                    </Button>
+              <ScrollArea className="flex-1 -mx-2 px-2 mask-linear">
+                <div className="space-y-3 pb-6">
+                  {orderItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-white/40 rounded-[2rem] border-2 border-dashed border-muted/30">
+                      <Coffee className="w-12 h-12 text-muted-foreground/20 mb-3" />
+                      <p className="font-bold text-muted-foreground">No hay items registrados</p>
+                    </div>
+                  ) : (
+                    orderItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="group bg-white rounded-3xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-primary/20 transition-all flex items-center gap-4 relative isolate"
+                      >
+                        {/* Cantidad Badge */}
+                        <div className="h-12 w-12 rounded-2xl bg-muted/40 dark:bg-muted/10 flex items-center justify-center text-xl font-black text-foreground shrink-0 border border-muted/20">
+                          {item.qty}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-foreground leading-tight truncate">
+                            {item.product?.name || 'Producto'}
+                          </h4>
+                          {item.variant && (
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-0.5">
+                              {item.variant.variant_type}: {item.variant.variant_value}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <p className="text-xs font-bold text-primary">
+                              ${Number(item.unit_price_usd).toFixed(2)} c/u
+                            </p>
+                            {item.note && (
+                              <Badge variant="secondary" className="text-[9px] font-bold py-0 h-4 rounded-md truncate max-w-[120px]">
+                                {item.note}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <p className="font-black text-base text-foreground tabular-nums">
+                            ${(item.qty * Number(item.unit_price_usd) - Number(item.discount_usd || 0)).toFixed(2)}
+                          </p>
+                        </div>
+
+                        {/* Quick Actions Overlay (Mobile friendly) */}
+                        <div className="absolute right-2 top-2 hidden group-hover:flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleUpdateQty(item.id, item.qty - 1)}
+                            className="h-8 w-8 rounded-full bg-slate-100/80 hover:bg-white transition-colors border border-slate-200"
+                            disabled={!canPause}
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleUpdateQty(item.id, item.qty + 1)}
+                            className="h-8 w-8 rounded-full bg-slate-100/80 hover:bg-white transition-colors border border-slate-200"
+                            disabled={!canPause}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="h-8 w-8 rounded-full bg-destructive/10 text-destructive hover:bg-destructive shadow-none border-none transition-colors"
+                            disabled={!canPause}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
-                <ScrollArea className="h-64 border border-border rounded-lg">
-                  <div className="p-2">
-                    {orderItems.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No hay items en la orden
-                      </div>
-                    ) : (
-                      currentOrder.items.map((item) => {
-                        const lineSubtotalUsd = item.qty * Number(item.unit_price_usd || 0)
-                        const lineDiscountUsd = Number(item.discount_usd || 0)
-                        const lineTotalUsd = lineSubtotalUsd - lineDiscountUsd
+              </ScrollArea>
 
-                        return (
-                          <div
-                            key={item.id}
-                            className={cn(
-                              "bg-muted/50 rounded-lg p-2.5 sm:p-3 border hover:border-primary/50 transition-all shadow-sm mb-2",
-                              "border-border"
-                            )}
-                          >
-                            <div className="flex items-start justify-between mb-2 gap-2 min-w-0">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-xs sm:text-sm text-foreground break-words leading-snug">
-                                  {item.product?.name || 'Producto'}
-                                </p>
-                                {item.variant && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {item.variant.variant_type}: {item.variant.variant_value}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  ${Number(item.unit_price_usd).toFixed(2)} c/u
-                                </p>
-                                {item.note && (
-                                  <p className="text-xs text-muted-foreground italic mt-1">
-                                    Nota: {item.note}
-                                  </p>
-                                )}
-                              </div>
-                              {canPause && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleRemoveItem(item.id)
-                                  }}
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7 flex-shrink-0"
-                                  disabled={removeItemMutation.isPending}
-                                  aria-label="Eliminar producto"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                              {canPause ? (
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleUpdateQty(item.id, item.qty - 1)
-                                    }}
-                                    className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
-                                    disabled={updateItemQuantityMutation.isPending || item.qty <= 1}
-                                    aria-label="Disminuir cantidad"
-                                  >
-                                    <Minus className="w-3 h-3" />
-                                  </Button>
-                                  <Input
-                                    type="number"
-                                    inputMode="numeric"
-                                    min={1}
-                                    max={MAX_QTY_PER_PRODUCT}
-                                    value={item.qty}
-                                    onChange={(e) => {
-                                      const newQty = parseInt(e.target.value) || 1
-                                      if (newQty >= 1 && newQty <= MAX_QTY_PER_PRODUCT) {
-                                        handleUpdateQty(item.id, newQty)
-                                      }
-                                    }}
-                                    className="w-16 h-10 sm:h-8 text-center font-semibold text-sm sm:text-base tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    disabled={updateItemQuantityMutation.isPending}
-                                    aria-label="Cantidad"
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleUpdateQty(item.id, item.qty + 1)
-                                    }}
-                                    className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px]"
-                                    disabled={updateItemQuantityMutation.isPending}
-                                    aria-label="Aumentar cantidad"
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <span className="text-sm font-medium">Cantidad: {item.qty}</span>
-                              )}
-                              <div className="text-right min-w-[80px] shrink-0">
-                                <p className="font-semibold text-sm sm:text-base">
-                                  ${lineTotalUsd.toFixed(2)}
-                                </p>
-                                {(Number(item.discount_bs) > 0 || Number(item.discount_usd) > 0) && (
-                                  <Badge variant="secondary" className="text-xs mt-0.5">
-                                    Descuento
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
+              {/* Pagos Parciales (Sutil) */}
+              {orderPayments.length > 0 && (
+                <div className="mt-4 p-4 rounded-3xl bg-white/40 border border-slate-100">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <DollarSign className="w-3.5 h-3.5" /> Pagos Parciales
+                  </p>
+                  <div className="space-y-1">
+                    {orderPayments.map(p => (
+                      <div key={p.id} className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-600">{p.payment_method}</span>
+                        <span className="font-black text-foreground">${Number(p.amount_usd).toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
-                </ScrollArea>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar de Pago y Acciones */}
+            <div className="w-full sm:w-80 lg:w-96 flex flex-col flex-shrink-0 bg-white border-l border-slate-200 p-6 sm:p-8">
+              <div className="flex-1 space-y-8">
+                {/* Totales Reales */}
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Saldo Pendiente</p>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-4xl lg:text-5xl font-black text-primary tracking-tighter tabular-nums">
+                          ${totals.usd.toFixed(2)}
+                        </span>
+                        <Badge className="bg-primary/10 text-primary border-none font-black text-xs px-3 py-1 rounded-lg">USD</Badge>
+                      </div>
+                      <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-muted/30">
+                        <span className="text-2xl font-bold text-slate-500 tabular-nums">
+                          {totals.bs.toFixed(2)}
+                        </span>
+                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">BOLÍVARES</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones de Control */}
+                <div className="space-y-3 pt-4">
+                  {canPause && (
+                    <>
+                      <Button
+                        onClick={() => setIsCloseModalOpen(true)}
+                        disabled={!canClose}
+                        className="w-full h-16 rounded-[2rem] bg-primary text-primary-foreground font-black text-xl shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-3 border-none group"
+                      >
+                        <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                        Cerrar Orden
+                      </Button>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsPaymentModalOpen(true)}
+                          className="h-14 rounded-2xl border-slate-200 bg-slate-50 font-bold hover:bg-white hover:border-primary/40 transition-all"
+                        >
+                          <DollarSign className="w-4 h-4 mr-2 text-primary" /> Pagos
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsSplitBillModalOpen(true)}
+                          disabled={orderItems.length === 0}
+                          className="h-14 rounded-2xl border-slate-200 bg-slate-50 font-bold hover:bg-white hover:border-primary/40 transition-all"
+                        >
+                          <Users className="w-4 h-4 mr-2 text-blue-500" /> Dividir
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          variant="ghost"
+                          onClick={handlePause}
+                          disabled={pauseMutation.isPending}
+                          className="h-12 rounded-2xl font-bold text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                        >
+                          <Pause className="w-4 h-4 mr-2" /> Pausar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setIsCancelDialogOpen(true)}
+                          className="h-12 rounded-2xl font-bold text-destructive hover:bg-destructive/10"
+                        >
+                          <XCircle className="w-4 h-4 mr-2" /> Cancelar
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {canResume && (
+                    <div className="flex flex-col gap-3">
+                      <Button
+                        onClick={handleResume}
+                        disabled={resumeMutation.isPending}
+                        className="w-full h-16 rounded-[2rem] bg-indigo-600 text-white font-black text-xl shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3"
+                      >
+                        <Play className="w-6 h-6" /> Reanudar Orden
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setIsCancelDialogOpen(true)}
+                        className="h-12 rounded-2xl font-bold text-destructive hover:bg-destructive/10"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" /> Cancelar Orden
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Pagos parciales */}
-              {orderPayments.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-foreground mb-3">
-                    Pagos Parciales ({orderPayments.length})
-                  </h3>
-                  <ScrollArea className="h-32 border border-border rounded-lg">
-                    <div className="p-2">
-                      {orderPayments.map((payment) => (
-                        <div
-                          key={payment.id}
-                          className="flex items-center justify-between p-2 border-b border-border last:border-0"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              ${Number(payment.amount_usd).toFixed(2)} /{' '}
-                              {Number(payment.amount_bs).toFixed(2)} Bs
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(payment.paid_at), 'dd/MM/yyyy HH:mm')}
-                            </p>
-                          </div>
-                          <Badge variant="outline">{payment.payment_method}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* Totales */}
-              <Card className="border-primary/50 bg-primary/5">
-                <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-foreground">Total Pendiente:</span>
-                      <div className="text-right">
-                        <p className="font-bold text-lg text-primary">
-                          ${totals.usd.toFixed(2)} USD
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {totals.bs.toFixed(2)} Bs
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Acciones */}
-              {canPause && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handlePause}
-                    disabled={pauseMutation.isPending}
-                  >
-                    <Pause className="w-4 h-4 mr-1" />
-                    Pausar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsPaymentModalOpen(true)}
-                  >
-                    <DollarSign className="w-4 h-4 mr-1" />
-                    Pago Parcial
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsSplitBillModalOpen(true)}
-                    disabled={orderItems.length === 0}
-                  >
-                    <Users className="w-4 h-4 mr-1" />
-                    Dividir Cuenta
-                  </Button>
-                  {canClose && (
-                    <Button
-                      variant="default"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setIsCloseModalOpen(true)
-                      }}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md font-semibold"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Cerrar Orden
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCancelDialogOpen(true)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <XCircle className="w-4 h-4 mr-1" />
-                    Cancelar
-                  </Button>
-                </div>
-              )}
-
-              {canResume && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleResume}
-                    disabled={resumeMutation.isPending}
-                  >
-                    <Play className="w-4 h-4 mr-1" />
-                    Reanudar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCancelDialogOpen(true)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <XCircle className="w-4 h-4 mr-1" />
-                    Cancelar
-                  </Button>
-                </div>
-              )}
+              <div className="mt-6 flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-[10px] text-muted-foreground font-medium leading-relaxed uppercase tracking-tight">
+                  Pasa el mouse sobre los items para editarlos o eliminarlos rápidamente.
+                </p>
+              </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de agregar item */}
+      {/* Selector inicial de item */}
       <OrderItemModal
         isOpen={isItemModalOpen}
         onClose={() => setIsItemModalOpen(false)}
@@ -675,11 +603,11 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         orderTotal={totals}
-        onConfirm={handlePartialPayment}
+        onConfirm={(data) => partialPaymentMutation.mutate(data)}
         isLoading={partialPaymentMutation.isPending}
       />
 
-      {/* Modal de cerrar orden (CheckoutModal) */}
+      {/* CheckoutModal */}
       <CheckoutModal
         isOpen={isCloseModalOpen}
         onClose={() => setIsCloseModalOpen(false)}
@@ -711,14 +639,13 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
         isLoading={false}
       />
 
-      {/* Modal de dividir cuenta */}
+      {/* Dividir cuenta */}
       {isSplitBillModalOpen && currentOrder && (
         <SplitBillModal
           isOpen={isSplitBillModalOpen}
           onClose={() => setIsSplitBillModalOpen(false)}
           order={currentOrder}
           onSplit={async (splits) => {
-            // Crear pagos parciales para cada división
             try {
               for (const split of splits) {
                 await ordersService.createPartialPayment(currentOrder.id, {
@@ -739,23 +666,22 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
         />
       )}
 
-      {/* Dialog de cancelar */}
+      {/* Cancelación */}
       <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Cancelar orden?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción cancelará la orden {currentOrder.order_number}. Esta acción no se puede
-              deshacer.
+            <AlertDialogTitle className="text-xl font-black">¿Anular esta orden?</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium">
+              Esta acción cancelará la orden #{currentOrder.order_number}. Se liberará la mesa y los items no serán cobrados. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>No, mantener</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-2xl border-none bg-slate-100 hover:bg-slate-200 font-bold">Mantener Orden</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black"
             >
-              Sí, cancelar
+              Sí, Anular Orden
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

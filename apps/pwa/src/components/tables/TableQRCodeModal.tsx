@@ -83,12 +83,12 @@ export default function TableQRCodeModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-primary" />
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
+          <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
+            <QrCode className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             Código QR - Mesa {table.table_number}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Escanea este código para acceder al menú de esta mesa
           </DialogDescription>
         </DialogHeader>
@@ -103,70 +103,90 @@ export default function TableQRCodeModal({
           ) : (
             <>
               {/* Código QR */}
-              <div className="flex justify-center p-6 bg-white rounded-lg border-2 border-dashed">
+              <div className="flex justify-center p-8 bg-white rounded-3xl border-2 border-dashed border-primary/20 shadow-inner">
                 {qrCodeImageUrl ? (
-                  <img
-                    src={qrCodeImageUrl}
-                    alt={`QR Code Mesa ${table.table_number}`}
-                    className="w-full max-w-[300px] h-auto"
-                  />
+                  <div className="relative group">
+                    <img
+                      src={qrCodeImageUrl}
+                      alt={`QR Code Mesa ${table.table_number}`}
+                      className="w-full max-w-[240px] h-auto rounded-xl shadow-lg border-4 border-white"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl backdrop-blur-[1px]">
+                      <QrCode className="w-12 h-12 text-primary animate-pulse" />
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-[300px] h-[300px] flex items-center justify-center text-muted-foreground">
+                  <div className="w-[240px] h-[240px] flex items-center justify-center text-muted-foreground font-medium">
                     Generando código QR...
                   </div>
                 )}
               </div>
 
               {/* URL */}
-              <div className="space-y-2">
-                <Label>URL del Menú</Label>
+              <div className="space-y-2 px-1">
+                <Label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">URL del Menú Digital</Label>
                 <div className="flex gap-2">
                   <Input
                     value={qrCodeUrl}
                     readOnly
-                    className="font-mono text-sm"
+                    className="h-12 font-mono text-xs bg-muted/30 border-muted/40"
                   />
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
                     onClick={handleCopyURL}
+                    className="h-12 w-12 border border-muted/40 hover:bg-white text-primary"
                     title="Copiar URL"
                   >
                     {copied ? (
-                      <Check className="w-4 h-4 text-green-600" />
+                      <Check className="w-5 h-5 text-green-600" />
                     ) : (
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-5 h-5" />
                     )}
                   </Button>
                 </div>
               </div>
 
               {/* Información */}
-              <Alert>
-                <AlertDescription className="text-sm">
-                  <strong>Instrucciones:</strong>
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>Descarga o imprime este código QR</li>
-                    <li>Pégalo en la mesa correspondiente</li>
-                    <li>Los clientes podrán escanearlo para ver el menú y hacer pedidos</li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
+              <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
+                <p className="text-[10px] font-black text-primary/70 uppercase tracking-widest mb-3">Recomendaciones</p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2 text-xs font-medium text-foreground">
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                    Descarga e imprime este código para la mesa.
+                  </li>
+                  <li className="flex items-start gap-2 text-xs font-medium text-foreground">
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                    Pégalo en un lugar visible de la mesa.
+                  </li>
+                  <li className="flex items-start gap-2 text-xs font-medium text-foreground">
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                    Tus clientes podrán pedir directamente desde su móvil.
+                  </li>
+                </ul>
+              </div>
 
               {/* Acciones */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+              <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-4">
                 <Button
-                  variant="outline"
-                  onClick={handleDownloadQR}
-                  className="flex-1"
+                  variant="ghost"
+                  onClick={onClose}
+                  className="h-12 flex-1 font-bold text-muted-foreground"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Descargar QR
+                  Cerrar
                 </Button>
                 <Button
                   variant="outline"
+                  onClick={handleDownloadQR}
+                  className="h-12 flex-1 border-muted/40 font-bold hover:bg-white"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Descargar
+                </Button>
+                <Button
+                  variant="default"
                   onClick={handleOpenURL}
-                  className="flex-1"
+                  className="h-12 flex-1 bg-primary text-primary-foreground font-black shadow-lg shadow-primary/20"
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Ver Menú
@@ -174,13 +194,6 @@ export default function TableQRCodeModal({
               </div>
             </>
           )}
-
-          {/* Cerrar */}
-          <div className="flex justify-end pt-2">
-            <Button variant="outline" onClick={onClose}>
-              Cerrar
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

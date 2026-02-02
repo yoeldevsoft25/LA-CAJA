@@ -640,7 +640,7 @@ export default function ProductsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-full sm:max-w-xs">
+            <div className="w-full sm:max-w-sm">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Catálogo público</Label>
               <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-white/60 px-3 py-2">
                 <span className="text-sm text-muted-foreground">

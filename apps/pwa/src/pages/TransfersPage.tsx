@@ -380,8 +380,8 @@ export default function TransfersPage() {
       {/* Modal de enviar */}
       <Dialog open={isShipOpen} onOpenChange={setIsShipOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+          <DialogHeader className="pr-12">
+            <DialogTitle className="text-base sm:text-lg">Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
               Completa los datos de envío y logística
             </DialogDescription>
@@ -389,7 +389,7 @@ export default function TransfersPage() {
           {selectedTransfer && (
             <form onSubmit={handleShipSubmit} className="space-y-4">
               {/* Logistics Info */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="space-y-2">
                   <Label>Conductor</Label>
                   <Input name="driver_name" placeholder="Nombre del chofer" />
@@ -408,24 +408,27 @@ export default function TransfersPage() {
                 </div>
               </div>
 
-              <div className="max-h-[300px] overflow-y-auto space-y-4">
+              <div className="max-h-[300px] overflow-y-auto space-y-3">
                 {selectedTransfer.items.map((item, index) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{item.product?.name}</p>
-                      <p className="text-xs text-muted-foreground">Solicitado: {item.quantity}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">Enviado:</Label>
-                      <Input
-                        type="number"
-                        name={`shipped_${index}`}
-                        min="0"
-                        max={item.quantity}
-                        defaultValue={item.quantity}
-                        required
-                        className="w-20 text-right"
-                      />
+                  <div key={item.id} className="p-3 border rounded-lg space-y-2">
+                    {/* Mobile: Vertical layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.product?.name}</p>
+                        <p className="text-xs text-muted-foreground">Solicitado: {item.quantity}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Enviado:</Label>
+                        <Input
+                          type="number"
+                          name={`shipped_${index}`}
+                          min="0"
+                          max={item.quantity}
+                          defaultValue={item.quantity}
+                          required
+                          className="w-20 text-right"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -436,11 +439,11 @@ export default function TransfersPage() {
                 <Textarea name="note" placeholder="Observaciones sobre el despacho..." />
               </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsShipOpen(false)}>
+              <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsShipOpen(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={shipMutation.isPending}>
+                <Button type="submit" disabled={shipMutation.isPending} className="w-full sm:w-auto">
                   {shipMutation.isPending ? 'Enviando...' : 'Confirmar Envío'}
                 </Button>
               </DialogFooter>
@@ -452,32 +455,35 @@ export default function TransfersPage() {
       {/* Modal de recibir */}
       <Dialog open={isReceiveOpen} onOpenChange={setIsReceiveOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+          <DialogHeader className="pr-12">
+            <DialogTitle className="text-base sm:text-lg">Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
               Verifica y confirma las cantidades recibidas
             </DialogDescription>
           </DialogHeader>
           {selectedTransfer && (
             <form onSubmit={handleReceiveSubmit} className="space-y-4">
-              <div className="max-h-[300px] overflow-y-auto space-y-4">
+              <div className="max-h-[300px] overflow-y-auto space-y-3">
                 {selectedTransfer.items.map((item, index) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{item.product?.name}</p>
-                      <p className="text-xs text-muted-foreground">Enviado: {item.quantity_shipped}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">Recibido:</Label>
-                      <Input
-                        type="number"
-                        name={`received_${index}`}
-                        min="0"
-                        max={item.quantity_shipped}
-                        defaultValue={item.quantity_shipped}
-                        required
-                        className="w-20 text-right"
-                      />
+                  <div key={item.id} className="p-3 border rounded-lg space-y-2">
+                    {/* Mobile: Vertical layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.product?.name}</p>
+                        <p className="text-xs text-muted-foreground">Enviado: {item.quantity_shipped}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Recibido:</Label>
+                        <Input
+                          type="number"
+                          name={`received_${index}`}
+                          min="0"
+                          max={item.quantity_shipped}
+                          defaultValue={item.quantity_shipped}
+                          required
+                          className="w-20 text-right"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -486,11 +492,11 @@ export default function TransfersPage() {
                 <Label>Notas de Recepción</Label>
                 <Textarea name="note" placeholder="Daños, faltantes o comentarios..." />
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsReceiveOpen(false)}>
+              <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsReceiveOpen(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={receiveMutation.isPending}>
+                <Button type="submit" disabled={receiveMutation.isPending} className="w-full sm:w-auto">
                   {receiveMutation.isPending ? 'Procesando...' : 'Confirmar Recepción'}
                 </Button>
               </DialogFooter>
@@ -502,9 +508,9 @@ export default function TransfersPage() {
       {/* Modal de detalles (Solo lectura) */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              Transferencia {selectedTransfer?.transfer_number}
+          <DialogHeader className="pr-12">
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <span className="text-base sm:text-lg">Transferencia {selectedTransfer?.transfer_number}</span>
               {selectedTransfer && getStatusBadge(selectedTransfer.status)}
             </DialogTitle>
           </DialogHeader>

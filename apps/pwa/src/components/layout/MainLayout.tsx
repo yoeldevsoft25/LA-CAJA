@@ -978,7 +978,7 @@ export default function MainLayout() {
               <Outlet />
             </div>
           ) : (
-            <div className="p-6 lg:p-8">
+            <div className="p-4 lg:p-8">
               {/* Breadcrumbs removed per user request to save space */}
               {/* <div className="hidden md:block mb-4">
                 <Breadcrumbs />
