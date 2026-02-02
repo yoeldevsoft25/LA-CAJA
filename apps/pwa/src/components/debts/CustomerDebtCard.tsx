@@ -61,7 +61,7 @@ export default function CustomerDebtCard({
 
   // Totales
   const debtsArray = debts || []
-  const openDebts = debtsArray.filter((d) => d.status !== 'paid')
+  const openDebts = useMemo(() => debtsArray.filter((d) => d.status !== 'paid'), [debtsArray])
   const hasOpenDebts = openDebts.length > 0
 
   const totalRemainingUsd = useMemo(
@@ -73,10 +73,19 @@ export default function CustomerDebtCard({
     setSelectedDebtIds((prev) => {
       const openIds = new Set(openDebts.map((d) => d.id))
       const next = new Set<string>()
+      let changed = false
+
       prev.forEach((id) => {
-        if (openIds.has(id)) next.add(id)
+        if (openIds.has(id)) {
+          next.add(id)
+        } else {
+          changed = true
+        }
       })
-      return next
+
+      if (prev.size !== next.size) changed = true
+
+      return changed ? next : prev
     })
   }, [openDebts])
 
@@ -241,12 +250,15 @@ export default function CustomerDebtCard({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
+                            asChild
                             variant="outline"
                             size="icon"
                             onClick={() => setIsSelectDebtsWhatsAppOpen(true)}
                             className="h-10 w-10 rounded-full border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
                           >
-                            <MessageCircle className="w-5 h-5" />
+                            <div role="button">
+                              <MessageCircle className="w-5 h-5" />
+                            </div>
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Cobrar por WhatsApp</TooltipContent>
