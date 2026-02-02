@@ -11,6 +11,9 @@ const FAILOVER_API_URLS = [PRIMARY_API_URL, FALLBACK_API_URL, TERTIARY_API_URL].
   (url): url is string => Boolean(url)
 );
 const API_BASE_STORAGE_KEY = 'velox_api_base';
+const PRIMARY_PROBE_INTERVAL_MS = 5000;
+let lastPrimaryProbeAt = 0;
+let primaryProbeInFlight: Promise<boolean> | null = null;
 
 /**
  * Decodifica un token JWT sin verificar la firma (solo para extraer datos)
@@ -147,6 +150,27 @@ const pickAvailableApi = async (): Promise<string | null> => {
   return null;
 };
 
+export const ensurePrimaryPreferred = async (): Promise<void> => {
+  if (!import.meta.env.PROD || isLocalEnv()) return;
+  if (!PRIMARY_API_URL) return;
+  if (api.defaults.baseURL === PRIMARY_API_URL) return;
+
+  const now = Date.now();
+  if (now - lastPrimaryProbeAt < PRIMARY_PROBE_INTERVAL_MS) return;
+  lastPrimaryProbeAt = now;
+
+  if (!primaryProbeInFlight) {
+    primaryProbeInFlight = probeApi(PRIMARY_API_URL).finally(() => {
+      primaryProbeInFlight = null;
+    });
+  }
+
+  const ok = await primaryProbeInFlight;
+  if (ok) {
+    setApiBaseUrl(PRIMARY_API_URL);
+  }
+};
+
 const probePrimaryApi = async (): Promise<boolean> => {
   if (!import.meta.env.PROD || isLocalEnv()) return true;
   if (FAILOVER_API_URLS.length <= 1) return true;
@@ -189,7 +213,7 @@ if (import.meta.env.PROD && !isLocalEnv() && FAILOVER_API_URLS.length > 1) {
 
 // Interceptor para agregar token JWT y bloquear peticiones offline
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Bloquear peticiones si está offline
     if (!navigator.onLine) {
       return Promise.reject({
@@ -198,6 +222,9 @@ api.interceptors.request.use(
         isOffline: true,
       });
     }
+
+    await ensurePrimaryPreferred();
+    config.baseURL = getApiBaseUrl();
 
     const token = localStorage.getItem('auth_token');
     if (token) {
@@ -240,6 +267,7 @@ api.interceptors.request.use(
 
     const baseUrl = config.baseURL || api.defaults.baseURL || '';
     if (baseUrl.includes('ngrok-free.dev')) {
+      config.headers = config.headers ?? {};
       config.headers['ngrok-skip-browser-warning'] = '1';
     }
     return config;

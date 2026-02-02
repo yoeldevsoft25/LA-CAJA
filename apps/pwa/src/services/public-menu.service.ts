@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getApiBaseUrl } from '@/lib/api'
+import { ensurePrimaryPreferred, getApiBaseUrl } from '@/lib/api'
 
 /**
  * Cliente API público (sin autenticación) para menú QR
@@ -12,13 +12,13 @@ const publicApi = axios.create({
   timeout: 30000,
 })
 
-publicApi.interceptors.request.use((config) => {
+publicApi.interceptors.request.use(async (config) => {
+  await ensurePrimaryPreferred()
   const baseUrl = getApiBaseUrl()
   config.baseURL = baseUrl
   if (baseUrl.includes('ngrok-free.dev')) {
-    if (config.headers) {
-      config.headers['ngrok-skip-browser-warning'] = '1'
-    }
+    config.headers = config.headers ?? {}
+    config.headers['ngrok-skip-browser-warning'] = '1'
   }
   return config
 })
