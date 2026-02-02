@@ -19,6 +19,21 @@ class CoordinatesDto {
 
   @IsInt()
   y: number;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['table', 'bar', 'corridor', 'wall', 'zone'])
+  type?: 'table' | 'bar' | 'corridor' | 'wall' | 'zone';
+
+  @IsInt()
+  @IsOptional()
+  @Min(1)
+  w?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(1)
+  h?: number;
 }
 
 /**

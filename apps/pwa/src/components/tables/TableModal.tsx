@@ -29,6 +29,7 @@ const tableSchema = z.object({
   name: z.string().max(100).nullable().optional(),
   capacity: z.number().min(1).nullable().optional(),
   status: z.enum(['available', 'occupied', 'reserved', 'cleaning', 'out_of_service']).optional(),
+  type: z.enum(['table', 'bar', 'corridor', 'wall', 'zone']),
   note: z.string().max(1000).nullable().optional(),
 })
 
@@ -73,6 +74,7 @@ export default function TableModal({
       name: null,
       capacity: null,
       status: 'available',
+      type: 'table',
       note: null,
     },
   })
@@ -86,6 +88,7 @@ export default function TableModal({
         name: table.name || null,
         capacity: table.capacity || null,
         status: table.status,
+        type: table.coordinates?.type || 'table',
         note: table.note || null,
       })
     } else {
@@ -94,6 +97,7 @@ export default function TableModal({
         name: null,
         capacity: null,
         status: 'available',
+        type: 'table',
         note: null,
       })
     }
@@ -106,6 +110,14 @@ export default function TableModal({
       capacity: data.capacity || null,
       status: data.status,
       note: data.note || null,
+      coordinates: table?.coordinates ? {
+        ...table.coordinates,
+        type: data.type
+      } : {
+        x: 100,
+        y: 100,
+        type: data.type
+      }
     }
     onConfirm(requestData)
   }
@@ -149,6 +161,29 @@ export default function TableModal({
                 {errors.table_number && (
                   <p className="mt-1 text-sm text-destructive font-medium">{errors.table_number.message}</p>
                 )}
+              </div>
+
+              {/* Tipo de Elemento */}
+              <div className="space-y-2">
+                <Label htmlFor="type" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Tipo de Elemento
+                </Label>
+                <Select
+                  value={watch('type') || 'table'}
+                  onValueChange={(value) => setValue('type', value as any)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="table">Mesa de Comensales</SelectItem>
+                    <SelectItem value="bar">Barra / Mostrador</SelectItem>
+                    <SelectItem value="corridor">Pasillo / Tránsito</SelectItem>
+                    <SelectItem value="wall">Muro / Obstáculo</SelectItem>
+                    <SelectItem value="zone">Etiqueta de Zona</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Nombre */}

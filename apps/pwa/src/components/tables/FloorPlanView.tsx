@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ZoomIn, ZoomOut, RotateCcw, User, UtensilsCrossed, SprayCan, Clock, Ban } from 'lucide-react'
+import { ZoomIn, ZoomOut, RotateCcw, User, UtensilsCrossed, SprayCan, Clock, Ban, Footprints, Info } from 'lucide-react'
 import { tablesService, Table } from '@/services/tables.service'
 import { ordersService, Order } from '@/services/orders.service'
 import { Button } from '@/components/ui/button'
@@ -20,46 +20,41 @@ const ZOOM_STEP = 0.1
 // Helpers para renderizado de sillas
 const getChairPositions = (capacity: number = 4) => {
   const chairs = []
-  const tableSize = TABLE_SIZE
-  const chairSize = 12
+  const halfSize = TABLE_SIZE / 2
   const offset = 8 // Distancia desde la mesa
 
-  // Distribución simple basada en lados
+  // Distribución basada en lados
   const sideCapacity = Math.ceil(capacity / 4)
 
   // Top
   for (let i = 0; i < sideCapacity; i++) {
     chairs.push({
-      x: (tableSize / (sideCapacity + 1)) * (i + 1) - chairSize / 2,
-      y: -chairSize - offset,
-      rotation: 0
+      x: (TABLE_SIZE / (sideCapacity + 1)) * (i + 1) - halfSize,
+      y: -halfSize - offset
     })
   }
   // Right
   for (let i = 0; i < sideCapacity; i++) {
     if (chairs.length >= capacity) break
     chairs.push({
-      x: tableSize + offset,
-      y: (tableSize / (sideCapacity + 1)) * (i + 1) - chairSize / 2,
-      rotation: 90
+      x: halfSize + offset,
+      y: (TABLE_SIZE / (sideCapacity + 1)) * (i + 1) - halfSize
     })
   }
   // Bottom
   for (let i = 0; i < sideCapacity; i++) {
     if (chairs.length >= capacity) break
     chairs.push({
-      x: (tableSize / (sideCapacity + 1)) * (i + 1) - chairSize / 2,
-      y: tableSize + offset,
-      rotation: 180
+      x: (TABLE_SIZE / (sideCapacity + 1)) * (i + 1) - halfSize,
+      y: halfSize + offset
     })
   }
   // Left
   for (let i = 0; i < sideCapacity; i++) {
     if (chairs.length >= capacity) break
     chairs.push({
-      x: -chairSize - offset,
-      y: (tableSize / (sideCapacity + 1)) * (i + 1) - chairSize / 2,
-      rotation: 270
+      x: -halfSize - offset,
+      y: (TABLE_SIZE / (sideCapacity + 1)) * (i + 1) - halfSize
     })
   }
 
@@ -68,7 +63,7 @@ const getChairPositions = (capacity: number = 4) => {
 
 export default function FloorPlanView({
   onTableClick,
-  onCreateOrder,
+  onCreateOrder: _onCreateOrder,
 }: FloorPlanViewProps) {
   const queryClient = useQueryClient()
   const svgRef = useRef<SVGSVGElement>(null)
@@ -157,8 +152,8 @@ export default function FloorPlanView({
       point.x = (e.clientX - rect.left - pan.x) / zoom
       point.y = (e.clientY - rect.top - pan.y) / zoom
 
-      const newX = Math.max(0, Math.min(point.x - dragOffset.x, 3000))
-      const newY = Math.max(0, Math.min(point.y - dragOffset.y, 3000))
+      const newX = Math.round(Math.max(0, Math.min(point.x - dragOffset.x, 3000)))
+      const newY = Math.round(Math.max(0, Math.min(point.y - dragOffset.y, 3000)))
 
       const table = tables?.find((t) => t.id === dragging)
       if (table) {
@@ -166,7 +161,7 @@ export default function FloorPlanView({
           if (!old) return old
           return old.map((t) =>
             t.id === dragging
-              ? { ...t, coordinates: { x: newX, y: newY } }
+              ? { ...t, coordinates: { ...t.coordinates, x: newX, y: newY } }
               : t
           )
         })
@@ -281,32 +276,127 @@ export default function FloorPlanView({
 
           {tables?.filter((t) => t.coordinates && t.status !== 'out_of_service').map((table) => {
             const order = getTableOrder(table.id)
-            const chairs = getChairPositions(table.capacity || 4)
+            const type = table.coordinates?.type || 'table'
+            const chairs = type === 'table' ? getChairPositions(table.capacity || 4) : []
             const isSelected = dragging === table.id
             const x = table.coordinates!.x
             const y = table.coordinates!.y
 
-            // Colores por estado (Premium Light Palette)
+            // Logic per type
+            if (type === 'bar') {
+              const barWidth = TABLE_SIZE * 2
+              const barHeight = TABLE_SIZE * 0.8
+              const stoolCount = table.capacity || 4 // Default if no capacity set
+
+              // Generate stools
+              const stools = []
+              for (let i = 0; i < stoolCount; i++) {
+                stools.push({
+                  x: (barWidth / (stoolCount + 1)) * (i + 1) - barWidth / 2,
+                  y: barHeight / 2 + 10
+                })
+              }
+
+              return (
+                <g key={table.id} transform={`translate(${x}, ${y})`}
+                  className={cn('cursor-pointer transition-opacity', isSelected ? 'opacity-70 cursor-grabbing' : 'hover:opacity-100')}
+                  onMouseDown={(e) => handleTableMouseDown(e, table)}
+                  onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
+
+                  {/* Stools (White as requested) */}
+                  {stools.map((chair, i) => (
+                    <circle key={i} cx={chair.x} cy={chair.y} r={7} className="fill-white stroke-slate-300 stroke-1 shadow-sm" />
+                  ))}
+
+                  {/* Bar Counter (Blanca Blanca as requested) */}
+                  <rect x={-barWidth / 2} y={-barHeight / 2} width={barWidth} height={barHeight} rx={8}
+                    className="fill-white stroke-slate-200 stroke-2 drop-shadow-xl" />
+
+                  {/* Inner Detail - Subtle differentiation */}
+                  <rect x={-barWidth / 2 + 5} y={-barHeight / 2 + 5} width={barWidth - 10} height={barHeight - 10} rx={4}
+                    className="fill-slate-50/50 stroke-none" />
+
+                  <foreignObject x={-barWidth / 2} y={-barHeight / 2} width={barWidth} height={barHeight} className="pointer-events-none">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-700">
+                      <span className="text-xs font-black uppercase tracking-widest">{table.table_number}</span>
+                    </div>
+                  </foreignObject>
+                </g>
+              )
+            }
+
+            if (type === 'corridor') {
+              return (
+                <g key={table.id} transform={`translate(${x}, ${y})`}
+                  className={cn('cursor-pointer transition-opacity', isSelected ? 'opacity-50 grayscale' : 'hover:opacity-80')}
+                  onMouseDown={(e) => handleTableMouseDown(e, table)}
+                  onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
+                  <rect x={-TABLE_SIZE / 2} y={-TABLE_SIZE / 2} width={TABLE_SIZE} height={TABLE_SIZE} rx={12}
+                    className="fill-slate-100/40 stroke-slate-300 stroke-2" strokeDasharray="6 4" />
+                  <foreignObject x={-TABLE_SIZE / 2} y={-TABLE_SIZE / 2} width={TABLE_SIZE} height={TABLE_SIZE} className="pointer-events-none">
+                    <div className="w-full h-full flex flex-col items-center justify-center opacity-30">
+                      <Footprints className="w-8 h-8 text-slate-400" />
+                      <span className="text-[10px] font-black text-slate-500 mt-1 uppercase tracking-tighter">Pasillo</span>
+                    </div>
+                  </foreignObject>
+                </g>
+              )
+            }
+
+            if (type === 'wall') {
+              return (
+                <g key={table.id} transform={`translate(${x}, ${y})`}
+                  className={cn('cursor-pointer', isSelected && 'opacity-50')}
+                  onMouseDown={(e) => handleTableMouseDown(e, table)}
+                  onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
+                  <rect x={-TABLE_SIZE / 2} y={-6} width={TABLE_SIZE} height={12} rx={6}
+                    className="fill-slate-400/80 stroke-slate-500 stroke-1" />
+                  <text y={24} textAnchor="middle" className="fill-slate-400 text-[9px] font-black uppercase tracking-widest">{table.table_number}</text>
+                </g>
+              )
+            }
+
+            if (type === 'zone') {
+              return (
+                <g key={table.id} transform={`translate(${x}, ${y})`}
+                  className={cn('cursor-pointer', isSelected && 'opacity-50')}
+                  onMouseDown={(e) => handleTableMouseDown(e, table)}
+                  onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
+                  <rect x={-TABLE_SIZE / 2} y={-18} width={TABLE_SIZE} height={36} rx={18}
+                    className="fill-primary/5 stroke-primary/30 stroke-1" strokeDasharray="3 3" />
+                  <foreignObject x={-TABLE_SIZE / 2} y={-18} width={TABLE_SIZE} height={36} className="pointer-events-none">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Info className="w-3 h-3 text-primary/40 mr-1" />
+                      <span className="fill-primary/60 font-black text-[11px] uppercase tracking-widest">
+                        {table.table_number}
+                      </span>
+                    </div>
+                  </foreignObject>
+                </g>
+              )
+            }
+
+            // Default: Table
+            // Unified 'White White' Aesthetic
             let tableFill = "fill-white"
-            let tableStroke = "stroke-slate-300"
+            let tableStroke = "stroke-slate-200"
+            let tableShadow = "drop-shadow-xl"
             let statusIcon = null
 
             if (order || table.status === 'occupied') {
-              tableFill = "fill-white"
               tableStroke = "stroke-primary"
               statusIcon = <UtensilsCrossed className="w-6 h-6 text-primary" />
             } else if (table.status === 'reserved') {
-              tableFill = "fill-amber-50"
               tableStroke = "stroke-amber-400"
               statusIcon = <Clock className="w-6 h-6 text-amber-500" />
             } else if (table.status === 'cleaning') {
-              tableFill = "fill-blue-50"
               tableStroke = "stroke-blue-400"
               statusIcon = <SprayCan className="w-6 h-6 text-blue-500" />
             } else if (table.status === 'out_of_service') {
-              tableFill = "fill-slate-100"
+              // Slight differentiation for out of service, but keeping it very light/white
+              tableFill = "fill-slate-50"
               tableStroke = "stroke-slate-200"
-              statusIcon = <Ban className="w-6 h-6 text-slate-400" />
+              statusIcon = <Ban className="w-6 h-6 text-slate-300" />
             }
 
             return (
@@ -327,7 +417,7 @@ export default function FloorPlanView({
                   if (dragging !== table.id) onTableClick(table)
                 }}
               >
-                {/* Sombra suave de elevación */}
+                {/* Sombra suave de elevación (Pre-calculated or generic) */}
                 <rect
                   x={-TABLE_SIZE / 2 + 4}
                   y={-TABLE_SIZE / 2 + 4}
@@ -337,7 +427,7 @@ export default function FloorPlanView({
                   className="fill-black/5 stroke-none"
                 />
 
-                {/* Sillas */}
+                {/* Sillas (Unified White Style) */}
                 {chairs.map((chair, i) => (
                   <circle
                     key={i}
@@ -345,8 +435,8 @@ export default function FloorPlanView({
                     cy={chair.y}
                     r={6}
                     className={cn(
-                      "stroke-1 transition-colors",
-                      order ? "fill-slate-800 stroke-slate-900" : "fill-white stroke-slate-300"
+                      "stroke-1 transition-colors shadow-sm",
+                      order ? "fill-white stroke-primary" : "fill-white stroke-slate-300"
                     )}
                   />
                 ))}
@@ -359,10 +449,11 @@ export default function FloorPlanView({
                   height={TABLE_SIZE}
                   rx={20}
                   className={cn(
-                    "stroke-[3px] transition-colors duration-300 drop-shadow-sm",
+                    "stroke-[3px] transition-colors duration-300",
                     tableFill,
                     tableStroke,
-                    isSelected && "stroke-primary shadow-xl"
+                    tableShadow,
+                    isSelected && "stroke-primary"
                   )}
                 />
 
@@ -429,6 +520,17 @@ export default function FloorPlanView({
               <SprayCan className="w-3 h-3 text-blue-500" />
             </div>
             <span>Limpieza</span>
+          </div>
+          <div className="w-full h-px bg-slate-100 my-1" />
+          <div className="flex items-center gap-2 opacity-60">
+            <div className="w-6 h-6 rounded-lg bg-slate-50 border border-slate-300 border-dashed flex items-center justify-center">
+              <Footprints className="w-3 h-3 text-slate-400" />
+            </div>
+            <span>Pasillo</span>
+          </div>
+          <div className="flex items-center gap-2 opacity-60">
+            <div className="w-6 h-6 rounded-sm bg-slate-400 flex items-center justify-center" />
+            <span>Muro</span>
           </div>
         </div>
       </div>

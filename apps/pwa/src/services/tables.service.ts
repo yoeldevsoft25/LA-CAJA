@@ -11,7 +11,13 @@ export interface Table {
   status: TableStatus
   current_order_id: string | null
   zone: string | null
-  coordinates: { x: number; y: number } | null
+  coordinates: {
+    x: number;
+    y: number;
+    type?: 'table' | 'bar' | 'corridor' | 'wall' | 'zone';
+    w?: number;
+    h?: number;
+  } | null
   estimated_dining_time: number | null
   note: string | null
   created_at: string
@@ -34,7 +40,13 @@ export interface CreateTableRequest {
   capacity?: number | null
   status?: TableStatus
   zone?: string | null
-  coordinates?: { x: number; y: number } | null
+  coordinates?: {
+    x: number;
+    y: number;
+    type?: 'table' | 'bar' | 'corridor' | 'wall' | 'zone';
+    w?: number;
+    h?: number;
+  } | null
   estimated_dining_time?: number | null
   note?: string | null
 }
