@@ -1,42 +1,19 @@
 import axios from 'axios'
-
-function getApiUrl(): string {
-  // 1. Si hay una variable de entorno, usarla (prioridad más alta)
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
-
-  // 2. Si estamos en localhost o preview local, usar localhost
-  if (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    window.location.port === '4173' || // Vite preview
-    window.location.port === '5173'    // Vite dev server
-  ) {
-    return 'http://localhost:3000'
-  }
-
-  // 3. En producción, intentar detectar automáticamente la URL del API
-  if (import.meta.env.PROD) {
-    const hostname = window.location.hostname
-
-    // Si estamos en Netlify (la-caja.netlify.app), usar el backend de Render
-    if (hostname.includes('netlify.app')) {
-      return 'https://la-caja-8i4h.onrender.com'
-    }
-
-    // Por defecto, usar el mismo protocolo y hostname con puerto 3000
-    const protocol = window.location.protocol
-    const port = protocol === 'https:' ? '' : ':3000'
-    return `${protocol}//${hostname}${port}`
-  }
-
-  // 4. En desarrollo, si estamos accediendo desde la red, usar la misma IP para el API
-  const hostname = window.location.hostname
-  return `http://${hostname}:3000`
-}
+import { getApiBaseUrl } from '@/lib/api'
 
 const adminApi = axios.create({
-  baseURL: getApiUrl(),
+  baseURL: getApiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
+})
+
+adminApi.interceptors.request.use((config) => {
+  const baseUrl = getApiBaseUrl()
+  config.baseURL = baseUrl
+  if (baseUrl.includes('ngrok-free.dev')) {
+    config.headers = config.headers ?? {}
+    config.headers['ngrok-skip-browser-warning'] = '1'
+  }
+  return config
 })
 
 const ADMIN_KEY_STORAGE = 'admin_key'

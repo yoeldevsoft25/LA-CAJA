@@ -130,7 +130,7 @@ async function bootstrap() {
     const config = new DocumentBuilder()
       .setTitle('Velox POS API')
       .setDescription(
-        'Sistema POS Offline-First para Venezuela - Documentación completa de la API',
+        'Velox POS Offline-First para Venezuela - Documentación completa de la API',
       )
       .setVersion('1.0.0')
       .addBearerAuth(
@@ -162,6 +162,10 @@ async function bootstrap() {
       .addTag('fiscal', 'Facturación fiscal')
       .addTag('reports', 'Reportes y análisis')
       .addTag('backup', 'Respaldo de datos')
+      .addServer(
+        'https://johnathon-unfrittered-prandially.ngrok-free.dev',
+        'Servidor de desarrollo (Ngrok)',
+      )
       .addServer('http://localhost:3000', 'Servidor de desarrollo')
       .addServer('https://la-caja-8i4h.onrender.com', 'Servidor de Producción (Render)')
       .build();

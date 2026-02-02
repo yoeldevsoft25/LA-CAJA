@@ -33,7 +33,7 @@ const paymentMethodLabels: Record<string, string> = {
 /**
  * Formatea un ticket de venta como texto para compartir por WhatsApp
  */
-export function formatSaleForWhatsApp(sale: Sale, storeName: string = 'SISTEMA POS'): string {
+export function formatSaleForWhatsApp(sale: Sale, storeName: string = 'Velox POS'): string {
   const soldAt = format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')
   const saleId = sale.id.slice(0, 8).toUpperCase()
   
@@ -93,7 +93,7 @@ export function formatSaleForWhatsApp(sale: Sale, storeName: string = 'SISTEMA P
 export function formatSaleWithThankYou(
   sale: Sale,
   thankYouMessage: string | null,
-  storeName: string = 'SISTEMA POS'
+  storeName: string = 'Velox POS'
 ): string {
   let message = ''
   

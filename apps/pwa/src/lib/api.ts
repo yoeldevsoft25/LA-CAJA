@@ -6,6 +6,10 @@ const logger = createLogger('API');
 
 const PRIMARY_API_URL = (import.meta.env.VITE_PRIMARY_API_URL as string | undefined) ?? '';
 const FALLBACK_API_URL = (import.meta.env.VITE_FALLBACK_API_URL as string | undefined) ?? '';
+const TERTIARY_API_URL = (import.meta.env.VITE_TERTIARY_API_URL as string | undefined) ?? '';
+const FAILOVER_API_URLS = [PRIMARY_API_URL, FALLBACK_API_URL, TERTIARY_API_URL].filter(
+  (url): url is string => Boolean(url)
+);
 const API_BASE_STORAGE_KEY = 'velox_api_base';
 
 /**
@@ -39,13 +43,17 @@ function getApiUrl(): string {
     return import.meta.env.VITE_API_URL;
   }
 
-  // 1.1 Si hay primary/fallback definidos, usar el último guardado o el primary
-  if (import.meta.env.PROD && (PRIMARY_API_URL || FALLBACK_API_URL)) {
+  // 1.1 Si hay failover definido, usar el último guardado o el primero
+  if (import.meta.env.PROD && FAILOVER_API_URLS.length > 0) {
     const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
-    if (storedBase && storedBase !== window.location.origin) {
+    if (
+      storedBase &&
+      storedBase !== window.location.origin &&
+      FAILOVER_API_URLS.includes(storedBase)
+    ) {
       return storedBase;
     }
-    return PRIMARY_API_URL || FALLBACK_API_URL;
+    return FAILOVER_API_URLS[0];
   }
 
   // 2. Si estamos en localhost o preview local, usar localhost
@@ -70,7 +78,7 @@ function getApiUrl(): string {
 
     // Si estamos en Netlify (la-caja.netlify.app), usar el backend de Render
     if (hostname.includes('netlify.app')) {
-      return FALLBACK_API_URL;
+      return FALLBACK_API_URL || TERTIARY_API_URL;
     }
 
     // Si estamos en otro dominio, intentar inferir el API URL
@@ -110,36 +118,50 @@ const isLocalEnv = () =>
   window.location.port === '4173' ||
   window.location.port === '5173';
 
-const probePrimaryApi = async (): Promise<boolean> => {
-  if (!import.meta.env.PROD || isLocalEnv()) return true;
-  if (!PRIMARY_API_URL || !FALLBACK_API_URL) return true;
+const getNgrokHeaders = (url: string) =>
+  url.includes('ngrok-free.dev') ? { 'ngrok-skip-browser-warning': '1' } : undefined;
 
+const probeApi = async (url: string): Promise<boolean> => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
   try {
-    await fetch(`${PRIMARY_API_URL}/health`, {
+    await fetch(`${url}/health`, {
       method: 'GET',
       cache: 'no-store',
       mode: 'no-cors',
-      headers: PRIMARY_API_URL.includes('ngrok-free.dev')
-        ? { 'ngrok-skip-browser-warning': '1' }
-        : undefined,
+      headers: getNgrokHeaders(url),
       signal: controller.signal,
     });
-    // Si no falla la red, asumimos que el host primario está disponible
-    setApiBaseUrl(PRIMARY_API_URL);
     return true;
   } catch {
-    setApiBaseUrl(FALLBACK_API_URL);
     return false;
   } finally {
     clearTimeout(timeout);
   }
 };
 
+const pickAvailableApi = async (): Promise<string | null> => {
+  for (const url of FAILOVER_API_URLS) {
+    if (await probeApi(url)) return url;
+  }
+  return null;
+};
+
+const probePrimaryApi = async (): Promise<boolean> => {
+  if (!import.meta.env.PROD || isLocalEnv()) return true;
+  if (FAILOVER_API_URLS.length <= 1) return true;
+
+  const available = await pickAvailableApi();
+  if (available) {
+    setApiBaseUrl(available);
+    return available === PRIMARY_API_URL;
+  }
+  return false;
+};
+
 void probePrimaryApi();
 
-if (import.meta.env.PROD && !isLocalEnv() && PRIMARY_API_URL && FALLBACK_API_URL) {
+if (import.meta.env.PROD && !isLocalEnv() && FAILOVER_API_URLS.length > 1) {
   const PROBE_MIN_MS = 30 * 1000;
   const PROBE_MAX_MS = 2 * 60 * 1000;
   let probeInterval = PROBE_MIN_MS;
@@ -256,10 +278,17 @@ api.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    if (!error.response && PRIMARY_API_URL && FALLBACK_API_URL && api.defaults.baseURL === PRIMARY_API_URL && !originalRequest?._apiFailoverRetry) {
-      originalRequest._apiFailoverRetry = true;
-      setApiBaseUrl(FALLBACK_API_URL);
-      originalRequest.baseURL = FALLBACK_API_URL;
+    const maxFailoverRetries = Math.max(0, FAILOVER_API_URLS.length - 1);
+    const currentRetry = originalRequest?._apiFailoverRetryCount ?? 0;
+    const currentBaseUrl = originalRequest?.baseURL || api.defaults.baseURL || '';
+    const currentIndex = FAILOVER_API_URLS.indexOf(currentBaseUrl);
+    const nextBaseUrl =
+      currentIndex >= 0 ? FAILOVER_API_URLS[currentIndex + 1] : undefined;
+
+    if (!error.response && maxFailoverRetries > 0 && currentRetry < maxFailoverRetries && nextBaseUrl) {
+      originalRequest._apiFailoverRetryCount = currentRetry + 1;
+      setApiBaseUrl(nextBaseUrl);
+      originalRequest.baseURL = nextBaseUrl;
       return api(originalRequest);
     }
 

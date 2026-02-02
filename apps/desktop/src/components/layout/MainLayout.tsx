@@ -676,7 +676,7 @@ export default function MainLayout() {
             />
             <div>
               <h2 className="text-lg font-semibold tracking-tight">Velox POS</h2>
-              <p className="text-xs text-muted-foreground">Sistema POS</p>
+              <p className="text-xs text-muted-foreground">Velox POS</p>
             </div>
           </div>
 

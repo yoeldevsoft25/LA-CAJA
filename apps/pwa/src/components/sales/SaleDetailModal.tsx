@@ -972,7 +972,7 @@ export default function SaleDetailModal({
               onClick={() => {
                 try {
                   printService.printSale(sale, {
-                    storeName: 'SISTEMA POS',
+                    storeName: 'Velox POS',
                     cashierName: sale.sold_by_user?.full_name || undefined,
                   })
                   toast.success('Ticket enviado a imprimir')
@@ -991,7 +991,7 @@ export default function SaleDetailModal({
               variant="outline"
               onClick={() => {
                 try {
-                  const text = formatSaleForWhatsApp(sale, 'SISTEMA POS')
+                  const text = formatSaleForWhatsApp(sale, 'Velox POS')
                   const encodedText = encodeWhatsAppText(text)
                   const whatsappUrl = `https://wa.me/?text=${encodedText}`
                   window.open(whatsappUrl, '_blank')

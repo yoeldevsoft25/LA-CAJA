@@ -325,7 +325,10 @@ export const salesService = {
    * - En modo online, intenta enviar al servidor primero
    * - Si falla la conexión, guarda offline como fallback
    */
-  async create(data: CreateSaleRequest): Promise<Sale> {
+  async create(
+    data: CreateSaleRequest,
+    options?: { returnMode?: 'full' | 'minimal' },
+  ): Promise<Sale> {
     // Verificar estado de conexión PRIMERO
     const isOnline = navigator.onLine
 
@@ -763,9 +766,14 @@ export const salesService = {
       logger.debug('Iniciando llamada HTTP')
 
       // ⚡ OPTIMIZACIÓN: Timeout más largo para creación de ventas (60s) ya que puede tener muchos items
-      const response = await api.post<Sale>('/sales', cleanedData, {
-        timeout: 60000, // 60 segundos para ventas (más que el timeout global de 30s)
-      }).then((res) => {
+      const response = await api
+        .post<Sale>('/sales', cleanedData, {
+          timeout: 60000, // 60 segundos para ventas (más que el timeout global de 30s)
+          ...(options?.returnMode
+            ? { params: { return: options.returnMode } }
+            : {}),
+        })
+        .then((res) => {
         logger.debug('Respuesta HTTP recibida exitosamente')
         return res
       }).catch((err) => {

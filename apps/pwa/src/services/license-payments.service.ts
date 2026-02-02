@@ -1,29 +1,5 @@
-import { api } from '@/lib/api';
+import { api, getApiBaseUrl } from '@/lib/api';
 import axios from 'axios';
-
-// Función auxiliar para obtener adminApi (mismo patrón que admin.service.ts)
-function getApiUrl(): string {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    window.location.port === '4173' ||
-    window.location.port === '5173'
-  ) {
-    return 'http://localhost:3000';
-  }
-  if (import.meta.env.PROD) {
-    const hostname = window.location.hostname;
-    if (hostname.includes('netlify.app')) {
-      return 'https://la-caja-8i4h.onrender.com';
-    }
-    const protocol = window.location.protocol;
-    const port = protocol === 'https:' ? '' : ':3000';
-    return `${protocol}//${hostname}${port}`;
-  }
-  const hostname = window.location.hostname;
-  return `http://${hostname}:3000`;
-}
 
 const ADMIN_KEY_STORAGE = 'admin_key';
 
@@ -32,12 +8,18 @@ function getAdminKey(): string | null {
 }
 
 const adminApi = axios.create({
-  baseURL: getApiUrl(),
+  baseURL: getApiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
 });
 
 // Interceptor para agregar admin key
 adminApi.interceptors.request.use((config) => {
+  const baseUrl = getApiBaseUrl();
+  config.baseURL = baseUrl;
+  if (baseUrl.includes('ngrok-free.dev')) {
+    config.headers = config.headers ?? {};
+    config.headers['ngrok-skip-browser-warning'] = '1';
+  }
   const key = getAdminKey();
   if (key) {
     config.headers['x-admin-key'] = key;
