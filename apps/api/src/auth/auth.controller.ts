@@ -5,13 +5,16 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-  Request,
   Get,
   Param,
   Delete,
   BadRequestException,
   Logger,
+  UnauthorizedException,
+  ForbiddenException,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -31,6 +34,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginRateLimitGuard } from './guards/login-rate-limit.guard';
 import { SecurityAuditService } from '../security/security-audit.service';
 import { AdminApiGuard } from '../admin/admin-api.guard';
+import { RequestWithUser } from './auth.types';
 
 @Controller('auth')
 export class AuthController {
@@ -39,7 +43,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly securityAudit: SecurityAuditService,
-  ) {}
+  ) { }
 
   /**
    * Lista pública de tiendas (solo id y nombre) para flujo de login
@@ -71,7 +75,7 @@ export class AuthController {
    */
   @Get('stores/:storeId/cashiers/public')
   async getPublicCashiers(
-    @Request() req: any,
+    @Req() req: Request,
     @Param('storeId') storeId: string,
   ): Promise<
     Array<{ user_id: string; full_name: string | null; role: string }>
@@ -82,7 +86,7 @@ export class AuthController {
   @Get('stores/:storeId/cashiers')
   @UseGuards(JwtAuthGuard)
   async getCashiers(
-    @Request() req: any,
+    @Req() req: RequestWithUser,
     @Param('storeId') storeId: string,
   ): Promise<
     Array<{ user_id: string; full_name: string | null; role: string }>
@@ -92,7 +96,12 @@ export class AuthController {
 
   @Get('debug/me')
   @UseGuards(JwtAuthGuard)
-  async getCurrentUser(@Request() req: any): Promise<any> {
+  async getCurrentUser(@Req() req: RequestWithUser): Promise<{
+    userFromRequest: any;
+    userFromDB: any;
+    comparison: any;
+    allMembersInStore: any[];
+  }> {
     // Endpoint de depuración para verificar el usuario actual
     const userId = req.user?.sub;
     const storeId = req.user?.store_id;
@@ -105,11 +114,11 @@ export class AuthController {
       userFromRequest: req.user,
       userFromDB: member
         ? {
-            user_id: member.user_id,
-            store_id: member.store_id,
-            role: member.role,
-            full_name: member.profile?.full_name,
-          }
+          user_id: member.user_id,
+          store_id: member.store_id,
+          role: member.role,
+          full_name: member.profile?.full_name,
+        }
         : null,
       comparison: {
         roleInToken,
@@ -125,8 +134,8 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async createStore(
     @Body() dto: CreateStoreDto,
-    @Request() req: any,
-  ): Promise<{ store: any; member: any }> {
+    @Req() req: RequestWithUser,
+  ): Promise<{ store: { id: string; name: string }; member: { role: string } }> {
     // TODO: En producción, obtener userId del token JWT
     // Por ahora usamos un UUID temporal para desarrollo
     const ownerUserId = req.user?.sub || '00000000-0000-0000-0000-000000000001';
@@ -138,8 +147,8 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async createCashier(
     @Body() dto: CreateCashierDto,
-    @Request() req: any,
-  ): Promise<any> {
+    @Req() req: RequestWithUser,
+  ): Promise<{ id: string; full_name: string | null }> {
     const ownerUserId = req.user.sub;
     return this.authService.createCashier(dto, ownerUserId);
   }
@@ -149,7 +158,7 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 60 } }) // 3 intentos por minuto (más estricto que login)
   async register(
     @Body() dto: RegisterDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<{
     store_id: string;
     store_name: string;
@@ -161,8 +170,8 @@ export class AuthController {
     license_grace_days: number;
     trial_days_remaining: number;
   }> {
-    const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(`Intento de registro para tienda: ${dto.store_name}`);
 
@@ -228,7 +237,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 3, ttl: 3600 } }) // 3 intentos por hora
   async resendVerificationEmail(
-    @Request() req: any,
+    @Req() req: RequestWithUser,
   ): Promise<{ message: string }> {
     const userId = req.user?.sub;
     if (!userId) {
@@ -244,10 +253,10 @@ export class AuthController {
   @Throttle({ default: { limit: 3, ttl: 3600 } }) // 3 intentos por hora (muy estricto)
   async forgotPin(
     @Body() dto: ForgotPinDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(
       `Solicitud de recuperación de PIN para email: ${dto.email}`,
@@ -296,10 +305,10 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60 } }) // 5 intentos por minuto
   async resetPin(
     @Body() dto: ResetPinDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log('Intento de restablecimiento de PIN');
 
@@ -345,7 +354,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60 } }) // 5 intentos por minuto
   async login(
     @Body() body: any,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<AuthResponseDto> {
     // Validación manual antes de pasar al DTO (mantener compatibilidad con frontend)
     if (!body || !body.store_id || !body.pin) {
@@ -364,13 +373,13 @@ export class AuthController {
       pin: String(body.pin).trim(),
     };
 
-    const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(`Intento de login para tienda: ${dto.store_id}`);
 
     try {
-      const deviceId = body.device_id || req.headers['x-device-id'] || null;
+      const deviceId = body.device_id || (req.headers['x-device-id'] as string) || null;
       const result = await this.authService.login(dto, deviceId, ipAddress);
 
       // ✅ Registrar login exitoso
@@ -417,10 +426,15 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60 } }) // 10 intentos por minuto
   async refresh(
     @Body() dto: RefreshTokenDto,
-    @Request() req: any,
+    @Req() req: Request,
   ): Promise<RefreshTokenResponseDto> {
-    const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const userAgent = (req.headers['user-agent'] as string) || 'unknown';
+
+    if (!dto.refresh_token) {
+      // Should have been caught by DTO validation, but double checking
+      throw new BadRequestException('Refresh token is required');
+    }
 
     try {
       const result = await this.authService.refreshToken(
@@ -445,7 +459,14 @@ export class AuthController {
         },
       });
 
-      throw error;
+      // Ensure we re-throw specific exceptions related to auth
+      if (error instanceof ForbiddenException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      // Wrap other errors
+      this.logger.error(`Refresh token error: ${error instanceof Error ? error.message : String(error)}`);
+      throw new UnauthorizedException('Could not refresh token');
     }
   }
 
@@ -454,10 +475,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async logout(
     @Body() body: { refresh_token?: string },
-    @Request() req: any,
+    @Req() req: RequestWithUser,
   ): Promise<{ message: string }> {
     const user = req.user;
-    const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
 
     if (body.refresh_token) {
       // Revocar refresh token específico
@@ -490,7 +511,7 @@ export class AuthController {
 
   @Get('sessions')
   @UseGuards(JwtAuthGuard)
-  async getActiveSessions(@Request() req: any): Promise<
+  async getActiveSessions(@Req() req: RequestWithUser): Promise<
     Array<{
       id: string;
       device_id: string | null;
@@ -509,7 +530,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async revokeSession(
     @Param('sessionId') sessionId: string,
-    @Request() req: any,
+    @Req() req: RequestWithUser,
   ): Promise<{ message: string }> {
     const user = req.user;
     await this.authService.revokeSession(sessionId, user.sub, user.store_id);
@@ -518,7 +539,7 @@ export class AuthController {
 
   @Get('2fa/initiate')
   @UseGuards(JwtAuthGuard)
-  async initiate2FA(@Request() req: any): Promise<{
+  async initiate2FA(@Req() req: RequestWithUser): Promise<{
     secret: string;
     qrCodeUrl: string;
     backupCodes: string[];
@@ -532,7 +553,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async enable2FA(
     @Body() dto: Enable2FADto,
-    @Request() req: any,
+    @Req() req: RequestWithUser,
   ): Promise<{ enabled: boolean; message: string }> {
     const user = req.user;
     return this.authService.enable2FA(user.sub, user.store_id, dto);
@@ -543,7 +564,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async disable2FA(
     @Body() body: { verification_code: string },
-    @Request() req: any,
+    @Req() req: RequestWithUser,
   ): Promise<{ disabled: boolean; message: string }> {
     const user = req.user;
     return this.authService.disable2FA(
@@ -558,7 +579,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verify2FA(
     @Body() dto: Verify2FADto,
-    @Request() req: any,
+    @Req() req: RequestWithUser,
   ): Promise<{ verified: boolean }> {
     const user = req.user;
     return this.authService.verify2FACode(user.sub, user.store_id, dto);
@@ -566,7 +587,7 @@ export class AuthController {
 
   @Get('2fa/status')
   @UseGuards(JwtAuthGuard)
-  async get2FAStatus(@Request() req: any): Promise<{
+  async get2FAStatus(@Req() req: RequestWithUser): Promise<{
     is_enabled: boolean;
     enabled_at: Date | null;
   }> {

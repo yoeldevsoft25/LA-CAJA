@@ -4,6 +4,14 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
 
+export interface JwtPayload {
+  sub: string;
+  store_id: string;
+  role: string;
+  iat?: number;
+  exp?: number;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name);
@@ -16,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!jwtSecret) {
       throw new Error(
         'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-          'En producción, esto es obligatorio por seguridad.',
+        'En producción, esto es obligatorio por seguridad.',
       );
     }
 
@@ -27,7 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: JwtPayload) {
     // Logging solo en desarrollo para no exponer información sensible
     if (process.env.NODE_ENV === 'development') {
       this.logger.debug('Validando token', {
