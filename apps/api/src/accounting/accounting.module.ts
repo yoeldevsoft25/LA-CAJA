@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChartOfAccountsService } from './chart-of-accounts.service';
 import { AccountingService } from './accounting.service';
 import { AccountingExportService } from './accounting-export.service';
+import { AccountingPeriodService } from './accounting-period.service';
 import { AccountingController } from './accounting.controller';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
 import { JournalEntry } from '../database/entities/journal-entry.entity';
@@ -44,10 +45,16 @@ import { LicensesModule } from '../licenses/licenses.module';
   ],
   controllers: [AccountingController],
   providers: [
-    ChartOfAccountsService,
     AccountingService,
+    AccountingPeriodService,
+    ChartOfAccountsService,
     AccountingExportService,
   ],
-  exports: [ChartOfAccountsService, AccountingService, AccountingExportService],
+  exports: [
+    AccountingService,
+    AccountingPeriodService,
+    ChartOfAccountsService,
+    AccountingExportService,
+  ],
 })
 export class AccountingModule {}
