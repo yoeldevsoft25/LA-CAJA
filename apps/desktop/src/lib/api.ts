@@ -1,12 +1,12 @@
-import { createApiClient, pickAvailableApi, setStoredApiBase, type ApiClientConfig } from '@la-caja/api-client';
+import { createApiClient, pickAvailableApi, setStoredApiBase, normalizeBaseUrl, type ApiClientConfig } from '@la-caja/api-client';
 import { useAuth } from '@/stores/auth.store';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('API');
 
-const PRIMARY_API_URL = (import.meta.env.VITE_PRIMARY_API_URL as string | undefined) ?? '';
-const FALLBACK_API_URL = (import.meta.env.VITE_FALLBACK_API_URL as string | undefined) ?? '';
-const TERTIARY_API_URL = (import.meta.env.VITE_TERTIARY_API_URL as string | undefined) ?? '';
+const PRIMARY_API_URL = normalizeBaseUrl((import.meta.env.VITE_PRIMARY_API_URL as string | undefined) ?? '');
+const FALLBACK_API_URL = normalizeBaseUrl((import.meta.env.VITE_FALLBACK_API_URL as string | undefined) ?? '');
+const TERTIARY_API_URL = normalizeBaseUrl((import.meta.env.VITE_TERTIARY_API_URL as string | undefined) ?? '');
 const FAILOVER_API_URLS = [PRIMARY_API_URL, FALLBACK_API_URL, TERTIARY_API_URL].filter(
   (url): url is string => Boolean(url)
 );
@@ -74,7 +74,7 @@ const isLocalEnv = () =>
   window.location.port === '4173' ||
   window.location.port === '5173';
 
-const API_URL = getApiUrl();
+const API_URL = normalizeBaseUrl(getApiUrl());
 
 const apiConfig: ApiClientConfig = {
   baseURL: API_URL,

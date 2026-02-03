@@ -81,15 +81,17 @@ async function bootstrap() {
     configService.get<string>('PUBLIC_APP_URL'),
     configService.get<string>('APP_URL'),
     configService.get<string>('RENDER_EXTERNAL_URL'),
+    'https://veloxpos.app',
+    'https://veloxpos.netlify.app',
   ].filter((origin): origin is string => Boolean(origin));
 
   const originList = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => origin.trim())
     : [
-        'http://localhost:5173',
-        'http://localhost:4173',
-        'http://localhost:3000',
-      ]; // Defaults para desarrollo (5173) y preview (4173)
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'http://localhost:3000',
+    ]; // Defaults para desarrollo (5173) y preview (4173)
   const origins = Array.from(new Set([...originList, ...extraOrigins]));
 
   // Obtener puerto antes de usarlo

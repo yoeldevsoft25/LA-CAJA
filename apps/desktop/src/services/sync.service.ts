@@ -99,9 +99,9 @@ class SyncServiceClass {
     this.reconnectOrchestrator.init(
       async () => {
         // Callback de sincronización
-        if (this.isInitialized && this.syncQueue) {
+        if (this.isInitialized) {
           this.logger.info('Orquestador disparó sincronización');
-          await this.syncQueue.flush();
+          await this.fullSync();
         } else {
           this.logger.debug('Orquestador disparó sync, pero no está inicializado. Marcando pendiente.');
           this.pendingSyncOnInit = true;
@@ -191,6 +191,9 @@ class SyncServiceClass {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
   }
 
+  private initPromise: Promise<void> | null = null;
+  // private isStopping = false;
+
   /**
    * Asegura que el servicio esté inicializado (idempotente)
    * Útil para rehidratar después de un reload con sesión guardada.
@@ -198,6 +201,10 @@ class SyncServiceClass {
   async ensureInitialized(storeId: string): Promise<void> {
     if (this.isInitialized && this.storeId === storeId && this.syncQueue) {
       return;
+    }
+    if (this.initPromise) {
+      await this.initPromise;
+      if (this.isInitialized && this.storeId === storeId) return;
     }
     const deviceId = this.getOrCreateDeviceId();
     await this.initialize(storeId, deviceId);
@@ -208,83 +215,100 @@ class SyncServiceClass {
    * Debe llamarse después de que el usuario esté autenticado
    */
   async initialize(storeId: string, deviceId: string, config?: SyncQueueConfig): Promise<void> {
-    if (this.isInitialized && this.storeId === storeId && this.syncQueue) {
-      this.logger.debug('Ya está inicializado para este store/device', { storeId, deviceId });
-      return;
-    }
+    if (this.initPromise) return this.initPromise;
 
-    this.logger.info('Inicializando servicio de sincronización', {
-      storeId,
-      deviceId,
-      isOnline: navigator.onLine,
-    });
+    this.initPromise = (async () => {
+      try {
+        if (this.isInitialized && this.storeId === storeId && this.syncQueue) {
+          this.logger.debug('Ya está inicializado para este store/device', { storeId, deviceId });
+          return;
+        }
 
-    this.storeId = storeId;
-    this.deviceId = deviceId;
+        this.logger.info('Inicializando servicio de sincronización', {
+          storeId,
+          deviceId,
+          isOnline: navigator.onLine,
+        });
 
-    // ✅ OFFLINE-FIRST: Inicializar Vector Clock Manager
-    this.vectorClockManager = new VectorClockManager(deviceId);
+        this.storeId = storeId;
+        this.deviceId = deviceId;
 
-    // Reintentar eventos fallidos (por validaciones previas) marcándolos como pendientes
+        // ✅ OFFLINE-FIRST: Inicializar Vector Clock Manager
+        this.vectorClockManager = new VectorClockManager(deviceId);
+
+        // Reintentar eventos fallidos (por validaciones previas) marcándolos como pendientes
+        try {
+          const resetCount = await db.resetFailedEventsToPending();
+          if (resetCount > 0) {
+            this.logger.info('Eventos fallidos reseteados a pendiente', { resetCount });
+          }
+        } catch (error) {
+          this.logger.warn('No se pudieron resetear eventos fallidos', { error });
+        }
+
+        // Crear la cola de sincronización con callback personalizado
+        this.syncQueue = new SyncQueue(
+          this.syncBatchToServer.bind(this),
+          config || {
+            batchSize: this.SYNC_BATCH_SIZE,
+            batchTimeout: this.SYNC_BATCH_TIMEOUT_MS,
+            prioritizeCritical: this.SYNC_PRIORITIZE_CRITICAL,
+          },
+          this.metrics
+        );
+
+        // Cargar eventos pendientes de la base de datos
+        await this.loadPendingEventsFromDB();
+
+        // Iniciar sincronización periódica
+        this.startPeriodicSync();
+
+        // ✅ OFFLINE-FIRST: Iniciar watchdog de red (fallback por si el evento 'online' falla)
+        setInterval(() => {
+          if (navigator.onLine && this.syncQueue && this.syncQueue.getStats().pending > 0) {
+            this.logger.debug('Watchdog: Conexión detectada y hay eventos pendientes → Forzando sync');
+            this.syncQueue.flush().catch(() => { });
+          }
+        }, 5000); // Verificar cada 5 segundos
+
+        this.isInitialized = true;
+        this.logger.info('Servicio de sincronización inicializado correctamente');
+
+        // Si había un evento online pendiente antes de inicializar, sincronizar ahora
+        if ((this.pendingSyncOnInit || navigator.onLine)) {
+          await this.fullSync();
+          this.pendingSyncOnInit = false;
+        }
+
+        // ✅ OFFLINE-FIRST: Guardar API_URL para Service Worker
+        if (api.defaults.baseURL) {
+          db.kv.put({ key: 'api_url', value: api.defaults.baseURL }).catch((err) => {
+            this.logger.warn('No se pudo guardar API_URL para SW', err);
+          });
+        }
+
+        // ✅ OFFLINE-FIRST: Guardar device_id para Service Worker
+        db.kv.put({ key: 'device_id', value: deviceId }).catch((err) => {
+          this.logger.warn('No se pudo guardar device_id para SW', err);
+        });
+      } catch (err: any) {
+        this.logger.error('Error initialize', err);
+        throw err;
+      } finally {
+        this.initPromise = null;
+      }
+    })();
+    return this.initPromise;
+  }
+
+  async fullSync(): Promise<void> {
+    if (!this.isInitialized) return;
     try {
-      const resetCount = await db.resetFailedEventsToPending();
-      if (resetCount > 0) {
-        this.logger.info('Eventos fallidos reseteados a pendiente', { resetCount });
-      }
-    } catch (error) {
-      this.logger.warn('No se pudieron resetear eventos fallidos', { error });
+      if (this.syncQueue) await this.syncQueue.flush();
+      // pull logic placeholder
+    } catch (err) {
+      this.logger.error('Full Sync Error', err);
     }
-
-    // Crear la cola de sincronización con callback personalizado
-    this.syncQueue = new SyncQueue(
-      this.syncBatchToServer.bind(this),
-      config || {
-        batchSize: this.SYNC_BATCH_SIZE,
-        batchTimeout: this.SYNC_BATCH_TIMEOUT_MS,
-        prioritizeCritical: this.SYNC_PRIORITIZE_CRITICAL,
-      },
-      this.metrics
-    );
-
-    // Cargar eventos pendientes de la base de datos
-    await this.loadPendingEventsFromDB();
-
-    // Iniciar sincronización periódica
-    this.startPeriodicSync();
-
-    // ✅ OFFLINE-FIRST: Iniciar watchdog de red (fallback por si el evento 'online' falla)
-    setInterval(() => {
-      if (navigator.onLine && this.syncQueue && this.syncQueue.getStats().pending > 0) {
-        this.logger.debug('Watchdog: Conexión detectada y hay eventos pendientes → Forzando sync');
-        this.syncQueue.flush().catch(() => { });
-      }
-    }, 5000); // Verificar cada 5 segundos
-
-    this.isInitialized = true;
-    this.logger.info('Servicio de sincronización inicializado correctamente');
-
-    // Si había un evento online pendiente antes de inicializar, sincronizar ahora
-    if ((this.pendingSyncOnInit || navigator.onLine) && this.syncQueue && this.syncQueue.getStats().pending > 0) {
-      this.logger.info('Sincronización inicial (o pendiente) requerida');
-      this.pendingSyncOnInit = false;
-      this.syncQueue.flush().then(() => {
-        this.logger.info('Sincronización inicial completada');
-      }).catch((err: unknown) => {
-        this.logger.warn('Error en sincronización inicial (se reintentará)', { error: err });
-      });
-    }
-
-    // ✅ OFFLINE-FIRST: Guardar API_URL para Service Worker
-    if (api.defaults.baseURL) {
-      db.kv.put({ key: 'api_url', value: api.defaults.baseURL }).catch((err) => {
-        this.logger.warn('No se pudo guardar API_URL para SW', err);
-      });
-    }
-
-    // ✅ OFFLINE-FIRST: Guardar device_id para Service Worker
-    db.kv.put({ key: 'device_id', value: deviceId }).catch((err) => {
-      this.logger.warn('No se pudo guardar device_id para SW', err);
-    });
   }
 
   /**

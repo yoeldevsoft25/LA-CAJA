@@ -1,4 +1,5 @@
 import { Controller, Get, Res, Header } from '@nestjs/common';
+import { Public } from '../auth/decorators/public.decorator';
 import { FastifyReply } from 'fastify';
 import * as path from 'path';
 import {
@@ -31,7 +32,7 @@ export class HealthController {
     private bullmq: BullMQHealthIndicator,
     private externalApis: ExternalApisHealthIndicator,
     private websocket: WebSocketHealthIndicator,
-  ) {}
+  ) { }
 
   // Cache simple para mejorar rendimiento
   private cache: Map<string, { result: any; time: number }> = new Map();

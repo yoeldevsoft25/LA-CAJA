@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { formatAnomalyType, formatAnomalySeverity } from '@/utils/ml-formatters'
-import { AlertTriangle } from 'lucide-react'
 import toast from '@/lib/toast'
 
 interface ResolveAnomalyModalProps {
@@ -52,12 +51,9 @@ export default function ResolveAnomalyModal({
     <Dialog open={isOpen && !!anomaly} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5" />
-            Resolver Anomalía
-          </DialogTitle>
+          <DialogTitle>Resolver Anomalía</DialogTitle>
           <DialogDescription>
-            Marca esta anomalía como resuelta. Puedes agregar una nota opcional.
+            Analice los detalles de la venta anómala y tome una decisión.
           </DialogDescription>
         </DialogHeader>
 

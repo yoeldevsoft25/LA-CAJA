@@ -83,7 +83,9 @@ export class ProductsCacheService {
       public_image_url: product.public_image_url ?? null,
       public_category: product.public_category ?? null,
       ingredients: product.ingredients ?? undefined,
-      updated_at: new Date(product.updated_at).getTime(),
+      updated_at: !isNaN(new Date(product.updated_at).getTime())
+        ? new Date(product.updated_at).getTime()
+        : Date.now(),
       cached_at: Date.now(),
     };
   }
@@ -210,17 +212,29 @@ export class ProductsCacheService {
    * Precarga índice de barcodes en memoria para escaneo ultra rápido
    */
   async warmBarcodeIndex(storeId: string): Promise<void> {
+    if (!storeId) return; // Guard clause for invalid storeId
     if (this.barcodeIndexStoreId === storeId && this.barcodeIndex.size > 0) return;
-    const locals = await db.products
-      .where('[store_id+is_active]')
-      .equals([storeId, true] as any)
-      .toArray();
-    this.barcodeIndex.clear();
-    this.barcodeIndexStoreId = storeId;
-    for (const local of locals) {
-      if (local.barcode) {
-        const normalized = normalizeBarcode(local.barcode) ?? local.barcode;
-        this.barcodeIndex.set(normalized, local);
+
+    try {
+      const locals = await db.products
+        .where('[store_id+is_active]')
+        .equals([storeId, true] as any) // Dexie handles boolean in compound index, but storeId must be valid
+        .toArray();
+
+      this.barcodeIndex.clear();
+      this.barcodeIndexStoreId = storeId;
+      for (const local of locals) {
+        if (local.barcode) {
+          const normalized = normalizeBarcode(local.barcode) ?? local.barcode;
+          this.barcodeIndex.set(normalized, local);
+        }
+      }
+    } catch (err) {
+      // Catch DataError or other IDB errors
+      if (err instanceof Error && err.name === 'DataError') {
+        console.warn('warmBarcodeIndex encountered DataError (likely invalid key)', err);
+      } else {
+        throw err;
       }
     }
   }
@@ -230,13 +244,21 @@ export class ProductsCacheService {
    */
   async cleanupOldCache(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<void> {
     const cutoff = Date.now() - maxAge;
-    const oldProducts = await db.products
-      .where('cached_at')
-      .below(cutoff)
-      .toArray();
 
-    if (oldProducts.length > 0) {
-      await db.products.bulkDelete(oldProducts.map(p => p.id));
+    // Ensure cutoff is a valid number
+    if (isNaN(cutoff)) return;
+
+    try {
+      const oldProducts = await db.products
+        .where('cached_at')
+        .below(cutoff)
+        .toArray();
+
+      if (oldProducts.length > 0) {
+        await db.products.bulkDelete(oldProducts.map(p => p.id));
+      }
+    } catch (err) {
+      console.warn('cleanupOldCache failed', err);
     }
   }
 }

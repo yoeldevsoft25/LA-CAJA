@@ -1,23 +1,32 @@
 import { getNgrokHeaders } from './ngrok';
+import { normalizeBaseUrl, joinUrl } from './url';
 
 const API_BASE_STORAGE_KEY = 'velox_api_base';
 const PRIMARY_PROBE_INTERVAL_MS = 5000;
+const DEFAULT_PROBE_TIMEOUT_MS = 1000;
 
 let lastPrimaryProbeAt = 0;
 let primaryProbeInFlight: Promise<boolean> | null = null;
 
-export async function probeApi(url: string): Promise<boolean> {
+/**
+ * Probes an API endpoint to check if it's available
+ * @param url - Base URL to probe (will be normalized)
+ * @param timeoutMs - Timeout in milliseconds (default 1000ms)
+ * @returns true if API responds successfully, false otherwise
+ */
+export async function probeApi(url: string, timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS): Promise<boolean> {
+    const normalizedUrl = normalizeBaseUrl(url);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1500);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-        await fetch(`${url}/health`, {
+        const response = await fetch(joinUrl(normalizedUrl, '/ping'), {
             method: 'GET',
             cache: 'no-store',
-            mode: 'no-cors',
-            headers: getNgrokHeaders(url),
+            headers: getNgrokHeaders(normalizedUrl),
             signal: controller.signal,
         });
-        return true;
+        return response.ok;
     } catch {
         return false;
     } finally {
@@ -25,9 +34,17 @@ export async function probeApi(url: string): Promise<boolean> {
     }
 }
 
+/**
+ * Picks the first available API from a list of URLs
+ * @param urls - Array of base URLs to try (will be normalized)
+ * @returns First available URL or null if none are available
+ */
 export async function pickAvailableApi(urls: string[]): Promise<string | null> {
     for (const url of urls) {
-        if (await probeApi(url)) return url;
+        const normalizedUrl = normalizeBaseUrl(url);
+        if (await probeApi(normalizedUrl)) {
+            return normalizedUrl;
+        }
     }
     return null;
 }
@@ -42,7 +59,8 @@ export function getStoredApiBase(): string | null {
 
 export function setStoredApiBase(url: string): void {
     try {
-        localStorage.setItem(API_BASE_STORAGE_KEY, url);
+        const normalizedUrl = normalizeBaseUrl(url);
+        localStorage.setItem(API_BASE_STORAGE_KEY, normalizedUrl);
     } catch {
         // Ignore storage errors
     }
