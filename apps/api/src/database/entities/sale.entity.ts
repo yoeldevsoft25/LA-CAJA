@@ -13,8 +13,13 @@ import { SaleItem } from './sale-item.entity';
 import { Profile } from './profile.entity';
 import { Customer } from './customer.entity';
 import { InvoiceSeries } from './invoice-series.entity';
+import { Index } from 'typeorm';
 
 @Entity('sales')
+@Index(['store_id', 'sale_number'], {
+  unique: true,
+  where: 'sale_number IS NOT NULL',
+})
 export class Sale {
   @PrimaryColumn('uuid')
   id: string;

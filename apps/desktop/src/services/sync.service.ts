@@ -14,6 +14,7 @@ import {
   CircuitBreaker,
   CacheManager,
 } from '@la-caja/offline-core';
+import { ReconnectSyncOrchestrator } from '@la-caja/sync';
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
 import { createLogger } from '@/lib/logger';
@@ -72,6 +73,7 @@ class SyncServiceClass {
   private vectorClockManager: VectorClockManager | null = null;
   private circuitBreaker: CircuitBreaker;
   private cacheManager: CacheManager;
+  private reconnectOrchestrator: ReconnectSyncOrchestrator | null = null;
 
   // ===== CALLBACKS PARA INVALIDAR CACHE Y NOTIFICAR =====
   private onSyncCompleteCallbacks: Array<(syncedCount: number) => void> = [];
@@ -88,35 +90,50 @@ class SyncServiceClass {
    * Configura listeners para cambios de conectividad
    */
   private setupConnectivityListeners(): void {
-    this.onlineListener = () => {
-      // Cuando vuelve la conexión, sincronizar inmediatamente
-      this.logger.info('Conexión recuperada, sincronizando eventos pendientes');
-      if (this.isInitialized && this.syncQueue) {
-        // Si está inicializado, sincronizar inmediatamente
-        this.syncQueue.flush().then(() => {
-          this.logger.info('Sincronización completada después de recuperar conexión');
-        }).catch((err: unknown) => {
-          this.logger.error('Error sincronizando después de recuperar conexión', err);
-          // Silenciar errores, el sync periódico lo intentará de nuevo
-        });
-      } else {
-        // Si no está inicializado, marcar para sincronizar cuando se inicialice
-        this.logger.debug('Servicio no inicializado aún, se sincronizará cuando esté listo');
-        this.pendingSyncOnInit = true;
+    // Inicializar orquestador de reconexión
+    this.reconnectOrchestrator = new ReconnectSyncOrchestrator({
+      debounceMs: 2000, // Esperar 2s de estabilidad
+      throttleMs: 10000, // No sincronizar más de una vez cada 10s por reconexión
+    });
+
+    this.reconnectOrchestrator.init(
+      async () => {
+        // Callback de sincronización
+        if (this.isInitialized && this.syncQueue) {
+          this.logger.info('Orquestador disparó sincronización');
+          await this.syncQueue.flush();
+        } else {
+          this.logger.debug('Orquestador disparó sync, pero no está inicializado. Marcando pendiente.');
+          this.pendingSyncOnInit = true;
+        }
+
+        // Intentar registrar background sync
+        this.registerBackgroundSync().catch(() => { });
+      },
+      {
+        onReconnectDetected: (source) => {
+          this.logger.debug(`Reconexión detectada vía ${source}`);
+        },
+        onSyncStarted: (source) => {
+          this.logger.info(`Iniciando sync por reconexión (${source})`);
+          this.metrics.recordEvent('reconnect_sync_started', { source });
+        },
+        onSyncSuccess: (source) => {
+          this.logger.info(`Sync por reconexión exitoso (${source})`);
+          this.metrics.recordEvent('reconnect_sync_success', { source });
+        },
+        onSyncFailed: (source, error) => {
+          this.logger.warn(`Sync por reconexión falló (${source})`, { error: error.message });
+          this.metrics.recordEvent('reconnect_sync_failed', { source, error: error.message });
+        },
       }
+    );
 
-      // Intentar registrar background sync (por si acaso)
-      this.registerBackgroundSync();
-    };
-
-    this.offlineListener = () => {
-      // Cuando se pierde la conexión, registrar background sync para cuando vuelva
-      this.logger.warn('Conexión perdida, eventos se guardarán localmente');
-      this.registerBackgroundSync();
-    };
-
-    window.addEventListener('online', this.onlineListener);
-    window.addEventListener('offline', this.offlineListener);
+    // Legacy listeners
+    window.addEventListener('offline', () => {
+      this.logger.warn('Conexión perdida');
+      this.registerBackgroundSync().catch(() => { });
+    });
   }
 
   /**
@@ -531,6 +548,11 @@ class SyncServiceClass {
     if (this.offlineListener) {
       window.removeEventListener('offline', this.offlineListener);
       this.offlineListener = null;
+    }
+
+    if (this.reconnectOrchestrator) {
+      this.reconnectOrchestrator.destroy();
+      this.reconnectOrchestrator = null;
     }
 
     this.syncQueue?.flush();

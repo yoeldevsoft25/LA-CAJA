@@ -21,3 +21,6 @@ export { CircuitBreaker, CircuitState } from './circuit-breaker';
 export type { CircuitBreakerConfig } from './circuit-breaker';
 export { CacheManager, CacheLevel } from './cache-manager';
 export type { CacheEntry } from './cache-manager';
+
+export { ReconnectSyncOrchestrator } from './reconnect-orchestrator';
+export type { ReconnectOrchestratorConfig, ReconnectTelemetry } from './reconnect-orchestrator';

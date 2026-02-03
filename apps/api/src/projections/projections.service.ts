@@ -62,7 +62,7 @@ export class ProjectionsService {
     private fiscalInvoicesService: FiscalInvoicesService,
     private warehousesService: WarehousesService,
     private metricsService: SyncMetricsService,
-  ) {}
+  ) { }
 
   private toBoolean(value: unknown): boolean {
     if (typeof value === 'boolean') {
@@ -515,10 +515,25 @@ export class ProjectionsService {
         payload.warehouse_id ?? null,
       );
 
+      // 🔢 GENERACIÓN DE SECUENCIA DE VENTA (Robust & Transactional)
+      const result = await manager.query(
+        `INSERT INTO sale_sequences (store_id, current_number, created_at, updated_at)
+         VALUES ($1, 1, NOW(), NOW())
+         ON CONFLICT (store_id)
+         DO UPDATE SET current_number = sale_sequences.current_number + 1, updated_at = NOW()
+         RETURNING current_number`,
+        [event.store_id],
+      );
+      const saleNumber = Number(result?.[0]?.current_number ?? 0);
+      if (!saleNumber) {
+        throw new Error('No se pudo generar el número de venta');
+      }
+
       // Crear venta (Upsert)
       const sale = manager.getRepository(Sale).create({
         id: payload.sale_id,
         store_id: event.store_id,
+        sale_number: saleNumber,
         cash_session_id: payload.cash_session_id || null,
         sold_at: payload.sold_at ? new Date(payload.sold_at) : event.created_at,
         exchange_rate: this.toNumber(payload.exchange_rate),
@@ -589,7 +604,7 @@ export class ProjectionsService {
           const movements = payload.items.map((item) => {
             const movementQty =
               this.toBoolean(item.is_weight_product) &&
-              item.weight_value != null
+                item.weight_value != null
                 ? this.toNumber(item.weight_value)
                 : this.toNumber(item.qty);
             const variantId = item.variant_id ?? null;
@@ -665,7 +680,7 @@ export class ProjectionsService {
         this.fiscalInvoicesService.findBySale(event.store_id, savedSale.id),
       ]);
 
-      if (hasFiscalConfig) {
+      if (hasFiscalConfig && this.toBoolean(payload.generate_fiscal_invoice)) {
         if (existingInvoice) {
           if (existingInvoice.status === 'draft') {
             await this.fiscalInvoicesService.issue(

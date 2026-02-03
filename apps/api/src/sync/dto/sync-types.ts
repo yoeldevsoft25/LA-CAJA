@@ -45,6 +45,7 @@ export interface SaleCreatedPayload {
     customer_id: string;
   };
   note?: string | null;
+  generate_fiscal_invoice?: boolean;
   items: SaleItemPayload[];
 }
 

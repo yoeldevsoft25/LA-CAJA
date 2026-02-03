@@ -12,9 +12,10 @@ import { ConflictResolutionService } from './conflict-resolution.service';
 import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { UsageService } from '../licenses/usage.service';
 import { PushSyncDto } from './dto/push-sync.dto';
+import { SyncMetricsService } from '../observability/services/sync-metrics.service';
 
 jest.mock('../projections/projections.service', () => ({
-  ProjectionsService: class ProjectionsService {},
+  ProjectionsService: class ProjectionsService { },
 }));
 
 describe('SyncService', () => {
@@ -88,6 +89,16 @@ describe('SyncService', () => {
         {
           provide: getQueueToken('sales-projections'),
           useValue: salesProjectionQueue,
+        },
+        {
+          provide: SyncMetricsService,
+          useValue: {
+            trackOutOfOrderEvent: jest.fn(),
+            trackSyncPush: jest.fn(),
+            trackSyncPull: jest.fn(),
+            trackProjectionFailureFatal: jest.fn(),
+            trackSyncProcessed: jest.fn() // Added missing method
+          },
         },
       ],
     }).compile();

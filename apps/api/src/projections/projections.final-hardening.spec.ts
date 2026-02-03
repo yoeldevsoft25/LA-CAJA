@@ -1,3 +1,4 @@
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectionsService } from './projections.service';
 import { SalesProjectionQueueProcessor } from '../sales/queues/sales-projection.queue';
@@ -42,6 +43,7 @@ const mockEntityManager = {
     create: jest.fn(),
     delete: jest.fn(),
     findOne: jest.fn(),
+    query: jest.fn().mockResolvedValue([{ current_number: 100 }]),
 } as unknown as EntityManager;
 
 const mockDataSource = {
@@ -77,6 +79,7 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
     let eventRepo: Repository<Event>;
     let debtRepo: Repository<Debt>;
     let movementRepo: Repository<InventoryMovement>;
+    let fiscalService: FiscalInvoicesService;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -90,7 +93,15 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
                 { provide: DataSource, useValue: mockDataSource },
                 { provide: WarehousesService, useValue: mockWarehousesService },
                 { provide: SyncMetricsService, useValue: { trackProjectionRetry: jest.fn(), trackProjectionFailureFatal: jest.fn() } },
-                { provide: FiscalInvoicesService, useValue: { hasActiveFiscalConfig: jest.fn().mockResolvedValue(false), findBySale: jest.fn().mockResolvedValue(null) } },
+                {
+                    provide: FiscalInvoicesService,
+                    useValue: {
+                        hasActiveFiscalConfig: jest.fn().mockResolvedValue(false),
+                        findBySale: jest.fn().mockResolvedValue(null),
+                        createFromSale: jest.fn().mockResolvedValue({ id: 'inv-1' }),
+                        issue: jest.fn().mockResolvedValue({ status: 'issued', invoice_number: '001' })
+                    }
+                },
                 { provide: WhatsAppMessagingService, useValue: {} },
                 // Add other repositories needed by ProjectionsService
                 { provide: getRepositoryToken(InventoryMovement), useValue: mockRepo },
@@ -111,11 +122,16 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
         eventRepo = module.get(getRepositoryToken(Event));
         debtRepo = module.get(getRepositoryToken(Debt));
         movementRepo = module.get(getRepositoryToken(InventoryMovement));
+        fiscalService = module.get<FiscalInvoicesService>(FiscalInvoicesService);
 
         jest.spyOn(Logger.prototype, 'log').mockImplementation(() => { });
         jest.spyOn(Logger.prototype, 'debug').mockImplementation(() => { });
         jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => { });
         jest.spyOn(Logger.prototype, 'error').mockImplementation(() => { });
+
+        // Reset global mocks shared across tests
+        (mockDataSource.transaction as jest.Mock).mockImplementation(async (cb) => cb(mockEntityManager));
+        (mockEntityManager.query as jest.Mock).mockResolvedValue([{ current_number: 100 }]);
     });
 
     afterEach(() => {
@@ -228,6 +244,79 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
         await expect(projectionsService.projectEvent(event)).rejects.toThrow('Debt Fail');
         // If it throws inside transaction callback, TypeORM rolls back.
         // We verify that the logic propagated the error.
+    });
+
+    it('should generate sale_number using transactional sequence', async () => {
+        const payload = {
+            sale_id: 's_seq_1',
+            warehouse_id: 'w1',
+            items: [],
+            totals: { total_bs: 100 },
+        };
+        const event = { type: 'SaleCreated', event_id: 'e_seq_1', payload, store_id: 'st1', actor_user_id: 'u1' } as any;
+
+        (mockEntityManager.getRepository as jest.Mock).mockReturnValue(mockRepo);
+        mockRepo.save.mockResolvedValue({ id: 's_seq_1' });
+        mockRepo.findOne.mockResolvedValue(null);
+        mockRepo.createQueryBuilder.mockReturnValue({
+            where: jest.fn().mockReturnThis(),
+            andWhere: jest.fn().mockReturnThis(),
+            getCount: jest.fn().mockResolvedValue(0),
+            select: jest.fn().mockReturnThis(),
+        });
+
+        // Ensure query returns a number
+        (mockEntityManager.query as jest.Mock).mockResolvedValue([{ current_number: 555 }]);
+
+        await projectionsService.projectEvent(event);
+
+        expect(mockEntityManager.query).toHaveBeenCalledWith(
+            expect.stringContaining('INSERT INTO sale_sequences'),
+            ['st1']
+        );
+        expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+            sale_number: 555
+        }));
+    });
+
+    it('should GENERATE fiscal invoice if requested and config active', async () => {
+        const payload = {
+            sale_id: 's_fisc_1',
+            items: [],
+            generate_fiscal_invoice: true, // Requested!
+        };
+        const event = { type: 'SaleCreated', event_id: 'e_fisc_1', payload, store_id: 'st_fisc', actor_user_id: 'u1' } as any;
+
+        // fiscalService is already defined in updated beforeEach
+        (fiscalService.hasActiveFiscalConfig as jest.Mock).mockResolvedValue(true); // Config exists
+
+        (mockDataSource.transaction as jest.Mock).mockResolvedValue({ id: 's_fisc_1' });
+
+        await projectionsService.projectEvent(event);
+
+        expect(fiscalService.createFromSale).toHaveBeenCalledWith('st_fisc', 's_fisc_1', 'u1');
+        expect(fiscalService.issue).toHaveBeenCalled();
+    });
+
+    it('should NOT generate fiscal invoice if NOT requested', async () => {
+        const payload = {
+            sale_id: 's_no_fisc_1',
+            items: [],
+            generate_fiscal_invoice: false, // Not requested
+            // or undefined
+        };
+        const event = { type: 'SaleCreated', event_id: 'e_no_fisc_1', payload, store_id: 'st_fisc', actor_user_id: 'u1' } as any;
+
+        // fiscalService is already defined in updated beforeEach
+        (fiscalService.hasActiveFiscalConfig as jest.Mock).mockResolvedValue(true); // Config exists
+        (fiscalService.createFromSale as jest.Mock).mockClear();
+
+        (mockEntityManager.getRepository as jest.Mock).mockReturnValue(mockRepo);
+        mockRepo.save.mockResolvedValue({ id: 's_no_fisc_1' });
+
+        await projectionsService.projectEvent(event);
+
+        expect(fiscalService.createFromSale).not.toHaveBeenCalled();
     });
 
 });

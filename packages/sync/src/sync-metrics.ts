@@ -27,6 +27,13 @@ export interface SyncMetrics {
   // Reintentos
   totalRetries: number;
   avgRetriesPerEvent: number;
+
+  // Eventos de Sistema
+  lastSystemEvent?: {
+    name: string;
+    timestamp: number;
+    metadata?: Record<string, any>;
+  };
 }
 
 export type MetricsListener = (metrics: SyncMetrics) => void;
@@ -124,6 +131,18 @@ export class SyncMetricsCollector {
    */
   updatePendingCount(count: number): void {
     this.metrics.pendingEvents = count;
+    this.notifyListeners();
+  }
+
+  /**
+   * Registra un evento de sistema arbitrario
+   */
+  recordEvent(name: string, metadata?: Record<string, any>): void {
+    this.metrics.lastSystemEvent = {
+      name,
+      timestamp: Date.now(),
+      metadata,
+    };
     this.notifyListeners();
   }
 
