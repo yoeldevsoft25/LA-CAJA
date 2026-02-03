@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { Search, User, X } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { Search, User, X, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -39,21 +39,20 @@ export default function CustomerSearchSection({
     const MIN_SEARCH_LENGTH = 2
     const trimmedSearch = searchValue.trim()
     const canSearch = trimmedSearch.length >= MIN_SEARCH_LENGTH
-    const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
+    const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId)
 
-    // Filtrar clientes por búsqueda
-    const filteredCustomers = canSearch
-        ? customers.filter(customer => {
-            const search = trimmedSearch.toLowerCase()
-            return (
-                customer.name.toLowerCase().includes(search) ||
-                customer.document_id?.toLowerCase().includes(search) ||
-                customer.phone?.toLowerCase().includes(search)
-            )
-        }).slice(0, 10) // Limitar a 10 resultados
-        : []
+    const filteredCustomers = useMemo(() => {
+        if (!canSearch) return []
+        const normalized = trimmedSearch.toLowerCase()
+        return customers
+            .filter((customer) => (
+                customer.name.toLowerCase().includes(normalized)
+                || customer.document_id?.toLowerCase().includes(normalized)
+                || customer.phone?.toLowerCase().includes(normalized)
+            ))
+            .slice(0, 10)
+    }, [canSearch, customers, trimmedSearch])
 
-    // Cerrar resultados al hacer click fuera
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -74,69 +73,77 @@ export default function CustomerSearchSection({
     const handleClearCustomer = () => {
         onSelectCustomer(null)
         onSearchChange('')
+        setShowResults(false)
     }
 
+    const searchId = 'customer-search'
+    const listId = 'customer-search-results'
+
     return (
-        <Card className={className}>
+        <Card className={cn('border-slate-200 bg-white shadow-sm', className)}>
             <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="customer-search">
-                        Cliente {required && <span className="text-destructive">*</span>}
-                    </Label>
+                <div className="flex items-start justify-between gap-2">
+                    <div>
+                        <Label htmlFor={searchId} className="text-sm font-bold text-slate-900">
+                            Cliente {required && <span className="text-destructive">*</span>}
+                        </Label>
+                        <p className="text-xs text-slate-500">Asocia la venta para historico y credito</p>
+                    </div>
                     {selectedCustomer && (
                         <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             onClick={handleClearCustomer}
-                            className="h-6 px-2"
+                            className="h-8 px-2 text-slate-600"
                         >
-                            <X className="h-3 w-3 mr-1" />
+                            <X className="h-3.5 w-3.5 mr-1" />
                             Limpiar
                         </Button>
                     )}
                 </div>
 
                 <div className="relative" ref={searchRef}>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            id="customer-search"
-                            type="text"
-                            placeholder="Buscar por nombre, cédula o teléfono..."
-                            value={searchValue}
-                            onChange={(e) => {
-                                onSearchChange(e.target.value)
-                                setShowResults(true)
-                            }}
-                            onFocus={() => setShowResults(true)}
-                            className="pl-9"
-                        />
-                    </div>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                        id={searchId}
+                        type="text"
+                        role="combobox"
+                        aria-expanded={showResults}
+                        aria-controls={listId}
+                        aria-autocomplete="list"
+                        placeholder="Buscar por nombre, cedula o telefono"
+                        value={searchValue}
+                        onChange={(e) => {
+                            onSearchChange(e.target.value)
+                            setShowResults(true)
+                        }}
+                        onFocus={() => setShowResults(true)}
+                        className="pl-9 h-10"
+                    />
 
-                    {/* Resultados de búsqueda */}
                     {showResults && canSearch && filteredCustomers.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-60 overflow-auto">
+                        <div id={listId} role="listbox" className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border bg-background shadow-lg">
                             {filteredCustomers.map((customer) => (
                                 <button
                                     key={customer.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={selectedCustomerId === customer.id}
                                     onClick={() => handleSelectCustomer(customer)}
                                     className={cn(
-                                        "w-full text-left px-3 py-2 hover:bg-muted transition-colors",
-                                        "border-b last:border-b-0"
+                                        'w-full border-b border-slate-100 px-3 py-2 text-left transition-colors last:border-b-0',
+                                        'hover:bg-slate-50 focus-visible:bg-slate-50',
                                     )}
                                 >
                                     <div className="flex items-start gap-2">
-                                        <User className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium truncate">{customer.name}</div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {customer.document_id && (
-                                                    <span className="mr-2">CI: {customer.document_id}</span>
-                                                )}
-                                                {customer.phone && (
-                                                    <span>Tel: {customer.phone}</span>
-                                                )}
-                                            </div>
+                                        <User className="mt-0.5 h-4 w-4 text-slate-400" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-semibold text-slate-900">{customer.name}</p>
+                                            <p className="truncate text-xs text-slate-500">
+                                                {customer.document_id ? `CI: ${customer.document_id}` : 'Sin documento'}
+                                                {customer.phone ? ` - ${customer.phone}` : ''}
+                                            </p>
                                         </div>
                                     </div>
                                 </button>
@@ -144,52 +151,41 @@ export default function CustomerSearchSection({
                         </div>
                     )}
 
-                    {/* Sin resultados */}
                     {showResults && trimmedSearch.length > 0 && !canSearch && (
-                        <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg p-3">
-                            <div className="text-sm text-muted-foreground text-center">
+                        <div className="absolute z-50 mt-1 w-full rounded-xl border bg-background p-3 shadow-lg">
+                            <p className="text-center text-sm text-slate-500">
                                 Escribe al menos {MIN_SEARCH_LENGTH} caracteres
-                            </div>
+                            </p>
                         </div>
                     )}
 
-                    {/* Sin resultados */}
                     {showResults && canSearch && filteredCustomers.length === 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg p-3">
-                            <div className="text-sm text-muted-foreground text-center">
-                                No se encontraron clientes
-                            </div>
+                        <div className="absolute z-50 mt-1 w-full rounded-xl border bg-background p-3 shadow-lg">
+                            <p className="text-center text-sm text-slate-500">No se encontraron clientes</p>
                         </div>
                     )}
                 </div>
 
-                {/* Cliente seleccionado */}
                 {selectedCustomer && (
-                    <div className="bg-muted p-3 rounded-lg">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                         <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <div className="font-medium">{selectedCustomer.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                    {selectedCustomer.document_id && (
-                                        <div>CI: {selectedCustomer.document_id}</div>
-                                    )}
-                                    {selectedCustomer.phone && (
-                                        <div>Tel: {selectedCustomer.phone}</div>
-                                    )}
-                                    {selectedCustomer.note && (
-                                        <div className="mt-1 italic">{selectedCustomer.note}</div>
-                                    )}
-                                </div>
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" />
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-emerald-900">{selectedCustomer.name}</p>
+                                <p className="text-xs text-emerald-700">
+                                    {selectedCustomer.document_id ? `CI: ${selectedCustomer.document_id}` : 'Sin documento'}
+                                    {selectedCustomer.phone ? ` - ${selectedCustomer.phone}` : ''}
+                                </p>
+                                {selectedCustomer.note && <p className="mt-1 text-xs text-emerald-700">{selectedCustomer.note}</p>}
                             </div>
                         </div>
                     </div>
                 )}
 
                 {required && !selectedCustomer && (
-                    <div className="text-xs text-destructive">
-                        Debes seleccionar un cliente para este método de pago
-                    </div>
+                    <p className="text-xs text-destructive" role="alert">
+                        Debes seleccionar un cliente para continuar con este metodo
+                    </p>
                 )}
             </CardContent>
         </Card>

@@ -1,10 +1,5 @@
-/**
- * Gestor de Pagos Divididos
- * Componente para agregar, editar y eliminar múltiples métodos de pago
- */
-
 import { useState } from 'react'
-import { Plus, Trash2, CreditCard, Wallet, Banknote, DollarSign, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, CreditCard, Wallet, Banknote, DollarSign, AlertCircle, CircleCheckBig } from 'lucide-react'
 import { PaymentMethod, SplitPaymentItem } from '@/types/split-payment.types'
 import { VENEZUELAN_BANKS } from '@/constants/venezuelan-banks'
 import { Button } from '@la-caja/ui-core'
@@ -55,7 +50,7 @@ export default function SplitPaymentManager({
   const paymentMethods: Array<{ id: PaymentMethod; label: string; icon: typeof Wallet; requiresDetails: boolean }> = [
     { id: 'CASH_USD', label: 'Efectivo USD', icon: DollarSign, requiresDetails: false },
     { id: 'CASH_BS', label: 'Efectivo Bs', icon: Banknote, requiresDetails: false },
-    { id: 'PAGO_MOVIL', label: 'Pago Móvil', icon: Wallet, requiresDetails: true },
+    { id: 'PAGO_MOVIL', label: 'Pago Movil', icon: Wallet, requiresDetails: true },
     { id: 'TRANSFER', label: 'Transferencia', icon: CreditCard, requiresDetails: true },
     { id: 'POINT_OF_SALE', label: 'Punto de Venta', icon: CreditCard, requiresDetails: false },
     { id: 'ZELLE', label: 'Zelle', icon: DollarSign, requiresDetails: true },
@@ -89,7 +84,6 @@ export default function SplitPaymentManager({
       confirmed: true,
     })
 
-    // Reset form
     setNewPayment({
       method: 'PAGO_MOVIL',
       currency: 'BS',
@@ -102,68 +96,75 @@ export default function SplitPaymentManager({
   }
 
   const getPaymentMethodLabel = (method: PaymentMethod): string => {
-    return paymentMethods.find((m) => m.id === method)?.label || method
+    return paymentMethods.find((paymentMethod) => paymentMethod.id === method)?.label || method
   }
 
   const getPaymentMethodIcon = (method: PaymentMethod) => {
-    const Icon = paymentMethods.find((m) => m.id === method)?.icon || Wallet
+    const Icon = paymentMethods.find((paymentMethod) => paymentMethod.id === method)?.icon || Wallet
     return <Icon className="w-4 h-4" />
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header con progreso */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Pagos Divididos</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Combina múltiples métodos de pago
-          </p>
-        </div>
-        {!showAddForm && !isComplete && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setShowAddForm(true)}
-            className="gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            Agregar Pago
-          </Button>
-        )}
-      </div>
+    <div className="space-y-3">
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Pagos divididos</h3>
+              <p className="text-xs text-slate-500">Combina varios metodos hasta completar el total</p>
+            </div>
+            {!showAddForm && !isComplete && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAddForm(true)}
+                className="h-9 rounded-lg border-slate-200 bg-slate-50"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Agregar
+              </Button>
+            )}
+          </div>
 
-      {/* Lista de pagos agregados */}
+          <div className={cn(
+            'mt-3 rounded-xl border p-3',
+            isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50',
+          )}>
+            <div className="flex items-center gap-2">
+              {isComplete ? <CircleCheckBig className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-amber-600" />}
+              <p className={cn('text-sm font-semibold', isComplete ? 'text-emerald-800' : 'text-amber-800')}>
+                {isComplete ? 'Pago completado' : 'Monto pendiente'}
+              </p>
+            </div>
+            {!isComplete && (
+              <p className="mt-1 text-xs text-amber-700">
+                ${remainingUsd.toFixed(2)} USD (Bs. {remainingBs.toFixed(2)})
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {payments.length > 0 && (
         <div className="space-y-2">
           {payments.map((payment) => (
-            <Card key={payment.id} className="border border-border">
+            <Card key={payment.id} className="border-slate-200 bg-white shadow-sm">
               <CardContent className="p-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2 flex-1 min-w-0">
-                    <div className="text-primary mt-0.5">{getPaymentMethodIcon(payment.method)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {getPaymentMethodLabel(payment.method)}
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                    <span className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+                      {getPaymentMethodIcon(payment.method)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-900">{getPaymentMethodLabel(payment.method)}</p>
+                      <p className="text-xs text-slate-600">
+                        ${payment.amount_usd.toFixed(2)} USD - Bs. {payment.amount_bs.toFixed(2)}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-semibold text-foreground">
-                          ${payment.amount_usd.toFixed(2)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">≈</span>
-                        <span className="text-xs text-muted-foreground">
-                          Bs. {payment.amount_bs.toFixed(2)}
-                        </span>
-                      </div>
-                      {payment.reference && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Ref: {payment.reference}
-                        </p>
-                      )}
+                      {payment.reference && <p className="text-xs text-slate-500">Ref: {payment.reference}</p>}
                       {payment.bank && (
-                        <p className="text-xs text-muted-foreground">
-                          {VENEZUELAN_BANKS.find((b) => b.code === payment.bank)?.name || payment.bank}
+                        <p className="text-xs text-slate-500">
+                          {VENEZUELAN_BANKS.find((bank) => bank.code === payment.bank)?.name || payment.bank}
                         </p>
                       )}
                     </div>
@@ -173,9 +174,10 @@ export default function SplitPaymentManager({
                     size="icon"
                     variant="ghost"
                     onClick={() => onRemovePayment(payment.id)}
-                    className="h-8 w-8 flex-shrink-0"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    aria-label="Eliminar pago"
                   >
-                    <Trash2 className="w-4 h-4 text-destructive" />
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </CardContent>
@@ -184,72 +186,50 @@ export default function SplitPaymentManager({
         </div>
       )}
 
-      {/* Formulario para agregar nuevo pago */}
       {showAddForm && (
-        <Card className="border-2 border-primary/50 bg-primary/5">
+        <Card className="border-primary/20 bg-white shadow-sm">
           <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold text-foreground">Nuevo Pago</h4>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowAddForm(false)}
-              >
-                Cancelar
-              </Button>
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-bold text-slate-900">Agregar pago</h4>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>Cancelar</Button>
             </div>
 
-            {/* Método de pago */}
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
-                Método de Pago
-              </label>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Metodo</label>
               <Select
                 value={newPayment.method}
-                onValueChange={(value) =>
-                  setNewPayment({ ...newPayment, method: value as PaymentMethod })
-                }
+                onValueChange={(value) => setNewPayment({ ...newPayment, method: value as PaymentMethod })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-slate-50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {paymentMethods.map((method) => (
-                    <SelectItem key={method.id} value={method.id}>
-                      {method.label}
-                    </SelectItem>
+                    <SelectItem key={method.id} value={method.id}>{method.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Monto */}
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1.5">
-                  Monto
-                </label>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Monto</label>
                 <Input
                   type="number"
                   step="0.01"
                   value={newPayment.amount}
                   onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
                   placeholder="0.00"
-                  className="text-sm"
+                  className="bg-slate-50"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1.5">
-                  Moneda
-                </label>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Moneda</label>
                 <Select
                   value={newPayment.currency}
-                  onValueChange={(value) =>
-                    setNewPayment({ ...newPayment, currency: value as 'USD' | 'BS' })
-                  }
+                  onValueChange={(value) => setNewPayment({ ...newPayment, currency: value as 'USD' | 'BS' })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-slate-50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -260,62 +240,49 @@ export default function SplitPaymentManager({
               </div>
             </div>
 
-            {/* Banco (si aplica) */}
             {requiresBank && (
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1.5">
-                  Banco
-                </label>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Banco</label>
                 <Select
                   value={newPayment.bank}
                   onValueChange={(value) => setNewPayment({ ...newPayment, bank: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-slate-50">
                     <SelectValue placeholder="Seleccionar banco" />
                   </SelectTrigger>
                   <SelectContent>
-                    {VENEZUELAN_BANKS.filter((b) =>
-                      newPayment.method === 'PAGO_MOVIL'
-                        ? b.supportsPayoMovil
-                        : b.supportsTransfer
-                    ).map((bank) => (
-                      <SelectItem key={bank.code} value={bank.code}>
-                        {bank.name}
-                      </SelectItem>
+                    {VENEZUELAN_BANKS.filter((bank) => (
+                      newPayment.method === 'PAGO_MOVIL' ? bank.supportsPayoMovil : bank.supportsTransfer
+                    )).map((bank) => (
+                      <SelectItem key={bank.code} value={bank.code}>{bank.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            {/* Referencia (si aplica) */}
             {requiresReference && (
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1.5">
-                  Referencia
-                </label>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Referencia</label>
                 <Input
                   type="text"
                   value={newPayment.reference}
                   onChange={(e) => setNewPayment({ ...newPayment, reference: e.target.value })}
-                  placeholder="Número de referencia"
-                  className="text-sm"
+                  placeholder="Numero de referencia"
+                  className="bg-slate-50"
                 />
               </div>
             )}
 
-            {/* Teléfono (para pago móvil) */}
             {newPayment.method === 'PAGO_MOVIL' && (
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1.5">
-                  Teléfono <span className="text-muted-foreground">(Opcional)</span>
-                </label>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Telefono</label>
                 <Input
                   type="tel"
                   value={newPayment.phone}
                   onChange={(e) => setNewPayment({ ...newPayment, phone: e.target.value })}
                   placeholder="0412-1234567"
-                  className="text-sm"
+                  className="bg-slate-50"
                 />
               </div>
             )}
@@ -326,46 +293,12 @@ export default function SplitPaymentManager({
               disabled={!newPayment.amount || parseFloat(newPayment.amount) <= 0}
               className="w-full"
             >
-              Agregar Pago
+              Agregar pago
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Resumen de restante */}
-      {!isComplete && (
-        <Card className={cn(
-          'border',
-          remainingUsd > 0 ? 'border-warning/50 bg-warning/5' : 'border-success/50 bg-success/5'
-        )}>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <AlertCircle className={cn(
-                'w-4 h-4',
-                remainingUsd > 0 ? 'text-warning' : 'text-success'
-              )} />
-              <div className="flex-1">
-                <p className="text-xs font-medium text-foreground">
-                  {remainingUsd > 0 ? 'Monto Restante por Pagar' : '¡Pago Completo!'}
-                </p>
-                {remainingUsd > 0 && (
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-sm font-bold text-foreground">
-                      ${remainingUsd.toFixed(2)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">≈</span>
-                    <span className="text-xs text-muted-foreground">
-                      Bs. {remainingBs.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Botón rápido para completar con pago móvil */}
       {!isComplete && remainingBs >= 5 && !showAddForm && (
         <Button
           type="button"
@@ -380,10 +313,10 @@ export default function SplitPaymentManager({
             })
             setShowAddForm(true)
           }}
-          className="w-full gap-2"
+          className="w-full h-10 rounded-xl border-slate-200 bg-slate-50 text-slate-700"
         >
-          <Wallet className="w-4 h-4" />
-          Completar con Pago Móvil (Bs. {remainingBs.toFixed(2)})
+          <Wallet className="w-4 h-4 mr-2" />
+          Completar con Pago Movil (Bs. {remainingBs.toFixed(2)})
         </Button>
       )}
     </div>

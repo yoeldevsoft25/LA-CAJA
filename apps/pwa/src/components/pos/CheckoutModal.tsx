@@ -6,23 +6,17 @@ import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNear
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'
 import { SplitPaymentItem, PaymentMethod } from '@/types/split-payment.types'
-
-// Componentes modulares
 import PaymentMethodSelector from './checkout/PaymentMethodSelector'
 import CashPaymentSection from './checkout/CashPaymentSection'
 import CustomerSearchSection from './checkout/CustomerSearchSection'
 import InvoiceConfigSection from './checkout/InvoiceConfigSection'
 import CheckoutSummary from './checkout/CheckoutSummary'
 import { QuickActionsBar } from './checkout/QuickActionsBar'
-
-// Hooks
 import { useCheckoutState } from '@/hooks/pos/useCheckoutState'
 import { useCheckoutData } from '@/hooks/pos/useCheckoutData'
 import { useCheckoutValidation } from '@/hooks/pos/useCheckoutValidation'
@@ -131,40 +125,40 @@ export default function CheckoutModal({
   }, [isOpen, actions.reset])
 
   const { splitRemainingUsd, splitRemainingBs, splitIsComplete } = useMemo(() => {
-    const remainingUsd = total.usd - splitPayments.reduce((sum, p) => {
-      const usd = p.amount_usd || 0
-      const bs = p.amount_bs || 0
+    const remainingUsd = total.usd - splitPayments.reduce((sum, payment) => {
+      const usd = payment.amount_usd || 0
+      const bs = payment.amount_bs || 0
       return sum + usd + (bs / checkoutData.exchangeRate)
     }, 0)
 
     return {
       splitRemainingUsd: remainingUsd,
       splitRemainingBs: remainingUsd * checkoutData.exchangeRate,
-      splitIsComplete: Math.abs(remainingUsd) < 0.01
+      splitIsComplete: Math.abs(remainingUsd) < 0.01,
     }
   }, [total.usd, splitPayments, checkoutData.exchangeRate])
 
   const handleAddSplitPayment = useCallback((payment: Omit<SplitPaymentItem, 'id'>) => {
     const newPayment: SplitPaymentItem = {
       ...payment,
-      id: `payment-${Date.now()}-${Math.random()}`
+      id: `payment-${Date.now()}-${Math.random()}`,
     }
-    setSplitPayments(prev => [...prev, newPayment])
+    setSplitPayments((prev) => [...prev, newPayment])
   }, [])
 
   const handleRemoveSplitPayment = useCallback((paymentId: string) => {
-    setSplitPayments(prev => prev.filter(p => p.id !== paymentId))
+    setSplitPayments((prev) => prev.filter((payment) => payment.id !== paymentId))
   }, [])
 
   const handleUpdateSplitPayment = useCallback((paymentId: string, updates: Partial<Omit<SplitPaymentItem, 'id'>>) => {
-    setSplitPayments(prev => prev.map(p => p.id === paymentId ? { ...p, ...updates } : p))
+    setSplitPayments((prev) => prev.map((payment) => payment.id === paymentId ? { ...payment, ...updates } : payment))
   }, [])
 
   const handleSerialSelect = useCallback((serials: string[]) => {
     if (serialSelectorItem) {
-      setSelectedSerials(prev => ({
+      setSelectedSerials((prev) => ({
         ...prev,
-        [serialSelectorItem.productId]: serials
+        [serialSelectorItem.productId]: serials,
       }))
       setSerialSelectorItem(null)
     }
@@ -200,10 +194,10 @@ export default function CheckoutModal({
     }
 
     if (
-      state.paymentMode === 'SINGLE' &&
-      (state.selectedMethod === 'CASH_BS' || (state.selectedMethod === 'CASH_USD' && state.cash.giveChangeInBs)) &&
-      state.cash.changeRoundingMode === 'MERCHANT' &&
-      !state.cash.changeRoundingConsent
+      state.paymentMode === 'SINGLE'
+      && (state.selectedMethod === 'CASH_BS' || (state.selectedMethod === 'CASH_USD' && state.cash.giveChangeInBs))
+      && state.cash.changeRoundingMode === 'MERCHANT'
+      && !state.cash.changeRoundingConsent
     ) {
       actions.setError('Debes confirmar que el cliente acepta el redondeo a favor de la tienda.')
       return
@@ -223,13 +217,13 @@ export default function CheckoutModal({
     }
 
     if (state.paymentMode === 'SPLIT') {
-      confirmData.split_payments = splitPayments.map(p => ({
-        method: p.method,
-        amount_usd: p.amount_usd,
-        amount_bs: p.amount_bs,
-        reference: p.reference,
-        phone: p.phone,
-        card_last_4: p.card_last_4,
+      confirmData.split_payments = splitPayments.map((payment) => ({
+        method: payment.method,
+        amount_usd: payment.amount_usd,
+        amount_bs: payment.amount_bs,
+        reference: payment.reference,
+        phone: payment.phone,
+        card_last_4: payment.card_last_4,
       }))
     } else {
       if (state.selectedMethod === 'CASH_USD') {
@@ -240,7 +234,7 @@ export default function CheckoutModal({
 
         confirmData.cash_payment = {
           received_usd: state.cash.receivedUsd,
-          change_bs: roundingResult?.changeBs
+          change_bs: roundingResult?.changeBs,
         }
 
         if (roundingResult) {
@@ -256,15 +250,17 @@ export default function CheckoutModal({
         const totalBs = total.usd * checkoutData.exchangeRate
         const changeBsRaw = Math.max(0, state.cash.receivedBs - totalBs)
         let roundedChangeBs = changeBsRaw
+
         if (state.cash.changeRoundingMode === 'MERCHANT') {
           roundedChangeBs = changeBsRaw > 0 ? roundToNearestDenomination(changeBsRaw) : 0
         } else if (state.cash.changeRoundingMode === 'CUSTOMER') {
           roundedChangeBs = changeBsRaw > 0 ? roundToNearestDenominationUp(changeBsRaw) : 0
         }
+
         const adjustmentBs = Math.round((changeBsRaw - roundedChangeBs) * 100) / 100
         confirmData.cash_payment_bs = {
           received_bs: state.cash.receivedBs,
-          change_bs: roundedChangeBs
+          change_bs: roundedChangeBs,
         }
 
         if (changeBsRaw > 0) {
@@ -286,248 +282,265 @@ export default function CheckoutModal({
     onConfirm(confirmData)
   }
 
+  const totalBs = total.usd * checkoutData.exchangeRate
+
+  const summaryPanel = (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+          <ShoppingBag className="h-3.5 w-3.5" />
+          Detalle del pedido
+        </h3>
+
+        <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200/90 bg-slate-50/80">
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              className={cn(
+                'flex items-center justify-between gap-3 px-3 py-2.5',
+                index < items.length - 1 && 'border-b border-slate-200/70',
+              )}
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{item.product_name}</p>
+                <p className="text-[11px] text-slate-500">
+                  {item.qty} {item.is_weight_product ? item.weight_unit : 'unid.'} x ${Number(item.unit_price_usd).toFixed(2)}
+                </p>
+              </div>
+              <p className="text-sm font-bold tabular-nums text-slate-900">
+                ${(item.qty * Number(item.unit_price_usd)).toFixed(2)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-white p-4 shadow-sm">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">Total pagable</p>
+        <div className="mt-2 flex items-end justify-between gap-2">
+          <p className="text-3xl font-black tracking-tight text-slate-900 tabular-nums sm:text-4xl">
+            ${total.usd.toFixed(2)}
+          </p>
+          <Badge variant="outline" className="border-primary/25 bg-white/80 text-primary">
+            Tasa {checkoutData.exchangeRate.toFixed(2)}
+          </Badge>
+        </div>
+        <p className="mt-1 text-sm font-medium text-slate-600 tabular-nums">
+          Bs. {totalBs.toFixed(2)}
+        </p>
+      </section>
+
+      <CheckoutSummary
+        subtotal={total.usd}
+        discount={0}
+        total={total.usd}
+        currency="USD"
+        exchangeRate={checkoutData.exchangeRate}
+      />
+    </div>
+  )
+
+  const checkoutControls = (
+    <div className="space-y-4">
+      <QuickActionsBar
+        isSplitPayment={state.paymentMode === 'SPLIT'}
+        onToggleSplitPayment={() => actions.setPaymentMode(state.paymentMode === 'SPLIT' ? 'SINGLE' : 'SPLIT')}
+        generateFiscalInvoice={state.invoice.generateFiscalInvoice}
+        hasFiscalConfig={checkoutData.invoiceSeries.length > 0}
+        onToggleFiscalInvoice={actions.setGenerateFiscalInvoice}
+        promotions={checkoutData.promotions as any || []}
+        selectedPromotionId={state.invoice.promotionId}
+        onPromotionChange={actions.setPromotion}
+        customers={checkoutData.customers}
+        selectedCustomerId={state.customerData.selectedId}
+        onCustomerChange={actions.setCustomerId}
+        customerSearchTerm={state.customerData.search}
+        onCustomerSearchChange={actions.setCustomerSearch}
+      />
+
+      {state.paymentMode === 'SPLIT' ? (
+        <SplitPaymentManager
+          payments={splitPayments}
+          remainingUsd={splitRemainingUsd}
+          remainingBs={splitRemainingBs}
+          exchangeRate={checkoutData.exchangeRate}
+          isComplete={splitIsComplete}
+          onAddPayment={handleAddSplitPayment}
+          onRemovePayment={handleRemoveSplitPayment}
+          onUpdatePayment={handleUpdateSplitPayment}
+        />
+      ) : (
+        <div className="space-y-4">
+          <PaymentMethodSelector
+            value={state.selectedMethod}
+            onChange={actions.setPaymentMethod}
+            disabled={false}
+          />
+
+          {state.selectedMethod === 'CASH_USD' && (
+            <CashPaymentSection
+              mode="USD"
+              totalAmount={total.usd}
+              exchangeRate={checkoutData.exchangeRate}
+              receivedAmount={state.cash.receivedUsd}
+              onAmountChange={actions.setReceivedUsd}
+              giveChangeInBs={state.cash.giveChangeInBs}
+              onGiveChangeInBsChange={actions.setGiveChangeInBs}
+              roundingMode={state.cash.changeRoundingMode}
+              onRoundingModeChange={actions.setChangeRoundingMode}
+              roundingConsent={state.cash.changeRoundingConsent}
+              onRoundingConsentChange={actions.setChangeRoundingConsent}
+            />
+          )}
+
+          {state.selectedMethod === 'CASH_BS' && (
+            <CashPaymentSection
+              mode="BS"
+              totalAmount={totalBs}
+              exchangeRate={checkoutData.exchangeRate}
+              receivedAmount={state.cash.receivedBs}
+              onAmountChange={actions.setReceivedBs}
+              roundingMode={state.cash.changeRoundingMode}
+              onRoundingModeChange={actions.setChangeRoundingMode}
+              roundingConsent={state.cash.changeRoundingConsent}
+              onRoundingConsentChange={actions.setChangeRoundingConsent}
+            />
+          )}
+        </div>
+      )}
+
+      {(state.selectedMethod === 'FIAO' || state.paymentMode === 'SPLIT') && (
+        <CustomerSearchSection
+          customers={checkoutData.customers}
+          selectedCustomerId={state.customerData.selectedId}
+          onSelectCustomer={actions.setCustomerId}
+          searchValue={state.customerData.search}
+          onSearchChange={actions.setCustomerSearch}
+          required={state.selectedMethod === 'FIAO'}
+        />
+      )}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h4 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Procesamiento operativo
+        </h4>
+
+        <div className="space-y-4">
+          <InvoiceConfigSection
+            invoiceSeries={checkoutData.invoiceSeries as any}
+            priceLists={checkoutData.priceLists}
+            warehouses={checkoutData.warehouses}
+            selectedSeriesId={state.invoice.seriesId}
+            selectedPriceListId={state.invoice.priceListId}
+            selectedWarehouseId={state.invoice.warehouseId}
+            onSeriesChange={actions.setInvoiceSeries}
+            onPriceListChange={actions.setPriceList}
+            onWarehouseChange={actions.setWarehouse}
+            generateFiscalInvoice={state.invoice.generateFiscalInvoice}
+            onGenerateFiscalInvoiceChange={actions.setGenerateFiscalInvoice}
+          />
+
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-slate-700">Nota interna</Label>
+            <Input
+              value={state.saleNote}
+              onChange={(e) => actions.setSaleNote(e.target.value)}
+              placeholder="Ej: cliente frecuente, delivery prioritario"
+              className="h-10 rounded-xl border-slate-200 bg-slate-50"
+            />
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-[95vw] h-[95vh] sm:h-[85vh] p-0 overflow-hidden border-none bg-slate-50 shadow-2xl flex flex-col">
-        {/* Premium Light Header */}
-        <DialogHeader className="px-6 py-4 flex-shrink-0 bg-white border-b border-slate-200 relative z-10 pr-12">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20">
-              <CheckCircle2 className="w-6 h-6" />
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
+        <DialogHeader className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-lg font-black tracking-tight text-slate-900 sm:text-xl">
+                  Finalizar venta
+                </DialogTitle>
+                <DialogDescription className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Confirma el pago y genera el comprobante
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
-                Finalizar Venta
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-1 font-bold uppercase tracking-widest">
-                Confirma el pago y genera el comprobante
-              </DialogDescription>
-            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Cerrar checkout"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col lg:flex-row min-h-0 bg-slate-50">
-          {/* Columna Izquierda: Resumen y Totales */}
-          <div className="w-full lg:w-[40%] flex flex-col border-r border-slate-200 bg-white p-6 overscroll-contain overflow-hidden">
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6">
-                {/* Resumen de Items */}
-                <div className="space-y-3">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <ShoppingBag className="w-3.5 h-3.5" /> Detalle del Pedido
-                  </h3>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/50 overflow-hidden">
-                    {items.map((item, idx) => (
-                      <div key={item.id} className={cn(
-                        "p-4 flex justify-between items-center gap-4",
-                        idx < items.length - 1 && "border-b border-slate-100"
-                      )}>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-slate-900 text-sm truncate">{item.product_name}</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">
-                            {item.qty} {item.is_weight_product ? item.weight_unit : 'unid.'} × ${Number(item.unit_price_usd).toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-black text-slate-900 text-sm tabular-nums">
-                            ${(item.qty * Number(item.unit_price_usd)).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Light Premium Totals Card */}
-                <div className="p-6 rounded-[2rem] bg-gradient-to-br from-primary/10 via-white to-white border border-primary/20 shadow-xl relative overflow-hidden group">
-                  <div className="absolute right-0 top-0 h-32 w-32 bg-primary/5 rounded-full blur-3xl" />
-                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2 leading-none">Total Pagable</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter tabular-nums">
-                      ${total.usd.toFixed(2)}
-                    </span>
-                    <span className="text-sm font-black text-slate-400">USD</span>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Monto en BS</span>
-                      <span className="text-xl font-black text-slate-700 tabular-nums">Bs. {(total.usd * checkoutData.exchangeRate).toFixed(2)}</span>
-                    </div>
-                    <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary font-black text-[10px] px-2">
-                      Tasa: {checkoutData.exchangeRate.toFixed(2)}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Resumen de Descuentos/Impuestos */}
-                <CheckoutSummary
-                  subtotal={total.usd}
-                  discount={0}
-                  total={total.usd}
-                  currency="USD"
-                  exchangeRate={checkoutData.exchangeRate}
-                />
-              </div>
-            </ScrollArea>
+        <div className="min-h-0 overflow-hidden">
+          <div className="h-full overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4 lg:hidden">
+            <div className="space-y-4">
+              {summaryPanel}
+              {checkoutControls}
+            </div>
           </div>
 
-          {/* Columna Derecha: Métodos de Pago y Acción */}
-          <div className="flex-1 flex flex-col bg-slate-50 p-6 overscroll-contain overflow-hidden">
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6">
-                {/* Quick Actions Bar */}
-                <QuickActionsBar
-                  isSplitPayment={state.paymentMode === 'SPLIT'}
-                  onToggleSplitPayment={() => actions.setPaymentMode(state.paymentMode === 'SPLIT' ? 'SINGLE' : 'SPLIT')}
-                  generateFiscalInvoice={state.invoice.generateFiscalInvoice}
-                  hasFiscalConfig={checkoutData.invoiceSeries.length > 0}
-                  onToggleFiscalInvoice={actions.setGenerateFiscalInvoice}
-                  promotions={checkoutData.promotions as any || []}
-                  selectedPromotionId={state.invoice.promotionId}
-                  onPromotionChange={actions.setPromotion}
-                  customers={checkoutData.customers}
-                  selectedCustomerId={state.customerData.selectedId}
-                  onCustomerChange={actions.setCustomerId}
-                  customerSearchTerm={state.customerData.search}
-                  onCustomerSearchChange={actions.setCustomerSearch}
-                />
-
-                {state.paymentMode === 'SPLIT' ? (
-                  <SplitPaymentManager
-                    payments={splitPayments}
-                    remainingUsd={splitRemainingUsd}
-                    remainingBs={splitRemainingBs}
-                    exchangeRate={checkoutData.exchangeRate}
-                    isComplete={splitIsComplete}
-                    onAddPayment={handleAddSplitPayment}
-                    onRemovePayment={handleRemoveSplitPayment}
-                    onUpdatePayment={handleUpdateSplitPayment}
-                  />
-                ) : (
-                  <div className="space-y-6">
-                    <div className="space-y-3">
-                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Método de Pago</Label>
-                      <PaymentMethodSelector
-                        value={state.selectedMethod}
-                        onChange={actions.setPaymentMethod}
-                        disabled={false}
-                      />
-                    </div>
-
-                    {state.selectedMethod === 'CASH_USD' && (
-                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                        <CashPaymentSection
-                          mode="USD"
-                          totalAmount={total.usd}
-                          exchangeRate={checkoutData.exchangeRate}
-                          receivedAmount={state.cash.receivedUsd}
-                          onAmountChange={actions.setReceivedUsd}
-                          giveChangeInBs={state.cash.giveChangeInBs}
-                          onGiveChangeInBsChange={actions.setGiveChangeInBs}
-                          roundingMode={state.cash.changeRoundingMode}
-                          onRoundingModeChange={actions.setChangeRoundingMode}
-                          roundingConsent={state.cash.changeRoundingConsent}
-                          onRoundingConsentChange={actions.setChangeRoundingConsent}
-                        />
-                      </div>
-                    )}
-
-                    {state.selectedMethod === 'CASH_BS' && (
-                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                        <CashPaymentSection
-                          mode="BS"
-                          totalAmount={total.usd * checkoutData.exchangeRate}
-                          exchangeRate={checkoutData.exchangeRate}
-                          receivedAmount={state.cash.receivedBs}
-                          onAmountChange={actions.setReceivedBs}
-                          roundingMode={state.cash.changeRoundingMode}
-                          onRoundingModeChange={actions.setChangeRoundingMode}
-                          roundingConsent={state.cash.changeRoundingConsent}
-                          onRoundingConsentChange={actions.setChangeRoundingConsent}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Cliente si es FIAO */}
-                {(state.selectedMethod === 'FIAO' || state.paymentMode === 'SPLIT') && (
-                  <CustomerSearchSection
-                    customers={checkoutData.customers}
-                    selectedCustomerId={state.customerData.selectedId}
-                    onSelectCustomer={actions.setCustomerId}
-                    searchValue={state.customerData.search}
-                    onSearchChange={actions.setCustomerSearch}
-                    required={state.selectedMethod === 'FIAO'}
-                  />
-                )}
-
-                {/* Configuración de factura e inventario */}
-                <div className="p-4 rounded-[1.5rem] bg-white border border-slate-200 shadow-sm space-y-4">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Procesamiento Operativo
-                  </h4>
-                  <InvoiceConfigSection
-                    invoiceSeries={checkoutData.invoiceSeries as any}
-                    priceLists={checkoutData.priceLists}
-                    warehouses={checkoutData.warehouses}
-                    selectedSeriesId={state.invoice.seriesId}
-                    selectedPriceListId={state.invoice.priceListId}
-                    selectedWarehouseId={state.invoice.warehouseId}
-                    onSeriesChange={actions.setInvoiceSeries}
-                    onPriceListChange={actions.setPriceList}
-                    onWarehouseChange={actions.setWarehouse}
-                    generateFiscalInvoice={state.invoice.generateFiscalInvoice}
-                    onGenerateFiscalInvoiceChange={actions.setGenerateFiscalInvoice}
-                  />
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold text-slate-600">Nota Interna</Label>
-                    <Input
-                      value={state.saleNote}
-                      onChange={(e) => actions.setSaleNote(e.target.value)}
-                      placeholder="Ej: Cliente frecuente, delivery prioritario..."
-                      className="bg-slate-50 border-slate-200 rounded-xl h-10 text-sm focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
+          <div className="hidden h-full lg:grid lg:grid-cols-[minmax(320px,38%)_1fr] lg:divide-x lg:divide-slate-200">
+            <aside className="min-h-0 overflow-y-auto overscroll-contain bg-slate-50 p-6">
+              {summaryPanel}
+            </aside>
+            <section className="min-h-0 overflow-y-auto overscroll-contain bg-slate-50 p-6">
+              {checkoutControls}
+            </section>
           </div>
         </div>
 
-        {/* Action Footer */}
-        <div className="p-6 bg-white border-t border-slate-200 flex flex-col gap-4">
+        <footer className="border-t border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
           {state.error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs font-bold animate-pulse flex items-center gap-2">
-              <X className="w-4 h-4" /> {state.error}
+            <div className="mb-3 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive" role="alert" aria-live="assertive">
+              <X className="h-4 w-4" />
+              {state.error}
             </div>
           )}
-          <div className="flex gap-4">
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 h-14 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-bold transition-all"
+              className="h-11 flex-1 rounded-xl border-slate-300"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleConfirm}
               disabled={isLoading || items.length === 0}
-              className="flex-[2] h-14 rounded-2xl bg-primary text-primary-foreground font-black text-lg shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95 group"
+              className="h-11 flex-[1.25] rounded-xl font-bold"
             >
               {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Procesando...
+                </>
               ) : (
                 <>
-                  Confirmar Pago
-                  <Receipt className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  Confirmar pago
+                  <Receipt className="ml-2 h-4 w-4" />
                 </>
               )}
             </Button>
           </div>
-        </div>
+        </footer>
 
         {serialSelectorItem && (
           <SerialSelector

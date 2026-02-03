@@ -1,4 +1,4 @@
-import { FileText, Tag, Users, Split } from 'lucide-react'
+import { FileText, Tag, Users, Split, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,27 +23,19 @@ interface Promotion {
 }
 
 interface QuickActionsBarProps {
-    // Pago Dividido
     isSplitPayment: boolean
     onToggleSplitPayment: () => void
-
-    // Factura Fiscal
     generateFiscalInvoice: boolean
     hasFiscalConfig: boolean
     onToggleFiscalInvoice: (value: boolean) => void
-
-    // Promoción
     promotions: Promotion[]
     selectedPromotionId: string | null
     onPromotionChange: (id: string | null) => void
-
-    // Cliente
     customers: Customer[]
     selectedCustomerId: string | null
     onCustomerChange: (id: string | null) => void
     customerSearchTerm: string
     onCustomerSearchChange: (term: string) => void
-
     className?: string
 }
 
@@ -61,130 +53,117 @@ export function QuickActionsBar({
     onCustomerChange,
     className,
 }: QuickActionsBarProps) {
-    const selectedPromotion = promotions.find(p => p.id === selectedPromotionId)
-    const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
+    const selectedPromotion = promotions.find((promotion) => promotion.id === selectedPromotionId)
+    const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId)
 
     return (
-        <div className={cn("grid grid-cols-4 gap-2 mb-4", className)}>
+        <div className={cn('rounded-2xl border border-slate-200 bg-white p-3 shadow-sm', className)}>
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Acciones rapidas
+            </div>
 
-            {/* 1. Pago Dividido Toggle */}
-            <Button
-                variant={isSplitPayment ? "default" : "secondary"}
-                size="sm"
-                onClick={onToggleSplitPayment}
-                className={cn(
-                    "h-9 px-2 transition-all duration-300 shadow-none",
-                    isSplitPayment
-                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-            >
-                <Split className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                <span className="font-medium truncate text-xs sm:text-sm">Dividir</span>
-            </Button>
-
-            {/* 2. Factura Fiscal Toggle */}
-            {hasFiscalConfig ? (
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
                 <Button
-                    variant={generateFiscalInvoice ? "default" : "secondary"}
+                    type="button"
+                    variant={isSplitPayment ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => onToggleFiscalInvoice(!generateFiscalInvoice)}
+                    onClick={onToggleSplitPayment}
                     className={cn(
-                        "h-9 px-2 transition-all duration-300 shadow-none",
-                        generateFiscalInvoice
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        'h-10 justify-start gap-2 rounded-xl',
+                        !isSplitPayment && 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                     )}
+                    aria-pressed={isSplitPayment}
                 >
-                    <FileText className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                    <span className="font-medium truncate text-xs sm:text-sm">Fiscal</span>
+                    <Split className="h-4 w-4" />
+                    <span className="truncate">Dividir pago</span>
                 </Button>
-            ) : (
-                <div /> /* Spacer */
-            )}
 
-            {/* 3. Promoción Dropdown */}
-            {promotions.length > 0 ? (
+                {hasFiscalConfig ? (
+                    <Button
+                        type="button"
+                        variant={generateFiscalInvoice ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => onToggleFiscalInvoice(!generateFiscalInvoice)}
+                        className={cn(
+                            'h-10 justify-start gap-2 rounded-xl',
+                            !generateFiscalInvoice && 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
+                        )}
+                        aria-pressed={generateFiscalInvoice}
+                    >
+                        <FileText className="h-4 w-4" />
+                        <span className="truncate">Factura fiscal</span>
+                    </Button>
+                ) : (
+                    <div className="hidden lg:block" />
+                )}
+
+                {promotions.length > 0 ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={cn(
+                                    'h-10 justify-start gap-2 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
+                                    selectedPromotionId && 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100',
+                                )}
+                            >
+                                <Tag className="h-4 w-4" />
+                                <span className="truncate">{selectedPromotion ? selectedPromotion.name : 'Promocion'}</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[220px]">
+                            <DropdownMenuLabel>Promocion</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => onPromotionChange(null)}>Sin promocion</DropdownMenuItem>
+                            {promotions.map((promo) => (
+                                <DropdownMenuItem
+                                    key={promo.id}
+                                    onClick={() => onPromotionChange(promo.id)}
+                                    className="justify-between"
+                                >
+                                    <span>{promo.name}</span>
+                                    {promo.code && <span className="rounded bg-slate-100 px-1.5 text-[11px] text-slate-500">{promo.code}</span>}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : (
+                    <div className="hidden lg:block" />
+                )}
+
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button
-                            variant="secondary"
+                            type="button"
+                            variant="outline"
                             size="sm"
                             className={cn(
-                                "h-9 px-2 transition-all shadow-none justify-between",
-                                selectedPromotionId
-                                    ? "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/40 dark:text-purple-300"
-                                    : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                'h-10 justify-start gap-2 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
+                                selectedCustomerId && 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100',
                             )}
                         >
-                            <div className="flex items-center truncate">
-                                <Tag className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                                <span className="truncate text-xs sm:text-sm">
-                                    {selectedPromotion ? selectedPromotion.name : "Promo"}
-                                </span>
-                            </div>
+                            <Users className="h-4 w-4" />
+                            <span className="truncate">{selectedCustomer ? selectedCustomer.name : 'Cliente'}</span>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[200px]">
-                        <DropdownMenuLabel>Seleccionar Promoción</DropdownMenuLabel>
+                    <DropdownMenuContent align="end" className="w-[240px]">
+                        <DropdownMenuLabel>Cliente</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onPromotionChange(null)}>
-                            Sin promoción
-                        </DropdownMenuItem>
-                        {promotions.map((promo) => (
-                            <DropdownMenuItem
-                                key={promo.id}
-                                onClick={() => onPromotionChange(promo.id)}
-                                className="justify-between"
-                            >
-                                {promo.name}
-                                {promo.code && <span className="text-xs text-muted-foreground ml-2 px-1 rounded bg-muted">{promo.code}</span>}
+                        <DropdownMenuItem onClick={() => onCustomerChange(null)}>Cliente general</DropdownMenuItem>
+                        {customers.slice(0, 8).map((customer) => (
+                            <DropdownMenuItem key={customer.id} onClick={() => onCustomerChange(customer.id)}>
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium">{customer.name}</p>
+                                    <p className="truncate text-xs text-slate-500">{customer.document_id || 'Sin documento'}</p>
+                                </div>
                             </DropdownMenuItem>
                         ))}
                     </DropdownMenuContent>
                 </DropdownMenu>
-            ) : <div />}
-
-            {/* 4. Cliente Dropdown */}
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        className={cn(
-                            "h-9 px-2 transition-all shadow-none justify-between",
-                            selectedCustomerId
-                                ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                    >
-                        <div className="flex items-center truncate">
-                            <Users className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                            <span className="truncate text-xs sm:text-sm">
-                                {selectedCustomer ? selectedCustomer.name.split(' ')[0] : "Cliente"}
-                            </span>
-                        </div>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[220px]">
-                    <DropdownMenuLabel>Seleccionar Cliente</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onCustomerChange(null)}>
-                        Cliente General
-                    </DropdownMenuItem>
-                    {customers.slice(0, 5).map((customer) => (
-                        <DropdownMenuItem
-                            key={customer.id}
-                            onClick={() => onCustomerChange(customer.id)}
-                        >
-                            <div className="flex flex-col">
-                                <span className="font-medium">{customer.name}</span>
-                                <span className="text-xs text-muted-foreground">{customer.document_id}</span>
-                            </div>
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
+            </div>
         </div>
     )
 }
