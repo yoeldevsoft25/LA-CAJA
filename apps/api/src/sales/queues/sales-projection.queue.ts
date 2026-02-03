@@ -6,6 +6,10 @@ import { Job } from 'bullmq';
 import { ProjectionsService } from '../../projections/projections.service';
 import { Event } from '../../database/entities/event.entity';
 import { Sale } from '../../database/entities/sale.entity';
+import { SyncMetricsService } from '../../observability/services/sync-metrics.service';
+import { SaleCreatedPayload } from '../../sync/dto/sync-types';
+import { InventoryMovement } from '../../database/entities/inventory-movement.entity';
+import { Debt } from '../../database/entities/debt.entity';
 
 export interface ProjectSaleEventJob {
   event: Event;
@@ -17,9 +21,9 @@ export interface ProjectSaleEventJob {
  * para no bloquear la respuesta al cliente
  */
 @Processor('sales-projections', {
-  concurrency: 10, // Alta concurrencia para procesar múltiples ventas en paralelo
+  concurrency: 10,
   limiter: {
-    max: 100, // Procesar hasta 100 jobs por segundo
+    max: 100,
     duration: 1000,
   },
 })
@@ -27,9 +31,16 @@ export class SalesProjectionQueueProcessor extends WorkerHost {
   private readonly logger = new Logger(SalesProjectionQueueProcessor.name);
 
   constructor(
-    private projectionsService: ProjectionsService,
+    private readonly projectionsService: ProjectionsService,
+    @InjectRepository(Event)
+    private readonly eventRepository: Repository<Event>,
     @InjectRepository(Sale)
-    private saleRepository: Repository<Sale>,
+    private readonly saleRepository: Repository<Sale>,
+    @InjectRepository(InventoryMovement)
+    private readonly movementRepository: Repository<InventoryMovement>,
+    @InjectRepository(Debt)
+    private readonly debtRepository: Repository<Debt>,
+    private readonly metricsService: SyncMetricsService,
   ) {
     super();
   }
@@ -43,41 +54,102 @@ export class SalesProjectionQueueProcessor extends WorkerHost {
     );
 
     try {
-      // ⚡ OPTIMIZACIÓN 2025: Early filtering - Verificar idempotencia antes de procesar
-      // Esto evita trabajo innecesario si el evento ya fue procesado
-      const payload = event.payload as { sale_id?: string } | null;
+      // ⚡ OPTIMIZACIÓN: Early filtering - Verificar idempotencia
+      const payload = event.payload as unknown as SaleCreatedPayload;
       if (payload?.sale_id) {
         const existingSale = await this.saleRepository.findOne({
           where: { id: payload.sale_id, store_id: event.store_id },
+          relations: ['items'],
         });
 
         if (existingSale) {
-          const duration = Date.now() - startTime;
-          this.logger.debug(
-            `⏭️ Evento ${event.event_id} ya procesado (idempotencia), saltando en ${duration}ms`,
-          );
-          await job.updateProgress(100);
-          return; // Idempotencia temprana - evitar procesamiento innecesario
+          // ⚡ COMPLETENESS CHECK RIGUROSO
+          let isComplete = true;
+          const incompletenessReasons: string[] = [];
+
+          // 1. Check Items
+          const payloadItemsCount = Array.isArray(payload.items)
+            ? payload.items.length
+            : 0;
+          const dbItemsCount = existingSale.items
+            ? existingSale.items.length
+            : 0;
+          if (payloadItemsCount > 0 && dbItemsCount !== payloadItemsCount) {
+            isComplete = false;
+            incompletenessReasons.push(
+              `Items mismatch (DB: ${dbItemsCount}, Payload: ${payloadItemsCount})`,
+            );
+          }
+
+          // 2. Check Inventory Movements (Estimate based on unique items)
+          if (isComplete && payloadItemsCount > 0) {
+            const movementsCount = await this.movementRepository
+              .createQueryBuilder('im')
+              .where("im.ref->>'sale_id' = :saleId", {
+                saleId: payload.sale_id,
+              })
+              .andWhere('im.store_id = :storeId', { storeId: event.store_id })
+              .getCount();
+
+            const expectedMovements = payload.items.length;
+
+            if (movementsCount < expectedMovements) {
+              isComplete = false;
+              incompletenessReasons.push(
+                `Inventory Movements missing (DB: ${movementsCount}, Expected: ${expectedMovements})`,
+              );
+            }
+          }
+
+          // 3. Check Debt (FIAO)
+          if (isComplete && payload.payment?.method === 'FIAO') {
+            const debtExists = await this.debtRepository.findOne({
+              where: { sale_id: payload.sale_id, store_id: event.store_id },
+              select: ['id'],
+            });
+            if (!debtExists) {
+              isComplete = false;
+              incompletenessReasons.push('Debt missing for FIAO sale');
+            }
+          }
+
+          if (!isComplete) {
+            this.logger.warn(
+              `⚠️ Venta ${payload.sale_id} existe pero no está completa. Proyección parcial detectada. Razones: ${incompletenessReasons.join(', ')}. Re-procesando para reparar.`,
+            );
+            // No retornamos, dejamos que pase a projectEvent para reparar
+          } else {
+            this.logger.debug(
+              `⏭️ Evento ${event.event_id} ya proyectado y COMPLETO, saltando.`,
+            );
+            await this.eventRepository.update(event.event_id, {
+              projection_status: 'processed',
+              projection_error: null,
+            });
+            return;
+          }
         }
       }
 
-      // Proyectar el evento
       await this.projectionsService.projectEvent(event);
+
+      // ✅ Marcar evento como procesado
+      await this.eventRepository.update(event.event_id, {
+        projection_status: 'processed',
+        projection_error: null,
+      });
 
       const duration = Date.now() - startTime;
       this.logger.log(
         `✅ Proyección completada para evento ${event.event_id} en ${duration}ms`,
       );
-
-      await job.updateProgress(100);
-    } catch (error) {
-      const duration = Date.now() - startTime;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
-        `❌ Error proyectando evento ${event.event_id} después de ${duration}ms:`,
-        error instanceof Error ? error.stack : String(error),
+        `❌ Error proyectando evento ${event.event_id}: ${message}`,
+        stack,
       );
-
-      // Re-lanzar el error para que BullMQ maneje el retry
       throw error;
     }
   }
@@ -90,11 +162,37 @@ export class SalesProjectionQueueProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent('failed')
-  onFailed(job: Job, error: Error) {
+  async onFailed(job: Job, error: Error) {
     this.logger.error(
       `Job de proyección ${job.name} (${job.id}) falló después de ${job.attemptsMade} intentos:`,
       error.message,
     );
+
+    this.metricsService.trackProjectionRetry(
+      job.data?.event?.event_id,
+      job.attemptsMade,
+      error.message,
+    );
+
+    const maxAttempts = job.opts.attempts || 3;
+    if (job.attemptsMade >= maxAttempts) {
+      this.metricsService.trackProjectionFailureFatal(
+        job.data?.event?.event_id,
+        error.message,
+        error.stack,
+      );
+
+      // 🛑 Marcar evento como fallido definitivamente
+      if (job.data?.event?.event_id) {
+        await this.eventRepository.update(job.data.event.event_id, {
+          projection_status: 'failed',
+          projection_error: `${error.message}\n${error.stack}`.substring(
+            0,
+            5000,
+          ),
+        });
+      }
+    }
   }
 
   @OnWorkerEvent('progress')

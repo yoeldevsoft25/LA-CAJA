@@ -16,10 +16,29 @@ import { randomUUID } from 'crypto';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
+import { SyncMetricsService } from '../observability/services/sync-metrics.service';
+import {
+  SaleCreatedPayload,
+  ProductCreatedPayload,
+  ProductUpdatedPayload,
+  ProductDeactivatedPayload,
+  RecipeIngredientsUpdatedPayload,
+  PriceChangedPayload,
+  StockReceivedPayload,
+  StockAdjustedPayload,
+  CashSessionOpenedPayload,
+  CashSessionClosedPayload,
+  CustomerCreatedPayload,
+  CustomerUpdatedPayload,
+  DebtCreatedPayload,
+  DebtPaymentRecordedPayload,
+} from '../sync/dto/sync-types';
 
 @Injectable()
 export class ProjectionsService {
   private readonly logger = new Logger(ProjectionsService.name);
+
+  private readonly truthyValues = new Set(['1', 'true', 't', 'yes', 'y']);
 
   constructor(
     @InjectRepository(Product)
@@ -42,7 +61,59 @@ export class ProjectionsService {
     private whatsappMessagingService: WhatsAppMessagingService,
     private fiscalInvoicesService: FiscalInvoicesService,
     private warehousesService: WarehousesService,
+    private metricsService: SyncMetricsService,
   ) {}
+
+  private toBoolean(value: unknown): boolean {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+    if (typeof value === 'string') {
+      return this.truthyValues.has(value.trim().toLowerCase());
+    }
+    return false;
+  }
+
+  private toNullableNumber(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private toNumber(value: unknown, fallback = 0): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  private toSaleTotals(totals?: SaleCreatedPayload['totals']): Sale['totals'] {
+    return {
+      subtotal_bs: this.toNumber(totals?.subtotal_bs),
+      subtotal_usd: this.toNumber(totals?.subtotal_usd),
+      discount_bs: this.toNumber(totals?.discount_total_bs),
+      discount_usd: this.toNumber(totals?.discount_total_usd),
+      total_bs: this.toNumber(totals?.total_bs),
+      total_usd: this.toNumber(totals?.total_usd),
+    };
+  }
+
+  private toSalePayment(
+    payment?: SaleCreatedPayload['payment'],
+  ): Sale['payment'] {
+    const normalizedMethod =
+      typeof payment?.method === 'string' && payment.method.trim().length > 0
+        ? payment.method
+        : 'UNKNOWN';
+    const normalized = {
+      ...(payment ?? {}),
+      method: normalizedMethod,
+    };
+    return normalized as unknown as Sale['payment'];
+  }
 
   private async resolveWarehouseId(
     storeId: string,
@@ -121,7 +192,7 @@ export class ProjectionsService {
   }
 
   private async projectProductCreated(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as ProductCreatedPayload;
     const exists = await this.productRepository.findOne({
       where: { id: payload.product_id, store_id: event.store_id },
     });
@@ -148,7 +219,8 @@ export class ProjectionsService {
       is_recipe: !!payload.is_recipe,
       profit_margin: Number(payload.profit_margin) || 0,
       product_type:
-        payload.product_type || (payload.is_recipe ? 'prepared' : 'sale_item'),
+        (payload.product_type as 'prepared' | 'sale_item' | 'ingredient') ||
+        (payload.is_recipe ? 'prepared' : 'sale_item'),
       is_visible_public: payload.is_visible_public ?? false,
       public_name: payload.public_name || null,
       public_description: payload.public_description || null,
@@ -160,13 +232,27 @@ export class ProjectionsService {
   }
 
   private async projectProductUpdated(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as ProductUpdatedPayload;
     const product = await this.productRepository.findOne({
       where: { id: payload.product_id, store_id: event.store_id },
     });
 
     if (!product) {
       return; // Producto no existe
+    }
+
+    // 🛡️ OFFLINE-FIRST GUARD: Evitar updates fuera de orden
+    if (product.updated_at && event.created_at < product.updated_at) {
+      this.logger.warn(
+        `Ignoring out-of-order update for product ${product.id}. Event time: ${event.created_at.toISOString()}, Current updated_at: ${product.updated_at.toISOString()}`,
+      );
+      this.metricsService.trackOutOfOrderEvent(
+        event.event_id,
+        product.id,
+        product.updated_at.getTime(),
+        event.created_at.getTime(),
+      );
+      return;
     }
 
     const patch = payload.patch || {};
@@ -184,7 +270,10 @@ export class ProjectionsService {
     if (patch.profit_margin !== undefined)
       product.profit_margin = Number(patch.profit_margin) || 0;
     if (patch.product_type !== undefined)
-      product.product_type = patch.product_type as any;
+      product.product_type = patch.product_type as
+        | 'prepared'
+        | 'sale_item'
+        | 'ingredient';
     if (patch.is_visible_public !== undefined)
       product.is_visible_public = !!patch.is_visible_public;
     if (patch.public_name !== undefined)
@@ -200,15 +289,33 @@ export class ProjectionsService {
   }
 
   private async projectProductDeactivated(event: Event): Promise<void> {
-    const payload = event.payload as any;
-    await this.productRepository.update(
-      { id: payload.product_id, store_id: event.store_id },
-      { is_active: false },
-    );
+    const payload = event.payload as unknown as ProductDeactivatedPayload;
+    const product = await this.productRepository.findOne({
+      where: { id: payload.product_id, store_id: event.store_id },
+    });
+
+    if (!product) return;
+
+    // 🛡️ OFFLINE-FIRST GUARD
+    if (product.updated_at && event.created_at < product.updated_at) {
+      this.logger.warn(
+        `Ignoring out-of-order deactivation for product ${product.id}`,
+      );
+      this.metricsService.trackOutOfOrderEvent(
+        event.event_id,
+        product.id,
+        product.updated_at.getTime(),
+        event.created_at.getTime(),
+      );
+      return;
+    }
+
+    product.is_active = false;
+    await this.productRepository.save(product);
   }
 
   private async projectPriceChanged(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as PriceChangedPayload;
     await this.productRepository.update(
       { id: payload.product_id, store_id: event.store_id },
       {
@@ -219,7 +326,7 @@ export class ProjectionsService {
   }
 
   private async projectRecipeIngredientsUpdated(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as RecipeIngredientsUpdatedPayload;
     const productId = payload.product_id;
 
     if (!productId) return;
@@ -241,7 +348,7 @@ export class ProjectionsService {
       if (ingredients.length === 0) return;
 
       let ingredientIds = [
-        ...new Set(ingredients.map((i: any) => i.ingredient_product_id)),
+        ...new Set(ingredients.map((i) => i.ingredient_product_id)),
       ];
       if (ingredientIds.includes(productId)) {
         this.logger.warn(
@@ -258,7 +365,7 @@ export class ProjectionsService {
       });
       const validIds = new Set(validIngredients.map((item) => item.id));
 
-      const filtered = ingredients.filter((i: any) => {
+      const filtered = ingredients.filter((i) => {
         const qty = Number(i.qty);
         return (
           validIds.has(i.ingredient_product_id) &&
@@ -269,7 +376,7 @@ export class ProjectionsService {
 
       if (filtered.length === 0) return;
 
-      const newIngredients = filtered.map((i: any) =>
+      const newIngredients = filtered.map((i) =>
         manager.create(RecipeIngredient, {
           id: randomUUID(),
           recipe_product_id: productId,
@@ -284,7 +391,7 @@ export class ProjectionsService {
   }
 
   private async projectStockReceived(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as StockReceivedPayload;
     const exists = await this.movementRepository.findOne({
       where: { id: payload.movement_id, store_id: event.store_id },
     });
@@ -328,7 +435,7 @@ export class ProjectionsService {
   }
 
   private async projectStockAdjusted(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as StockAdjustedPayload;
     const exists = await this.movementRepository.findOne({
       where: { id: payload.movement_id, store_id: event.store_id },
     });
@@ -372,318 +479,237 @@ export class ProjectionsService {
   }
 
   private async projectSaleCreated(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as SaleCreatedPayload;
     const exists = await this.saleRepository.findOne({
       where: { id: payload.sale_id, store_id: event.store_id },
+      relations: ['items'],
     });
 
     if (exists) {
-      return; // Ya existe, idempotente
+      if (exists.updated_at && event.created_at < exists.updated_at) {
+        this.logger.warn(
+          `Ignoring out-of-order SaleCreated for ${payload.sale_id}`,
+        );
+        return;
+      }
+
+      // ⚡ SMART IDEMPOTENCY: Solo retornar si la venta está COMPLETA (tiene items)
+      if (exists.items && exists.items.length > 0) {
+        return; // Ya existe y está completa
+      }
+
+      this.logger.warn(`Reparando venta parcial detectada: ${payload.sale_id}`);
     }
 
-    // ⚠️ VALIDACIÓN CRÍTICA: Verificar que el evento tiene actor_user_id
-    if (!event.actor_user_id) {
-      this.logger.error(
-        `Evento SaleCreated ${event.event_id} no tiene actor_user_id. No se puede crear la venta sin identificar al responsable.`,
-      );
-      throw new Error(
-        `No se puede crear la venta ${payload.sale_id}: el evento no contiene información del responsable (actor_user_id).`,
-      );
-    }
-
-    // ⚠️ VALIDACIÓN CRÍTICA: Para ventas FIAO, verificar que hay customer_id
-    if (
-      payload.payment?.method === 'FIAO' &&
-      !payload.customer?.customer_id &&
-      !payload.customer_id
-    ) {
-      this.logger.error(
-        `Evento SaleCreated ${event.event_id} es una venta FIAO sin cliente. No se puede crear la venta.`,
-      );
-      throw new Error(
-        `No se puede crear la venta FIAO ${payload.sale_id}: falta información del cliente.`,
-      );
-    }
-
-    const warehouseId = await this.resolveWarehouseId(
-      event.store_id,
-      payload.warehouse_id ?? null,
-    );
-
-    // Crear venta
-    const sale = this.saleRepository.create({
-      id: payload.sale_id,
-      store_id: event.store_id,
-      cash_session_id: payload.cash_session_id || null,
-      sold_at: payload.sold_at ? new Date(payload.sold_at) : event.created_at,
-      exchange_rate: Number(payload.exchange_rate) || 0,
-      currency: payload.currency || 'BS',
-      totals: payload.totals || {},
-      payment: payload.payment || {},
-      customer_id: payload.customer?.customer_id || payload.customer_id || null,
-      sold_by_user_id: event.actor_user_id, // ⚠️ CRÍTICO: Asignar responsable desde el evento
-      note: payload.note || null,
-    });
-
-    const savedSale = await this.saleRepository.save(sale);
-
-    // Crear items de venta
-    if (payload.items && Array.isArray(payload.items)) {
-      const items = payload.items.map((item: any) => {
-        const isWeightProduct = Boolean(item.is_weight_product);
-        const weightValue =
-          item.weight_value !== undefined && item.weight_value !== null
-            ? Number(item.weight_value)
-            : null;
-        const normalizedQty =
-          isWeightProduct && weightValue !== null
-            ? weightValue
-            : Number(item.qty) || 0;
-
-        return this.saleItemRepository.create({
-          id: item.item_id || randomUUID(),
-          sale_id: savedSale.id,
-          product_id: item.product_id,
-          variant_id: item.variant_id ?? null,
-          lot_id: item.lot_id ?? null,
-          qty: normalizedQty,
-          unit_price_bs: Number(item.unit_price_bs) || 0,
-          unit_price_usd: Number(item.unit_price_usd) || 0,
-          discount_bs: Number(item.discount_bs) || 0,
-          discount_usd: Number(item.discount_usd) || 0,
-          is_weight_product: isWeightProduct,
-          weight_unit: item.weight_unit || null,
-          weight_value: weightValue,
-          price_per_weight_bs:
-            item.price_per_weight_bs !== undefined &&
-            item.price_per_weight_bs !== null
-              ? Number(item.price_per_weight_bs)
-              : null,
-          price_per_weight_usd:
-            item.price_per_weight_usd !== undefined &&
-            item.price_per_weight_usd !== null
-              ? Number(item.price_per_weight_usd)
-              : null,
-        });
-      });
-
-      await this.saleItemRepository.save(items);
-    }
-
-    // ⚡ OPTIMIZACIÓN: Crear movimientos de inventario en batch (descontar stock)
-    // Nota: Para FIAO, el stock se descuenta igual
-    if (payload.items && Array.isArray(payload.items)) {
-      const stockUpdates: Array<{
-        product_id: string;
-        variant_id: string | null;
-        qty_delta: number;
-      }> = [];
-      const movements = payload.items.map((item) => {
-        const movementQty =
-          item.is_weight_product && item.weight_value != null
-            ? Number(item.weight_value)
-            : Number(item.qty) || 0;
-        const variantId = item.variant_id ?? null;
-        if (warehouseId) {
-          stockUpdates.push({
-            product_id: item.product_id,
-            variant_id: variantId,
-            qty_delta: -movementQty,
-          });
-        }
-        return this.movementRepository.create({
-          id: randomUUID(),
-          store_id: event.store_id,
-          product_id: item.product_id,
-          variant_id: variantId,
-          movement_type: 'sold',
-          qty_delta: -movementQty, // Negativo para descontar
-          unit_cost_bs: 0,
-          unit_cost_usd: 0,
-          warehouse_id: warehouseId,
-          note: `Venta ${payload.sale_id}`,
-          ref: { sale_id: payload.sale_id, warehouse_id: warehouseId },
-          happened_at: payload.sold_at
-            ? new Date(payload.sold_at)
-            : event.created_at,
-        });
-      });
-
-      // Batch insert para mejor performance
-      await this.movementRepository.save(movements);
-
-      if (warehouseId && stockUpdates.length > 0) {
-        await this.warehousesService.updateStockBatch(
-          warehouseId,
-          stockUpdates,
-          event.store_id,
+    // ⚡ CRITICAL: Shared Transaction for Atomicity
+    const savedSale = await this.dataSource.transaction(async (manager) => {
+      // ⚠️ VALIDACIÓN CRÍTICA: Verificar que el evento tiene actor_user_id
+      if (!event.actor_user_id) {
+        throw new Error(
+          `No se puede crear la venta ${payload.sale_id}: el evento no contiene información del responsable (actor_user_id).`,
         );
       }
-    }
 
-    // ⚠️ CRÍTICO: Si es venta FIAO, SIEMPRE crear la deuda automáticamente
-    // Esto es esencial para la trazabilidad - sin deuda, el sistema no puede rastrear quién debe qué
-    // La validación de crédito ya se hizo antes (en el servicio de ventas o en el frontend)
-    // Aquí solo creamos la deuda para mantener la integridad del sistema
-    if (payload.payment?.method === 'FIAO') {
-      if (!savedSale.customer_id) {
-        // Esto no debería pasar porque ya validamos arriba, pero registramos el error
-        this.logger.error(
-          `❌ CRÍTICO: Venta FIAO ${payload.sale_id} sin customer_id. NO se puede crear la deuda. Esto causará problemas de trazabilidad.`,
-        );
-      } else {
-        const customerId = savedSale.customer_id;
-        const totalUsd = Number(payload.totals?.total_usd || 0);
-        const totalBs = Number(payload.totals?.total_bs || 0);
+      const warehouseId = await this.resolveWarehouseId(
+        event.store_id,
+        payload.warehouse_id ?? null,
+      );
 
-        // Verificar si ya existe una deuda para esta venta (idempotencia)
-        const existingDebt = await this.debtRepository.findOne({
-          where: { sale_id: savedSale.id, store_id: event.store_id },
+      // Crear venta (Upsert)
+      const sale = manager.getRepository(Sale).create({
+        id: payload.sale_id,
+        store_id: event.store_id,
+        cash_session_id: payload.cash_session_id || null,
+        sold_at: payload.sold_at ? new Date(payload.sold_at) : event.created_at,
+        exchange_rate: this.toNumber(payload.exchange_rate),
+        currency: (payload.currency as 'BS' | 'USD' | 'MIXED') || 'BS',
+        totals: this.toSaleTotals(payload.totals),
+        payment: this.toSalePayment(payload.payment),
+        customer_id:
+          payload.customer?.customer_id || payload.customer_id || null,
+        sold_by_user_id: event.actor_user_id,
+        note: payload.note || null,
+      });
+
+      const s = await manager.getRepository(Sale).save(sale);
+
+      // Crear items de venta
+      if (payload.items && Array.isArray(payload.items)) {
+        const items = payload.items.map((item) => {
+          const isWeightProduct = this.toBoolean(item.is_weight_product);
+          const weightValue = this.toNullableNumber(item.weight_value);
+          const normalizedQty =
+            isWeightProduct && weightValue !== null
+              ? weightValue
+              : this.toNumber(item.qty);
+
+          return manager.getRepository(SaleItem).create({
+            id: item.item_id || randomUUID(),
+            sale_id: s.id,
+            product_id: item.product_id,
+            variant_id: item.variant_id || null,
+            lot_id: item.lot_id || null,
+            qty: normalizedQty,
+            unit_price_bs: this.toNumber(item.unit_price_bs),
+            unit_price_usd: this.toNumber(item.unit_price_usd),
+            discount_bs: this.toNumber(item.discount_bs),
+            discount_usd: this.toNumber(item.discount_usd),
+            is_weight_product: isWeightProduct,
+            weight_unit:
+              (item.weight_unit as 'kg' | 'g' | 'lb' | 'oz' | null) || null,
+            weight_value: weightValue,
+            price_per_weight_bs: this.toNullableNumber(
+              item.price_per_weight_bs,
+            ),
+            price_per_weight_usd: this.toNullableNumber(
+              item.price_per_weight_usd,
+            ),
+          });
         });
 
-        if (existingDebt) {
-          this.logger.log(
-            `Deuda ya existe para venta FIAO ${payload.sale_id}: ${existingDebt.id}`,
-          );
-        } else {
-          // Crear la deuda - SIEMPRE, sin importar si el cliente tiene crédito o no
-          // La validación de crédito ya se hizo antes de crear la venta
-          const debt = this.debtRepository.create({
-            id: randomUUID(),
-            store_id: event.store_id,
-            sale_id: savedSale.id,
-            customer_id: customerId,
-            created_at: savedSale.sold_at,
-            amount_bs: totalBs,
-            amount_usd: totalUsd,
-            status: DebtStatus.OPEN,
+        await manager.getRepository(SaleItem).save(items);
+      }
+
+      // Movimientos de inventario
+      if (payload.items && Array.isArray(payload.items)) {
+        // ⚡ IDEMPOTENCY GUARD: Verificar si ya existen movimientos para esta venta
+        const existingMovements = await manager
+          .getRepository(InventoryMovement)
+          .createQueryBuilder('im')
+          .where("im.ref->>'sale_id' = :saleId", { saleId: payload.sale_id })
+          .getCount();
+
+        if (existingMovements === 0) {
+          const stockUpdates: Array<{
+            product_id: string;
+            variant_id: string | null;
+            qty_delta: number;
+          }> = [];
+
+          const movements = payload.items.map((item) => {
+            const movementQty =
+              this.toBoolean(item.is_weight_product) &&
+              item.weight_value != null
+                ? this.toNumber(item.weight_value)
+                : this.toNumber(item.qty);
+            const variantId = item.variant_id ?? null;
+            if (warehouseId) {
+              stockUpdates.push({
+                product_id: item.product_id,
+                variant_id: variantId,
+                qty_delta: -movementQty,
+              });
+            }
+            return manager.getRepository(InventoryMovement).create({
+              id: randomUUID(),
+              store_id: event.store_id,
+              product_id: item.product_id,
+              variant_id: variantId,
+              movement_type: 'sold',
+              qty_delta: -movementQty,
+              unit_cost_bs: 0,
+              unit_cost_usd: 0,
+              warehouse_id: warehouseId,
+              note: `Venta ${payload.sale_id}`,
+              ref: { sale_id: payload.sale_id, warehouse_id: warehouseId },
+              happened_at: payload.sold_at
+                ? new Date(payload.sold_at)
+                : event.created_at,
+            });
           });
 
-          await this.debtRepository.save(debt);
+          await manager.getRepository(InventoryMovement).save(movements);
 
-          // Log informativo
-          const customer = await this.customerRepository.findOne({
-            where: { id: customerId, store_id: event.store_id },
-          });
-
-          if (customer) {
-            this.logger.log(
-              `✅ Deuda creada para venta FIAO ${payload.sale_id}: ${debt.id} - Cliente: ${customer.name} (${customerId}) - Monto: $${totalUsd} USD / ${totalBs} Bs`,
-            );
-          } else {
-            this.logger.warn(
-              `⚠️ Deuda creada para venta FIAO ${payload.sale_id}: ${debt.id} - Cliente ID: ${customerId} (cliente no encontrado en BD) - Monto: $${totalUsd} USD / ${totalBs} Bs`,
+          if (warehouseId && stockUpdates.length > 0) {
+            // ⚡ ATOMICITY: Pass manager
+            await this.warehousesService.updateStockBatch(
+              warehouseId,
+              stockUpdates,
+              event.store_id,
+              manager,
             );
           }
         }
       }
-    }
 
-    // ⚠️ CRÍTICO: Generar factura fiscal automáticamente (igual que en sales.service.ts)
-    // Esto es esencial para mantener la funcionalidad original del sistema
-    // ⚡ OPTIMIZACIÓN: Ejecutar verificación de factura fiscal en paralelo con otras operaciones
+      // Deuda FIAO
+      if (payload.payment?.method === 'FIAO' && s.customer_id) {
+        // ⚡ IDEMPOTENCY GUARD: Verificar si ya existe deuda
+        const existingDebt = await manager.getRepository(Debt).findOne({
+          where: { sale_id: payload.sale_id, store_id: event.store_id },
+        });
+
+        if (!existingDebt) {
+          const debt = manager.getRepository(Debt).create({
+            id: randomUUID(),
+            store_id: event.store_id,
+            sale_id: s.id,
+            customer_id: s.customer_id,
+            created_at: s.sold_at,
+            amount_bs: Number(payload.totals?.total_bs || 0),
+            amount_usd: Number(payload.totals?.total_usd || 0),
+            status: DebtStatus.OPEN,
+          });
+          await manager.getRepository(Debt).save(debt);
+        }
+      }
+
+      return s;
+    });
+
+    // ⚡ OPTIMIZACIÓN: Facturación y notificaciones (fuera de la transacción pesada)
+    // Estos son side-effects que NO deben bloquear la transacción principal si fallan
     try {
-      this.logger.log(
-        `Verificando configuración fiscal para venta ${payload.sale_id} (store: ${event.store_id})`,
-      );
-
-      // ⚡ OPTIMIZACIÓN: Verificar configuración fiscal y factura existente en paralelo
       const [hasFiscalConfig, existingInvoice] = await Promise.all([
         this.fiscalInvoicesService.hasActiveFiscalConfig(event.store_id),
         this.fiscalInvoicesService.findBySale(event.store_id, savedSale.id),
       ]);
 
-      this.logger.log(
-        `Configuración fiscal para store ${event.store_id}: ${hasFiscalConfig ? 'ACTIVA' : 'INACTIVA'}`,
-      );
-
       if (hasFiscalConfig) {
-        // existingInvoice ya fue obtenido en paralelo arriba
-
         if (existingInvoice) {
-          this.logger.log(
-            `Factura fiscal existente encontrada para venta ${payload.sale_id}: ${existingInvoice.id} (status: ${existingInvoice.status})`,
-          );
-
           if (existingInvoice.status === 'draft') {
-            // Emitir factura si está en draft
-            const issuedInvoice = await this.fiscalInvoicesService.issue(
+            await this.fiscalInvoicesService.issue(
               event.store_id,
               existingInvoice.id,
             );
-            this.logger.log(
-              `✅ Factura fiscal emitida automáticamente para venta ${payload.sale_id}: ${issuedInvoice.invoice_number} (fiscal: ${issuedInvoice.fiscal_number || 'N/A'})`,
-            );
-          } else if (existingInvoice.status === 'issued') {
-            this.logger.log(
-              `✅ Factura fiscal ya estaba emitida para venta ${payload.sale_id}: ${existingInvoice.invoice_number}`,
-            );
           }
         } else {
-          // Crear y emitir factura fiscal automáticamente
-          this.logger.log(
-            `Creando factura fiscal automática para venta ${payload.sale_id}...`,
-          );
-
           const createdInvoice =
             await this.fiscalInvoicesService.createFromSale(
               event.store_id,
               savedSale.id,
               event.actor_user_id || null,
             );
-
-          this.logger.log(
-            `Factura fiscal creada (draft) para venta ${payload.sale_id}: ${createdInvoice.id}`,
-          );
-
-          const issuedInvoice = await this.fiscalInvoicesService.issue(
+          await this.fiscalInvoicesService.issue(
             event.store_id,
             createdInvoice.id,
           );
-
-          this.logger.log(
-            `✅ Factura fiscal creada y emitida automáticamente para venta ${payload.sale_id}: ${issuedInvoice.invoice_number} (fiscal: ${issuedInvoice.fiscal_number || 'N/A'})`,
-          );
         }
-      } else {
-        this.logger.warn(
-          `⚠️ No hay configuración fiscal activa para store ${event.store_id}. No se generará factura fiscal para venta ${payload.sale_id}.`,
-        );
       }
     } catch (error) {
-      // No fallar la proyección si hay error en factura fiscal, pero loguear el error completo
       this.logger.error(
-        `❌ Error generando factura fiscal automática para venta ${payload.sale_id}:`,
-        error instanceof Error ? error.stack : String(error),
+        `Error en factura fiscal automática para venta ${payload.sale_id}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
 
-    // Enviar notificación de WhatsApp si está habilitado (offline-first)
-    // El mensaje se agregará a la cola incluso si no hay conexión o el bot está desconectado
     if (this.whatsappMessagingService) {
       try {
-        // Obtener device_id y seq del evento si están disponibles (para tracking offline)
-        const deviceId = (event as any).device_id || undefined;
-        const seq = (event as any).seq || undefined;
-
         await this.whatsappMessagingService.sendSaleNotification(
           event.store_id,
           payload.sale_id,
-          deviceId,
-          seq,
+          event.device_id,
+          event.seq,
         );
       } catch (error) {
-        // No fallar la proyección si hay error en WhatsApp
         this.logger.warn(
-          `Error enviando notificación de WhatsApp para venta ${payload.sale_id}:`,
-          error,
+          `Error en notificación WhatsApp para venta ${payload.sale_id}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
   }
 
   private async projectCashSessionOpened(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as CashSessionOpenedPayload;
     const exists = await this.cashSessionRepository.findOne({
       where: { id: payload.session_id, store_id: event.store_id },
     });
@@ -712,7 +738,7 @@ export class ProjectionsService {
   }
 
   private async projectCashSessionClosed(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as CashSessionClosedPayload;
     const session = await this.cashSessionRepository.findOne({
       where: { id: payload.session_id, store_id: event.store_id },
     });
@@ -721,19 +747,29 @@ export class ProjectionsService {
       return; // Sesión no existe
     }
 
+    // 🛡️ OFFLINE-FIRST GUARD
+    if (session.updated_at && event.created_at < session.updated_at) {
+      this.logger.warn(`Ignoring out-of-order session close for ${session.id}`);
+      return;
+    }
+
     session.closed_at = payload.closed_at
       ? new Date(payload.closed_at)
       : event.created_at;
     session.closed_by = event.actor_user_id;
-    session.expected = payload.expected || null;
-    session.counted = payload.counted || null;
+    session.expected =
+      (payload.expected as unknown as { cash_bs: number; cash_usd: number }) ||
+      null;
+    session.counted =
+      (payload.counted as unknown as { cash_bs: number; cash_usd: number }) ||
+      null;
     session.note = payload.note || session.note;
 
     await this.cashSessionRepository.save(session);
   }
 
   private async projectCustomerCreated(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as CustomerCreatedPayload;
     const exists = await this.customerRepository.findOne({
       where: { id: payload.customer_id, store_id: event.store_id },
     });
@@ -755,13 +791,27 @@ export class ProjectionsService {
   }
 
   private async projectCustomerUpdated(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as CustomerUpdatedPayload;
     const customer = await this.customerRepository.findOne({
       where: { id: payload.customer_id, store_id: event.store_id },
     });
 
     if (!customer) {
       return; // Cliente no existe
+    }
+
+    // 🛡️ OFFLINE-FIRST GUARD
+    if (customer.updated_at && event.created_at < customer.updated_at) {
+      this.logger.warn(
+        `Ignoring out-of-order update for customer ${customer.id}`,
+      );
+      this.metricsService.trackOutOfOrderEvent(
+        event.event_id,
+        customer.id,
+        customer.updated_at.getTime(),
+        event.created_at.getTime(),
+      );
+      return;
     }
 
     const patch = payload.patch || {};
@@ -774,7 +824,7 @@ export class ProjectionsService {
   }
 
   private async projectDebtCreated(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as DebtCreatedPayload;
     const exists = await this.debtRepository.findOne({
       where: { id: payload.debt_id, store_id: event.store_id },
     });
@@ -801,7 +851,7 @@ export class ProjectionsService {
   }
 
   private async projectDebtPaymentRecorded(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    const payload = event.payload as unknown as DebtPaymentRecordedPayload;
 
     // Validar campos requeridos
     if (!payload.payment_id) {
@@ -857,71 +907,18 @@ export class ProjectionsService {
     const paidAt = payload.paid_at
       ? new Date(payload.paid_at)
       : event.created_at;
-    const amountBs = Number(payload.amount_bs) || 0;
-    const amountUsd = Number(payload.amount_usd) || 0;
 
-    // Validar que debt_id no sea null antes de insertar
-    if (!payload.debt_id) {
-      this.logger.error(
-        `Error crítico: debt_id es null/undefined`,
-        JSON.stringify(payload),
-      );
-      throw new Error(
-        `debt_id es requerido y no puede ser null. Evento: ${event.event_id}`,
-      );
-    }
-
-    this.logger.debug(
-      `Insertando pago - payment_id: ${payload.payment_id}, store_id: ${event.store_id}, debt_id: ${payload.debt_id}`,
+    await this.debtPaymentRepository.save(
+      this.debtPaymentRepository.create({
+        id: payload.payment_id,
+        store_id: event.store_id,
+        debt_id: payload.debt_id,
+        amount_bs: Number(payload.amount_bs) || 0,
+        amount_usd: Number(payload.amount_usd) || 0,
+        method: payload.method,
+        paid_at: paidAt,
+        note: payload.note || null,
+      }),
     );
-
-    // Usar SQL directo para insertar (igual que en debts.service.ts)
-    await this.dataSource.query(
-      `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        payload.payment_id,
-        event.store_id,
-        payload.debt_id,
-        paidAt,
-        amountBs,
-        amountUsd,
-        payload.method,
-        payload.note || null,
-      ],
-    );
-
-    this.logger.debug(
-      `Pago insertado exitosamente - payment_id: ${payload.payment_id}`,
-    );
-
-    // Actualizar estado de la deuda si está completamente pagada
-    // Recargar la deuda con todos los pagos para calcular correctamente
-    const updatedDebt = await this.debtRepository.findOne({
-      where: { id: payload.debt_id, store_id: event.store_id },
-      relations: ['payments'],
-    });
-
-    if (updatedDebt) {
-      const totalPaidBs = (updatedDebt.payments || []).reduce(
-        (sum, p) => sum + Number(p.amount_bs),
-        0,
-      );
-      const totalPaidUsd = (updatedDebt.payments || []).reduce(
-        (sum, p) => sum + Number(p.amount_usd),
-        0,
-      );
-
-      const debtAmountBs = Number(updatedDebt.amount_bs);
-      const debtAmountUsd = Number(updatedDebt.amount_usd);
-
-      if (totalPaidBs >= debtAmountBs && totalPaidUsd >= debtAmountUsd) {
-        updatedDebt.status = DebtStatus.PAID;
-        await this.debtRepository.save(updatedDebt);
-      } else if (totalPaidBs > 0 || totalPaidUsd > 0) {
-        updatedDebt.status = DebtStatus.PARTIAL;
-        await this.debtRepository.save(updatedDebt);
-      }
-    }
   }
 }
