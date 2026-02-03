@@ -12,8 +12,8 @@ import { PurchaseOrder } from '../database/entities/purchase-order.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { Shift } from '../database/entities/shift.entity';
 import { ProductLot } from '../database/entities/product-lot.entity';
+import { ExchangeRate } from '../database/entities/exchange-rate.entity';
 import { ReportsModule } from '../reports/reports.module';
-import { ExchangeModule } from '../exchange/exchange.module';
 
 @Module({
   imports: [
@@ -28,9 +28,9 @@ import { ExchangeModule } from '../exchange/exchange.module';
       FiscalInvoice,
       Shift,
       ProductLot,
+      ExchangeRate,
     ]),
     ReportsModule,
-    ExchangeModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],

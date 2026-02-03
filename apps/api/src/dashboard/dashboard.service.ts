@@ -11,10 +11,10 @@ import { PurchaseOrder } from '../database/entities/purchase-order.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { Shift } from '../database/entities/shift.entity';
 import { ProductLot } from '../database/entities/product-lot.entity';
+import { ExchangeRate } from '../database/entities/exchange-rate.entity';
 import { DebtStatus } from '../database/entities/debt.entity';
 import { ReportsService } from '../reports/reports.service';
 import { RedisCacheService } from '../common/cache/redis-cache.service';
-import { ExchangeService } from '../exchange/exchange.service';
 
 /**
  * Servicio para Dashboard Ejecutivo con KPIs consolidados
@@ -44,9 +44,10 @@ export class DashboardService {
     private shiftRepository: Repository<Shift>,
     @InjectRepository(ProductLot)
     private productLotRepository: Repository<ProductLot>,
+    @InjectRepository(ExchangeRate)
+    private exchangeRateRepository: Repository<ExchangeRate>,
     private reportsService: ReportsService,
     private cache: RedisCacheService,
-    private exchangeService: ExchangeService,
   ) {}
 
   /**
@@ -352,8 +353,23 @@ export class DashboardService {
       // Mantener consistencia con BCV actual cuando hay valoración en USD.
       // Si no hay tasa o no hay USD, se conserva el cálculo en Bs por costo base.
       if (totalStockValueUsd > 0) {
-        const bcv = await this.exchangeService.getBCVRate(storeId);
-        const bcvRate = Number(bcv?.rate || 0);
+        const now = new Date();
+        const bcvRateRow = await this.exchangeRateRepository
+          .createQueryBuilder('rate')
+          .where('rate.store_id = :storeId', { storeId })
+          .andWhere('rate.rate_type = :rateType', { rateType: 'BCV' })
+          .andWhere('rate.is_active = true')
+          .andWhere('rate.effective_from <= :now', { now })
+          .andWhere('(rate.effective_until IS NULL OR rate.effective_until > :now)', {
+            now,
+          })
+          .orderBy('rate.is_preferred', 'DESC')
+          .addOrderBy('rate.effective_from', 'DESC')
+          .addOrderBy('rate.updated_at', 'DESC')
+          .addOrderBy('rate.created_at', 'DESC')
+          .getOne();
+
+        const bcvRate = Number(bcvRateRow?.rate || 0);
         if (bcvRate > 0) {
           totalStockValueBs = totalStockValueUsd * bcvRate;
         }
