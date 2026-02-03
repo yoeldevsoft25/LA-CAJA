@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiConfig } from '../types';
-import { decodeJWT } from '../utils/jwt';
+
 
 // Variable para evitar múltiples redirecciones simultáneas
 let isRedirecting = false;

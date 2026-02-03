@@ -43,6 +43,18 @@
       ],
       "@la-caja/ui-core/*": [
         "../../packages/ui-core/src/*"
+      ],
+      "@la-caja/api-client": [
+        "../../packages/api-client/src/index.ts"
+      ],
+      "@la-caja/api-client/*": [
+        "../../packages/api-client/src/*"
+      ],
+      "@la-caja/offline-core": [
+        "../../packages/offline-core/src/index.ts"
+      ],
+      "@la-caja/offline-core/*": [
+        "../../packages/offline-core/src/*"
       ]
     }
   },

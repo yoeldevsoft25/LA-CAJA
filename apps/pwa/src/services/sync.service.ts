@@ -652,7 +652,7 @@ class SyncServiceClass {
 
       // Marcar eventos aceptados como sincronizados
       if (response.data.accepted.length > 0) {
-        const acceptedIds = response.data.accepted.map((a) => a.event_id);
+        const acceptedIds = response.data.accepted.map((a: { event_id: string }) => a.event_id);
         await this.markEventsAsSynced(acceptedIds);
         this.syncQueue?.markAsSynced(acceptedIds);
 
