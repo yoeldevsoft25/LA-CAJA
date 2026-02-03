@@ -7,6 +7,76 @@
 
 ---
 
+## Estado de ejecucion real (actualizado)
+
+> Corte de estado: **2026-02-03** (ultimo bloque de trabajo validado en rama `main`).
+
+### Resumen ejecutivo de avance
+
+- **Sprint 1 (Estabilizacion):** **🟡 Muy avanzado**
+  - Build API/PWA/Desktop validado en los ultimos ciclos.
+  - Quedan deudas menores de entorno local y estandarizacion final de CI en la cuenta principal.
+- **Sprint 2 (Unificacion Frontend):** **✅ Avance mayor completado**
+  - Base compartida consolidada (`ui-core`, `api-client`, `offline-core`, `app-core`).
+  - Reduccion fuerte de duplicacion estructural entre PWA/Desktop.
+- **Sprint 3 (Commerce Core I):** **✅ Avance mayor completado**
+  - Refactor CQRS en `sales` (queries/commands/handlers).
+  - Descomposicion de dominio de devoluciones (validation/inventory/financial/domain services).
+  - Cobertura de contratos + integration tests transaccionales para devoluciones.
+- **Sprint 4 (Finance/Fiscal + Auth):** **✅ Completado**
+  - **Sprint 4.1 ✅ cerrado:** hardening auth/refresh/session + tests dedicados.
+  - **Sprint 4.2 ✅ cerrado:** extraccion de `AccountingPeriodService` + pruebas de periodo.
+  - **Sprint 4.3 ✅ cerrado:** extraccion de `AccountingSharedService` y eliminacion de ciclo circular entre servicios.
+  - **Sprint 4.4 ✅ cerrado:** extraccion de `AccountingReportingService`, ajuste robusto de DI en `AccountingPeriodService`, pruebas del bloque reporting.
+- **Sprint 7 (Performance comercial):** **🟡 Parcial**
+  - Refactor UX/UI del checkout modal (PWA + Desktop) ya integrado.
+  - Sigue pendiente plan formal de chunking y reduccion de bundle grande.
+- **Sprint 5 (Data Platform & Migraciones):** **⏳ Siguiente en cola**
+- **Sprints 6/8/9/10:** **⏳ Pendientes**
+
+### Evidencia tecnica reciente (commits en `main`)
+
+- `0e00a16` feat(sales): integrate returns domain decomposition with any-zero type hardening
+- `8fdcc30` fix(pwa): resolve frontend compile issues for sales and sync paths
+- `97c7c91` fix(pwa): add workspace path aliases in vite config
+- `f2712b0` feat(checkout): redesign modal shell and internal UX for pwa and desktop
+- `1ea9512` test(sales): add transactional integration coverage for returns flows
+- `ff00510` feat(auth): harden refresh/session flow with strict typing and tests
+- `068a646` refactor(accounting): extract period service and add focused tests
+- `0318ad2` refactor(accounting): extract shared helpers to remove service cycle
+- `a6a70f0` refactor(accounting): extract reporting service and fix period DI wiring
+
+### KPI operativo (ultimo estado validado)
+
+- `sales-contract.spec.ts`: **12/12** passing.
+- `sales-returns.integration.spec.ts`: **3/3** passing.
+- `auth.service.spec.ts`: **7/7** passing.
+- `accounting-period.service.spec.ts`: **7/7** passing.
+- `accounting-reporting.service.spec.ts`: **5/5** passing.
+- `build` API/PWA/Desktop: **passing** en los ultimos ciclos.
+- `lint:ratchet`: **passing** (API por debajo del baseline configurado).
+
+### Estado de Sprint 4 (tracking secuencial)
+
+- **Sprint 4.1 (Auth hardening):** **✅ Cerrado**
+  - Refresh/session hardening implementado.
+  - Tipado estricto en controller/service.
+  - Evidencia: commit `ff00510`.
+- **Sprint 4.2 (Accounting period extraction):** **✅ Cerrado**
+  - Nuevo `AccountingPeriodService` con pruebas.
+  - Delegacion desde `AccountingService`.
+  - Evidencia: commit `068a646`.
+- **Sprint 4.3 (circular dependency removal):** **✅ Cerrado**
+  - Nuevo `AccountingSharedService`.
+  - Eliminado ciclo entre `AccountingService` y `AccountingPeriodService`.
+  - Evidencia: commit `0318ad2`.
+- **Sprint 4.4 (financial reporting extraction):** **✅ Cerrado**
+  - Nuevo `AccountingReportingService` y delegacion desde `AccountingService`.
+  - Fix robusto de inyeccion en `AccountingPeriodService` para evitar fallo runtime de Nest.
+  - Evidencia: commit `a6a70f0`.
+
+---
+
 ## 0) Vision: la propuesta que hace temblar la competencia
 
 **Velox POS Linea A** = un POS **offline-first real**, **auditado por eventos**, **multi-canal (PWA + Desktop + Android)** y con **inteligencia operativa** (prediccion + automatizacion) que entrega:
