@@ -43,7 +43,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly securityAudit: SecurityAuditService,
-  ) { }
+  ) {}
 
   /**
    * Lista pública de tiendas (solo id y nombre) para flujo de login
@@ -114,11 +114,11 @@ export class AuthController {
       userFromRequest: req.user,
       userFromDB: member
         ? {
-          user_id: member.user_id,
-          store_id: member.store_id,
-          role: member.role,
-          full_name: member.profile?.full_name,
-        }
+            user_id: member.user_id,
+            store_id: member.store_id,
+            role: member.role,
+            full_name: member.profile?.full_name,
+          }
         : null,
       comparison: {
         roleInToken,
@@ -135,7 +135,10 @@ export class AuthController {
   async createStore(
     @Body() dto: CreateStoreDto,
     @Req() req: RequestWithUser,
-  ): Promise<{ store: { id: string; name: string }; member: { role: string } }> {
+  ): Promise<{
+    store: { id: string; name: string };
+    member: { role: string };
+  }> {
     // TODO: En producción, obtener userId del token JWT
     // Por ahora usamos un UUID temporal para desarrollo
     const ownerUserId = req.user?.sub || '00000000-0000-0000-0000-000000000001';
@@ -170,7 +173,8 @@ export class AuthController {
     license_grace_days: number;
     trial_days_remaining: number;
   }> {
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(`Intento de registro para tienda: ${dto.store_name}`);
@@ -255,7 +259,8 @@ export class AuthController {
     @Body() dto: ForgotPinDto,
     @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(
@@ -307,7 +312,8 @@ export class AuthController {
     @Body() dto: ResetPinDto,
     @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log('Intento de restablecimiento de PIN');
@@ -373,13 +379,15 @@ export class AuthController {
       pin: String(body.pin).trim(),
     };
 
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(`Intento de login para tienda: ${dto.store_id}`);
 
     try {
-      const deviceId = body.device_id || (req.headers['x-device-id'] as string) || null;
+      const deviceId =
+        body.device_id || (req.headers['x-device-id'] as string) || null;
       const result = await this.authService.login(dto, deviceId, ipAddress);
 
       // ✅ Registrar login exitoso
@@ -428,7 +436,8 @@ export class AuthController {
     @Body() dto: RefreshTokenDto,
     @Req() req: Request,
   ): Promise<RefreshTokenResponseDto> {
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     if (!dto.refresh_token) {
@@ -460,12 +469,17 @@ export class AuthController {
       });
 
       // Ensure we re-throw specific exceptions related to auth
-      if (error instanceof ForbiddenException || error instanceof UnauthorizedException) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof UnauthorizedException
+      ) {
         throw error;
       }
 
       // Wrap other errors
-      this.logger.error(`Refresh token error: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Refresh token error: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw new UnauthorizedException('Could not refresh token');
     }
   }
@@ -478,7 +492,8 @@ export class AuthController {
     @Req() req: RequestWithUser,
   ): Promise<{ message: string }> {
     const user = req.user;
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
 
     if (body.refresh_token) {
       // Revocar refresh token específico

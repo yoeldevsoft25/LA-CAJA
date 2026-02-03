@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BullModule } from '@nestjs/bullmq';
-import { QueuesModule } from '../queues/queues.module';
 import { SyncController } from './sync.controller';
 import { SyncService } from './sync.service';
 import { VectorClockService } from './vector-clock.service';
@@ -13,6 +11,8 @@ import { Product } from '../database/entities/product.entity';
 import { CashSession } from '../database/entities/cash-session.entity';
 import { DiscountsModule } from '../discounts/discounts.module';
 import { LicensesModule } from '../licenses/licenses.module';
+import { ObservabilityModule } from '../observability/observability.module';
+import { QueuesModule } from '../queues/queues.module';
 
 @Module({
   imports: [
@@ -21,6 +21,7 @@ import { LicensesModule } from '../licenses/licenses.module';
     DiscountsModule,
     QueuesModule,
     LicensesModule,
+    ObservabilityModule,
   ],
   controllers: [SyncController],
   providers: [
@@ -29,11 +30,6 @@ import { LicensesModule } from '../licenses/licenses.module';
     CRDTService,
     ConflictResolutionService,
   ],
-  exports: [
-    SyncService,
-    VectorClockService,
-    CRDTService,
-    ConflictResolutionService,
-  ],
+  exports: [SyncService],
 })
-export class SyncModule {}
+export class SyncModule { }

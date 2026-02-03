@@ -25,7 +25,7 @@ export class SalesReturnDomainService {
     private readonly validationService: SalesReturnValidationService,
     private readonly inventoryService: SalesReturnInventoryService,
     private readonly financialService: SalesReturnFinancialService,
-  ) { }
+  ) {}
 
   private async getReturnedQtyMap(
     manager: EntityManager,
@@ -33,14 +33,14 @@ export class SalesReturnDomainService {
   ): Promise<Map<string, number>> {
     const existingReturns = saleItemIds.length
       ? await manager
-        .createQueryBuilder(SaleReturnItem, 'return_item')
-        .select('return_item.sale_item_id', 'sale_item_id')
-        .addSelect('SUM(return_item.qty)', 'returned_qty')
-        .where('return_item.sale_item_id IN (:...saleItemIds)', {
-          saleItemIds,
-        })
-        .groupBy('return_item.sale_item_id')
-        .getRawMany()
+          .createQueryBuilder(SaleReturnItem, 'return_item')
+          .select('return_item.sale_item_id', 'sale_item_id')
+          .addSelect('SUM(return_item.qty)', 'returned_qty')
+          .where('return_item.sale_item_id IN (:...saleItemIds)', {
+            saleItemIds,
+          })
+          .groupBy('return_item.sale_item_id')
+          .getRawMany()
       : [];
 
     const returnedQtyByItem = new Map<string, number>();

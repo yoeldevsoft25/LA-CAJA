@@ -5,6 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Store } from './store.entity';
 
@@ -49,9 +51,9 @@ export class Customer {
   @Column({ type: 'timestamptz', nullable: true })
   debt_cutoff_at: Date | null;
 
-  @Column({ type: 'timestamptz', default: () => 'NOW()' })
+  @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @Column({ type: 'timestamptz', default: () => 'NOW()' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }

@@ -18,6 +18,7 @@ import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
 import { createLogger } from '@/lib/logger';
 import { projectionManager } from './projection.manager';
+import toast from '@/lib/toast';
 
 export interface PushSyncDto {
   store_id: string;
@@ -652,7 +653,7 @@ class SyncServiceClass {
 
       // Marcar eventos aceptados como sincronizados
       if (response.data.accepted.length > 0) {
-        const acceptedIds = response.data.accepted.map((a) => a.event_id);
+        const acceptedIds = response.data.accepted.map((a: { event_id: string }) => a.event_id);
         await this.markEventsAsSynced(acceptedIds);
         this.syncQueue?.markAsSynced(acceptedIds);
 
@@ -729,10 +730,12 @@ class SyncServiceClass {
     requires_manual_review: boolean;
     conflicting_with?: string[];
   }): Promise<void> {
-    this.logger.warn('Conflicto detectado', { conflict_id: conflict.conflict_id, event_id: conflict.event_id, reason: conflict.reason });
-
-    // Marcar evento como en conflicto en la cola
-    this.syncQueue?.markAsConflict([conflict.event_id]);
+    // ✅ SPRINT 6.1B: Telemetría de UX
+    this.recordUXTelemetry('conflict_detected', {
+      conflict_id: conflict.conflict_id,
+      event_id: conflict.event_id,
+      reason: conflict.reason
+    });
 
     // Guardar conflicto en IndexedDB para mostrar en UI
     try {
@@ -749,11 +752,32 @@ class SyncServiceClass {
       this.logger.error('Error guardando conflicto en DB', error);
     }
 
-    // TODO: Mostrar notificación al usuario si requires_manual_review === true
+    // 🔔 SPRINT 6.1B: Notificación mejorada para el usuario
     if (conflict.requires_manual_review) {
       this.logger.warn('Conflicto requiere resolución manual', { conflict_id: conflict.conflict_id });
-      // Ejemplo: toast.warning('Conflicto detectado', { action: { label: 'Resolver', onClick: () => navigate('/conflicts') } })
+
+      toast.error('Conflicto Crítico Detectado', {
+        description: 'Se requiere tu intervención para resolver una discrepancia de datos.',
+        duration: 8000,
+        action: {
+          label: 'Revisar Ahora',
+          onClick: () => {
+            // Esto asume que window.location.href o similar se puede usar para navegar
+            // o que hay un evento global de navegación.
+            window.dispatchEvent(new CustomEvent('app:navigate', { detail: '/app/conflicts' }));
+          }
+        }
+      });
     }
+  }
+
+  /**
+   * ✅ SPRINT 6.1B: Helper para telemetría de UX
+   */
+  private recordUXTelemetry(event: string, metadata: Record<string, any> = {}): void {
+    this.logger.info(`[UX Telemetry] ${event}`, metadata);
+    // En una implementación real, esto se enviaría a Sentry, Mixpanel, etc.
+    // analytics.track(event, { ...metadata, platform: 'pwa', version: '1.0.0' });
   }
 
   /**

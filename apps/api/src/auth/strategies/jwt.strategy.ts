@@ -24,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!jwtSecret) {
       throw new Error(
         'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-        'En producción, esto es obligatorio por seguridad.',
+          'En producción, esto es obligatorio por seguridad.',
       );
     }
 

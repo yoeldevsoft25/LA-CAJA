@@ -62,7 +62,7 @@ export class AuthService {
     private emailService: EmailService,
     private usageService: UsageService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;
@@ -613,10 +613,7 @@ export class AuthService {
     } catch (error: unknown) {
       // Si la tabla no existe, continuar sin verificar 2FA
       const err = error as { code?: string; message?: string };
-      if (
-        err?.code === '42P01' ||
-        err?.message?.includes('does not exist')
-      ) {
+      if (err?.code === '42P01' || err?.message?.includes('does not exist')) {
         this.logger.warn(
           `Tabla two_factor_auth no existe.Migración 55 pendiente.Continuando sin verificar 2FA.`,
         );
@@ -1457,10 +1454,7 @@ export class AuthService {
       });
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-      if (
-        err?.code === '42P01' ||
-        err?.message?.includes('does not exist')
-      ) {
+      if (err?.code === '42P01' || err?.message?.includes('does not exist')) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1486,10 +1480,7 @@ export class AuthService {
       await this.twoFactorAuthRepository.save(twoFactor);
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-      if (
-        err?.code === '42P01' ||
-        err?.message?.includes('does not exist')
-      ) {
+      if (err?.code === '42P01' || err?.message?.includes('does not exist')) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1522,10 +1513,7 @@ export class AuthService {
       });
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-      if (
-        err?.code === '42P01' ||
-        err?.message?.includes('does not exist')
-      ) {
+      if (err?.code === '42P01' || err?.message?.includes('does not exist')) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1562,10 +1550,7 @@ export class AuthService {
       await this.twoFactorAuthRepository.save(twoFactor);
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-      if (
-        err?.code === '42P01' ||
-        err?.message?.includes('does not exist')
-      ) {
+      if (err?.code === '42P01' || err?.message?.includes('does not exist')) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1596,10 +1581,7 @@ export class AuthService {
       });
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
-      if (
-        err?.code === '42P01' ||
-        err?.message?.includes('does not exist')
-      ) {
+      if (err?.code === '42P01' || err?.message?.includes('does not exist')) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );

@@ -447,7 +447,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     private validator: CreateSaleValidator,
     @InjectQueue('sales-post-processing')
     private salesPostProcessingQueue: Queue,
-  ) { }
+  ) {}
 
   async execute(command: CreateSaleCommand): Promise<Sale> {
     const { storeId, dto, userId, userRole, returnMode } = command;
@@ -516,8 +516,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       debt?: DetailedDebt | null;
       items?: SaleItem[];
       fiscal_invoice?:
-      | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
-      | null;
+        | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
+        | null;
     };
 
     const result = await this.transactionWithRetry<SaleResponse>(
@@ -584,8 +584,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         const [allSerials, allLots] = await Promise.all([
           productsWithSerials.length > 0
             ? manager.find(ProductSerial, {
-              where: { product_id: In(productsWithSerials) },
-            })
+                where: { product_id: In(productsWithSerials) },
+              })
             : Promise.resolve([]),
           manager.find(ProductLot, {
             where: { product_id: In(productIds) },
@@ -759,20 +759,20 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
 
             const currentStock = warehouseId
               ? await this.validator.validateAndLockStock(
-                manager,
-                storeId,
-                warehouseId,
-                product.id,
-                variant?.id || null,
-                requestedQty,
-              )
+                  manager,
+                  storeId,
+                  warehouseId,
+                  product.id,
+                  variant?.id || null,
+                  requestedQty,
+                )
               : await this.validator.validateAndLockTotalStock(
-                manager,
-                storeId,
-                product.id,
-                variant?.id || null,
-                requestedQty,
-              );
+                  manager,
+                  storeId,
+                  product.id,
+                  variant?.id || null,
+                  requestedQty,
+                );
 
             if (currentStock < requestedQty) {
               const variantInfo = variant
@@ -1053,7 +1053,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         const splitSummary =
           dto.payment_method === 'SPLIT'
             ? dto.split ||
-            this.buildSplitSummary(dto.split_payments, dto.exchange_rate)
+              this.buildSplitSummary(dto.split_payments, dto.exchange_rate)
             : dto.split;
 
         // Validar método de pago según configuración de topes
@@ -1322,15 +1322,15 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           minimalSale.items = items;
           minimalSale.debt = debt
             ? {
-              id: debt.id,
-              status: debt.status,
-              amount_bs: Number(debt.amount_bs || 0),
-              amount_usd: Number(debt.amount_usd || 0),
-              total_paid_bs: 0,
-              total_paid_usd: 0,
-              remaining_bs: Number(debt.amount_bs || 0),
-              remaining_usd: Number(debt.amount_usd || 0),
-            }
+                id: debt.id,
+                status: debt.status,
+                amount_bs: Number(debt.amount_bs || 0),
+                amount_usd: Number(debt.amount_usd || 0),
+                total_paid_bs: 0,
+                total_paid_usd: 0,
+                remaining_bs: Number(debt.amount_bs || 0),
+                remaining_usd: Number(debt.amount_usd || 0),
+              }
             : null;
           minimalSale.fiscal_invoice = null;
           return minimalSale;
@@ -1377,8 +1377,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         type SaleWithDetailedDebt = Sale & {
           debt?: DetailedDebt | null;
           fiscal_invoice?:
-          | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
-          | null;
+            | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
+            | null;
         };
 
         const saleWithDetailedDebt = savedSaleWithItems as SaleWithDetailedDebt;

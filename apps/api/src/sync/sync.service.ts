@@ -21,6 +21,7 @@ import { ConflictResolutionService } from './conflict-resolution.service';
 import * as crypto from 'crypto';
 import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { UsageService } from '../licenses/usage.service';
+import { SyncMetricsService } from '../observability/services/sync-metrics.service';
 
 interface SyncEventActor {
   user_id: string;
@@ -125,7 +126,8 @@ export class SyncService {
     private usageService: UsageService,
     @InjectQueue('sales-projections')
     private salesProjectionQueue: Queue,
-  ) {}
+    private metricsService: SyncMetricsService,
+  ) { }
 
   async push(
     dto: PushSyncDto,
@@ -135,6 +137,7 @@ export class SyncService {
     const rejected: RejectedEventDto[] = [];
     const conflicted: ConflictedEventDto[] = [];
     let lastProcessedSeq = 0;
+    const startTime = Date.now();
 
     if (!dto.events || dto.events.length === 0) {
       return {
@@ -412,10 +415,19 @@ export class SyncService {
       }
     }
 
+    const durationMs = Date.now() - startTime;
+
     // 9. Log de métricas
     this.logger.log(
-      `Sync completed: ${accepted.length} accepted, ${rejected.length} rejected, ${conflicted.length} conflicted`,
+      `Sync completed: ${accepted.length} accepted, ${rejected.length} rejected, ${conflicted.length} conflicted in ${durationMs}ms`,
     );
+
+    this.metricsService.trackSyncProcessed(dto.store_id, {
+      accepted: accepted.length,
+      rejected: rejected.length,
+      conflicted: conflicted.length,
+      durationMs,
+    });
 
     return {
       accepted,
@@ -653,9 +665,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedSubtotalBs - Number(payload.totals.subtotal_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedSubtotalUsd - Number(payload.totals.subtotal_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,
@@ -666,9 +678,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedDiscountBs - Number(payload.totals.discount_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedDiscountUsd - Number(payload.totals.discount_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,
@@ -679,9 +691,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedTotalBs - Number(payload.totals.total_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedTotalUsd - Number(payload.totals.total_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,

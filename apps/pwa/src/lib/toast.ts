@@ -10,6 +10,11 @@ type ToastOptions = {
   icon?: string | React.ReactNode
   id?: string
   style?: React.CSSProperties
+  description?: string | React.ReactNode
+  action?: {
+    label: string
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => void
+  }
 }
 
 type ToastFunction = {
@@ -21,7 +26,7 @@ type ToastFunction = {
   dismiss: (toastId?: string | number) => void
   dismissAll: () => void
   loading: (message: string, options?: ToastOptions) => string | number
-  promise: <T,>(
+  promise: <T, >(
     promise: Promise<T>,
     messages: {
       loading: string
@@ -39,6 +44,8 @@ const toastFunction: ToastFunction = ((message: string, options?: ToastOptions) 
   return sonnerToast(message, {
     duration,
     id: options?.id,
+    description: options?.description,
+    action: options?.action,
   })
 }) as ToastFunction
 
@@ -50,6 +57,8 @@ toastFunction.success = (message: string, options?: ToastOptions) => {
   return sonnerToast.success(message, {
     duration,
     id: options?.id,
+    description: options?.description,
+    action: options?.action,
   })
 }
 
@@ -58,6 +67,8 @@ toastFunction.error = (message: string, options?: ToastOptions) => {
   return sonnerToast.error(message, {
     duration,
     id: options?.id,
+    description: options?.description,
+    action: options?.action,
   })
 }
 
