@@ -304,13 +304,7 @@ export class DashboardService {
         .addSelect(
           `CASE
             WHEN product.is_weight_product = true THEN
-              CASE
-                WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
-                  SUM(lot.remaining_quantity * lot.unit_cost_bs) / NULLIF(SUM(lot.remaining_quantity), 0),
-                  COALESCE(product.cost_per_weight_bs, ${perWeightFallbackBs})
-                )
-                ELSE COALESCE(product.cost_per_weight_bs, ${perWeightFallbackBs})
-              END
+              COALESCE(product.cost_per_weight_bs, ${perWeightFallbackBs})
             ELSE
               CASE
                 WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
@@ -325,13 +319,7 @@ export class DashboardService {
         .addSelect(
           `CASE
             WHEN product.is_weight_product = true THEN
-              CASE
-                WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
-                  SUM(lot.remaining_quantity * lot.unit_cost_usd) / NULLIF(SUM(lot.remaining_quantity), 0),
-                  COALESCE(product.cost_per_weight_usd, ${perWeightFallbackUsd})
-                )
-                ELSE COALESCE(product.cost_per_weight_usd, ${perWeightFallbackUsd})
-              END
+              COALESCE(product.cost_per_weight_usd, ${perWeightFallbackUsd})
             ELSE
               CASE
                 WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
