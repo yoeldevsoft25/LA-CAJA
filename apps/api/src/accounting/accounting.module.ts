@@ -6,6 +6,7 @@ import { AccountingExportService } from './accounting-export.service';
 import { AccountingPeriodService } from './accounting-period.service';
 import { AccountingController } from './accounting.controller';
 import { AccountingSharedService } from './accounting-shared.service';
+import { AccountingReportingService } from './accounting-reporting.service';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
 import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
@@ -49,6 +50,7 @@ import { LicensesModule } from '../licenses/licenses.module';
     AccountingService,
     AccountingPeriodService,
     AccountingSharedService,
+    AccountingReportingService,
     ChartOfAccountsService,
     AccountingExportService,
   ],

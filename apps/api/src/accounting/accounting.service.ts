@@ -36,6 +36,7 @@ import {
 } from './accounting-advanced-algorithms';
 import { AccountingPeriodService } from './accounting-period.service';
 import { AccountingSharedService } from './accounting-shared.service';
+import { AccountingReportingService } from './accounting-reporting.service';
 
 @Injectable()
 export class AccountingService {
@@ -77,6 +78,7 @@ export class AccountingService {
     @InjectRepository(AccountingPeriod)
     private periodRepository: Repository<AccountingPeriod>,
     private sharedService: AccountingSharedService,
+    private reportingService: AccountingReportingService,
     @Inject(forwardRef(() => AccountingPeriodService))
     private periodService: AccountingPeriodService,
   ) {}
@@ -3154,7 +3156,7 @@ export class AccountingService {
     periodEnd: Date,
     userId: string,
     note?: string,
-  ): Promise<{ period: AccountingPeriod; closingEntry: JournalEntry }> {
+  ): Promise<{ period: AccountingPeriod; closingEntry: JournalEntry | null }> {
     return this.periodService.closePeriod(
       storeId,
       periodStart,

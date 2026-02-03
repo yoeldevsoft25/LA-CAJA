@@ -67,7 +67,6 @@ export class AccountingExportService {
       });
 
       let filePath: string;
-      let fileSize: number;
 
       switch (dto.export_type) {
         case 'csv':
@@ -89,7 +88,7 @@ export class AccountingExportService {
       }
 
       const stats = fs.statSync(filePath);
-      fileSize = stats.size;
+      const fileSize = stats.size;
 
       const totalAmountBs = entries.reduce(
         (sum, e) => sum + Number(e.total_debit_bs),

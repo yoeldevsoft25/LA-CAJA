@@ -6,10 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  ChartOfAccount,
-  AccountType,
-} from '../database/entities/chart-of-accounts.entity';
+import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
 import { AccountingAccountMapping } from '../database/entities/accounting-account-mapping.entity';
 import { CreateAccountDto } from './dto/create-account.dto';
 import {

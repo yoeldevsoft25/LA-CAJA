@@ -13,8 +13,8 @@ import {
 import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
-import { AccountingService } from './accounting.service';
 import { AccountingSharedService } from './accounting-shared.service';
+import { AccountingReportingService } from './accounting-reporting.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -31,7 +31,7 @@ export class AccountingPeriodService {
     @InjectRepository(ChartOfAccount)
     private accountRepository: Repository<ChartOfAccount>,
     private sharedService: AccountingSharedService,
-    private accountingService: AccountingService,
+    private reportingService: AccountingReportingService,
   ) {}
 
   /**
@@ -101,7 +101,7 @@ export class AccountingPeriodService {
     periodEnd: Date,
     userId: string,
     note?: string,
-  ): Promise<{ period: AccountingPeriod; closingEntry: JournalEntry }> {
+  ): Promise<{ period: AccountingPeriod; closingEntry: JournalEntry | null }> {
     const period = await this.getOrCreatePeriod(
       storeId,
       periodStart,
@@ -117,8 +117,8 @@ export class AccountingPeriodService {
       );
     }
 
-    // Obtener Estado de Resultados del período vía AccountingService
-    const incomeStatement = await this.accountingService.getIncomeStatement(
+    // Obtener Estado de Resultados del período vía AccountingReportingService
+    const incomeStatement = await this.reportingService.getIncomeStatement(
       storeId,
       periodStart,
       periodEnd,
@@ -137,7 +137,7 @@ export class AccountingPeriodService {
       // Retornar sin asiento de cierre
       return {
         period,
-        closingEntry: null as any, // No hay asiento porque no hay utilidad
+        closingEntry: null, // No hay asiento porque no hay utilidad
       };
     }
 

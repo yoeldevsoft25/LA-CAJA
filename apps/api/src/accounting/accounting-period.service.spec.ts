@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountingPeriodService } from './accounting-period.service';
-import { AccountingService } from './accounting.service';
+import { AccountingReportingService } from './accounting-reporting.service';
 import { AccountingSharedService } from './accounting-shared.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
@@ -19,7 +19,7 @@ const mockRepository = () => ({
     find: jest.fn(),
 });
 
-const mockAccountingService = () => ({
+const mockAccountingReportingService = () => ({
     getIncomeStatement: jest.fn(),
 });
 
@@ -34,13 +34,16 @@ describe('AccountingPeriodService', () => {
     let periodRepository: any;
     let journalEntryRepository: any;
     let accountRepository: any;
-    let accountingService: any;
+    let accountingReportingService: { getIncomeStatement: jest.Mock };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 AccountingPeriodService,
-                { provide: AccountingService, useFactory: mockAccountingService },
+                {
+                    provide: AccountingReportingService,
+                    useFactory: mockAccountingReportingService,
+                },
                 {
                     provide: AccountingSharedService,
                     useFactory: mockAccountingSharedService,
@@ -68,7 +71,7 @@ describe('AccountingPeriodService', () => {
         periodRepository = module.get(getRepositoryToken(AccountingPeriod));
         journalEntryRepository = module.get(getRepositoryToken(JournalEntry));
         accountRepository = module.get(getRepositoryToken(ChartOfAccount));
-        accountingService = module.get(AccountingService);
+        accountingReportingService = module.get(AccountingReportingService);
     });
 
     it('should be defined', () => {
@@ -120,7 +123,7 @@ describe('AccountingPeriodService', () => {
 
         it('should close period without entry if no income', async () => {
             periodRepository.findOne.mockResolvedValue({ status: AccountingPeriodStatus.OPEN });
-            accountingService.getIncomeStatement.mockResolvedValue({
+            accountingReportingService.getIncomeStatement.mockResolvedValue({
                 totals: { net_income_bs: 0, net_income_usd: 0 },
             });
 
