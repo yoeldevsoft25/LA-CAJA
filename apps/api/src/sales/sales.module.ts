@@ -33,6 +33,7 @@ import { ProjectionsModule } from '../projections/projections.module';
 import { LicensesModule } from '../licenses/licenses.module';
 import { SalesProjectionQueueProcessor } from './queues/sales-projection.queue';
 import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processing.queue';
+import { SalesReturnDomainService } from './domain/services/sales-return-domain.service';
 
 import { CqrsModule } from '@nestjs/cqrs';
 import { GetSaleByIdHandler } from './application/queries/get-sale-by-id/get-sale-by-id.handler';
@@ -82,6 +83,7 @@ import { ReturnSaleHandler } from './application/commands/return-sale/return-sal
     SalesService,
     SalesProjectionQueueProcessor,
     SalesPostProcessingQueueProcessor,
+    SalesReturnDomainService,
     GetSaleByIdHandler,
     CreateSaleHandler,
     CreateSaleValidator,
