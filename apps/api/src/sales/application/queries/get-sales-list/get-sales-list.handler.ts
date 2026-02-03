@@ -52,9 +52,10 @@ export class GetSalesListHandler implements IQueryHandler<GetSalesListQuery> {
     }
 
     const total = await countQuery.getCount();
-
-    // Query para obtener ventas con relaciones
-    const whereConditions: any = { store_id: storeId };
+    const whereConditions: {
+      store_id: string;
+      sold_at?: import('typeorm').FindOperator<Date>;
+    } = { store_id: storeId };
 
     if (dateFrom && dateTo) {
       whereConditions.sold_at = Between(dateFrom, dateTo);
@@ -122,9 +123,9 @@ export class GetSalesListHandler implements IQueryHandler<GetSalesListQuery> {
     }
 
     // Asignar deudas a las ventas
+    type SaleWithDebt = Sale & { debt?: DebtWithCalculations | null };
     for (const sale of sales) {
-      (sale as Sale & { debt?: DebtWithCalculations | null }).debt =
-        debtsBySaleId.get(sale.id) || null;
+      (sale as SaleWithDebt).debt = debtsBySaleId.get(sale.id) || null;
     }
 
     // Asegurar que items siempre sea un array (incluso si está vacío)

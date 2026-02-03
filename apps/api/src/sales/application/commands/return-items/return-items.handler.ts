@@ -3,7 +3,10 @@ import { DataSource, EntityManager } from 'typeorm';
 import { BadRequestException, Logger } from '@nestjs/common';
 import { ReturnItemsCommand } from './return-items.command';
 import { SaleReturn } from '../../../../database/entities/sale-return.entity';
-import { SalesReturnDomainService, ReturnItemInput } from '../../../domain/services/sales-return-domain.service';
+import {
+  SalesReturnDomainService,
+  ReturnItemInput,
+} from '../../../domain/services/sales-return-domain.service';
 
 @CommandHandler(ReturnItemsCommand)
 export class ReturnItemsHandler implements ICommandHandler<ReturnItemsCommand> {
@@ -12,7 +15,7 @@ export class ReturnItemsHandler implements ICommandHandler<ReturnItemsCommand> {
   constructor(
     private readonly dataSource: DataSource,
     private readonly salesReturnDomainService: SalesReturnDomainService,
-  ) { }
+  ) {}
 
   async execute(command: ReturnItemsCommand): Promise<SaleReturn> {
     const { storeId, saleId, userId, dto } = command;
@@ -21,7 +24,7 @@ export class ReturnItemsHandler implements ICommandHandler<ReturnItemsCommand> {
       throw new BadRequestException('Debes especificar items a devolver');
     }
 
-    const itemsToProcess: ReturnItemInput[] = dto.items.map(item => ({
+    const itemsToProcess: ReturnItemInput[] = dto.items.map((item) => ({
       sale_item_id: item.sale_item_id,
       qty: item.qty,
       serial_ids: item.serial_ids,

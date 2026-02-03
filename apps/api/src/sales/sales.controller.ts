@@ -10,8 +10,6 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
-  UsePipes,
-  ValidationPipe,
   ForbiddenException,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
@@ -35,7 +33,7 @@ export class SalesController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateSaleDto,
-    @Request() req: any,
+    @Request() req: { user: { store_id: string; sub: string; role: string } },
     @Query('return') returnMode?: string,
   ) {
     // ⚠️ VALIDACIÓN CRÍTICA: Verificar que req.user existe y tiene los datos necesarios
@@ -79,7 +77,7 @@ export class SalesController {
     @Query('offset') offset: string,
     @Query('date_from') dateFrom: string,
     @Query('date_to') dateTo: string,
-    @Request() req: any,
+    @Request() req: { user: { store_id: string } },
   ) {
     const userStoreId = req.user.store_id;
 
@@ -137,7 +135,10 @@ export class SalesController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req: any) {
+  async findOne(
+    @Param('id') id: string,
+    @Request() req: { user: { store_id: string } },
+  ) {
     const storeId = req.user.store_id;
 
     // Validar que storeId esté presente
@@ -162,7 +163,7 @@ export class SalesController {
   async voidSale(
     @Param('id') id: string,
     @Body() dto: VoidSaleDto,
-    @Request() req: any,
+    @Request() req: { user: { store_id: string; sub: string; role: string } },
   ) {
     if (req.user.role !== 'owner') {
       await this.securityAuditService.log({
@@ -204,7 +205,7 @@ export class SalesController {
   async returnSaleItems(
     @Param('id') id: string,
     @Body() dto: ReturnSaleDto,
-    @Request() req: any,
+    @Request() req: { user: { store_id: string; sub: string } },
   ) {
     const storeId = req.user.store_id;
     const userId = req.user.sub;

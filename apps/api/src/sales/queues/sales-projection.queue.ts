@@ -1,5 +1,5 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import { Logger, Inject } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Job } from 'bullmq';
@@ -45,7 +45,7 @@ export class SalesProjectionQueueProcessor extends WorkerHost {
     try {
       // ⚡ OPTIMIZACIÓN 2025: Early filtering - Verificar idempotencia antes de procesar
       // Esto evita trabajo innecesario si el evento ya fue procesado
-      const payload = event.payload as any;
+      const payload = event.payload as { sale_id?: string } | null;
       if (payload?.sale_id) {
         const existingSale = await this.saleRepository.findOne({
           where: { id: payload.sale_id, store_id: event.store_id },

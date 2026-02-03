@@ -34,6 +34,9 @@ import { LicensesModule } from '../licenses/licenses.module';
 import { SalesProjectionQueueProcessor } from './queues/sales-projection.queue';
 import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processing.queue';
 import { SalesReturnDomainService } from './domain/services/sales-return-domain.service';
+import { SalesReturnValidationService } from './domain/services/sales-return-validation.service';
+import { SalesReturnInventoryService } from './domain/services/sales-return-inventory.service';
+import { SalesReturnFinancialService } from './domain/services/sales-return-financial.service';
 
 import { CqrsModule } from '@nestjs/cqrs';
 import { GetSaleByIdHandler } from './application/queries/get-sale-by-id/get-sale-by-id.handler';
@@ -84,6 +87,9 @@ import { ReturnSaleHandler } from './application/commands/return-sale/return-sal
     SalesProjectionQueueProcessor,
     SalesPostProcessingQueueProcessor,
     SalesReturnDomainService,
+    SalesReturnValidationService,
+    SalesReturnInventoryService,
+    SalesReturnFinancialService,
     GetSaleByIdHandler,
     CreateSaleHandler,
     CreateSaleValidator,
@@ -94,4 +100,4 @@ import { ReturnSaleHandler } from './application/commands/return-sale/return-sal
   ],
   exports: [SalesService],
 })
-export class SalesModule { }
+export class SalesModule {}

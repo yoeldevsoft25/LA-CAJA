@@ -56,7 +56,24 @@ export class GetSaleByIdHandler implements IQueryHandler<GetSaleByIdQuery> {
     }
 
     // Agregar información de pagos si hay deuda (optimizado)
-    const saleWithDebt = sale as any;
+    interface DetailedDebt {
+      id: string;
+      status: string;
+      amount_bs: number;
+      amount_usd: number;
+      total_paid_bs?: number;
+      total_paid_usd?: number;
+      remaining_bs?: number;
+      remaining_usd?: number;
+    }
+    type SaleWithDetailedDebt = Sale & {
+      debt?: DetailedDebt | null;
+      fiscal_invoice?:
+        | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
+        | null;
+    };
+
+    const saleWithDebt = sale as SaleWithDetailedDebt;
     if (saleWithDebt.debt) {
       // Obtener pagos directamente sin cargar toda la relación
       const payments = await this.debtPaymentRepository.find({
@@ -65,11 +82,11 @@ export class GetSaleByIdHandler implements IQueryHandler<GetSaleByIdQuery> {
       });
 
       const totalPaidBs = payments.reduce(
-        (sum: number, p: any) => sum + Number(p.amount_bs || 0),
+        (sum, p) => sum + Number(p.amount_bs || 0),
         0,
       );
       const totalPaidUsd = payments.reduce(
-        (sum: number, p: any) => sum + Number(p.amount_usd || 0),
+        (sum, p) => sum + Number(p.amount_usd || 0),
         0,
       );
       saleWithDebt.debt.total_paid_bs = totalPaidBs;
@@ -86,11 +103,7 @@ export class GetSaleByIdHandler implements IQueryHandler<GetSaleByIdQuery> {
         storeId,
         saleId,
       );
-      if (fiscalInvoice) {
-        saleWithDebt.fiscal_invoice = fiscalInvoice;
-      } else {
-        saleWithDebt.fiscal_invoice = null;
-      }
+      saleWithDebt.fiscal_invoice = fiscalInvoice || null;
     } catch (error) {
       // Ignorar errores de factura fiscal para no bloquear la venta
       saleWithDebt.fiscal_invoice = null;
