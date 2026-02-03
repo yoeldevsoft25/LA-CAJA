@@ -26,7 +26,13 @@ export interface SendEmailOptions {
 }
 
 export interface EmailWebhookPayload {
-  type: 'email.sent' | 'email.delivered' | 'email.bounced' | 'email.complained' | 'email.opened' | 'email.clicked';
+  type:
+    | 'email.sent'
+    | 'email.delivered'
+    | 'email.bounced'
+    | 'email.complained'
+    | 'email.opened'
+    | 'email.clicked';
   created_at: string;
   data: {
     email_id: string;
@@ -57,24 +63,39 @@ export class EmailService {
       this.logger.debug('--- EMAIL SERVICE DEBUG ---');
       this.logger.debug(`RESEND_API_KEY present: ${!!resendApiKey}`);
       if (resendApiKey) {
-        this.logger.debug(`RESEND_API_KEY prefix: ${resendApiKey.substring(0, 3)}`);
-        this.logger.debug(`Is Default/Placeholder? ${resendApiKey.includes('YOUR_RESEND_API_KEY')}`);
+        this.logger.debug(
+          `RESEND_API_KEY prefix: ${resendApiKey.substring(0, 3)}`,
+        );
+        this.logger.debug(
+          `Is Default/Placeholder? ${resendApiKey.includes('YOUR_RESEND_API_KEY')}`,
+        );
       }
-      this.logger.debug(`EMAIL_FROM config: ${this.configService.get<string>('EMAIL_FROM')}`);
+      this.logger.debug(
+        `EMAIL_FROM config: ${this.configService.get<string>('EMAIL_FROM')}`,
+      );
       this.logger.debug('---------------------------');
     }
 
-    if (resendApiKey && resendApiKey !== 're_123456789_YOUR_RESEND_API_KEY_HERE') {
+    if (
+      resendApiKey &&
+      resendApiKey !== 're_123456789_YOUR_RESEND_API_KEY_HERE'
+    ) {
       try {
         this.resend = new Resend(resendApiKey);
-        this.logger.log(`✅ Resend Email Service initialized with API key: ${resendApiKey.substring(0, 10)}...`);
+        this.logger.log(
+          `✅ Resend Email Service initialized with API key: ${resendApiKey.substring(0, 10)}...`,
+        );
       } catch (error) {
         this.logger.error('❌ Failed to initialize Resend:', error);
         this.resend = null;
       }
     } else {
-      this.logger.warn('⚠️ RESEND_API_KEY not configured or using placeholder - email sending disabled');
-      this.logger.warn('   Configure RESEND_API_KEY in environment variables to enable email sending');
+      this.logger.warn(
+        '⚠️ RESEND_API_KEY not configured or using placeholder - email sending disabled',
+      );
+      this.logger.warn(
+        '   Configure RESEND_API_KEY in environment variables to enable email sending',
+      );
     }
 
     // Usar dominio de testing de Resend por defecto (no requiere verificación)
@@ -84,8 +105,12 @@ export class EmailService {
     this.defaultFromName =
       this.configService.get<string>('EMAIL_FROM_NAME') || 'Velox POS';
 
-    this.logger.log(`📧 Email default FROM: ${this.defaultFromName} <${this.defaultFrom}>`);
-    this.logger.log(`   Using Resend domain for testing (change EMAIL_FROM for production)`);
+    this.logger.log(
+      `📧 Email default FROM: ${this.defaultFromName} <${this.defaultFrom}>`,
+    );
+    this.logger.log(
+      `   Using Resend domain for testing (change EMAIL_FROM for production)`,
+    );
   }
 
   /**
@@ -94,7 +119,9 @@ export class EmailService {
   isAvailable(): boolean {
     const available = this.resend !== null;
     if (!available) {
-      this.logger.warn('📧 Email service is not available (RESEND_API_KEY not configured or invalid)');
+      this.logger.warn(
+        '📧 Email service is not available (RESEND_API_KEY not configured or invalid)',
+      );
     }
     return available;
   }
@@ -148,11 +175,15 @@ export class EmailService {
       }
 
       const fromAddress = `${finalFromName} <${finalFromEmail}>`;
-      this.logger.log(`📤 Attempting to send email via Resend: ${options.to} from ${fromAddress}`);
+      this.logger.log(
+        `📤 Attempting to send email via Resend: ${options.to} from ${fromAddress}`,
+      );
 
       // Log extra si hubo override
       if (finalFromEmail !== queueEntry.from_email) {
-        this.logger.log(`   (Overridden stale FROM: ${queueEntry.from_email} -> ${finalFromEmail})`);
+        this.logger.log(
+          `   (Overridden stale FROM: ${queueEntry.from_email} -> ${finalFromEmail})`,
+        );
       }
 
       const result = await this.resend!.emails.send({
@@ -195,12 +226,18 @@ export class EmailService {
         });
       }
 
-      this.logger.log(`✅ Email sent successfully: ${emailId} (Resend ID: ${result.data?.id})`);
+      this.logger.log(
+        `✅ Email sent successfully: ${emailId} (Resend ID: ${result.data?.id})`,
+      );
       return emailId;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`❌ Failed to send email ${emailId}: ${errorMessage}`, errorStack);
+      this.logger.error(
+        `❌ Failed to send email ${emailId}: ${errorMessage}`,
+        errorStack,
+      );
 
       // Log detalle del error para debugging
       if (error instanceof Error) {
@@ -218,7 +255,8 @@ export class EmailService {
       if (queueEntry) {
         queueEntry.status = 'failed';
         queueEntry.failed_at = new Date();
-        queueEntry.error_message = error instanceof Error ? error.message : 'Unknown error';
+        queueEntry.error_message =
+          error instanceof Error ? error.message : 'Unknown error';
         await this.emailQueueRepository.save(queueEntry);
       }
 
@@ -296,8 +334,7 @@ export class EmailService {
 
         // ⚡ RATE LIMITING: Esperar 1.1 segundos entre envíos para respetar límite de Resend (2 req/s)
         // Esto previene errores 429 durante el procesamiento de lotes
-        await new Promise(resolve => setTimeout(resolve, 1100));
-
+        await new Promise((resolve) => setTimeout(resolve, 1100));
       } catch (error) {
         this.logger.error(`Failed to process email ${email.id}:`, error);
 
@@ -309,11 +346,12 @@ export class EmailService {
           email.failed_at = new Date();
         }
 
-        email.error_message = error instanceof Error ? error.message : 'Unknown error';
+        email.error_message =
+          error instanceof Error ? error.message : 'Unknown error';
         await this.emailQueueRepository.save(email);
 
         // Si fallamos por Rate Limit, esperar un poco más antes de seguir
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
 
@@ -361,7 +399,9 @@ export class EmailService {
             analytics.email_opened = true;
             if (analytics.delivered_at) {
               analytics.time_to_open_seconds = Math.floor(
-                (new Date(payload.created_at).getTime() - analytics.delivered_at.getTime()) / 1000,
+                (new Date(payload.created_at).getTime() -
+                  analytics.delivered_at.getTime()) /
+                  1000,
               );
             }
             break;
@@ -371,7 +411,9 @@ export class EmailService {
             analytics.email_clicked = true;
             if (analytics.delivered_at) {
               analytics.time_to_action_seconds = Math.floor(
-                (new Date(payload.created_at).getTime() - analytics.delivered_at.getTime()) / 1000,
+                (new Date(payload.created_at).getTime() -
+                  analytics.delivered_at.getTime()) /
+                  1000,
               );
             }
             break;
@@ -416,16 +458,22 @@ export class EmailService {
       .select('email.status', 'status')
       .addSelect('COUNT(*)', 'count')
       .where('email.store_id = :storeId', { storeId })
-      .andWhere('email.created_at >= NOW() - INTERVAL \'30 days\'')
+      .andWhere("email.created_at >= NOW() - INTERVAL '30 days'")
       .groupBy('email.status')
       .getRawMany();
 
     return {
-      pending: parseInt(stats.find((s) => s.status === 'pending')?.count || '0'),
-      sending: parseInt(stats.find((s) => s.status === 'sending')?.count || '0'),
+      pending: parseInt(
+        stats.find((s) => s.status === 'pending')?.count || '0',
+      ),
+      sending: parseInt(
+        stats.find((s) => s.status === 'sending')?.count || '0',
+      ),
       sent: parseInt(stats.find((s) => s.status === 'sent')?.count || '0'),
       failed: parseInt(stats.find((s) => s.status === 'failed')?.count || '0'),
-      bounced: parseInt(stats.find((s) => s.status === 'bounced')?.count || '0'),
+      bounced: parseInt(
+        stats.find((s) => s.status === 'bounced')?.count || '0',
+      ),
     };
   }
 

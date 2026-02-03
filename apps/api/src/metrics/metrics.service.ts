@@ -1,11 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import {
-  Counter,
-  Histogram,
-  Gauge,
-  Registry,
-  register,
-} from 'prom-client';
+import { Counter, Histogram, Gauge, Registry, register } from 'prom-client';
 
 @Injectable()
 export class MetricsService implements OnModuleInit {
@@ -158,7 +152,10 @@ export class MetricsService implements OnModuleInit {
     duration: number,
   ) {
     this.httpRequestsTotal.inc({ method, route });
-    this.httpRequestDuration.observe({ method, route, status: status.toString() }, duration);
+    this.httpRequestDuration.observe(
+      { method, route, status: status.toString() },
+      duration,
+    );
     this.httpRequestsByStatus.inc({ status: status.toString() });
     this.httpRequestsByEndpoint.inc({ endpoint: route });
   }
@@ -166,7 +163,12 @@ export class MetricsService implements OnModuleInit {
   /**
    * Registra una métrica de base de datos
    */
-  recordDbQuery(operation: string, table: string, duration: number, error?: Error) {
+  recordDbQuery(
+    operation: string,
+    table: string,
+    duration: number,
+    error?: Error,
+  ) {
     this.dbQueryDuration.observe({ operation, table }, duration);
     if (error) {
       this.dbQueryErrors.inc({ operation, table });
@@ -185,7 +187,11 @@ export class MetricsService implements OnModuleInit {
   /**
    * Registra una métrica de cola
    */
-  recordQueueJob(queue: string, status: 'completed' | 'failed' | 'active', duration?: number) {
+  recordQueueJob(
+    queue: string,
+    status: 'completed' | 'failed' | 'active',
+    duration?: number,
+  ) {
     this.queueJobsTotal.inc({ queue, status });
     if (status === 'failed') {
       this.queueJobsFailed.inc({ queue });

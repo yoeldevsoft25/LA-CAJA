@@ -32,4 +32,4 @@ import { RecipesModule } from '../recipes/recipes.module';
   providers: [MenuService, PublicOrdersService],
   exports: [MenuService],
 })
-export class MenuModule { }
+export class MenuModule {}

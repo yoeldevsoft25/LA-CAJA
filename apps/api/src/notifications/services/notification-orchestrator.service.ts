@@ -105,7 +105,8 @@ export class NotificationOrchestratorService {
   async createNotificationFromInsight(
     options: CreateMLNotificationOptions,
   ): Promise<Notification> {
-    const { mlInsight, templateKey, targetRoles, targetUsers, language } = options;
+    const { mlInsight, templateKey, targetRoles, targetUsers, language } =
+      options;
 
     this.logger.log(
       `Creating notification for insight ${mlInsight.id} (${mlInsight.insight_type})`,
@@ -142,7 +143,8 @@ export class NotificationOrchestratorService {
     );
 
     // Determinar canales de entrega
-    const channels = options.forceChannels || this.getChannelsForInsight(mlInsight);
+    const channels =
+      options.forceChannels || this.getChannelsForInsight(mlInsight);
 
     // Determinar prioridad
     const priority = this.getPriorityFromSeverity(mlInsight.severity);
@@ -256,18 +258,24 @@ export class NotificationOrchestratorService {
     htmlBody: string,
   ): Promise<void> {
     if (!user.email) {
-      this.logger.warn(`⚠️ Cannot send email for notification ${notification.id}: user ${user.id} has no email`);
+      this.logger.warn(
+        `⚠️ Cannot send email for notification ${notification.id}: user ${user.id} has no email`,
+      );
       return;
     }
 
     if (!this.emailService.isAvailable()) {
-      this.logger.warn(`⚠️ Cannot send email for notification ${notification.id}: email service not available`);
+      this.logger.warn(
+        `⚠️ Cannot send email for notification ${notification.id}: email service not available`,
+      );
       return;
     }
 
     try {
-      this.logger.log(`📧 Sending email notification ${notification.id} to ${user.email}`);
-      
+      this.logger.log(
+        `📧 Sending email notification ${notification.id} to ${user.email}`,
+      );
+
       await this.emailService.sendEmail({
         storeId: notification.store_id,
         notificationId: notification.id,
@@ -277,7 +285,8 @@ export class NotificationOrchestratorService {
         htmlBody,
         textBody: notification.message,
         templateId: (notification.metadata as any)?.template_id || undefined,
-        templateVariables: (notification.metadata as any)?.template_variables || undefined,
+        templateVariables:
+          (notification.metadata as any)?.template_variables || undefined,
         priority: this.getPriorityScore(notification.priority),
       });
 
@@ -303,7 +312,9 @@ export class NotificationOrchestratorService {
     try {
       // TODO: Implement push notification delivery
       // The NotificationsService needs to expose a public method for this
-      this.logger.log(`Push notification ${notification.id} delivery skipped (not implemented yet)`);
+      this.logger.log(
+        `Push notification ${notification.id} delivery skipped (not implemented yet)`,
+      );
     } catch (error) {
       this.logger.error(`Failed to send push notification:`, error);
     }
@@ -503,7 +514,7 @@ export class NotificationOrchestratorService {
     const insights = await this.mlInsightRepository
       .createQueryBuilder('insight')
       .where('insight.store_id = :storeId', { storeId })
-      .andWhere('insight.created_at >= NOW() - INTERVAL \'24 hours\'')
+      .andWhere("insight.created_at >= NOW() - INTERVAL '24 hours'")
       .andWhere('insight.is_resolved = false')
       .orderBy('insight.priority', 'DESC')
       .limit(10)
@@ -615,15 +626,21 @@ export class NotificationOrchestratorService {
       .andWhere('insight.created_at <= :endDate', { endDate })
       .getMany();
 
-    const anomalyCount = insights.filter((i) => i.insight_type === 'anomaly').length;
+    const anomalyCount = insights.filter(
+      (i) => i.insight_type === 'anomaly',
+    ).length;
     const recommendationCount = insights.filter((i) =>
       ['recommendation', 'opportunity'].includes(i.insight_type),
     ).length;
-    const criticalCount = insights.filter((i) => i.severity === 'critical').length;
+    const criticalCount = insights.filter(
+      (i) => i.severity === 'critical',
+    ).length;
     const highCount = insights.filter((i) => i.severity === 'high').length;
 
     const topProductsSummary = topProducts.map((p) => {
-      const quantity = p.is_weight_product ? p.quantity_sold_kg : p.quantity_sold_units;
+      const quantity = p.is_weight_product
+        ? p.quantity_sold_kg
+        : p.quantity_sold_units;
       return {
         name: p.product_name,
         quantity: Number(quantity || 0),

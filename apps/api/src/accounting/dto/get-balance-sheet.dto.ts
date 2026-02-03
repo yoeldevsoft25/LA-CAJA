@@ -5,13 +5,3 @@ export class GetBalanceSheetDto {
   @IsDateString()
   as_of_date?: string; // Fecha de corte (default: hoy)
 }
-
-
-
-
-
-
-
-
-
-

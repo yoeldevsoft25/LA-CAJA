@@ -3,13 +3,13 @@ import { BullModule } from '@nestjs/bullmq';
 
 @Global()
 @Module({
-    imports: [
-        BullModule.registerQueue(
-            { name: 'notifications' },
-            { name: 'sales-projections' },
-            { name: 'sales-post-processing' },
-        ),
-    ],
-    exports: [BullModule],
+  imports: [
+    BullModule.registerQueue(
+      { name: 'notifications' },
+      { name: 'sales-projections' },
+      { name: 'sales-post-processing' },
+    ),
+  ],
+  exports: [BullModule],
 })
-export class QueuesModule { }
+export class QueuesModule {}

@@ -30,4 +30,4 @@ import { RealTimeAnalyticsModule } from '../realtime-analytics/realtime-analytic
   providers: [SetupService],
   exports: [SetupService],
 })
-export class SetupModule { }
+export class SetupModule {}

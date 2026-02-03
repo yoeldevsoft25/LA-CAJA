@@ -28,14 +28,14 @@ export const wsCorsOptions = {
     const allowedOrigins = process.env.ALLOWED_ORIGINS;
     const baseOrigins = allowedOrigins
       ? allowedOrigins
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean)
+          .split(',')
+          .map((o) => o.trim())
+          .filter(Boolean)
       : [
-        'http://localhost:5173',
-        'http://localhost:4173',
-        'http://localhost:3000',
-      ];
+          'http://localhost:5173',
+          'http://localhost:4173',
+          'http://localhost:3000',
+        ];
 
     const extraOrigins = [
       process.env.PUBLIC_APP_URL,
@@ -49,7 +49,9 @@ export const wsCorsOptions = {
       return callback(null, true);
     }
 
-    logger.warn(`CORS blocked for websocket origin: ${origin}. Allowed: ${origins.join(', ')}`);
+    logger.warn(
+      `CORS blocked for websocket origin: ${origin}. Allowed: ${origins.join(', ')}`,
+    );
     return callback(new Error('CORS not allowed'));
   },
   credentials: true,

@@ -11,4 +11,4 @@ import { LicensesModule } from '../licenses/licenses.module';
   providers: [FiscalConfigsService],
   exports: [FiscalConfigsService],
 })
-export class FiscalConfigsModule { }
+export class FiscalConfigsModule {}

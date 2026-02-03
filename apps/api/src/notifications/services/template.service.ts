@@ -136,7 +136,10 @@ export class TemplateService {
       .andWhere('template.is_active = true');
 
     if (storeId) {
-      query.andWhere('(template.store_id = :storeId OR template.store_id IS NULL)', { storeId });
+      query.andWhere(
+        '(template.store_id = :storeId OR template.store_id IS NULL)',
+        { storeId },
+      );
       query.orderBy('template.store_id', 'DESC'); // Priorizar templates específicos de la tienda
     } else {
       query.andWhere('template.store_id IS NULL');
@@ -170,8 +173,12 @@ export class TemplateService {
     const content = template.content[language] || template.content['es'];
 
     if (!content) {
-      this.logger.error(`Language ${language} not supported for template ${templateKey}`);
-      throw new Error(`Language ${language} not supported for template ${templateKey}`);
+      this.logger.error(
+        `Language ${language} not supported for template ${templateKey}`,
+      );
+      throw new Error(
+        `Language ${language} not supported for template ${templateKey}`,
+      );
     }
 
     // Renderizar título
@@ -336,9 +343,12 @@ export class TemplateService {
       .where('template.is_active = true');
 
     if (filters?.storeId) {
-      query.andWhere('(template.store_id = :storeId OR template.store_id IS NULL)', {
-        storeId: filters.storeId,
-      });
+      query.andWhere(
+        '(template.store_id = :storeId OR template.store_id IS NULL)',
+        {
+          storeId: filters.storeId,
+        },
+      );
     }
 
     if (filters?.templateType) {
@@ -353,7 +363,9 @@ export class TemplateService {
       });
     }
 
-    query.orderBy('template.template_key', 'ASC').addOrderBy('template.version', 'DESC');
+    query
+      .orderBy('template.template_key', 'ASC')
+      .addOrderBy('template.version', 'DESC');
 
     return await query.getMany();
   }

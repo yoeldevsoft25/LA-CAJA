@@ -149,7 +149,12 @@ export class RateLimiterService {
     );
 
     if (!limits) {
-      limits = await this.createDefaultLimit(storeId, userId, category, channel);
+      limits = await this.createDefaultLimit(
+        storeId,
+        userId,
+        category,
+        channel,
+      );
     }
 
     // Incrementar contadores
@@ -244,7 +249,10 @@ export class RateLimiterService {
     }
 
     // Resetear ventana de día
-    if (now.getTime() - limits.day_window_start.getTime() >= 24 * 60 * 60 * 1000) {
+    if (
+      now.getTime() - limits.day_window_start.getTime() >=
+      24 * 60 * 60 * 1000
+    ) {
       limits.count_last_day = 0;
       limits.day_window_start = now;
       updated = true;
@@ -357,7 +365,8 @@ export class RateLimiterService {
         limit: limits.max_per_day || this.DEFAULT_LIMITS.day,
         remaining: Math.max(
           0,
-          (limits.max_per_day || this.DEFAULT_LIMITS.day) - limits.count_last_day,
+          (limits.max_per_day || this.DEFAULT_LIMITS.day) -
+            limits.count_last_day,
         ),
       },
       weekly: {

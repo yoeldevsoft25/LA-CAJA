@@ -10,14 +10,14 @@ import { exchangeService } from '@/services/exchange.service'
 import toast from '@/lib/toast'
 import { useOnline } from '@/hooks/use-online'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 const LIVE_BCV_REFETCH_MS = 30_000
 const roundCurrency = (value: number) => Math.round(value * 100) / 100

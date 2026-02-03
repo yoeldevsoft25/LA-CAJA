@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional, IsDateString, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsOptional,
+  IsDateString,
+  Min,
+} from 'class-validator';
 
 export class CreateLegacyDebtDto {
   @IsNotEmpty()

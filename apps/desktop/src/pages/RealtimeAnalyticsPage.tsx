@@ -18,7 +18,7 @@ import {
   History,
   Store,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import RealtimeMetricsCard from '@/components/realtime/RealtimeMetricsCard'
 import AlertsPanel from '@/components/realtime/AlertsPanel'
 import SalesHeatmapChart from '@/components/realtime/SalesHeatmapChart'

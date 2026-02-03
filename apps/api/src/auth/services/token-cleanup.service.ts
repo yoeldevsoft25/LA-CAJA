@@ -44,38 +44,56 @@ export class TokenCleanupService implements OnModuleInit {
 
     try {
       // Limpiar refresh tokens expirados y revocados antiguos (más de 30 días)
-      const refreshTokenCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const refreshTokenCutoff = new Date(
+        now.getTime() - 30 * 24 * 60 * 60 * 1000,
+      );
       const deletedRefreshTokens = await this.refreshTokenRepository.delete({
         expires_at: LessThan(refreshTokenCutoff),
       });
-      this.logger.log(`Eliminados ${deletedRefreshTokens.affected || 0} refresh tokens expirados`);
+      this.logger.log(
+        `Eliminados ${deletedRefreshTokens.affected || 0} refresh tokens expirados`,
+      );
 
       // Limpiar tokens de verificación de email expirados y usados (más de 7 días)
-      const emailTokenCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const emailTokenCutoff = new Date(
+        now.getTime() - 7 * 24 * 60 * 60 * 1000,
+      );
       const deletedEmailTokens = await this.emailVerificationTokenRepository
         .createQueryBuilder()
         .delete()
         .where('expires_at < :cutoff', { cutoff: emailTokenCutoff })
-        .orWhere('(used_at IS NOT NULL AND used_at < :cutoff)', { cutoff: emailTokenCutoff })
+        .orWhere('(used_at IS NOT NULL AND used_at < :cutoff)', {
+          cutoff: emailTokenCutoff,
+        })
         .execute();
-      this.logger.log(`Eliminados ${deletedEmailTokens.affected || 0} tokens de verificación de email`);
+      this.logger.log(
+        `Eliminados ${deletedEmailTokens.affected || 0} tokens de verificación de email`,
+      );
 
       // Limpiar tokens de recuperación de PIN expirados y usados (más de 7 días)
-      const pinRecoveryCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const pinRecoveryCutoff = new Date(
+        now.getTime() - 7 * 24 * 60 * 60 * 1000,
+      );
       const deletedPinRecovery = await this.pinRecoveryTokenRepository
         .createQueryBuilder()
         .delete()
         .where('expires_at < :cutoff', { cutoff: pinRecoveryCutoff })
-        .orWhere('(used_at IS NOT NULL AND used_at < :cutoff)', { cutoff: pinRecoveryCutoff })
+        .orWhere('(used_at IS NOT NULL AND used_at < :cutoff)', {
+          cutoff: pinRecoveryCutoff,
+        })
         .execute();
-      this.logger.log(`Eliminados ${deletedPinRecovery.affected || 0} tokens de recuperación de PIN`);
+      this.logger.log(
+        `Eliminados ${deletedPinRecovery.affected || 0} tokens de recuperación de PIN`,
+      );
 
       const totalDeleted =
         (deletedRefreshTokens.affected || 0) +
         (deletedEmailTokens.affected || 0) +
         (deletedPinRecovery.affected || 0);
 
-      this.logger.log(`Limpieza completada: ${totalDeleted} tokens eliminados en total`);
+      this.logger.log(
+        `Limpieza completada: ${totalDeleted} tokens eliminados en total`,
+      );
     } catch (error) {
       this.logger.error('Error en limpieza de tokens:', error);
     }

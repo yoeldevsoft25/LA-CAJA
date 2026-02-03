@@ -11,7 +11,7 @@
     "dev:pwa": "npm run dev --workspace=apps/pwa",
     "dev:desktop": "npm run dev --workspace=apps/desktop",
     "build": "npm run build:packages && npm run build:apps",
-    "build:packages": "npm run build --workspace=packages/domain --if-present && npm run build --workspace=packages/sync --if-present && npm run build --workspace=packages/application --if-present",
+    "build:packages": "npm run build --workspace=packages/domain --if-present && npm run build --workspace=packages/sync --if-present && npm run build --workspace=packages/application --if-present && npm run build --workspace=packages/ui-core --if-present && npm run build --workspace=packages/api-client --if-present && npm run build --workspace=packages/offline-core --if-present && npm run build --workspace=packages/app-core --if-present",
     "build:apps": "npm run build --workspace=apps/api --workspace=apps/pwa --workspace=apps/desktop --if-present",
     "build:pwa": "npm run build:packages && npm run build --workspace=apps/pwa",
     "build:api": "npm run build:packages && npm run build --workspace=apps/api",

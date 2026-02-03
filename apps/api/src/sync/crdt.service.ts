@@ -134,7 +134,9 @@ export class CRDTService {
     }
 
     // Reducir todos usando mergeLWW
-    return registers.reduce((winner, current) => this.mergeLWW(winner, current));
+    return registers.reduce((winner, current) =>
+      this.mergeLWW(winner, current),
+    );
   }
 
   // =====================================================

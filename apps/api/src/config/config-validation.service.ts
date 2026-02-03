@@ -43,10 +43,13 @@ export interface ConfigurationStatus {
 @Injectable()
 export class ConfigValidationService {
   private readonly logger = new Logger(ConfigValidationService.name);
-  
+
   // ⚡ OPTIMIZACIÓN CRÍTICA: Cache en memoria para validación de configuración
   // La configuración cambia raramente, así que cacheamos por 30 segundos
-  private configCache = new Map<string, { result: boolean | ConfigurationStatus; timestamp: number }>();
+  private configCache = new Map<
+    string,
+    { result: boolean | ConfigurationStatus; timestamp: number }
+  >();
   private readonly CACHE_TTL = 30000; // 30 segundos
 
   constructor(
@@ -71,12 +74,12 @@ export class ConfigValidationService {
     const cacheKey = `config_status_${storeId}`;
     const cached = this.configCache.get(cacheKey);
     const now = Date.now();
-    
+
     // Usar cache si existe y no ha expirado (30 segundos)
-    if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
+    if (cached && now - cached.timestamp < this.CACHE_TTL) {
       return cached.result as ConfigurationStatus;
     }
-    
+
     const missingConfigurations: string[] = [];
     const warnings: string[] = [];
 
@@ -112,13 +115,15 @@ export class ConfigValidationService {
         },
       }),
       // 3b. Verificar si hay lista por defecto (query optimizada)
-      this.priceListRepository.count({
-        where: {
-          store_id: storeId,
-          is_active: true,
-          is_default: true,
-        },
-      }).then(count => count > 0),
+      this.priceListRepository
+        .count({
+          where: {
+            store_id: storeId,
+            is_active: true,
+            is_default: true,
+          },
+        })
+        .then((count) => count > 0),
       // 4. Validar almacén (count)
       this.warehouseRepository.count({
         where: {
@@ -127,13 +132,15 @@ export class ConfigValidationService {
         },
       }),
       // 4b. Verificar si hay almacén por defecto (query optimizada)
-      this.warehouseRepository.count({
-        where: {
-          store_id: storeId,
-          is_active: true,
-          is_default: true,
-        },
-      }).then(count => count > 0),
+      this.warehouseRepository
+        .count({
+          where: {
+            store_id: storeId,
+            is_active: true,
+            is_default: true,
+          },
+        })
+        .then((count) => count > 0),
     ]);
 
     const invoiceSeriesConfigured = invoiceSeriesCount > 0;
@@ -250,15 +257,21 @@ export class ConfigValidationService {
     ];
 
     if (!status.details.invoiceSeries.configured) {
-      messages.push(`❌ Series de factura: ${status.details.invoiceSeries.message}`);
+      messages.push(
+        `❌ Series de factura: ${status.details.invoiceSeries.message}`,
+      );
     }
 
     if (!status.details.paymentMethods.configured) {
-      messages.push(`❌ Métodos de pago: ${status.details.paymentMethods.message}`);
+      messages.push(
+        `❌ Métodos de pago: ${status.details.paymentMethods.message}`,
+      );
     }
 
     if (!status.details.priceList.configured) {
-      messages.push(`❌ Listas de precios: ${status.details.priceList.message}`);
+      messages.push(
+        `❌ Listas de precios: ${status.details.priceList.message}`,
+      );
     }
 
     if (!status.details.warehouse.configured) {
@@ -266,7 +279,9 @@ export class ConfigValidationService {
     }
 
     messages.push('');
-    messages.push('📋 Por favor, completa la configuración antes de generar ventas.');
+    messages.push(
+      '📋 Por favor, completa la configuración antes de generar ventas.',
+    );
 
     return messages.join('\n');
   }

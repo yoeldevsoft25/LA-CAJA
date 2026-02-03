@@ -24,7 +24,7 @@ export enum AlertStatus {
 @Index(['service_name'])
 @Index(['severity'])
 @Index(['created_at'])
-@Index(['status', 'created_at'], { where: 'status = \'active\'' })
+@Index(['status', 'created_at'], { where: "status = 'active'" })
 export class Alert {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { FloatingParticles } from '@/components/aceternity'
 import { colors } from '@/design-system'
 

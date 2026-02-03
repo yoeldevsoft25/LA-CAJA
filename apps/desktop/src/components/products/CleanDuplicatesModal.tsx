@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import toast from '@/lib/toast'

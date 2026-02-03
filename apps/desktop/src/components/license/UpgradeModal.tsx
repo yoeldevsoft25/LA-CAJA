@@ -7,7 +7,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Check, Sparkles } from 'lucide-react'
 
 interface UpgradeModalProps {

@@ -19,8 +19,17 @@ export class RedisCacheService implements OnModuleDestroy {
 
     try {
       this.client = redisUrl
-        ? new Redis(redisUrl, { enableOfflineQueue: true, maxRetriesPerRequest: 3 })
-        : new Redis({ host, port, password, enableOfflineQueue: true, maxRetriesPerRequest: 3 });
+        ? new Redis(redisUrl, {
+            enableOfflineQueue: true,
+            maxRetriesPerRequest: 3,
+          })
+        : new Redis({
+            host,
+            port,
+            password,
+            enableOfflineQueue: true,
+            maxRetriesPerRequest: 3,
+          });
 
       this.client.on('error', (err) => {
         this.logger.warn(`Redis cache error: ${err?.message || err}`);
@@ -28,7 +37,9 @@ export class RedisCacheService implements OnModuleDestroy {
 
       return this.client;
     } catch (error) {
-      this.logger.warn(`Redis cache disabled: ${error instanceof Error ? error.message : error}`);
+      this.logger.warn(
+        `Redis cache disabled: ${error instanceof Error ? error.message : error}`,
+      );
       this.client = null;
       return null;
     }
@@ -42,7 +53,9 @@ export class RedisCacheService implements OnModuleDestroy {
       if (!value) return null;
       return JSON.parse(value) as T;
     } catch (error) {
-      this.logger.warn(`Redis get failed for ${key}: ${error instanceof Error ? error.message : error}`);
+      this.logger.warn(
+        `Redis get failed for ${key}: ${error instanceof Error ? error.message : error}`,
+      );
       return null;
     }
   }
@@ -54,7 +67,9 @@ export class RedisCacheService implements OnModuleDestroy {
       const payload = JSON.stringify(value);
       await client.set(key, payload, 'EX', ttlSeconds);
     } catch (error) {
-      this.logger.warn(`Redis set failed for ${key}: ${error instanceof Error ? error.message : error}`);
+      this.logger.warn(
+        `Redis set failed for ${key}: ${error instanceof Error ? error.message : error}`,
+      );
     }
   }
 
@@ -64,11 +79,17 @@ export class RedisCacheService implements OnModuleDestroy {
     try {
       await client.del(key);
     } catch (error) {
-      this.logger.warn(`Redis del failed for ${key}: ${error instanceof Error ? error.message : error}`);
+      this.logger.warn(
+        `Redis del failed for ${key}: ${error instanceof Error ? error.message : error}`,
+      );
     }
   }
 
-  async getOrSet<T>(key: string, ttlSeconds: number, loader: () => Promise<T>): Promise<T> {
+  async getOrSet<T>(
+    key: string,
+    ttlSeconds: number,
+    loader: () => Promise<T>,
+  ): Promise<T> {
     const cached = await this.get<T>(key);
     if (cached !== null) return cached;
     const fresh = await loader();

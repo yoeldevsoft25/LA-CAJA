@@ -147,7 +147,8 @@ export class ProjectionsService {
       image_url: payload.image_url || null,
       is_recipe: !!payload.is_recipe,
       profit_margin: Number(payload.profit_margin) || 0,
-      product_type: payload.product_type || (payload.is_recipe ? 'prepared' : 'sale_item'),
+      product_type:
+        payload.product_type || (payload.is_recipe ? 'prepared' : 'sale_item'),
       is_visible_public: payload.is_visible_public ?? false,
       public_name: payload.public_name || null,
       public_description: payload.public_description || null,
@@ -175,17 +176,25 @@ export class ProjectionsService {
     if (patch.barcode !== undefined) product.barcode = patch.barcode || null;
     if (patch.low_stock_threshold !== undefined)
       product.low_stock_threshold = Number(patch.low_stock_threshold) || 0;
-    if (patch.description !== undefined) product.description = patch.description || null;
-    if (patch.image_url !== undefined) product.image_url = patch.image_url || null;
+    if (patch.description !== undefined)
+      product.description = patch.description || null;
+    if (patch.image_url !== undefined)
+      product.image_url = patch.image_url || null;
     if (patch.is_recipe !== undefined) product.is_recipe = !!patch.is_recipe;
     if (patch.profit_margin !== undefined)
       product.profit_margin = Number(patch.profit_margin) || 0;
-    if (patch.product_type !== undefined) product.product_type = patch.product_type as any;
-    if (patch.is_visible_public !== undefined) product.is_visible_public = !!patch.is_visible_public;
-    if (patch.public_name !== undefined) product.public_name = patch.public_name || null;
-    if (patch.public_description !== undefined) product.public_description = patch.public_description || null;
-    if (patch.public_image_url !== undefined) product.public_image_url = patch.public_image_url || null;
-    if (patch.public_category !== undefined) product.public_category = patch.public_category || null;
+    if (patch.product_type !== undefined)
+      product.product_type = patch.product_type as any;
+    if (patch.is_visible_public !== undefined)
+      product.is_visible_public = !!patch.is_visible_public;
+    if (patch.public_name !== undefined)
+      product.public_name = patch.public_name || null;
+    if (patch.public_description !== undefined)
+      product.public_description = patch.public_description || null;
+    if (patch.public_image_url !== undefined)
+      product.public_image_url = patch.public_image_url || null;
+    if (patch.public_category !== undefined)
+      product.public_category = patch.public_category || null;
 
     await this.productRepository.save(product);
   }
@@ -383,7 +392,11 @@ export class ProjectionsService {
     }
 
     // ⚠️ VALIDACIÓN CRÍTICA: Para ventas FIAO, verificar que hay customer_id
-    if (payload.payment?.method === 'FIAO' && !payload.customer?.customer_id && !payload.customer_id) {
+    if (
+      payload.payment?.method === 'FIAO' &&
+      !payload.customer?.customer_id &&
+      !payload.customer_id
+    ) {
       this.logger.error(
         `Evento SaleCreated ${event.event_id} es una venta FIAO sin cliente. No se puede crear la venta.`,
       );
@@ -422,9 +435,10 @@ export class ProjectionsService {
           item.weight_value !== undefined && item.weight_value !== null
             ? Number(item.weight_value)
             : null;
-        const normalizedQty = isWeightProduct && weightValue !== null
-          ? weightValue
-          : Number(item.qty) || 0;
+        const normalizedQty =
+          isWeightProduct && weightValue !== null
+            ? weightValue
+            : Number(item.qty) || 0;
 
         return this.saleItemRepository.create({
           id: item.item_id || randomUUID(),
@@ -465,9 +479,10 @@ export class ProjectionsService {
         qty_delta: number;
       }> = [];
       const movements = payload.items.map((item) => {
-        const movementQty = item.is_weight_product && item.weight_value != null
-          ? Number(item.weight_value)
-          : Number(item.qty) || 0;
+        const movementQty =
+          item.is_weight_product && item.weight_value != null
+            ? Number(item.weight_value)
+            : Number(item.qty) || 0;
         const variantId = item.variant_id ?? null;
         if (warehouseId) {
           stockUpdates.push({
@@ -545,12 +560,12 @@ export class ProjectionsService {
           });
 
           await this.debtRepository.save(debt);
-          
+
           // Log informativo
           const customer = await this.customerRepository.findOne({
             where: { id: customerId, store_id: event.store_id },
           });
-          
+
           if (customer) {
             this.logger.log(
               `✅ Deuda creada para venta FIAO ${payload.sale_id}: ${debt.id} - Cliente: ${customer.name} (${customerId}) - Monto: $${totalUsd} USD / ${totalBs} Bs`,
@@ -571,25 +586,25 @@ export class ProjectionsService {
       this.logger.log(
         `Verificando configuración fiscal para venta ${payload.sale_id} (store: ${event.store_id})`,
       );
-      
+
       // ⚡ OPTIMIZACIÓN: Verificar configuración fiscal y factura existente en paralelo
       const [hasFiscalConfig, existingInvoice] = await Promise.all([
         this.fiscalInvoicesService.hasActiveFiscalConfig(event.store_id),
         this.fiscalInvoicesService.findBySale(event.store_id, savedSale.id),
       ]);
-      
+
       this.logger.log(
         `Configuración fiscal para store ${event.store_id}: ${hasFiscalConfig ? 'ACTIVA' : 'INACTIVA'}`,
       );
-      
+
       if (hasFiscalConfig) {
         // existingInvoice ya fue obtenido en paralelo arriba
-        
+
         if (existingInvoice) {
           this.logger.log(
             `Factura fiscal existente encontrada para venta ${payload.sale_id}: ${existingInvoice.id} (status: ${existingInvoice.status})`,
           );
-          
+
           if (existingInvoice.status === 'draft') {
             // Emitir factura si está en draft
             const issuedInvoice = await this.fiscalInvoicesService.issue(
@@ -609,22 +624,23 @@ export class ProjectionsService {
           this.logger.log(
             `Creando factura fiscal automática para venta ${payload.sale_id}...`,
           );
-          
-          const createdInvoice = await this.fiscalInvoicesService.createFromSale(
-            event.store_id,
-            savedSale.id,
-            event.actor_user_id || null,
-          );
-          
+
+          const createdInvoice =
+            await this.fiscalInvoicesService.createFromSale(
+              event.store_id,
+              savedSale.id,
+              event.actor_user_id || null,
+            );
+
           this.logger.log(
             `Factura fiscal creada (draft) para venta ${payload.sale_id}: ${createdInvoice.id}`,
           );
-          
+
           const issuedInvoice = await this.fiscalInvoicesService.issue(
             event.store_id,
             createdInvoice.id,
           );
-          
+
           this.logger.log(
             `✅ Factura fiscal creada y emitida automáticamente para venta ${payload.sale_id}: ${issuedInvoice.invoice_number} (fiscal: ${issuedInvoice.fiscal_number || 'N/A'})`,
           );
@@ -658,7 +674,10 @@ export class ProjectionsService {
         );
       } catch (error) {
         // No fallar la proyección si hay error en WhatsApp
-        this.logger.warn(`Error enviando notificación de WhatsApp para venta ${payload.sale_id}:`, error);
+        this.logger.warn(
+          `Error enviando notificación de WhatsApp para venta ${payload.sale_id}:`,
+          error,
+        );
       }
     }
   }

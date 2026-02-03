@@ -17,11 +17,7 @@ export type WhatsAppMessageType =
   | 'customer'
   | 'custom';
 
-export type WhatsAppMessageStatus =
-  | 'pending'
-  | 'sent'
-  | 'failed'
-  | 'retrying';
+export type WhatsAppMessageStatus = 'pending' | 'sent' | 'failed' | 'retrying';
 
 @Entity('whatsapp_message_queue')
 @Index(['store_id', 'status'])

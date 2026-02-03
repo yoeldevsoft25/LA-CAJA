@@ -73,9 +73,8 @@ export class LicenseVerificationService {
       await this.paymentRepo.save(payment);
 
       try {
-        verificationResult = await this.bankIntegration.verifyAutomatic(
-          payment,
-        );
+        verificationResult =
+          await this.bankIntegration.verifyAutomatic(payment);
         verificationMethod = verificationResult.method;
 
         // Registrar el intento de verificación
@@ -85,9 +84,7 @@ export class LicenseVerificationService {
           status: verificationResult.result.status,
           response_data: verificationResult.result.responseData || null,
           error_message: verificationResult.result.errorMessage || null,
-          verified_at: verificationResult.result.success
-            ? new Date()
-            : null,
+          verified_at: verificationResult.result.success ? new Date() : null,
         });
         await this.verificationRepo.save(verification);
 
@@ -156,7 +153,9 @@ export class LicenseVerificationService {
       await this.verificationRepo.save(verification);
 
       await this.paymentRepo.save(payment);
-      this.logger.log(`Pago ${paymentId} verificado manualmente por ${verifiedBy}`);
+      this.logger.log(
+        `Pago ${paymentId} verificado manualmente por ${verifiedBy}`,
+      );
     }
 
     return payment;
@@ -165,9 +164,7 @@ export class LicenseVerificationService {
   /**
    * Retry de verificación automática
    */
-  async retryAutomaticVerification(
-    paymentId: string,
-  ): Promise<LicensePayment> {
+  async retryAutomaticVerification(paymentId: string): Promise<LicensePayment> {
     const payment = await this.paymentRepo.findOne({
       where: { id: paymentId },
     });
@@ -186,9 +183,8 @@ export class LicenseVerificationService {
     }
 
     // Intentar verificación automática
-    const verificationResult = await this.bankIntegration.verifyAutomatic(
-      payment,
-    );
+    const verificationResult =
+      await this.bankIntegration.verifyAutomatic(payment);
 
     // Registrar el intento
     const verification = this.verificationRepo.create({

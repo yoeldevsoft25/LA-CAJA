@@ -10,9 +10,7 @@ import { Customer } from '../database/entities/customer.entity';
  * Módulo para gestión de reservas
  */
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Reservation, Table, Customer]),
-  ],
+  imports: [TypeOrmModule.forFeature([Reservation, Table, Customer])],
   controllers: [ReservationsController],
   providers: [ReservationsService],
   exports: [ReservationsService],

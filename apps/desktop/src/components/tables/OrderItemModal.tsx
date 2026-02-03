@@ -10,13 +10,13 @@ import { AddOrderItemRequest } from '@/services/orders.service'
 import { useAuth } from '@/stores/auth.store'
 import VariantSelector from '@/components/variants/VariantSelector'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 const itemSchema = z.object({
   qty: z.number().min(1, 'La cantidad debe ser mayor a 0'),

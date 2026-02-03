@@ -41,7 +41,9 @@ export class AlertService {
       });
     }
 
-    this.logger.warn(`Alert created: ${dto.service_name} - ${dto.alert_type} (${dto.severity})`);
+    this.logger.warn(
+      `Alert created: ${dto.service_name} - ${dto.alert_type} (${dto.severity})`,
+    );
 
     return savedAlert;
   }
@@ -50,7 +52,8 @@ export class AlertService {
    * Obtiene alertas activas
    */
   async getActiveAlerts(serviceName?: string): Promise<Alert[]> {
-    const query = this.alertRepository.createQueryBuilder('alert')
+    const query = this.alertRepository
+      .createQueryBuilder('alert')
       .where('alert.status = :status', { status: AlertStatus.ACTIVE })
       .orderBy('alert.created_at', 'DESC');
 
@@ -96,7 +99,9 @@ export class AlertService {
    * Resuelve una alerta
    */
   async resolveAlert(alertId: string): Promise<Alert> {
-    const alert = await this.alertRepository.findOne({ where: { id: alertId } });
+    const alert = await this.alertRepository.findOne({
+      where: { id: alertId },
+    });
 
     if (!alert) {
       throw new Error(`Alert ${alertId} not found`);
@@ -112,7 +117,9 @@ export class AlertService {
    * Marca una alerta como reconocida
    */
   async acknowledgeAlert(alertId: string, userId: string): Promise<Alert> {
-    const alert = await this.alertRepository.findOne({ where: { id: alertId } });
+    const alert = await this.alertRepository.findOne({
+      where: { id: alertId },
+    });
 
     if (!alert) {
       throw new Error(`Alert ${alertId} not found`);

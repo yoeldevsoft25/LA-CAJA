@@ -24,7 +24,7 @@ export class SyncController {
   constructor(
     private readonly syncService: SyncService,
     private readonly conflictResolutionService: ConflictResolutionService,
-  ) { }
+  ) {}
 
   @Post('push')
   @HttpCode(HttpStatus.OK)

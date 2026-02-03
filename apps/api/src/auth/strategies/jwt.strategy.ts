@@ -36,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         roleInToken: payload.role,
       });
     }
-    
+
     // Validar que el usuario existe en la tienda
     const member = await this.authService.validateUser(
       payload.sub,

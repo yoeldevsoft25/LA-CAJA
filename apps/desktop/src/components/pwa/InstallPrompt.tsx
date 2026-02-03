@@ -1,8 +1,8 @@
 import { usePWAInstall } from '@/hooks/usePWAInstall'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Card, CardContent } from '@/components/ui/card'
 import { Download, X, Share, Plus } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface InstallPromptProps {
   className?: string

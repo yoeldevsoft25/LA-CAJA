@@ -295,7 +295,8 @@ export class NotificationsService {
         );
 
         // Si la suscripción es inválida (410 Gone), desactivarla
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('410') || errorMessage.includes('Gone')) {
           subscription.is_active = false;
           await this.subscriptionRepository.save(subscription);
@@ -492,20 +493,44 @@ export class NotificationsService {
         throw new BadRequestException('DTO inválido o no proporcionado');
       }
 
-      if (!dto.endpoint || typeof dto.endpoint !== 'string' || !dto.endpoint.trim()) {
-        throw new BadRequestException('endpoint es requerido y debe ser una cadena no vacía');
+      if (
+        !dto.endpoint ||
+        typeof dto.endpoint !== 'string' ||
+        !dto.endpoint.trim()
+      ) {
+        throw new BadRequestException(
+          'endpoint es requerido y debe ser una cadena no vacía',
+        );
       }
 
-      if (!dto.p256dh_key || typeof dto.p256dh_key !== 'string' || !dto.p256dh_key.trim()) {
-        throw new BadRequestException('p256dh_key es requerido y debe ser una cadena no vacía');
+      if (
+        !dto.p256dh_key ||
+        typeof dto.p256dh_key !== 'string' ||
+        !dto.p256dh_key.trim()
+      ) {
+        throw new BadRequestException(
+          'p256dh_key es requerido y debe ser una cadena no vacía',
+        );
       }
 
-      if (!dto.auth_key || typeof dto.auth_key !== 'string' || !dto.auth_key.trim()) {
-        throw new BadRequestException('auth_key es requerido y debe ser una cadena no vacía');
+      if (
+        !dto.auth_key ||
+        typeof dto.auth_key !== 'string' ||
+        !dto.auth_key.trim()
+      ) {
+        throw new BadRequestException(
+          'auth_key es requerido y debe ser una cadena no vacía',
+        );
       }
 
-      if (!dto.device_id || typeof dto.device_id !== 'string' || !dto.device_id.trim()) {
-        throw new BadRequestException('device_id es requerido y debe ser una cadena no vacía');
+      if (
+        !dto.device_id ||
+        typeof dto.device_id !== 'string' ||
+        !dto.device_id.trim()
+      ) {
+        throw new BadRequestException(
+          'device_id es requerido y debe ser una cadena no vacía',
+        );
       }
 
       this.logger.debug(
@@ -523,7 +548,9 @@ export class NotificationsService {
 
       if (subscription) {
         // Actualizar suscripción existente
-        this.logger.debug(`Actualizando suscripción existente: ${subscription.id}`);
+        this.logger.debug(
+          `Actualizando suscripción existente: ${subscription.id}`,
+        );
         subscription.endpoint = dto.endpoint;
         subscription.p256dh_key = dto.p256dh_key;
         subscription.auth_key = dto.auth_key;

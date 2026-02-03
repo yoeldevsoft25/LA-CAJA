@@ -1,8 +1,8 @@
 import { useState, useEffect, forwardRef } from 'react'
-import { Input } from '@/components/ui/input'
+import { Input } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { validateRIF, RIF_TYPES } from '@/utils/rif-validator'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { Check, AlertCircle, Info } from 'lucide-react'
 import {
   Tooltip,

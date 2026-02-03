@@ -1,4 +1,15 @@
-import { Controller, Get, Param, Put, Body, UseGuards, Request, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Put,
+  Body,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { KitchenDisplayService } from './kitchen-display.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 

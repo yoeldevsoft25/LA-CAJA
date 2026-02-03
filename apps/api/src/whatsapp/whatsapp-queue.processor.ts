@@ -43,16 +43,21 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
       const pending = await this.messageQueueRepository
         .createQueryBuilder('msg')
         .select('DISTINCT msg.store_id', 'store_id')
-        .where('msg.status IN (:...statuses)', { statuses: ['pending', 'retrying'] })
+        .where('msg.status IN (:...statuses)', {
+          statuses: ['pending', 'retrying'],
+        })
         .getRawMany();
 
       // 2) Tiendas con WhatsApp habilitado (alguna opción activa) — clave para prod tras restart
       const enabled = await this.whatsappConfigRepository
         .createQueryBuilder('c')
         .select('c.store_id', 'store_id')
-        .where('c.enabled = :t OR c.debt_notifications_enabled = :t OR c.debt_reminders_enabled = :t', {
-          t: true,
-        })
+        .where(
+          'c.enabled = :t OR c.debt_notifications_enabled = :t OR c.debt_reminders_enabled = :t',
+          {
+            t: true,
+          },
+        )
         .getRawMany();
 
       const allStoreIds = new Set<string>([
@@ -74,10 +79,15 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
             if (this.whatsappBotService.isConnected(storeId)) {
               this.logger.log(`Bot restaurado para tienda ${storeId}`);
             } else {
-              this.logger.warn(`Bot inicializado pero aún no conectado para tienda ${storeId}`);
+              this.logger.warn(
+                `Bot inicializado pero aún no conectado para tienda ${storeId}`,
+              );
             }
           } catch (error) {
-            this.logger.error(`Error inicializando bot para tienda ${storeId}:`, error);
+            this.logger.error(
+              `Error inicializando bot para tienda ${storeId}:`,
+              error,
+            );
           }
         }
       }
@@ -116,19 +126,30 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
 
         const shouldRestore =
           !hasBot ||
-          (hasBot && !isConnected && !hasQR && (state as string | null) !== 'connecting');
+          (hasBot &&
+            !isConnected &&
+            !hasQR &&
+            (state as string | null) !== 'connecting');
 
         if (!shouldRestore) continue;
 
-        this.logger.log(`[Prod] Restaurando bot desconectado para tienda ${store_id}`);
+        this.logger.log(
+          `[Prod] Restaurando bot desconectado para tienda ${store_id}`,
+        );
         try {
           await this.whatsappBotService.initializeBot(store_id);
         } catch (error) {
-          this.logger.warn(`Error restaurando bot para tienda ${store_id}:`, (error as Error)?.message);
+          this.logger.warn(
+            `Error restaurando bot para tienda ${store_id}:`,
+            (error as Error)?.message,
+          );
         }
       }
     } catch (error) {
-      this.logger.error('Error en restauración periódica de bots WhatsApp:', error);
+      this.logger.error(
+        'Error en restauración periódica de bots WhatsApp:',
+        error,
+      );
     }
   }
 
@@ -140,10 +161,7 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
     try {
       // Obtener mensajes pendientes o en retry, ordenados por fecha de creación
       const pendingMessages = await this.messageQueueRepository.find({
-        where: [
-          { status: 'pending' },
-          { status: 'retrying' },
-        ],
+        where: [{ status: 'pending' }, { status: 'retrying' }],
         order: { created_at: 'ASC' },
         take: 50, // Procesar máximo 50 mensajes por ciclo
       });
@@ -158,7 +176,7 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
         // Si hay mensajes encontrados pero filtrados (programados), loguear
         if (pendingMessages.length > 0) {
           this.logger.debug(
-            `Encontrados ${pendingMessages.length} mensajes pero están programados para más tarde`
+            `Encontrados ${pendingMessages.length} mensajes pero están programados para más tarde`,
           );
         }
         // Solo loguear cada 5 minutos para no saturar logs cuando no hay mensajes
@@ -169,16 +187,20 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
           });
           if (totalPending > 0) {
             this.logger.warn(
-              `⚠️ Hay ${totalPending} mensajes pendientes en la cola pero no se están procesando. Verificar estado del bot.`
+              `⚠️ Hay ${totalPending} mensajes pendientes en la cola pero no se están procesando. Verificar estado del bot.`,
             );
           } else {
-            this.logger.debug(`✅ No hay mensajes pendientes en la cola de WhatsApp`);
+            this.logger.debug(
+              `✅ No hay mensajes pendientes en la cola de WhatsApp`,
+            );
           }
         }
         return;
       }
 
-      this.logger.log(`📱 Procesando ${messagesToProcess.length} mensajes pendientes de WhatsApp`);
+      this.logger.log(
+        `📱 Procesando ${messagesToProcess.length} mensajes pendientes de WhatsApp`,
+      );
 
       // Procesar mensajes agrupados por tienda (para rate limiting)
       const messagesByStore = new Map<string, typeof messagesToProcess>();
@@ -197,7 +219,10 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
       // Resetear contadores de rate limiting cada minuto
       this.processingStores.clear();
     } catch (error) {
-      this.logger.error('Error procesando cola de mensajes de WhatsApp:', error);
+      this.logger.error(
+        'Error procesando cola de mensajes de WhatsApp:',
+        error,
+      );
     }
   }
 
@@ -213,23 +238,34 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
       // Intentar inicializar el bot si hay una sesión guardada
       const hasSession = this.whatsappBotService.hasSavedSession(storeId);
       const hasBot = this.whatsappBotService.hasBot(storeId);
-      
+
       if (!hasBot && hasSession) {
-        this.logger.log(`Bot no inicializado pero hay sesión guardada para tienda ${storeId}, intentando restaurar conexión...`);
+        this.logger.log(
+          `Bot no inicializado pero hay sesión guardada para tienda ${storeId}, intentando restaurar conexión...`,
+        );
         try {
           await this.whatsappBotService.initializeBot(storeId);
           // Esperar un momento para que Baileys restaure la conexión desde la sesión guardada
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
           // Verificar nuevamente si está conectado
           if (!this.whatsappBotService.isConnected(storeId)) {
-            this.logger.warn(`Bot inicializado pero aún no conectado para tienda ${storeId}, omitiendo ${messages.length} mensajes`);
+            this.logger.warn(
+              `Bot inicializado pero aún no conectado para tienda ${storeId}, omitiendo ${messages.length} mensajes`,
+            );
             return;
           }
-          this.logger.log(`Bot restaurado exitosamente para tienda ${storeId}, procesando ${messages.length} mensajes`);
+          this.logger.log(
+            `Bot restaurado exitosamente para tienda ${storeId}, procesando ${messages.length} mensajes`,
+          );
         } catch (error) {
-          this.logger.error(`Error restaurando bot para tienda ${storeId}:`, error);
-          this.logger.warn(`Omitiendo ${messages.length} mensajes para tienda ${storeId} - bot no disponible`);
+          this.logger.error(
+            `Error restaurando bot para tienda ${storeId}:`,
+            error,
+          );
+          this.logger.warn(
+            `Omitiendo ${messages.length} mensajes para tienda ${storeId} - bot no disponible`,
+          );
           return;
         }
       } else {
@@ -250,7 +286,9 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
     // Rate limiting: verificar cuántos mensajes se han enviado en el último minuto
     const sentCount = this.processingStores.get(storeId) || 0;
     if (sentCount >= this.RATE_LIMIT_MESSAGES_PER_MINUTE) {
-      this.logger.warn(`Rate limit alcanzado para tienda ${storeId}, omitiendo mensajes`);
+      this.logger.warn(
+        `Rate limit alcanzado para tienda ${storeId}, omitiendo mensajes`,
+      );
       return;
     }
 

@@ -6,10 +6,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ChartOfAccount, AccountType } from '../database/entities/chart-of-accounts.entity';
+import {
+  ChartOfAccount,
+  AccountType,
+} from '../database/entities/chart-of-accounts.entity';
 import { AccountingAccountMapping } from '../database/entities/accounting-account-mapping.entity';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { getChartTemplate, getDefaultMappings, BusinessType } from './templates/chart-templates';
+import {
+  getChartTemplate,
+  getDefaultMappings,
+  BusinessType,
+} from './templates/chart-templates';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -26,7 +33,11 @@ export class ChartOfAccountsService {
   /**
    * Crear cuenta contable
    */
-  async createAccount(storeId: string, dto: CreateAccountDto, userId: string): Promise<ChartOfAccount> {
+  async createAccount(
+    storeId: string,
+    dto: CreateAccountDto,
+    userId: string,
+  ): Promise<ChartOfAccount> {
     // Validar que el código no exista
     const existing = await this.accountRepository.findOne({
       where: { store_id: storeId, account_code: dto.account_code },
@@ -47,7 +58,9 @@ export class ChartOfAccountsService {
       }
 
       if (!parent.allows_entries) {
-        throw new BadRequestException('La cuenta padre no permite crear subcuentas');
+        throw new BadRequestException(
+          'La cuenta padre no permite crear subcuentas',
+        );
       }
     }
 
@@ -72,8 +85,12 @@ export class ChartOfAccountsService {
   /**
    * Obtener todas las cuentas
    */
-  async getAccounts(storeId: string, activeOnly: boolean = false): Promise<ChartOfAccount[]> {
-    const query = this.accountRepository.createQueryBuilder('account')
+  async getAccounts(
+    storeId: string,
+    activeOnly: boolean = false,
+  ): Promise<ChartOfAccount[]> {
+    const query = this.accountRepository
+      .createQueryBuilder('account')
       .where('account.store_id = :storeId', { storeId })
       .orderBy('account.account_code', 'ASC');
 
@@ -87,7 +104,10 @@ export class ChartOfAccountsService {
   /**
    * Obtener cuenta por ID
    */
-  async getAccount(storeId: string, accountId: string): Promise<ChartOfAccount> {
+  async getAccount(
+    storeId: string,
+    accountId: string,
+  ): Promise<ChartOfAccount> {
     const account = await this.accountRepository.findOne({
       where: { id: accountId, store_id: storeId },
     });
@@ -102,7 +122,10 @@ export class ChartOfAccountsService {
   /**
    * Obtener cuenta por código
    */
-  async getAccountByCode(storeId: string, accountCode: string): Promise<ChartOfAccount | null> {
+  async getAccountByCode(
+    storeId: string,
+    accountCode: string,
+  ): Promise<ChartOfAccount | null> {
     return this.accountRepository.findOne({
       where: { store_id: storeId, account_code: accountCode },
     });
@@ -125,7 +148,9 @@ export class ChartOfAccountsService {
       });
 
       if (existing) {
-        throw new BadRequestException(`La cuenta ${updates.account_code} ya existe`);
+        throw new BadRequestException(
+          `La cuenta ${updates.account_code} ya existe`,
+        );
       }
     }
 
@@ -145,7 +170,9 @@ export class ChartOfAccountsService {
     });
 
     if (subAccounts > 0) {
-      throw new BadRequestException('No se puede eliminar una cuenta que tiene subcuentas');
+      throw new BadRequestException(
+        'No se puede eliminar una cuenta que tiene subcuentas',
+      );
     }
 
     // TODO: Verificar si tiene movimientos en journal_entries
@@ -159,9 +186,12 @@ export class ChartOfAccountsService {
    */
   async getAccountTree(storeId: string): Promise<ChartOfAccount[]> {
     const accounts = await this.getAccounts(storeId, true);
-    
+
     // Construir árbol
-    const accountMap = new Map<string, ChartOfAccount & { children?: ChartOfAccount[] }>();
+    const accountMap = new Map<
+      string,
+      ChartOfAccount & { children?: ChartOfAccount[] }
+    >();
     const rootAccounts: ChartOfAccount[] = [];
 
     // Crear mapa
@@ -172,7 +202,7 @@ export class ChartOfAccountsService {
     // Construir jerarquía
     accounts.forEach((account) => {
       const accountWithChildren = accountMap.get(account.id)!;
-      
+
       if (account.parent_account_id) {
         const parent = accountMap.get(account.parent_account_id);
         if (parent) {
@@ -243,7 +273,9 @@ export class ChartOfAccountsService {
     const existingMappings = await this.mappingRepository.find({
       where: { store_id: storeId, is_active: true },
     });
-    const existingMappingTypes = new Set(existingMappings.map((mapping) => mapping.transaction_type));
+    const existingMappingTypes = new Set(
+      existingMappings.map((mapping) => mapping.transaction_type),
+    );
     let mappingsCreated = 0;
 
     for (const mapping of mappingsToCreate) {
@@ -279,14 +311,9 @@ export class ChartOfAccountsService {
       `Plan de cuentas inicializado para store ${storeId}: ${accountsCreated} cuentas, ${mappingsCreated} mapeos`,
     );
 
-    return { accounts_created: accountsCreated, mappings_created: mappingsCreated };
+    return {
+      accounts_created: accountsCreated,
+      mappings_created: mappingsCreated,
+    };
   }
 }
-
-
-
-
-
-
-
-

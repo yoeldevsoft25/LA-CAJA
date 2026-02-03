@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface Particle {
   id: number

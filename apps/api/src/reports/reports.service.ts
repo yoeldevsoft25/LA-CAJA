@@ -253,7 +253,9 @@ export class ReportsService {
         // Obtener producto del mapa
         const product = productMap.get(item.product_id);
         if (product) {
-          const isWeight = Boolean(item.is_weight_product || product.is_weight_product);
+          const isWeight = Boolean(
+            item.is_weight_product || product.is_weight_product,
+          );
           const unitCostBs = isWeight
             ? Number(product.cost_per_weight_bs ?? product.cost_bs ?? 0)
             : Number(product.cost_bs ?? 0);
@@ -433,20 +435,23 @@ export class ReportsService {
 
       const productData = productMap.get(productId)!;
       const qty = Number(item.qty) || 0;
-      const isWeight = Boolean(item.is_weight_product || product?.is_weight_product);
+      const isWeight = Boolean(
+        item.is_weight_product || product?.is_weight_product,
+      );
       const weightUnit = item.weight_unit || product?.weight_unit || null;
       productData.quantity_sold += qty;
       if (isWeight) {
-        productData.quantity_sold_kg += this.normalizeWeightToKg(qty, weightUnit);
+        productData.quantity_sold_kg += this.normalizeWeightToKg(
+          qty,
+          weightUnit,
+        );
       } else {
         productData.quantity_sold_units += qty;
       }
       productData.revenue_bs +=
-        Number(item.unit_price_bs || 0) * qty -
-        Number(item.discount_bs || 0);
+        Number(item.unit_price_bs || 0) * qty - Number(item.discount_bs || 0);
       productData.revenue_usd +=
-        Number(item.unit_price_usd || 0) * qty -
-        Number(item.discount_usd || 0);
+        Number(item.unit_price_usd || 0) * qty - Number(item.discount_usd || 0);
       const unitCostBs = isWeight
         ? Number(product?.cost_per_weight_bs ?? product?.cost_bs ?? 0)
         : Number(product?.cost_bs ?? 0);
@@ -474,8 +479,12 @@ export class ReportsService {
         };
       })
       .sort((a, b) => {
-        const qtyA = a.is_weight_product ? a.quantity_sold_kg : a.quantity_sold_units;
-        const qtyB = b.is_weight_product ? b.quantity_sold_kg : b.quantity_sold_units;
+        const qtyA = a.is_weight_product
+          ? a.quantity_sold_kg
+          : a.quantity_sold_units;
+        const qtyB = b.is_weight_product
+          ? b.quantity_sold_kg
+          : b.quantity_sold_units;
         return qtyB - qtyA;
       })
       .slice(0, limit);
@@ -1134,7 +1143,8 @@ export class ReportsService {
       });
 
       total_quantity += Number(lot.remaining_quantity);
-      total_value_bs += Number(lot.unit_cost_bs || 0) * Number(lot.remaining_quantity);
+      total_value_bs +=
+        Number(lot.unit_cost_bs || 0) * Number(lot.remaining_quantity);
       total_value_usd +=
         Number(lot.unit_cost_usd || 0) * Number(lot.remaining_quantity);
     }
@@ -1375,7 +1385,9 @@ export class ReportsService {
       const product = productsMap.get(item.product_id);
       if (!product) continue;
 
-      const isWeight = Boolean(item.is_weight_product || product.is_weight_product);
+      const isWeight = Boolean(
+        item.is_weight_product || product.is_weight_product,
+      );
       const weightUnit = item.weight_unit || product.weight_unit || null;
       const qty = Number(item.qty) || 0;
 
@@ -1397,16 +1409,17 @@ export class ReportsService {
       const productData = productMap.get(item.product_id)!;
       productData.quantity_sold += qty;
       if (isWeight) {
-        productData.quantity_sold_kg += this.normalizeWeightToKg(qty, weightUnit);
+        productData.quantity_sold_kg += this.normalizeWeightToKg(
+          qty,
+          weightUnit,
+        );
       } else {
         productData.quantity_sold_units += qty;
       }
       productData.revenue_bs +=
-        Number(item.unit_price_bs || 0) * qty -
-        Number(item.discount_bs || 0);
+        Number(item.unit_price_bs || 0) * qty - Number(item.discount_bs || 0);
       productData.revenue_usd +=
-        Number(item.unit_price_usd || 0) * qty -
-        Number(item.discount_usd || 0);
+        Number(item.unit_price_usd || 0) * qty - Number(item.discount_usd || 0);
       const unitCostBs = isWeight
         ? Number(product.cost_per_weight_bs ?? product.cost_bs ?? 0)
         : Number(product.cost_bs ?? 0);
@@ -1430,8 +1443,9 @@ export class ReportsService {
           const rotation_base = data.is_weight_product
             ? data.quantity_sold_kg
             : data.quantity_sold_units;
-          const rotation_unit: 'kg' | 'unid' =
-            data.is_weight_product ? 'kg' : 'unid';
+          const rotation_unit: 'kg' | 'unid' = data.is_weight_product
+            ? 'kg'
+            : 'unid';
           // Rotación aproximada (ventas / 1, asumiendo stock promedio de 1)
           // En producción, se debería calcular el stock promedio real
           const rotation_rate = rotation_base;

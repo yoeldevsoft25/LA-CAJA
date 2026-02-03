@@ -12,8 +12,8 @@ const BulkStockAdjustModal = lazy(() => import('@/components/inventory/BulkStock
 const MovementsModal = lazy(() => import('@/components/inventory/MovementsModal'))
 const PurchaseOrderFormModal = lazy(() => import('@/components/purchase-orders/PurchaseOrderFormModal'))
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'

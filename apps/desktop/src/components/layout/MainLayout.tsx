@@ -40,8 +40,8 @@ import {
   UtensilsCrossed,
   MessageCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { cn } from '@la-caja/ui-core'
+import { Button } from '@la-caja/ui-core'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'

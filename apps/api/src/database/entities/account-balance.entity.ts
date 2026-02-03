@@ -87,14 +87,3 @@ export class AccountBalance {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-
-
-
-
-
-
-
-
-
-
-

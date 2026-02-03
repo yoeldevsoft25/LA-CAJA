@@ -81,7 +81,10 @@ export class WhatsAppMessagingService {
       // Verificar configuración
       const config = await this.whatsappConfigService.findOne(storeId);
       if (!config || !config.enabled) {
-        return { queued: false, error: 'WhatsApp no está habilitado para esta tienda' };
+        return {
+          queued: false,
+          error: 'WhatsApp no está habilitado para esta tienda',
+        };
       }
 
       // Obtener venta con relaciones
@@ -96,16 +99,17 @@ export class WhatsAppMessagingService {
 
       // Verificar si tiene cliente con teléfono
       if (!sale.customer_id || !sale.customer?.phone) {
-        return { queued: false, error: 'La venta no tiene cliente con teléfono' };
+        return {
+          queued: false,
+          error: 'La venta no tiene cliente con teléfono',
+        };
       }
 
       // Obtener items de la venta con productos
-      const saleItems = await this.dataSource
-        .getRepository(SaleItem)
-        .find({
-          where: { sale_id: saleId },
-          relations: ['product'],
-        });
+      const saleItems = await this.dataSource.getRepository(SaleItem).find({
+        where: { sale_id: saleId },
+        relations: ['product'],
+      });
 
       // Obtener nombre de la tienda
       const store = await this.storeRepository.findOne({
@@ -133,7 +137,9 @@ export class WhatsAppMessagingService {
         seq,
       );
 
-      this.logger.log(`Notificación de venta ${saleId} agregada a cola para tienda ${storeId}`);
+      this.logger.log(
+        `Notificación de venta ${saleId} agregada a cola para tienda ${storeId}`,
+      );
       return { queued: true };
     } catch (error: any) {
       this.logger.error(`Error agregando notificación de venta a cola:`, error);
@@ -152,7 +158,10 @@ export class WhatsAppMessagingService {
       // Verificar configuración
       const config = await this.whatsappConfigService.findOne(storeId);
       if (!config || !config.debt_notifications_enabled) {
-        return { queued: false, error: 'Notificaciones de deudas no están habilitadas' };
+        return {
+          queued: false,
+          error: 'Notificaciones de deudas no están habilitadas',
+        };
       }
 
       // Obtener deuda con relaciones
@@ -167,23 +176,26 @@ export class WhatsAppMessagingService {
 
       // Verificar si tiene cliente con teléfono
       if (!debt.customer?.phone) {
-        return { queued: false, error: 'El cliente no tiene teléfono registrado' };
+        return {
+          queued: false,
+          error: 'El cliente no tiene teléfono registrado',
+        };
       }
 
       // Si hay venta asociada, cargar los items con productos y variantes
       let saleWithItems: Sale | undefined = undefined;
       if (debt.sale_id) {
-        const saleItems = await this.dataSource
-          .getRepository(SaleItem)
-          .find({
-            where: { sale_id: debt.sale_id },
-            relations: ['product', 'variant'],
-          });
-        
-        saleWithItems = debt.sale ? {
-          ...debt.sale,
-          items: saleItems,
-        } as Sale & { items: SaleItem[] } : undefined;
+        const saleItems = await this.dataSource.getRepository(SaleItem).find({
+          where: { sale_id: debt.sale_id },
+          relations: ['product', 'variant'],
+        });
+
+        saleWithItems = debt.sale
+          ? ({
+              ...debt.sale,
+              items: saleItems,
+            } as Sale & { items: SaleItem[] })
+          : undefined;
       }
 
       // Obtener nombre de la tienda
@@ -214,7 +226,9 @@ export class WhatsAppMessagingService {
         debtId,
       );
 
-      this.logger.log(`Notificación de deuda ${debtId} agregada a cola para tienda ${storeId}`);
+      this.logger.log(
+        `Notificación de deuda ${debtId} agregada a cola para tienda ${storeId}`,
+      );
       return { queued: true };
     } catch (error: any) {
       this.logger.error(`Error agregando notificación de deuda a cola:`, error);
@@ -235,7 +249,10 @@ export class WhatsAppMessagingService {
       // Verificar configuración
       const config = await this.whatsappConfigService.findOne(storeId);
       if (!config || !config.debt_reminders_enabled) {
-        return { queued: false, error: 'Recordatorios de deudas no están habilitados' };
+        return {
+          queued: false,
+          error: 'Recordatorios de deudas no están habilitados',
+        };
       }
 
       // Obtener cliente
@@ -269,7 +286,11 @@ export class WhatsAppMessagingService {
         const foundIds = new Set(debts.map((d) => d.id));
         const missing = debtIds.filter((id) => !foundIds.has(id));
         if (missing.length > 0) {
-          return { queued: false, error: 'Algunas deudas seleccionadas no existen o no están pendientes' };
+          return {
+            queued: false,
+            error:
+              'Algunas deudas seleccionadas no existen o no están pendientes',
+          };
         }
       }
 
@@ -280,7 +301,8 @@ export class WhatsAppMessagingService {
       // Cargar items de las ventas asociadas a cada deuda
       const debtsWithItems = await Promise.all(
         debts.map(async (debt) => {
-          let saleWithItems: (Sale & { items?: SaleItem[] }) | undefined = undefined;
+          let saleWithItems: (Sale & { items?: SaleItem[] }) | undefined =
+            undefined;
 
           if (debt.sale_id) {
             const saleItems = await this.dataSource
@@ -304,7 +326,7 @@ export class WhatsAppMessagingService {
             ...debt,
             sale: saleWithItems,
           } as Debt & { sale?: Sale & { items?: SaleItem[] } };
-        })
+        }),
       );
 
       // Obtener nombre de la tienda
@@ -331,10 +353,15 @@ export class WhatsAppMessagingService {
         customerId,
       );
 
-      this.logger.log(`Recordatorio de deudas agregado a cola para cliente ${customerId} en tienda ${storeId}`);
+      this.logger.log(
+        `Recordatorio de deudas agregado a cola para cliente ${customerId} en tienda ${storeId}`,
+      );
       return { queued: true };
     } catch (error: any) {
-      this.logger.error(`Error agregando recordatorio de deudas a cola:`, error);
+      this.logger.error(
+        `Error agregando recordatorio de deudas a cola:`,
+        error,
+      );
       return { queued: false, error: error.message || 'Error desconocido' };
     }
   }
@@ -351,7 +378,10 @@ export class WhatsAppMessagingService {
       // Verificar configuración
       const config = await this.whatsappConfigService.findOne(storeId);
       if (!config) {
-        return { queued: false, error: 'Configuración de WhatsApp no encontrada' };
+        return {
+          queued: false,
+          error: 'Configuración de WhatsApp no encontrada',
+        };
       }
 
       // Obtener cliente
@@ -387,7 +417,9 @@ export class WhatsAppMessagingService {
         customerId,
       );
 
-      this.logger.log(`Mensaje personalizado agregado a cola para cliente ${customerId} en tienda ${storeId}`);
+      this.logger.log(
+        `Mensaje personalizado agregado a cola para cliente ${customerId} en tienda ${storeId}`,
+      );
       return { queued: true };
     } catch (error: any) {
       this.logger.error(`Error agregando mensaje personalizado a cola:`, error);

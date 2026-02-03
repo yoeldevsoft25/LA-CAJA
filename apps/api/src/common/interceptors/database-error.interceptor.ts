@@ -73,7 +73,9 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
             );
 
             // Extraer el nombre de la constraint si es posible
-            const constraintMatch = message.match(/unique constraint "([^"]+)"/i);
+            const constraintMatch = message.match(
+              /unique constraint "([^"]+)"/i,
+            );
             const constraintName = constraintMatch
               ? constraintMatch[1]
               : 'unknown';
@@ -99,8 +101,7 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
 
             return throwError(() => ({
               statusCode: HttpStatus.BAD_REQUEST,
-              message:
-                'Referencia inválida. El recurso relacionado no existe.',
+              message: 'Referencia inválida. El recurso relacionado no existe.',
               error: 'Foreign Key Constraint Violation',
             }));
           }
@@ -111,10 +112,7 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
             message.includes('NOT NULL constraint') ||
             (error as any).code === '23502' // PostgreSQL not null violation code
           ) {
-            this.logger.error(
-              `Violación de not null: ${message}`,
-              error.stack,
-            );
+            this.logger.error(`Violación de not null: ${message}`, error.stack);
 
             const columnMatch = message.match(/column "([^"]+)"/i);
             const columnName = columnMatch ? columnMatch[1] : 'unknown';
@@ -152,13 +150,3 @@ export class DatabaseErrorInterceptor implements NestInterceptor {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-

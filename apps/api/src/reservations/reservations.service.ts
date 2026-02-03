@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
-import { Reservation, ReservationStatus } from '../database/entities/reservation.entity';
+import {
+  Reservation,
+  ReservationStatus,
+} from '../database/entities/reservation.entity';
 import { Table } from '../database/entities/table.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
@@ -34,7 +37,9 @@ export class ReservationsService {
     const reservationDate = new Date(dto.reservation_date);
     const now = new Date();
     if (reservationDate < now) {
-      throw new BadRequestException('La fecha de reserva no puede ser en el pasado');
+      throw new BadRequestException(
+        'La fecha de reserva no puede ser en el pasado',
+      );
     }
 
     // Si se especifica una mesa, verificar disponibilidad
@@ -190,8 +195,7 @@ export class ReservationsService {
     });
 
     const suitableTable = availableTables.find(
-      (table) =>
-        table.capacity && table.capacity >= reservation.party_size,
+      (table) => table.capacity && table.capacity >= reservation.party_size,
     );
 
     if (!suitableTable) {
@@ -236,9 +240,7 @@ export class ReservationsService {
     const reservation = await this.getReservationById(storeId, reservationId);
 
     if (!reservation.table_id) {
-      throw new BadRequestException(
-        'La reserva debe tener una mesa asignada',
-      );
+      throw new BadRequestException('La reserva debe tener una mesa asignada');
     }
 
     reservation.status = 'seated';

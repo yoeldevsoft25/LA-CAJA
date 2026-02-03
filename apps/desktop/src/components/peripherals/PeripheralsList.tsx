@@ -23,7 +23,7 @@ import {
 } from '@/services/peripherals.service'
 import toast from '@/lib/toast'
 import PeripheralConfigModal from './PeripheralConfigModal'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -51,7 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 const peripheralTypeLabels: Record<PeripheralType, string> = {
   scanner: 'Escáner',

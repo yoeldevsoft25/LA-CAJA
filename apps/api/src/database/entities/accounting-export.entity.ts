@@ -12,7 +12,11 @@ import { Store } from './store.entity';
 import { Profile } from './profile.entity';
 
 export type AccountingExportType = 'csv' | 'excel' | 'json' | 'viotech_sync';
-export type AccountingExportStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type AccountingExportStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'failed';
 export type AccountingStandard = 'IFRS' | 'NIIF' | 'local';
 
 @Entity('accounting_exports')
@@ -94,4 +98,3 @@ export class AccountingExport {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

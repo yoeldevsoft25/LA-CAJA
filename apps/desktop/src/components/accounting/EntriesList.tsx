@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { accountingEntriesService } from '@/services/accounting.service'
 import type { AccountingEntry, EntryType, EntryStatus } from '@/types/accounting.types'
 import { Eye, Calendar as CalendarIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 const entryTypeLabels: Record<EntryType, string> = {
   sale: 'Venta',

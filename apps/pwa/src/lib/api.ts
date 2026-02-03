@@ -1,5 +1,5 @@
-import axios, { AxiosHeaders } from 'axios';
-import { useAuth, type AuthUser } from '@/stores/auth.store';
+import { createApiClient, pickAvailableApi, setStoredApiBase, type ApiClientConfig } from '@la-caja/api-client';
+import { useAuth } from '@/stores/auth.store';
 import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('API');
@@ -10,34 +10,6 @@ const TERTIARY_API_URL = (import.meta.env.VITE_TERTIARY_API_URL as string | unde
 const FAILOVER_API_URLS = [PRIMARY_API_URL, FALLBACK_API_URL, TERTIARY_API_URL].filter(
   (url): url is string => Boolean(url)
 );
-const API_BASE_STORAGE_KEY = 'velox_api_base';
-const PRIMARY_PROBE_INTERVAL_MS = 5000;
-let lastPrimaryProbeAt = 0;
-let primaryProbeInFlight: Promise<boolean> | null = null;
-
-/**
- * Decodifica un token JWT sin verificar la firma (solo para extraer datos)
- * Los tokens JWT tienen formato: header.payload.signature
- */
-function decodeJWT(token: string): any | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return null;
-    }
-    // Decodificar el payload (segunda parte)
-    const payload = parts[1];
-    // Reemplazar caracteres base64url por base64 estándar
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    // Agregar padding si es necesario
-    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-    const decoded = atob(padded);
-    return JSON.parse(decoded);
-  } catch (error) {
-    logger.error('Error decodificando JWT', error);
-    return null;
-  }
-}
 
 // Detectar automáticamente la URL del API basándose en la URL actual
 function getApiUrl(): string {
@@ -48,7 +20,7 @@ function getApiUrl(): string {
 
   // 1.1 Si hay failover definido, usar el último guardado o el primero
   if (import.meta.env.PROD && FAILOVER_API_URLS.length > 0) {
-    const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
+    const storedBase = localStorage.getItem('velox_api_base');
     if (
       storedBase &&
       storedBase !== window.location.origin &&
@@ -74,7 +46,7 @@ function getApiUrl(): string {
     const hostname = window.location.hostname;
 
     // Usar última URL válida si existe (para failover automático)
-    const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
+    const storedBase = localStorage.getItem('velox_api_base');
     if (storedBase) {
       return storedBase;
     }
@@ -85,8 +57,6 @@ function getApiUrl(): string {
     }
 
     // Si estamos en otro dominio, intentar inferir el API URL
-    // Opción 1: Mismo dominio, puerto 3000 (si es local)
-    // Opción 2: Dominio API (si existe un patrón conocido)
     // Por defecto, usar el mismo protocolo y hostname con puerto 3000
     const protocol = window.location.protocol;
     const port = protocol === 'https:' ? '' : ':3000';
@@ -98,86 +68,64 @@ function getApiUrl(): string {
   return `http://${hostname}:3000`;
 }
 
-const API_URL = getApiUrl();
-
-export const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 30000, // Timeout de 30 segundos (aumentado para importaciones largas)
-});
-
-export const getApiBaseUrl = () => api.defaults.baseURL || API_URL;
-
-const setApiBaseUrl = (nextBaseUrl: string) => {
-  api.defaults.baseURL = nextBaseUrl;
-  localStorage.setItem(API_BASE_STORAGE_KEY, nextBaseUrl);
-};
-
 const isLocalEnv = () =>
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1' ||
   window.location.port === '4173' ||
   window.location.port === '5173';
 
-const getNgrokHeaders = (url: string) =>
-  url.includes('ngrok-free.dev') ? { 'ngrok-skip-browser-warning': '1' } : undefined;
+const API_URL = getApiUrl();
 
-const probeApi = async (url: string): Promise<boolean> => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1500);
-  try {
-    await fetch(`${url}/health`, {
-      method: 'GET',
-      cache: 'no-store',
-      mode: 'no-cors',
-      headers: getNgrokHeaders(url),
-      signal: controller.signal,
-    });
-    return true;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timeout);
-  }
+const apiConfig: ApiClientConfig = {
+  baseURL: API_URL,
+  timeout: 30000,
+  failoverUrls: FAILOVER_API_URLS,
+  isProduction: import.meta.env.PROD,
+  isLocalEnv: isLocalEnv(),
+  getToken: () => localStorage.getItem('auth_token'),
+  setToken: (token: string) => {
+    localStorage.setItem('auth_token', token);
+    useAuth.getState().setToken(token);
+  },
+  onLogout: () => {
+    useAuth.getState().logout();
+    setTimeout(() => {
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }, 100);
+  },
+  getApiUrl,
+  logger: logger as ApiClientConfig['logger'],
 };
 
-const pickAvailableApi = async (): Promise<string | null> => {
-  for (const url of FAILOVER_API_URLS) {
-    if (await probeApi(url)) return url;
-  }
-  return null;
-};
+export const api = createApiClient(apiConfig);
 
+export const getApiBaseUrl = () => api.defaults.baseURL || API_URL;
+
+// Export for backward compatibility with services that use it directly
 export const ensurePrimaryPreferred = async (): Promise<void> => {
   if (!import.meta.env.PROD || isLocalEnv()) return;
   if (!PRIMARY_API_URL) return;
   if (api.defaults.baseURL === PRIMARY_API_URL) return;
 
-  const now = Date.now();
-  if (now - lastPrimaryProbeAt < PRIMARY_PROBE_INTERVAL_MS) return;
-  lastPrimaryProbeAt = now;
-
-  if (!primaryProbeInFlight) {
-    primaryProbeInFlight = probeApi(PRIMARY_API_URL).finally(() => {
-      primaryProbeInFlight = null;
-    });
-  }
-
-  const ok = await primaryProbeInFlight;
-  if (ok) {
-    setApiBaseUrl(PRIMARY_API_URL);
+  const available = await pickAvailableApi(FAILOVER_API_URLS);
+  if (available && available === PRIMARY_API_URL) {
+    setStoredApiBase(available);
+    api.defaults.baseURL = available;
   }
 };
 
+
+// Probe primary API on startup
 const probePrimaryApi = async (): Promise<boolean> => {
   if (!import.meta.env.PROD || isLocalEnv()) return true;
   if (FAILOVER_API_URLS.length <= 1) return true;
 
-  const available = await pickAvailableApi();
+  const available = await pickAvailableApi(FAILOVER_API_URLS);
   if (available) {
-    setApiBaseUrl(available);
+    setStoredApiBase(available);
+    api.defaults.baseURL = available;
     return available === PRIMARY_API_URL;
   }
   return false;
@@ -185,6 +133,7 @@ const probePrimaryApi = async (): Promise<boolean> => {
 
 void probePrimaryApi();
 
+// Background probing for failover
 if (import.meta.env.PROD && !isLocalEnv() && FAILOVER_API_URLS.length > 1) {
   const PROBE_MIN_MS = 30 * 1000;
   const PROBE_MAX_MS = 2 * 60 * 1000;
@@ -210,271 +159,3 @@ if (import.meta.env.PROD && !isLocalEnv() && FAILOVER_API_URLS.length > 1) {
     }
   });
 }
-
-// Interceptor para agregar token JWT y bloquear peticiones offline
-api.interceptors.request.use(
-  async (config) => {
-    // Bloquear peticiones si está offline
-    if (!navigator.onLine) {
-      return Promise.reject({
-        code: 'ERR_INTERNET_DISCONNECTED',
-        message: 'Sin conexión a internet',
-        isOffline: true,
-      });
-    }
-
-    await ensurePrimaryPreferred();
-    config.baseURL = getApiBaseUrl();
-
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      // Decodificar token para logging de depuración
-      const decoded = decodeJWT(token);
-      const authState = useAuth.getState();
-
-      if (decoded) {
-        logger.debug('Token info', {
-          url: config.url,
-          roleInToken: decoded.role,
-          roleInStore: authState.user?.role,
-          userIdInToken: decoded.sub,
-          userIdInStore: authState.user?.user_id,
-        });
-
-        // Si hay discrepancia, advertir
-        if (decoded.role !== authState.user?.role) {
-          logger.warn('DISCREPANCIA DE ROL', {
-            tokenRole: decoded.role,
-            storeRole: authState.user?.role,
-            tokenUserId: decoded.sub,
-            storeUserId: authState.user?.user_id,
-          });
-        }
-
-        // Si hay discrepancia en user_id, advertir también
-        if (decoded.sub !== authState.user?.user_id) {
-          logger.warn('DISCREPANCIA DE USER_ID', {
-            tokenUserId: decoded.sub,
-            storeUserId: authState.user?.user_id,
-            tokenRole: decoded.role,
-            storeRole: authState.user?.role,
-          });
-        }
-      }
-
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    const baseUrl = config.baseURL || api.defaults.baseURL || '';
-    if (baseUrl.includes('ngrok-free.dev')) {
-      const headers =
-        config.headers instanceof AxiosHeaders
-          ? config.headers
-          : AxiosHeaders.from(config.headers);
-      headers.set('ngrok-skip-browser-warning', '1');
-      config.headers = headers;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Variable para evitar múltiples redirecciones simultáneas
-let isRedirecting = false;
-
-// Variable para evitar múltiples refresh simultáneos
-let isRefreshing = false;
-let refreshSubscribers: Array<(token: string) => void> = [];
-
-// Función para suscribirse a la resolución del refresh
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
-}
-
-// Función para notificar a todos los suscriptores
-function onRefreshed(token: string) {
-  refreshSubscribers.forEach(cb => cb(token));
-  refreshSubscribers = [];
-}
-
-// Interceptor para manejar errores
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    // Si es un error offline, no hacer nada más (ya fue manejado en el request interceptor)
-    if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED') {
-      return Promise.reject(error);
-    }
-
-    const originalRequest = error.config;
-
-    const maxFailoverRetries = Math.max(0, FAILOVER_API_URLS.length - 1);
-    const currentRetry = originalRequest?._apiFailoverRetryCount ?? 0;
-    const currentBaseUrl = originalRequest?.baseURL || api.defaults.baseURL || '';
-    const currentIndex = FAILOVER_API_URLS.indexOf(currentBaseUrl);
-    const nextBaseUrl =
-      currentIndex >= 0 ? FAILOVER_API_URLS[currentIndex + 1] : undefined;
-
-    if (!error.response && maxFailoverRetries > 0 && currentRetry < maxFailoverRetries && nextBaseUrl) {
-      originalRequest._apiFailoverRetryCount = currentRetry + 1;
-      setApiBaseUrl(nextBaseUrl);
-      originalRequest.baseURL = nextBaseUrl;
-      return api(originalRequest);
-    }
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // ✅ OFFLINE-FIRST: Marcar error como no-retriable para React Query
-      error.isAuthError = true;
-
-      // Marcar que ya intentamos hacer refresh para este request
-      originalRequest._retry = true;
-
-      // 🔄 REFRESH TOKEN: Intentar renovar el token automáticamente
-      const refreshToken = localStorage.getItem('refresh_token');
-
-      if (!refreshToken) {
-        logger.warn('401 pero no hay refresh_token - redirigiendo a login');
-        if (!isRedirecting && !window.location.pathname.includes('/login')) {
-          isRedirecting = true;
-          localStorage.removeItem('auth_token');
-          useAuth.getState().logout();
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 100);
-        }
-        return Promise.reject(error);
-      }
-
-      // Si ya hay un refresh en progreso, esperar a que termine
-      if (isRefreshing) {
-        logger.debug('Esperando refresh en progreso');
-        return new Promise((resolve) => {
-          subscribeTokenRefresh((token: string) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            resolve(api(originalRequest));
-          });
-        });
-      }
-
-      isRefreshing = true;
-      logger.info('Intentando renovar token con refresh_token');
-
-      try {
-        // Hacer el refresh sin pasar por el interceptor (para evitar bucle)
-        const response = await axios.post(
-          `${originalRequest.baseURL}/auth/refresh`,
-          { refresh_token: refreshToken }
-        );
-
-        const { access_token, refresh_token: newRefreshToken } = response.data;
-
-        // ✅ ROTACIÓN: Actualizar el refresh token en localStorage con el nuevo token
-        // El backend ahora rota los refresh tokens por seguridad
-
-        logger.info('Token renovado exitosamente');
-
-        // Decodificar el nuevo token para extraer información del usuario
-        const decoded = decodeJWT(access_token);
-        if (decoded) {
-          logger.debug('Token decodificado', { userId: decoded.sub, role: decoded.role, storeId: decoded.store_id });
-
-          // Actualizar el estado del usuario con la información del token
-          const auth = useAuth.getState();
-          const currentUser = auth.user;
-
-          if (currentUser) {
-            // El JWT solo contiene: sub (user_id), store_id, role
-            // Mantener los demás campos del usuario actual (full_name, license_status, etc.)
-            const updatedUser: AuthUser = {
-              user_id: decoded.sub || currentUser.user_id,
-              store_id: decoded.store_id || currentUser.store_id,
-              role: decoded.role || currentUser.role, // Actualizar rol del token
-              full_name: currentUser.full_name, // Mantener nombre del usuario actual
-              license_status: currentUser.license_status,
-              license_expires_at: currentUser.license_expires_at,
-              license_plan: currentUser.license_plan,
-              license_features: currentUser.license_features,
-            };
-
-            // Si el rol cambió, loguear el cambio y mostrar advertencia
-            if (updatedUser.role !== currentUser.role) {
-              logger.warn('Rol del usuario cambió en el token', {
-                oldRole: currentUser.role,
-                newRole: updatedUser.role,
-                userId: currentUser.user_id,
-              });
-              // Mostrar toast de advertencia al usuario
-              import('@/lib/toast').then(({ default: toast }) => {
-                toast.error(
-                  `Tu rol ha cambiado a: ${updatedUser.role === 'owner' ? 'Propietario' : 'Cajero'}. Recarga la página.`,
-                  { duration: 5000 }
-                );
-              });
-            }
-
-            // Actualizar el usuario en el store
-            auth.setUser(updatedUser);
-          } else {
-            // Si no hay usuario actual pero tenemos token, intentar crear uno básico
-            logger.warn('No hay usuario en el store pero se renovó el token');
-          }
-        } else {
-          logger.warn('No se pudo decodificar el token, manteniendo estado actual');
-        }
-
-        // Actualizar tokens en localStorage y store
-        localStorage.setItem('auth_token', access_token);
-        localStorage.setItem('refresh_token', newRefreshToken);
-        useAuth.getState().setToken(access_token);
-
-        // Notificar a todos los requests que esperaban
-        onRefreshed(access_token);
-
-        // Actualizar el token en el request original y reintentarlo
-        originalRequest.headers.Authorization = `Bearer ${access_token}`;
-
-        isRefreshing = false;
-        return api(originalRequest);
-      } catch (refreshError) {
-        logger.error('Error al renovar token', refreshError);
-        isRefreshing = false;
-
-        // Si falla el refresh, cerrar sesión
-        if (!isRedirecting && !window.location.pathname.includes('/login')) {
-          isRedirecting = true;
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('refresh_token');
-          useAuth.getState().logout();
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 100);
-        }
-
-        return Promise.reject(error);
-      }
-    }
-
-    if (error.response?.status === 403) {
-      const data = error.response?.data as { code?: string; message?: string } | undefined
-      const message = typeof data?.message === 'string' ? data?.message.toLowerCase() : ''
-      const isLicenseBlocked =
-        data?.code === 'LICENSE_BLOCKED' || message.includes('licencia')
-
-      if (isLicenseBlocked) {
-        const auth = useAuth.getState()
-        const currentUser = auth.user
-        if (currentUser) {
-          auth.setUser({
-            ...currentUser,
-            license_status: currentUser.license_status ?? 'suspended',
-          })
-        }
-        window.location.href = '/license'
-      }
-      return Promise.reject(error);
-    }
-    return Promise.reject(error);
-  }
-);

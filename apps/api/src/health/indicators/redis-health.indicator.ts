@@ -1,10 +1,17 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
+import {
+  HealthIndicator,
+  HealthIndicatorResult,
+  HealthCheckError,
+} from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
-export class RedisHealthIndicator extends HealthIndicator implements OnModuleDestroy {
+export class RedisHealthIndicator
+  extends HealthIndicator
+  implements OnModuleDestroy
+{
   private redisClient: Redis | null = null;
 
   constructor(private configService: ConfigService) {
@@ -18,7 +25,7 @@ export class RedisHealthIndicator extends HealthIndicator implements OnModuleDes
     if (!this.redisClient) {
       try {
         const redisUrl = this.configService.get<string>('REDIS_URL');
-        
+
         if (redisUrl) {
           this.redisClient = new Redis(redisUrl, {
             maxRetriesPerRequest: null,
@@ -27,7 +34,8 @@ export class RedisHealthIndicator extends HealthIndicator implements OnModuleDes
             lazyConnect: true, // Conectar solo cuando se necesite
           });
         } else {
-          const host = this.configService.get<string>('REDIS_HOST') || 'localhost';
+          const host =
+            this.configService.get<string>('REDIS_HOST') || 'localhost';
           const port = this.configService.get<number>('REDIS_PORT') || 6379;
           const password = this.configService.get<string>('REDIS_PASSWORD');
 
@@ -55,7 +63,7 @@ export class RedisHealthIndicator extends HealthIndicator implements OnModuleDes
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     const client = this.getRedisClient();
-    
+
     if (!client) {
       throw new HealthCheckError(
         'Redis no está configurado',
@@ -95,7 +103,7 @@ export class RedisHealthIndicator extends HealthIndicator implements OnModuleDes
       );
     }
   }
-  
+
   // ⚡ OPTIMIZACIÓN: Cerrar conexión cuando el módulo se destruye
   async onModuleDestroy() {
     if (this.redisClient) {

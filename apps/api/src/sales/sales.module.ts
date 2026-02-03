@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { BullModule } from '@nestjs/bullmq';
 import { QueuesModule } from '../queues/queues.module';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
@@ -36,8 +34,18 @@ import { LicensesModule } from '../licenses/licenses.module';
 import { SalesProjectionQueueProcessor } from './queues/sales-projection.queue';
 import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processing.queue';
 
+import { CqrsModule } from '@nestjs/cqrs';
+import { GetSaleByIdHandler } from './application/queries/get-sale-by-id/get-sale-by-id.handler';
+import { CreateSaleHandler } from './application/commands/create-sale/create-sale.handler';
+import { CreateSaleValidator } from './application/commands/create-sale/create-sale.validator';
+import { GetSalesListHandler } from './application/queries/get-sales-list/get-sales-list.handler';
+import { VoidSaleHandler } from './application/commands/void-sale/void-sale.handler';
+import { ReturnItemsHandler } from './application/commands/return-items/return-items.handler';
+import { ReturnSaleHandler } from './application/commands/return-sale/return-sale.handler';
+
 @Module({
   imports: [
+    CqrsModule,
     TypeOrmModule.forFeature([
       Sale,
       SaleItem,
@@ -74,6 +82,13 @@ import { SalesPostProcessingQueueProcessor } from './queues/sales-post-processin
     SalesService,
     SalesProjectionQueueProcessor,
     SalesPostProcessingQueueProcessor,
+    GetSaleByIdHandler,
+    CreateSaleHandler,
+    CreateSaleValidator,
+    GetSalesListHandler,
+    VoidSaleHandler,
+    ReturnItemsHandler,
+    ReturnSaleHandler,
   ],
   exports: [SalesService],
 })

@@ -72,7 +72,7 @@ export class AnalyticsService {
         .andWhere('analytics.created_at <= :to', { to: dateRange.to });
     } else {
       // Por defecto, últimos 30 días
-      query.andWhere('analytics.created_at >= NOW() - INTERVAL \'30 days\'');
+      query.andWhere("analytics.created_at >= NOW() - INTERVAL '30 days'");
     }
 
     const analytics = await query.getMany();
@@ -135,7 +135,7 @@ export class AnalyticsService {
         .andWhere('analytics.created_at >= :from', { from: dateRange.from })
         .andWhere('analytics.created_at <= :to', { to: dateRange.to });
     } else {
-      query.andWhere('analytics.created_at >= NOW() - INTERVAL \'30 days\'');
+      query.andWhere("analytics.created_at >= NOW() - INTERVAL '30 days'");
     }
 
     const analytics = await query.getMany();
@@ -156,8 +156,9 @@ export class AnalyticsService {
     // Calcular métricas por canal
     return Object.entries(byChannel).map(([channel, items]) => {
       const sent = items.length;
-      const delivered = items.filter((i) => i.delivery_status === 'delivered')
-        .length;
+      const delivered = items.filter(
+        (i) => i.delivery_status === 'delivered',
+      ).length;
       const opened = items.filter((i) => i.opened_at).length;
       const clicked = items.filter((i) => i.clicked_at).length;
 
@@ -167,7 +168,8 @@ export class AnalyticsService {
         delivered,
         opened,
         clicked,
-        deliveryRate: sent > 0 ? Number(((delivered / sent) * 100).toFixed(2)) : 0,
+        deliveryRate:
+          sent > 0 ? Number(((delivered / sent) * 100).toFixed(2)) : 0,
         openRate: sent > 0 ? Number(((opened / sent) * 100).toFixed(2)) : 0,
         clickRate: sent > 0 ? Number(((clicked / sent) * 100).toFixed(2)) : 0,
       };
@@ -190,7 +192,7 @@ export class AnalyticsService {
         .andWhere('insight.created_at >= :from', { from: dateRange.from })
         .andWhere('insight.created_at <= :to', { to: dateRange.to });
     } else {
-      query.andWhere('insight.created_at >= NOW() - INTERVAL \'30 days\'');
+      query.andWhere("insight.created_at >= NOW() - INTERVAL '30 days'");
     }
 
     const insights = await query.getMany();
@@ -215,7 +217,9 @@ export class AnalyticsService {
       {} as Record<string, number>,
     );
 
-    const notificationsSent = insights.filter((i) => i.notification_sent).length;
+    const notificationsSent = insights.filter(
+      (i) => i.notification_sent,
+    ).length;
     const actionableInsights = insights.filter((i) => i.is_actionable).length;
     const resolvedInsights = insights.filter((i) => i.is_resolved).length;
 
@@ -260,7 +264,7 @@ export class AnalyticsService {
     const notifications = await this.notificationRepository
       .createQueryBuilder('notification')
       .where('notification.store_id = :storeId', { storeId })
-      .andWhere('notification.created_at >= NOW() - INTERVAL \'30 days\'')
+      .andWhere("notification.created_at >= NOW() - INTERVAL '30 days'")
       .orderBy('notification.created_at', 'DESC')
       .limit(100)
       .getMany();

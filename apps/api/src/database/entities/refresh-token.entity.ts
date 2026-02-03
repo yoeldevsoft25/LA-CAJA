@@ -67,19 +67,6 @@ export class RefreshToken {
    */
   isActive(): boolean {
     const now = new Date();
-    return (
-      this.expires_at > now &&
-      this.revoked_at === null
-    );
+    return this.expires_at > now && this.revoked_at === null;
   }
 }
-
-
-
-
-
-
-
-
-
-

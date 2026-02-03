@@ -171,9 +171,7 @@ export class DemandForecastingModel {
       predictions.length;
     const stdDev = Math.sqrt(variance);
     const confidence =
-      mean > 0
-        ? Math.max(0, Math.min(100, 100 - (stdDev / mean) * 100))
-        : 0;
+      mean > 0 ? Math.max(0, Math.min(100, 100 - (stdDev / mean) * 100)) : 0;
 
     return {
       forecast,

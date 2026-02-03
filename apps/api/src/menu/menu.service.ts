@@ -29,7 +29,7 @@ export class MenuService {
     private inventoryMovementRepository: Repository<InventoryMovement>,
     private recipesService: RecipesService,
     private cache: RedisCacheService,
-  ) { }
+  ) {}
 
   /**
    * Valida el código QR y obtiene información de la mesa
@@ -143,14 +143,18 @@ export class MenuService {
       let stockAvailable: number | null = null;
 
       if (product.is_recipe) {
-        stockAvailable = await this.recipesService.calculateAvailability(storeId, product.id);
+        stockAvailable = await this.recipesService.calculateAvailability(
+          storeId,
+          product.id,
+        );
         isAvailable = stockAvailable > 0;
       } else {
         // TODO: Para productos normales, consultar stock real en bodega
         isAvailable = true;
       }
 
-      const categoryName = product.public_category || product.category || 'Sin categoría';
+      const categoryName =
+        product.public_category || product.category || 'Sin categoría';
 
       if (!categoriesMap.has(categoryName)) {
         categoriesMap.set(categoryName, []);
@@ -190,7 +194,10 @@ export class MenuService {
   /**
    * Obtiene un producto específico del menú público
    */
-  async getPublicProduct(storeId: string, productId: string): Promise<{
+  async getPublicProduct(
+    storeId: string,
+    productId: string,
+  ): Promise<{
     id: string;
     name: string;
     category: string | null;
@@ -233,7 +240,10 @@ export class MenuService {
     let stockAvailable: number | null = null;
 
     if (product.is_recipe) {
-      stockAvailable = await this.recipesService.calculateAvailability(storeId, productId);
+      stockAvailable = await this.recipesService.calculateAvailability(
+        storeId,
+        productId,
+      );
       isAvailable = stockAvailable > 0;
     }
 

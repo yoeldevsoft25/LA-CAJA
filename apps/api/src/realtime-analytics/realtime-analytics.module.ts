@@ -24,7 +24,6 @@ import { Shift } from '../database/entities/shift.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
 import { Customer } from '../database/entities/customer.entity';
 
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -51,7 +50,7 @@ import { Customer } from '../database/entities/customer.entity';
         if (!jwtSecret) {
           throw new Error(
             'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-            'En producción, esto es obligatorio por seguridad.',
+              'En producción, esto es obligatorio por seguridad.',
           );
         }
         return {
@@ -75,4 +74,4 @@ import { Customer } from '../database/entities/customer.entity';
     AnalyticsDefaultsService,
   ],
 })
-export class RealTimeAnalyticsModule { }
+export class RealTimeAnalyticsModule {}

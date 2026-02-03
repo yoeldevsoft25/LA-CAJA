@@ -11,7 +11,13 @@ import { Product } from './product.entity';
 import { ProductVariant } from './product-variant.entity';
 import { Warehouse } from './warehouse.entity';
 
-export type MovementType = 'received' | 'adjust' | 'sold' | 'sale' | 'transfer_in' | 'transfer_out';
+export type MovementType =
+  | 'received'
+  | 'adjust'
+  | 'sold'
+  | 'sale'
+  | 'transfer_in'
+  | 'transfer_out';
 
 @Entity('inventory_movements')
 export class InventoryMovement {

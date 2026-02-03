@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { useCallback, useEffect, useRef } from 'react'
 

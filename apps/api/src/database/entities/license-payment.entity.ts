@@ -146,11 +146,9 @@ export class LicensePayment {
   expires_at: Date | null;
 
   // Relaciones
-  @OneToMany(
-    () => LicensePaymentDocument,
-    (document) => document.payment,
-    { cascade: true },
-  )
+  @OneToMany(() => LicensePaymentDocument, (document) => document.payment, {
+    cascade: true,
+  })
   documents: LicensePaymentDocument[];
 
   @OneToMany(

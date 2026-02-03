@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { calculateChangeInBs, formatCurrency } from '@/utils/checkout-utils'
 import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNearestDenominationUp, CashChangeRoundingMode } from '@/utils/vzla-denominations'

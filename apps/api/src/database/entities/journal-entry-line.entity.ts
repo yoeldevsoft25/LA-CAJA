@@ -71,14 +71,3 @@ export class JournalEntryLine {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }
-
-
-
-
-
-
-
-
-
-
-

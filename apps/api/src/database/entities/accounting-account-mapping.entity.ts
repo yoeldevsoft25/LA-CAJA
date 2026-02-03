@@ -77,4 +77,3 @@ export class AccountingAccountMapping {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-

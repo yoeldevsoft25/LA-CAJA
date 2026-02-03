@@ -8,10 +8,12 @@ import {
   SyncQueue,
   SyncQueueConfig,
   SyncMetricsCollector,
+} from '@la-caja/sync';
+import {
   VectorClockManager,
   CircuitBreaker,
   CacheManager,
-} from '@la-caja/sync';
+} from '@la-caja/offline-core';
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
 import { createLogger } from '@/lib/logger';

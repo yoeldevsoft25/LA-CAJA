@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { RefreshCw } from 'lucide-react'
 
 interface PullToRefreshIndicatorProps {

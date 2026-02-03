@@ -8,8 +8,8 @@ import {
 } from '@/services/promotions.service'
 import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 export default function PromotionsPage() {
   const { user } = useAuth()

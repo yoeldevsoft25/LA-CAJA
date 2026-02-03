@@ -23,7 +23,7 @@ export class WhatsAppController {
   constructor(
     private readonly whatsappConfigService: WhatsAppConfigService,
     private readonly whatsappBotService: WhatsAppBotService,
-  ) { }
+  ) {}
 
   @Get('config')
   async getConfig(@Request() req: any) {
@@ -78,22 +78,27 @@ export class WhatsAppController {
 
     // Si no hay QR y no está conectado, forzar reinicialización del bot
     if (!qrCode) {
-      this.logger.log(`No hay QR disponible para tienda ${storeId}, reinicializando bot...`);
+      this.logger.log(
+        `No hay QR disponible para tienda ${storeId}, reinicializando bot...`,
+      );
 
       try {
         await this.whatsappBotService.disconnect(storeId);
       } catch (error) {
-        this.logger.debug(`Error al desconectar bot (puede que no exista):`, error);
+        this.logger.debug(
+          `Error al desconectar bot (puede que no exista):`,
+          error,
+        );
       }
 
       // Esperar un momento antes de reinicializar
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Reinicializar el bot (esto generará un nuevo QR si no hay sesión guardada)
       await this.whatsappBotService.initializeBot(storeId, true, true);
 
       // Esperar un momento para que se genere el QR (Baileys puede tardar un poco)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Obtener el nuevo QR
       qrCode = await this.whatsappBotService.getQRCode(storeId);
@@ -139,14 +144,19 @@ export class WhatsAppController {
     const hasSession = this.whatsappBotService.hasSavedSession(storeId);
 
     if (!botExists && hasSession) {
-      this.logger.log(`Bot no inicializado pero hay sesión guardada para tienda ${storeId}, restaurando conexión...`);
+      this.logger.log(
+        `Bot no inicializado pero hay sesión guardada para tienda ${storeId}, restaurando conexión...`,
+      );
       try {
         await this.whatsappBotService.initializeBot(storeId);
         // Esperar un momento para que Baileys restaure la conexión desde la sesión guardada
         // Baileys se conecta automáticamente si hay credenciales válidas
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (error) {
-        this.logger.warn(`Error restaurando bot para tienda ${storeId}:`, error);
+        this.logger.warn(
+          `Error restaurando bot para tienda ${storeId}:`,
+          error,
+        );
       }
     }
 

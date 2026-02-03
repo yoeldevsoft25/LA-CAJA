@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
+import {
+  HealthIndicator,
+  HealthIndicatorResult,
+  HealthCheckError,
+} from '@nestjs/terminus';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
 @Injectable()
 export class BullMQHealthIndicator extends HealthIndicator {
-  constructor(
-    @InjectQueue('notifications') private notificationsQueue: Queue,
-  ) {
+  constructor(@InjectQueue('notifications') private notificationsQueue: Queue) {
     super();
   }
 

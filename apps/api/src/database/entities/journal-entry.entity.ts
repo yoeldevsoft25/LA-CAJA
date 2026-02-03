@@ -140,13 +140,3 @@ export class JournalEntry {
   @OneToMany(() => JournalEntryLine, (line) => line.entry, { cascade: true })
   lines: JournalEntryLine[];
 }
-
-
-
-
-
-
-
-
-
-

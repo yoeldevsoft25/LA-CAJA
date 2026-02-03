@@ -112,13 +112,3 @@ export class CreateJournalEntryDto {
   @IsObject()
   metadata?: Record<string, any>;
 }
-
-
-
-
-
-
-
-
-
-

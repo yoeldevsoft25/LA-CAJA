@@ -1,12 +1,12 @@
 import { Clock, DollarSign, FileX, CheckCircle2, Calendar, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { Shift, ShiftSummary } from '@/services/shifts.service'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface CurrentShiftCardProps {
   shift: Shift | null

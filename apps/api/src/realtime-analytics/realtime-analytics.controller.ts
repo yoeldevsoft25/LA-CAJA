@@ -40,7 +40,7 @@ export class RealTimeAnalyticsController {
     private readonly notificationsService: NotificationsService,
     private readonly notificationsGateway: NotificationsGateway,
     private readonly analyticsDefaultsService: AnalyticsDefaultsService,
-  ) { }
+  ) {}
 
   /**
    * Obtener métricas en tiempo real
@@ -282,11 +282,12 @@ export class RealTimeAnalyticsController {
         );
 
       // Aplicar configuración predeterminada
-      const thresholds = await this.analyticsDefaultsService.applyDefaultThresholds(
-        storeId,
-        userId,
-        historicalAverages || undefined, // Convert null to undefined
-      );
+      const thresholds =
+        await this.analyticsDefaultsService.applyDefaultThresholds(
+          storeId,
+          userId,
+          historicalAverages || undefined, // Convert null to undefined
+        );
 
       // Iniciar cálculo de métricas inmediatamente
       await this.analyticsService.calculateAndSaveMetrics(storeId);

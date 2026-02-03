@@ -1,7 +1,7 @@
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 type TransitionType = 'fade' | 'slideUp' | 'slideLeft' | 'scale' | 'none'
 

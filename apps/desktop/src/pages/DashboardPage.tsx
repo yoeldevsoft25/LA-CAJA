@@ -25,11 +25,11 @@ import PendingOrdersIndicator from '@/components/suppliers/PendingOrdersIndicato
 import { dashboardService } from '@/services/dashboard.service'
 import { setupService } from '@/services/setup.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import {
   Table,
   TableBody,

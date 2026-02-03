@@ -23,7 +23,10 @@ import { ResetPinDto } from './dto/reset-pin.dto';
 import { Enable2FADto } from './dto/enable-2fa.dto';
 import { Verify2FADto } from './dto/verify-2fa.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { RefreshTokenDto, RefreshTokenResponseDto } from './dto/refresh-token.dto';
+import {
+  RefreshTokenDto,
+  RefreshTokenResponseDto,
+} from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginRateLimitGuard } from './guards/login-rate-limit.guard';
 import { SecurityAuditService } from '../security/security-audit.service';
@@ -210,7 +213,9 @@ export class AuthController {
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60 } }) // 5 intentos por minuto
-  async verifyEmail(@Body() body: { token: string }): Promise<{ verified: boolean; message: string }> {
+  async verifyEmail(
+    @Body() body: { token: string },
+  ): Promise<{ verified: boolean; message: string }> {
     if (!body.token) {
       throw new BadRequestException('Token de verificación es requerido');
     }
@@ -222,7 +227,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 3, ttl: 3600 } }) // 3 intentos por hora
-  async resendVerificationEmail(@Request() req: any): Promise<{ message: string }> {
+  async resendVerificationEmail(
+    @Request() req: any,
+  ): Promise<{ message: string }> {
     const userId = req.user?.sub;
     if (!userId) {
       throw new BadRequestException('Usuario no autenticado');
@@ -242,7 +249,9 @@ export class AuthController {
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
 
-    this.logger.log(`Solicitud de recuperación de PIN para email: ${dto.email}`);
+    this.logger.log(
+      `Solicitud de recuperación de PIN para email: ${dto.email}`,
+    );
 
     try {
       const result = await this.authService.forgotPin(dto, ipAddress);
@@ -363,7 +372,7 @@ export class AuthController {
     try {
       const deviceId = body.device_id || req.headers['x-device-id'] || null;
       const result = await this.authService.login(dto, deviceId, ipAddress);
-      
+
       // ✅ Registrar login exitoso
       await this.securityAudit.log({
         event_type: 'login_success',
@@ -452,10 +461,7 @@ export class AuthController {
 
     if (body.refresh_token) {
       // Revocar refresh token específico
-      await this.authService.revokeRefreshToken(
-        body.refresh_token,
-        'logout',
-      );
+      await this.authService.revokeRefreshToken(body.refresh_token, 'logout');
     } else {
       // Revocar todos los tokens del usuario
       await this.authService.revokeAllUserTokens(
@@ -540,7 +546,11 @@ export class AuthController {
     @Request() req: any,
   ): Promise<{ disabled: boolean; message: string }> {
     const user = req.user;
-    return this.authService.disable2FA(user.sub, user.store_id, body.verification_code);
+    return this.authService.disable2FA(
+      user.sub,
+      user.store_id,
+      body.verification_code,
+    );
   }
 
   @Post('2fa/verify')

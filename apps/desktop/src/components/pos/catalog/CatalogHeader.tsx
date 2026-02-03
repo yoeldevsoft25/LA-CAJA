@@ -1,6 +1,6 @@
 import { Search, RotateCw } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Input } from '@la-caja/ui-core'
+import { Button } from '@la-caja/ui-core'
 import ScannerStatusBadge from '@/components/pos/ScannerStatusBadge'
 
 interface CatalogHeaderProps {

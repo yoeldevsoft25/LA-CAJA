@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {

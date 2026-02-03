@@ -21,6 +21,10 @@ import { CashSession } from '../database/entities/cash-session.entity';
     CashMovementsService,
     PaymentRulesService,
   ],
-  exports: [PaymentMethodConfigsService, PaymentRulesService, CashMovementsService],
+  exports: [
+    PaymentMethodConfigsService,
+    PaymentRulesService,
+    CashMovementsService,
+  ],
 })
 export class PaymentsModule {}

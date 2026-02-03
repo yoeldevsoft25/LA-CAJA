@@ -2,7 +2,7 @@ import { Product } from '@/services/products.service'
 import { StockStatus } from '@/services/inventory.service'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   Copy,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 

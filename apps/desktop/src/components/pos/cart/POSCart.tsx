@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react'
 import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { CartItem } from '@/stores/cart.store'
 import { CartTabs } from './CartTabs'
 import { CartList } from './CartList'
 import { CartSummary } from './CartSummary'
 import { Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import {
     AlertDialog,
     AlertDialogAction,

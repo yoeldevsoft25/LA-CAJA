@@ -43,4 +43,3 @@ export class ExportAccountingDto {
   @IsString({ each: true })
   account_codes?: string[];
 }
-

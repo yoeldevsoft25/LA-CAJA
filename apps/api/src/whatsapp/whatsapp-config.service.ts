@@ -19,7 +19,7 @@ export class WhatsAppConfigService {
   constructor(
     @InjectRepository(WhatsAppConfig)
     private whatsappConfigRepository: Repository<WhatsAppConfig>,
-  ) { }
+  ) {}
 
   /**
    * Obtiene la configuración de WhatsApp de una tienda
@@ -139,9 +139,7 @@ export class WhatsAppConfigService {
           ? `${Number(item.weight_value || item.qty).toFixed(2)} ${item.weight_unit || 'kg'}`
           : item.qty.toString();
         const unitPrice = item.is_weight_product
-          ? Number(
-            item.price_per_weight_usd ?? item.unit_price_usd,
-          ).toFixed(2)
+          ? Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(2)
           : Number(item.unit_price_usd).toFixed(2);
         const lineTotal = (
           Number(item.qty) * Number(item.unit_price_usd) -
@@ -177,9 +175,9 @@ export class WhatsAppConfigService {
       FIAO: 'Fiado',
       OTHER: 'Biopago',
     };
-    message +=
-      `${paymentMethodLabels[sale.payment.method] || sale.payment.method
-      }\n`;
+    message += `${
+      paymentMethodLabels[sale.payment.method] || sale.payment.method
+    }\n`;
 
     // Cliente
     if (sale.customer) {
@@ -245,9 +243,9 @@ export class WhatsAppConfigService {
             ? `${Number(item.weight_value || item.qty).toFixed(2)} ${item.weight_unit || 'kg'}`
             : item.qty.toString();
           const unitPrice = item.is_weight_product
-            ? Number(
-              item.price_per_weight_usd ?? item.unit_price_usd,
-            ).toFixed(2)
+            ? Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
+                2,
+              )
             : Number(item.unit_price_usd).toFixed(2);
           const lineTotal = (
             Number(item.qty) * Number(item.unit_price_usd) -
@@ -275,7 +273,11 @@ export class WhatsAppConfigService {
    * Formatea un mensaje de recordatorio de deudas pendientes
    */
   formatDebtReminderMessage(
-    debts: (Debt & { customer?: Customer; payments?: any[]; sale?: Sale & { items?: any[] } })[],
+    debts: (Debt & {
+      customer?: Customer;
+      payments?: any[];
+      sale?: Sale & { items?: any[] };
+    })[],
     customer: Customer,
     config: WhatsAppConfig,
     storeName: string,
@@ -334,7 +336,13 @@ export class WhatsAppConfigService {
       });
 
       const emoji =
-        index === 0 ? '1️⃣' : index === 1 ? '2️⃣' : index === 2 ? '3️⃣' : `${index + 1}.`;
+        index === 0
+          ? '1️⃣'
+          : index === 1
+            ? '2️⃣'
+            : index === 2
+              ? '3️⃣'
+              : `${index + 1}.`;
 
       message += `${emoji} Deuda #${debtId}\n`;
       message += `   📅 Fecha: ${debtDate}\n`;
@@ -351,9 +359,9 @@ export class WhatsAppConfigService {
             ? `${Number(item.weight_value || item.qty).toFixed(2)} ${item.weight_unit || 'kg'}`
             : item.qty.toString();
           const unitPrice = item.is_weight_product
-            ? Number(
-              item.price_per_weight_usd ?? item.unit_price_usd,
-            ).toFixed(2)
+            ? Number(item.price_per_weight_usd ?? item.unit_price_usd).toFixed(
+                2,
+              )
             : Number(item.unit_price_usd).toFixed(2);
           const lineTotal = (
             Number(item.qty) * Number(item.unit_price_usd) -
@@ -395,7 +403,7 @@ export class WhatsAppConfigService {
     config: WhatsAppConfig,
     storeName: string,
   ): string {
-    let message = this.replaceVariables(customMessage, {
+    const message = this.replaceVariables(customMessage, {
       storeName,
       customerName: customer.name,
     });

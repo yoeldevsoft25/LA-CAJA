@@ -8,7 +8,7 @@ import TablesGrid from '@/components/tables/TablesGrid'
 import FloorPlanView from '@/components/tables/FloorPlanView'
 import OrderModal from '@/components/tables/OrderModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders'
 
 export default function TablesPage() {

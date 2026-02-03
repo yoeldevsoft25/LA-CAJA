@@ -1,0 +1,22 @@
+{
+    "name": "@la-caja/app-core",
+    "version": "1.0.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "lint": "eslint \"src/**/*.{ts,tsx}\"",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "zustand": "^5.0.9"
+    },
+    "devDependencies": {
+        "react": "^18.2.0",
+        "typescript": "^5.2.2",
+        "vitest": "^1.0.0"
+    },
+    "peerDependencies": {
+        "react": ">=18.0.0"
+    }
+}

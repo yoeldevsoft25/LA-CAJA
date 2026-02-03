@@ -20,7 +20,7 @@ import {
 import { inventoryService } from '@/services/inventory.service'
 import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -43,7 +43,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WarehouseFormModal } from '@/components/warehouses/WarehouseFormModal'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 export default function WarehousesPage() {
   const { user } = useAuth()

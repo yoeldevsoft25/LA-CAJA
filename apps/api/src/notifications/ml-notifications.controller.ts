@@ -235,10 +235,7 @@ export class MLNotificationsController {
    * Obtiene top notificaciones por engagement
    */
   @Get('analytics/top-performing')
-  async getTopPerforming(
-    @Request() req: any,
-    @Query('limit') limit?: string,
-  ) {
+  async getTopPerforming(@Request() req: any, @Query('limit') limit?: string) {
     const storeId = req.user.storeId;
     const notifications =
       await this.analyticsService.getTopPerformingNotifications(
@@ -256,10 +253,7 @@ export class MLNotificationsController {
    * Obtiene tendencias de engagement
    */
   @Get('analytics/trends')
-  async getEngagementTrends(
-    @Request() req: any,
-    @Query('days') days?: string,
-  ) {
+  async getEngagementTrends(@Request() req: any, @Query('days') days?: string) {
     const storeId = req.user.storeId;
     const trends = await this.analyticsService.getEngagementTrends(
       storeId,

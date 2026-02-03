@@ -92,7 +92,10 @@ export class TablesService {
         try {
           await this.qrCodesService.getQRCodeByTable(storeId, table.id);
           // Actualizar la referencia en memoria
-          const updatedQR = await this.qrCodesService.getQRCodeByTable(storeId, table.id);
+          const updatedQR = await this.qrCodesService.getQRCodeByTable(
+            storeId,
+            table.id,
+          );
           table.qrCode = updatedQR;
         } catch (error) {
           // Ignorar errores si no hay QR code
@@ -119,7 +122,10 @@ export class TablesService {
     // Actualizar URL del QR code si es necesario
     if (table.qrCode) {
       try {
-        const updatedQR = await this.qrCodesService.getQRCodeByTable(storeId, tableId);
+        const updatedQR = await this.qrCodesService.getQRCodeByTable(
+          storeId,
+          tableId,
+        );
         // Actualizar la referencia en memoria
         table.qrCode = updatedQR;
       } catch (error) {
@@ -147,7 +153,10 @@ export class TablesService {
     for (const table of tables) {
       if (table.qrCode) {
         try {
-          const updatedQR = await this.qrCodesService.getQRCodeByTable(storeId, table.id);
+          const updatedQR = await this.qrCodesService.getQRCodeByTable(
+            storeId,
+            table.id,
+          );
           // Actualizar la referencia en memoria
           table.qrCode = updatedQR;
         } catch (error) {
@@ -192,19 +201,24 @@ export class TablesService {
     if (dto.status !== undefined) table.status = dto.status;
     if (dto.zone !== undefined) table.zone = dto.zone;
     if (dto.coordinates !== undefined) table.coordinates = dto.coordinates;
-    if (dto.estimated_dining_time !== undefined) table.estimated_dining_time = dto.estimated_dining_time;
+    if (dto.estimated_dining_time !== undefined)
+      table.estimated_dining_time = dto.estimated_dining_time;
     if (dto.note !== undefined) table.note = dto.note;
 
     table.updated_at = new Date();
 
     const savedTable = await this.tableRepository.save(table);
-    
+
     // Emitir evento WebSocket
     this.notificationsGateway.emitTableUpdate(storeId, savedTable);
     if (dto.status !== undefined) {
-      this.notificationsGateway.emitTableStatusChange(storeId, tableId, dto.status);
+      this.notificationsGateway.emitTableStatusChange(
+        storeId,
+        tableId,
+        dto.status,
+      );
     }
-    
+
     return savedTable;
   }
 
@@ -220,11 +234,11 @@ export class TablesService {
     table.status = status;
     table.updated_at = new Date();
     const savedTable = await this.tableRepository.save(table);
-    
+
     // Emitir eventos WebSocket
     this.notificationsGateway.emitTableUpdate(storeId, savedTable);
     this.notificationsGateway.emitTableStatusChange(storeId, tableId, status);
-    
+
     return savedTable;
   }
 
@@ -241,11 +255,15 @@ export class TablesService {
     table.status = orderId ? 'occupied' : 'available';
     table.updated_at = new Date();
     const savedTable = await this.tableRepository.save(table);
-    
+
     // Emitir eventos WebSocket
     this.notificationsGateway.emitTableUpdate(storeId, savedTable);
-    this.notificationsGateway.emitTableStatusChange(storeId, tableId, savedTable.status);
-    
+    this.notificationsGateway.emitTableStatusChange(
+      storeId,
+      tableId,
+      savedTable.status,
+    );
+
     return savedTable;
   }
 

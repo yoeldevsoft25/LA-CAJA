@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from '../database/entities/order.entity';
@@ -53,7 +60,7 @@ export class KitchenDisplayService {
     private notificationsGateway: NotificationsGateway,
     private recipesService: RecipesService,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   private generatePublicUrl(token: string): string {
     let baseUrl = this.configService.get<string>('FRONTEND_URL');
@@ -65,8 +72,12 @@ export class KitchenDisplayService {
     return `${baseUrl}/public/kitchen/${token}`;
   }
 
-  async getOrCreatePublicLink(storeId: string): Promise<{ token: string; url: string; has_pin: boolean }> {
-    const store = await this.storeRepository.findOne({ where: { id: storeId } });
+  async getOrCreatePublicLink(
+    storeId: string,
+  ): Promise<{ token: string; url: string; has_pin: boolean }> {
+    const store = await this.storeRepository.findOne({
+      where: { id: storeId },
+    });
     if (!store) {
       throw new NotFoundException('Tienda no encontrada');
     }
@@ -83,8 +94,12 @@ export class KitchenDisplayService {
     };
   }
 
-  async rotatePublicToken(storeId: string): Promise<{ token: string; url: string; has_pin: boolean }> {
-    const store = await this.storeRepository.findOne({ where: { id: storeId } });
+  async rotatePublicToken(
+    storeId: string,
+  ): Promise<{ token: string; url: string; has_pin: boolean }> {
+    const store = await this.storeRepository.findOne({
+      where: { id: storeId },
+    });
     if (!store) {
       throw new NotFoundException('Tienda no encontrada');
     }
@@ -99,7 +114,10 @@ export class KitchenDisplayService {
     };
   }
 
-  async getPublicKitchenOrders(token: string, pin?: string): Promise<KitchenOrder[]> {
+  async getPublicKitchenOrders(
+    token: string,
+    pin?: string,
+  ): Promise<KitchenOrder[]> {
     const store = await this.storeRepository.findOne({
       where: { kitchen_public_token: token },
       select: ['id', 'kitchen_public_pin_hash'],
@@ -122,8 +140,13 @@ export class KitchenDisplayService {
     return this.getKitchenOrders(store.id);
   }
 
-  async setPublicPin(storeId: string, pin?: string): Promise<{ has_pin: boolean }> {
-    const store = await this.storeRepository.findOne({ where: { id: storeId } });
+  async setPublicPin(
+    storeId: string,
+    pin?: string,
+  ): Promise<{ has_pin: boolean }> {
+    const store = await this.storeRepository.findOne({
+      where: { id: storeId },
+    });
     if (!store) {
       throw new NotFoundException('Tienda no encontrada');
     }
@@ -156,7 +179,7 @@ export class KitchenDisplayService {
 
     return orders.map((order) => {
       const elapsedMinutes = Math.floor(
-        (Date.now() - new Date(order.opened_at).getTime()) / 60000
+        (Date.now() - new Date(order.opened_at).getTime()) / 60000,
       );
 
       return {
@@ -169,7 +192,10 @@ export class KitchenDisplayService {
           product_name: (item.product as any)?.name || 'Producto desconocido',
           qty: item.qty,
           note: item.note,
-          status: (item.status || 'pending') as 'pending' | 'preparing' | 'ready',
+          status: (item.status || 'pending') as
+            | 'pending'
+            | 'preparing'
+            | 'ready',
           added_at: item.added_at.toISOString(),
         })),
         created_at: order.opened_at.toISOString(),
@@ -181,7 +207,10 @@ export class KitchenDisplayService {
   /**
    * Obtiene una orden específica para la cocina
    */
-  async getKitchenOrder(storeId: string, orderId: string): Promise<KitchenOrder | null> {
+  async getKitchenOrder(
+    storeId: string,
+    orderId: string,
+  ): Promise<KitchenOrder | null> {
     const order = await this.orderRepository.findOne({
       where: {
         id: orderId,
@@ -194,7 +223,7 @@ export class KitchenDisplayService {
     if (!order) return null;
 
     const elapsedMinutes = Math.floor(
-      (Date.now() - new Date(order.opened_at).getTime()) / 60000
+      (Date.now() - new Date(order.opened_at).getTime()) / 60000,
     );
 
     return {
@@ -251,13 +280,19 @@ export class KitchenDisplayService {
 
     // Validar transición de estado
     if (status === 'pending' && item.status === 'ready') {
-      throw new BadRequestException('No se puede revertir un item listo a pendiente');
+      throw new BadRequestException(
+        'No se puede revertir un item listo a pendiente',
+      );
     }
 
     // Si el item pasa a 'ready', descontar stock de ingredientes (receta)
     if (status === 'ready' && item.status !== 'ready') {
       try {
-        await this.recipesService.consumeIngredients(storeId, item.product_id, item.qty);
+        await this.recipesService.consumeIngredients(
+          storeId,
+          item.product_id,
+          item.qty,
+        );
       } catch (error) {
         this.logger.error(
           `Error consumiendo ingredientes para el plato ${item.product_id}: ${error.message}`,

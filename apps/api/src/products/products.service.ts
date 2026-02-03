@@ -16,13 +16,15 @@ import { SearchProductsDto } from './dto/search-products.dto';
 import { ExchangeService } from '../exchange/exchange.service';
 import { UsageService } from '../licenses/usage.service';
 import { randomUUID } from 'crypto';
-import { PricingCalculator, WeightUnit, normalizeBarcode } from '@la-caja/domain';
+import {
+  PricingCalculator,
+  WeightUnit,
+  normalizeBarcode,
+} from '@la-caja/domain';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
-
-
 
   constructor(
     @InjectRepository(Product)
@@ -31,7 +33,7 @@ export class ProductsService {
     private recipeIngredientRepository: Repository<RecipeIngredient>,
     private exchangeService: ExchangeService,
     private usageService: UsageService,
-  ) { }
+  ) {}
 
   private async ensureBarcodeUnique(
     repository: Repository<Product>,
@@ -60,8 +62,16 @@ export class ProductsService {
     fromUnit: WeightUnit,
     toUnit: WeightUnit,
   ): Promise<void> {
-    const quantityFactor = PricingCalculator.convertWeightValue(1, fromUnit, toUnit);
-    const priceFactor = PricingCalculator.convertWeightPrice(1, fromUnit, toUnit);
+    const quantityFactor = PricingCalculator.convertWeightValue(
+      1,
+      fromUnit,
+      toUnit,
+    );
+    const priceFactor = PricingCalculator.convertWeightPrice(
+      1,
+      fromUnit,
+      toUnit,
+    );
 
     if (!Number.isFinite(quantityFactor) || !Number.isFinite(priceFactor)) {
       throw new BadRequestException(
@@ -115,7 +125,11 @@ export class ProductsService {
     manager: EntityManager,
     storeId: string,
     productId: string,
-    ingredients: { ingredient_product_id: string; qty: number; unit: string | null }[],
+    ingredients: {
+      ingredient_product_id: string;
+      qty: number;
+      unit: string | null;
+    }[],
   ): Promise<void> {
     await manager.delete(RecipeIngredient, { recipe_product_id: productId });
 
@@ -124,9 +138,7 @@ export class ProductsService {
     const invalidQty = ingredients.some((ingredient) => {
       const qty = Number(ingredient.qty);
       return (
-        !ingredient.ingredient_product_id ||
-        !Number.isFinite(qty) ||
-        qty <= 0
+        !ingredient.ingredient_product_id || !Number.isFinite(qty) || qty <= 0
       );
     });
     if (invalidQty) {
@@ -137,9 +149,7 @@ export class ProductsService {
       ...new Set(ingredients.map((i) => i.ingredient_product_id)),
     ];
     if (ingredientIds.includes(productId)) {
-      throw new BadRequestException(
-        'Una receta no puede incluirse a sí misma',
-      );
+      throw new BadRequestException('Una receta no puede incluirse a sí misma');
     }
 
     const validIngredients = await manager.getRepository(Product).find({
@@ -213,7 +223,7 @@ export class ProductsService {
       isWeightProduct && pricePerWeightUsd !== null
         ? PricingCalculator.roundToDecimals(pricePerWeightUsd * exchangeRate, 4)
         : isWeightProduct
-          ? dto.price_per_weight_bs ?? null
+          ? (dto.price_per_weight_bs ?? null)
           : null;
 
     // Calcular costo por peso
@@ -225,11 +235,11 @@ export class ProductsService {
       isWeightProduct && costPerWeightUsd !== null
         ? PricingCalculator.roundToDecimals(costPerWeightUsd * exchangeRate, 6)
         : isWeightProduct
-          ? dto.cost_per_weight_bs ?? null
+          ? (dto.cost_per_weight_bs ?? null)
           : null;
 
     return this.productRepository.manager.transaction(async (manager) => {
-      let productType: 'sale_item' | 'ingredient' | 'prepared' =
+      const productType: 'sale_item' | 'ingredient' | 'prepared' =
         dto.product_type ?? (dto.is_recipe ? 'prepared' : 'sale_item');
 
       if (dto.is_recipe && productType === 'ingredient') {
@@ -260,15 +270,17 @@ export class ProductsService {
         low_stock_threshold: dto.low_stock_threshold || 0,
         is_active: true,
         is_weight_product: isWeightProduct,
-        weight_unit: isWeightProduct ? dto.weight_unit ?? null : null,
+        weight_unit: isWeightProduct ? (dto.weight_unit ?? null) : null,
         price_per_weight_bs: pricePerWeightBs,
         price_per_weight_usd: pricePerWeightUsd,
         cost_per_weight_bs: costPerWeightBs,
         cost_per_weight_usd: costPerWeightUsd,
-        min_weight: isWeightProduct ? dto.min_weight ?? null : null,
-        max_weight: isWeightProduct ? dto.max_weight ?? null : null,
-        scale_plu: isWeightProduct ? dto.scale_plu ?? null : null,
-        scale_department: isWeightProduct ? dto.scale_department ?? null : null,
+        min_weight: isWeightProduct ? (dto.min_weight ?? null) : null,
+        max_weight: isWeightProduct ? (dto.max_weight ?? null) : null,
+        scale_plu: isWeightProduct ? (dto.scale_plu ?? null) : null,
+        scale_department: isWeightProduct
+          ? (dto.scale_department ?? null)
+          : null,
         image_url: dto.image_url ?? null,
         description: dto.description ?? null,
         is_recipe: dto.is_recipe ?? false,
@@ -441,9 +453,15 @@ export class ProductsService {
         product.is_weight_product = dto.is_weight_product;
 
       // Lógica para actualizar precios: Si se envía price_bs, priorizarlo para mantener exactitud.
-      if (dto.price_bs !== undefined && dto.price_bs !== null && exchangeRate !== null) {
+      if (
+        dto.price_bs !== undefined &&
+        dto.price_bs !== null &&
+        exchangeRate !== null
+      ) {
         product.price_bs = PricingCalculator.roundToTwoDecimals(dto.price_bs);
-        product.price_usd = PricingCalculator.roundToTwoDecimals(product.price_bs / exchangeRate);
+        product.price_usd = PricingCalculator.roundToTwoDecimals(
+          product.price_bs / exchangeRate,
+        );
         this.logger.log(
           `Actualizando precio (Base Bs): price_bs=${product.price_bs} -> price_usd=${product.price_usd} (tasa=${exchangeRate})`,
         );
@@ -457,11 +475,16 @@ export class ProductsService {
         );
       }
 
-
       // Lógica para actualizar costos
-      if (dto.cost_bs !== undefined && dto.cost_bs !== null && exchangeRate !== null) {
+      if (
+        dto.cost_bs !== undefined &&
+        dto.cost_bs !== null &&
+        exchangeRate !== null
+      ) {
         product.cost_bs = PricingCalculator.roundToTwoDecimals(dto.cost_bs);
-        product.cost_usd = PricingCalculator.roundToTwoDecimals(product.cost_bs / exchangeRate);
+        product.cost_usd = PricingCalculator.roundToTwoDecimals(
+          product.cost_bs / exchangeRate,
+        );
         this.logger.log(
           `Actualizando costo (Base Bs): cost_bs=${product.cost_bs} -> cost_usd=${product.cost_usd} (tasa=${exchangeRate})`,
         );
@@ -492,12 +515,9 @@ export class ProductsService {
           | 'g'
           | 'lb'
           | 'oz';
-        if (dto.weight_unit !== undefined) product.weight_unit = dto.weight_unit;
-        currentUnit = (product.weight_unit || 'kg') as
-          | 'kg'
-          | 'g'
-          | 'lb'
-          | 'oz';
+        if (dto.weight_unit !== undefined)
+          product.weight_unit = dto.weight_unit;
+        currentUnit = (product.weight_unit || 'kg') as 'kg' | 'g' | 'lb' | 'oz';
         unitChanged = previousUnit !== currentUnit;
 
         if (unitChanged) {
@@ -667,11 +687,17 @@ export class ProductsService {
         product.public_image_url = dto.public_image_url;
       if (dto.public_category !== undefined)
         product.public_category = dto.public_category;
-      if (dto.profit_margin !== undefined) product.profit_margin = dto.profit_margin;
+      if (dto.profit_margin !== undefined)
+        product.profit_margin = dto.profit_margin;
 
       const savedProduct = await productRepo.save(product);
 
-      if (unitChanged && product.is_weight_product && previousUnit && currentUnit) {
+      if (
+        unitChanged &&
+        product.is_weight_product &&
+        previousUnit &&
+        currentUnit
+      ) {
         this.logger.log(
           `Convirtiendo inventario de ${previousUnit} a ${currentUnit} para producto ${product.id}`,
         );
@@ -829,8 +855,6 @@ export class ProductsService {
       products: savedProducts,
     };
   }
-
-
 
   async deactivate(storeId: string, productId: string): Promise<Product> {
     const product = await this.findOne(storeId, productId);

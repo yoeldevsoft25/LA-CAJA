@@ -36,4 +36,4 @@ import { LicensesModule } from '../licenses/licenses.module';
     ConflictResolutionService,
   ],
 })
-export class SyncModule { }
+export class SyncModule {}

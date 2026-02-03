@@ -30,7 +30,10 @@ export class ReservationsController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createReservation(@Body() dto: CreateReservationDto, @Request() req: any) {
+  async createReservation(
+    @Body() dto: CreateReservationDto,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
     return this.reservationsService.createReservation(storeId, dto);
   }
@@ -39,13 +42,13 @@ export class ReservationsController {
    * Obtiene todas las reservas de la tienda
    */
   @Get()
-  async getReservations(
-    @Request() req: any,
-    @Query('date') date?: string,
-  ) {
+  async getReservations(@Request() req: any, @Query('date') date?: string) {
     const storeId = req.user.store_id;
     const reservationDate = date ? new Date(date) : undefined;
-    return this.reservationsService.getReservationsByStore(storeId, reservationDate);
+    return this.reservationsService.getReservationsByStore(
+      storeId,
+      reservationDate,
+    );
   }
 
   /**

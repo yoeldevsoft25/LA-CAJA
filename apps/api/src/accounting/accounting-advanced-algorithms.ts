@@ -11,17 +11,17 @@
 export function neumaierSum(values: number[]): number {
   let sum = 0;
   let c = 0; // Compensación de errores acumulados
-  
+
   for (const value of values) {
     const t = sum + Number(value || 0);
     if (Math.abs(sum) >= Math.abs(Number(value || 0))) {
-      c += (sum - t) + Number(value || 0);
+      c += sum - t + Number(value || 0);
     } else {
-      c += (Number(value || 0) - t) + sum;
+      c += Number(value || 0) - t + sum;
     }
     sum = t;
   }
-  
+
   return sum + c;
 }
 
@@ -37,23 +37,47 @@ export function benfordAnalysis(amounts: number[]): {
   confidence: number;
 } {
   if (amounts.length === 0) {
-    return { chiSquare: 0, isAnomalous: false, suspiciousDigits: [], confidence: 1.0 };
+    return {
+      chiSquare: 0,
+      isAnomalous: false,
+      suspiciousDigits: [],
+      confidence: 1.0,
+    };
   }
 
   // Frecuencia esperada según Benford's Law
   const expectedFreq: Record<number, number> = {
-    1: 0.301, 2: 0.176, 3: 0.125, 4: 0.097,
-    5: 0.079, 6: 0.067, 7: 0.058, 8: 0.051, 9: 0.046,
+    1: 0.301,
+    2: 0.176,
+    3: 0.125,
+    4: 0.097,
+    5: 0.079,
+    6: 0.067,
+    7: 0.058,
+    8: 0.051,
+    9: 0.046,
   };
 
   // Contar primeros dígitos
-  const observedFreq: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
-  
+  const observedFreq: Record<number, number> = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0,
+    7: 0,
+    8: 0,
+    9: 0,
+  };
+
   for (const amount of amounts) {
     const absAmount = Math.abs(amount);
     if (absAmount === 0) continue;
-    
-    const firstDigit = Math.floor(absAmount / Math.pow(10, Math.floor(Math.log10(absAmount))));
+
+    const firstDigit = Math.floor(
+      absAmount / Math.pow(10, Math.floor(Math.log10(absAmount))),
+    );
     if (firstDigit >= 1 && firstDigit <= 9) {
       observedFreq[firstDigit as keyof typeof observedFreq]++;
     }
@@ -68,7 +92,7 @@ export function benfordAnalysis(amounts: number[]): {
     const observed = observedFreq[d];
     const expected = expectedFreq[d] * total;
     const diff = observed - expected;
-    
+
     if (expected > 0) {
       chiSquare += (diff * diff) / expected;
     }
@@ -82,7 +106,7 @@ export function benfordAnalysis(amounts: number[]): {
   // Chi-Square crítico con 8 grados de libertad, alpha=0.05 = 15.507
   // Si chiSquare > 15.507, rechazamos hipótesis de conformidad con Benford
   const isAnomalous = chiSquare > 15.507;
-  const confidence = Math.min(1.0, 1.0 - (chiSquare / 50)); // Normalizado para confianza 0-1
+  const confidence = Math.min(1.0, 1.0 - chiSquare / 50); // Normalizado para confianza 0-1
 
   return { chiSquare, isAnomalous, suspiciousDigits, confidence };
 }
@@ -102,20 +126,28 @@ export function statisticalDataReconciliation(
   const difference = targetBalance - currentSum;
 
   if (Math.abs(difference) < 0.01) {
-    return lines.map(line => ({ id: line.id, adjustment: 0, newAmount: line.amount || 0 }));
+    return lines.map((line) => ({
+      id: line.id,
+      adjustment: 0,
+      newAmount: line.amount || 0,
+    }));
   }
 
   // Pesos: líneas con mayor monto tienen mayor "incertidumbre" relativa, pero también mayor capacidad de absorber ajuste
   // Usamos peso inverso proporcional al monto absoluto para distribución proporcional
-  const totalAbsolute = lines.reduce((sum, line) => sum + Math.abs(line.amount || 0), 0);
-  
-  const adjustments = lines.map(line => {
-    const weight = line.weight !== undefined 
-      ? line.weight 
-      : totalAbsolute > 0 
-        ? Math.abs(line.amount || 0) / totalAbsolute 
-        : 1 / lines.length;
-    
+  const totalAbsolute = lines.reduce(
+    (sum, line) => sum + Math.abs(line.amount || 0),
+    0,
+  );
+
+  const adjustments = lines.map((line) => {
+    const weight =
+      line.weight !== undefined
+        ? line.weight
+        : totalAbsolute > 0
+          ? Math.abs(line.amount || 0) / totalAbsolute
+          : 1 / lines.length;
+
     const adjustment = difference * weight;
     return {
       id: line.id,
@@ -125,17 +157,27 @@ export function statisticalDataReconciliation(
   });
 
   // Verificar que la suma de ajustes iguala la diferencia (con tolerancia de redondeo)
-  const totalAdjustment = adjustments.reduce((sum, adj) => sum + adj.adjustment, 0);
+  const totalAdjustment = adjustments.reduce(
+    (sum, adj) => sum + adj.adjustment,
+    0,
+  );
   const roundingError = difference - totalAdjustment;
 
   // Distribuir error de redondeo en la línea más grande (menor impacto proporcional)
   if (Math.abs(roundingError) > 0.001) {
-    const largestLineIndex = lines.reduce((maxIdx, line, idx) => 
-      Math.abs(line.amount || 0) > Math.abs(lines[maxIdx].amount || 0) ? idx : maxIdx, 0
+    const largestLineIndex = lines.reduce(
+      (maxIdx, line, idx) =>
+        Math.abs(line.amount || 0) > Math.abs(lines[maxIdx].amount || 0)
+          ? idx
+          : maxIdx,
+      0,
     );
     adjustments[largestLineIndex].adjustment += roundingError;
     adjustments[largestLineIndex].newAmount = Number(
-      ((lines[largestLineIndex].amount || 0) + adjustments[largestLineIndex].adjustment).toFixed(2)
+      (
+        (lines[largestLineIndex].amount || 0) +
+        adjustments[largestLineIndex].adjustment
+      ).toFixed(2),
     );
   }
 
@@ -150,7 +192,11 @@ export function statisticalDataReconciliation(
 export function detectExactTransposition(
   value1: number,
   value2: number,
-): { isTransposition: boolean; transposedDigits?: [number, number]; positions?: [number, number] } {
+): {
+  isTransposition: boolean;
+  transposedDigits?: [number, number];
+  positions?: [number, number];
+} {
   const str1 = Math.abs(Math.round(value1)).toString();
   const str2 = Math.abs(Math.round(value2)).toString();
 
@@ -190,7 +236,13 @@ export function detectErrorTypeAdvanced(
   amounts: number[],
   historicalMeans?: { bs?: number; usd?: number },
 ): {
-  type: 'rounding' | 'transposition' | 'slide' | 'omission' | 'systematic' | 'unknown';
+  type:
+    | 'rounding'
+    | 'transposition'
+    | 'slide'
+    | 'omission'
+    | 'systematic'
+    | 'unknown';
   confidence: number;
   suggestion: string;
   analysis: {
@@ -214,7 +266,10 @@ export function detectErrorTypeAdvanced(
   let benfordResult: { chiSquare: number; isAnomalous: boolean } | undefined;
   if (amounts.length >= 10) {
     const benford = benfordAnalysis(amounts);
-    benfordResult = { chiSquare: benford.chiSquare, isAnomalous: benford.isAnomalous };
+    benfordResult = {
+      chiSquare: benford.chiSquare,
+      isAnomalous: benford.isAnomalous,
+    };
   }
 
   // Análisis estadístico de outliers si hay historial
@@ -236,7 +291,8 @@ export function detectErrorTypeAdvanced(
     return {
       type: 'transposition',
       confidence: 0.75,
-      suggestion: 'Error probable de transposición de dígitos (divisible por 9). Revisar entrada manual.',
+      suggestion:
+        'Error probable de transposición de dígitos (divisible por 9). Revisar entrada manual.',
       analysis: { benford: benfordResult, statistical: statisticalAnalysis },
     };
   }
@@ -246,7 +302,8 @@ export function detectErrorTypeAdvanced(
     return {
       type: 'systematic',
       confidence: 0.65,
-      suggestion: 'Patrón anómalo detectado (Benford). Posible error sistemático o manipulación.',
+      suggestion:
+        'Patrón anómalo detectado (Benford). Posible error sistemático o manipulación.',
       analysis: { benford: benfordResult, statistical: statisticalAnalysis },
     };
   }
@@ -256,7 +313,8 @@ export function detectErrorTypeAdvanced(
     return {
       type: 'slide',
       confidence: 0.7,
-      suggestion: 'Posible error de posición decimal (múltiplo de 10). Verificar entrada de datos.',
+      suggestion:
+        'Posible error de posición decimal (múltiplo de 10). Verificar entrada de datos.',
       analysis: { benford: benfordResult, statistical: statisticalAnalysis },
     };
   }
@@ -266,7 +324,8 @@ export function detectErrorTypeAdvanced(
     return {
       type: 'omission',
       confidence: 0.5,
-      suggestion: 'Posible entrada faltante (diferencia par). Revisar línea por línea.',
+      suggestion:
+        'Posible entrada faltante (diferencia par). Revisar línea por línea.',
       analysis: { benford: benfordResult, statistical: statisticalAnalysis },
     };
   }
@@ -284,7 +343,8 @@ export function detectErrorTypeAdvanced(
   return {
     type: 'unknown',
     confidence: 0.3,
-    suggestion: 'Revisión manual recomendada. Tipo de error no clasificable automáticamente.',
+    suggestion:
+      'Revisión manual recomendada. Tipo de error no clasificable automáticamente.',
     analysis: { benford: benfordResult, statistical: statisticalAnalysis },
   };
 }

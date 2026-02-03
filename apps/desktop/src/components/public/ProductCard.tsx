@@ -1,11 +1,11 @@
 import { Plus, AlertCircle, UtensilsCrossed } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { ShineBorder } from '@/components/ui/shine-border'
 import { motion } from 'framer-motion'
 import type { PublicProduct } from '@/services/public-menu.service'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface ProductCardProps {
   product: PublicProduct

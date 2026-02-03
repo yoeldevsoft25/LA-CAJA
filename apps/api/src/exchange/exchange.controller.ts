@@ -27,7 +27,7 @@ export class ExchangeController {
   constructor(
     private readonly exchangeService: ExchangeService,
     private readonly realtimeGateway: RealTimeAnalyticsGateway,
-  ) { }
+  ) {}
 
   // ============================================
   // ENDPOINTS MULTI-TASA
@@ -104,7 +104,10 @@ export class ExchangeController {
    * Establece múltiples tasas a la vez
    */
   @Post('rates/bulk')
-  async setMultipleRates(@Body() dto: SetMultipleRatesDto, @Request() req: any) {
+  async setMultipleRates(
+    @Body() dto: SetMultipleRatesDto,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
 

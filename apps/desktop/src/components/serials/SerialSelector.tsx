@@ -3,14 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { Hash, X, Check } from 'lucide-react'
 import { productSerialsService } from '@/services/product-serials.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface SerialSelectorProps {
   isOpen: boolean

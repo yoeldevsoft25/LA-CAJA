@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { productLotsService, ProductLot } from '@/services/product-lots.service'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { differenceInDays, isPast } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface ExpiringLotsAlertProps {
   className?: string

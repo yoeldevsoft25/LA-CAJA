@@ -86,7 +86,8 @@ export class PaymentMethodConfigsService {
         enabled: dto.enabled ?? true,
         requires_authorization: dto.requires_authorization ?? false,
         sort_order:
-          dto.sort_order ?? this.getDefaultSortOrder(dto.method as PaymentMethod),
+          dto.sort_order ??
+          this.getDefaultSortOrder(dto.method as PaymentMethod),
         commission_percentage: dto.commission_percentage ?? 0,
       });
 

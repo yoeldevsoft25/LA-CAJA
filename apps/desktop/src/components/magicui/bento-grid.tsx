@@ -1,8 +1,8 @@
 import { ReactNode } from "react";
 import { ArrowRightIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "@la-caja/ui-core";
+import { Button } from "@la-caja/ui-core";
 
 const BentoGrid = ({
     children,

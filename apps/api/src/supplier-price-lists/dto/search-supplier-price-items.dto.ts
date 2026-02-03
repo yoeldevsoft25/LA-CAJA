@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsUUID, MinLength, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+  IsInt,
+  Min,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class SearchSupplierPriceItemsDto {
@@ -15,13 +22,17 @@ export class SearchSupplierPriceItemsDto {
   @IsOptional()
   search?: string;
 
-  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
+  @Transform(({ value }) =>
+    value !== undefined ? parseInt(value, 10) : undefined,
+  )
   @IsInt()
   @Min(1)
   @IsOptional()
   limit?: number;
 
-  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
+  @Transform(({ value }) =>
+    value !== undefined ? parseInt(value, 10) : undefined,
+  )
   @IsInt()
   @Min(0)
   @IsOptional()

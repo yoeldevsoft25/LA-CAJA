@@ -1,4 +1,3 @@
-
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
@@ -6,10 +5,12 @@ import { DataSource } from 'typeorm';
 export class DbRepairService implements OnModuleInit {
   private readonly logger = new Logger(DbRepairService.name);
 
-  constructor(private dataSource: DataSource) { }
+  constructor(private dataSource: DataSource) {}
 
   async onModuleInit() {
-    this.logger.log('🛠️ Iniciando reparación de base de datos (Emergency Fix)...');
+    this.logger.log(
+      '🛠️ Iniciando reparación de base de datos (Emergency Fix)...',
+    );
     try {
       await this.createMissingTables();
       this.logger.log('✅ Reparación de base de datos completada.');
@@ -140,7 +141,6 @@ export class DbRepairService implements OnModuleInit {
               ADD COLUMN IF NOT EXISTS license_plan text,
               ADD COLUMN IF NOT EXISTS license_notes text;
             `);
-
     } finally {
       await queryRunner.release();
     }

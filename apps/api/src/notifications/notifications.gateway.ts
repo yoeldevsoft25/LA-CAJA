@@ -220,12 +220,15 @@ export class NotificationsGateway
   /**
    * Emitir cambio de estado de licencia a todo el store
    */
-  emitLicenseStatusChange(storeId: string, licenseStatus: {
-    license_status: string;
-    license_expires_at: Date | null;
-    license_plan: string | null;
-    license_grace_days: number;
-  }) {
+  emitLicenseStatusChange(
+    storeId: string,
+    licenseStatus: {
+      license_status: string;
+      license_expires_at: Date | null;
+      license_plan: string | null;
+      license_grace_days: number;
+    },
+  ) {
     this.server.to(`store:${storeId}`).emit('license:status_change', {
       license: licenseStatus,
       timestamp: Date.now(),

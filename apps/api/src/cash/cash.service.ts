@@ -260,8 +260,7 @@ export class CashService {
       session,
       closedAt,
     );
-    expectedBs =
-      Math.round((expectedBs + movementTotals.net_bs) * 100) / 100;
+    expectedBs = Math.round((expectedBs + movementTotals.net_bs) * 100) / 100;
     expectedUsd =
       Math.round((expectedUsd + movementTotals.net_usd) * 100) / 100;
     expectedBsVerify =

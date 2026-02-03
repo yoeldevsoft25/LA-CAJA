@@ -15,7 +15,10 @@ export class MetricsDto {
   @ApiProperty({ description: 'Métricas HTTP', type: [MetricValueDto] })
   http: MetricValueDto[];
 
-  @ApiProperty({ description: 'Métricas de base de datos', type: [MetricValueDto] })
+  @ApiProperty({
+    description: 'Métricas de base de datos',
+    type: [MetricValueDto],
+  })
   database: MetricValueDto[];
 
   @ApiProperty({ description: 'Métricas de colas', type: [MetricValueDto] })

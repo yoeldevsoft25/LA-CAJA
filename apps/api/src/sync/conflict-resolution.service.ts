@@ -1,7 +1,11 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { VectorClockService, VectorClock, CausalRelation } from './vector-clock.service';
+import {
+  VectorClockService,
+  VectorClock,
+  CausalRelation,
+} from './vector-clock.service';
 import { CRDTService, LWWRegister, AWSet, MVRegister } from './crdt.service';
 import { Event } from '../database/entities/event.entity';
 
@@ -157,7 +161,10 @@ export class ConflictResolutionService {
           throw new Error(`Unknown strategy: ${strategy}`);
       }
     } catch (error) {
-      this.logger.error(`Error resolving conflict: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error resolving conflict: ${error.message}`,
+        error.stack,
+      );
 
       // Fallback a resolución manual
       return this.createManualConflict(conflictingEvents);
@@ -461,10 +468,8 @@ export class ConflictResolutionService {
     // 2. Determinar qué evento mantener
     // 'keep_mine' = eventIdB (el evento del cliente que está resuelviendo)
     // 'take_theirs' = eventIdA (el evento del servidor/otro dispositivo)
-    const winningEventId =
-      resolution === 'keep_mine' ? eventIdB : eventIdA;
-    const losingEventId =
-      resolution === 'keep_mine' ? eventIdA : eventIdB;
+    const winningEventId = resolution === 'keep_mine' ? eventIdB : eventIdA;
+    const losingEventId = resolution === 'keep_mine' ? eventIdA : eventIdB;
 
     // 3. Obtener los eventos
     const winningEvent = await this.eventRepository.findOne({
@@ -495,11 +500,7 @@ export class ConflictResolutionService {
            resolved_by = $2,
            updated_at = NOW()
        WHERE id = $3`,
-      [
-        { winning_event_id: winningEventId, resolution },
-        userId,
-        conflictId,
-      ],
+      [{ winning_event_id: winningEventId, resolution }, userId, conflictId],
     );
 
     // 6. Si el evento perdedor no está aplicado (aún está en conflicto),

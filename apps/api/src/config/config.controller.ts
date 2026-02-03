@@ -35,9 +35,8 @@ export class ConfigController {
   @Get('can-generate-sale')
   async canGenerateSale(@Request() req: any) {
     const storeId = req.user.store_id;
-    const canGenerate = await this.configValidationService.canGenerateSale(
-      storeId,
-    );
+    const canGenerate =
+      await this.configValidationService.canGenerateSale(storeId);
     const errorMessage = canGenerate
       ? null
       : await this.configValidationService.getConfigurationErrorMessage(

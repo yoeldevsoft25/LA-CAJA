@@ -212,7 +212,8 @@ export class SalePaymentsService {
       if (changeUsd > 0.001) {
         // Hay sobrepago, calcular cambio
         const config = await this.exchangeService.getStoreRateConfig(storeId);
-        const bcvRate = (await this.exchangeService.getBCVRate(storeId))?.rate || 36;
+        const bcvRate =
+          (await this.exchangeService.getBCVRate(storeId))?.rate || 36;
 
         // Determinar en qué moneda dar el cambio
         let changeMethod: ChangeMethod = 'CASH_BS';
@@ -220,7 +221,7 @@ export class SalePaymentsService {
         let changeCentsBs = 0;
         let breakdown: ChangeBreakdown | null = null;
         let excessCentsBs = 0;
-        let excessAction: ExcessAction = 'FAVOR_CUSTOMER';
+        const excessAction: ExcessAction = 'FAVOR_CUSTOMER';
 
         if (config.prefer_change_in === 'USD') {
           changeMethod = 'CASH_USD';
@@ -260,7 +261,9 @@ export class SalePaymentsService {
           total_paid_bs: totalPaidBs,
           total_due_usd: totalDueUsd,
           change_usd: changeUsd > 0 ? changeUsd : 0,
-          change_bs: savedChange ? fromCents(Number(savedChange.change_cents_bs)) : 0,
+          change_bs: savedChange
+            ? fromCents(Number(savedChange.change_cents_bs))
+            : 0,
           is_complete: totalPaidUsd >= totalDueUsd,
           is_overpaid: changeUsd > 0.001,
         },

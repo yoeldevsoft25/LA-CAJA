@@ -28,7 +28,7 @@ export class RolesGuard implements CanActivate {
     const userRole = request?.user?.role || 'cashier';
     const userId = request?.user?.sub || 'unknown';
     const storeId = request?.user?.store_id || 'unknown';
-    
+
     // Logging para depuración (solo en desarrollo)
     if (process.env.NODE_ENV === 'development') {
       this.logger.debug('Validando acceso', {
@@ -39,7 +39,7 @@ export class RolesGuard implements CanActivate {
         requiredRoles,
       });
     }
-    
+
     if (!requiredRoles.includes(userRole)) {
       this.logger.warn('Acceso denegado', {
         endpoint: `${request.method} ${request.path}`,
@@ -52,7 +52,7 @@ export class RolesGuard implements CanActivate {
         `Este endpoint requiere uno de los siguientes roles: ${requiredRoles.join(', ')}. Tu rol actual es: ${userRole}`,
       );
     }
-    
+
     return true;
   }
 }

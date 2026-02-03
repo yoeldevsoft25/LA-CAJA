@@ -75,7 +75,7 @@ import { MLNotificationsController } from './ml-notifications.controller';
         if (!jwtSecret) {
           throw new Error(
             'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-            'En producción, esto es obligatorio por seguridad.',
+              'En producción, esto es obligatorio por seguridad.',
           );
         }
         return {
@@ -116,4 +116,4 @@ import { MLNotificationsController } from './ml-notifications.controller';
     EmailService,
   ],
 })
-export class NotificationsModule { }
+export class NotificationsModule {}

@@ -50,16 +50,15 @@ export class UptimeTrackerService {
     const periodStart = new Date();
     periodStart.setDate(periodStart.getDate() - periodDays);
 
-    const query = this.uptimeRepository.createQueryBuilder('record')
+    const query = this.uptimeRepository
+      .createQueryBuilder('record')
       .where('record.timestamp >= :periodStart', { periodStart });
 
     if (serviceName) {
       query.andWhere('record.service_name = :serviceName', { serviceName });
     }
 
-    const records = await query
-      .orderBy('record.timestamp', 'ASC')
-      .getMany();
+    const records = await query.orderBy('record.timestamp', 'ASC').getMany();
 
     const totalChecks = records.length;
     const successfulChecks = records.filter(
@@ -104,7 +103,8 @@ export class UptimeTrackerService {
     const periodStart = new Date();
     periodStart.setHours(periodStart.getHours() - hours);
 
-    const query = this.uptimeRepository.createQueryBuilder('record')
+    const query = this.uptimeRepository
+      .createQueryBuilder('record')
       .where('record.timestamp >= :periodStart', { periodStart })
       .orderBy('record.timestamp', 'DESC')
       .take(limit);

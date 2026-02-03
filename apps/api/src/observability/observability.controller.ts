@@ -9,13 +9,22 @@ import {
   Request,
   Patch,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { ObservabilityService } from './services/observability.service';
 import { AlertService } from './services/alert.service';
 import { UptimeTrackerService } from './services/uptime-tracker.service';
 import { HealthStatusDto } from './dto/health-status.dto';
 import { MetricsDto } from './dto/metrics.dto';
-import { AlertDto, CreateAlertDto, UpdateAlertStatusDto } from './dto/alert.dto';
+import {
+  AlertDto,
+  CreateAlertDto,
+  UpdateAlertStatusDto,
+} from './dto/alert.dto';
 import { UptimeStatsDto, UptimeHistoryDto } from './dto/uptime.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';

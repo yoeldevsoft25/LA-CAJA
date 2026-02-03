@@ -37,7 +37,7 @@ export class AdminController {
     private readonly profileRepo: Repository<Profile>,
     @InjectRepository(LicenseUsage)
     private readonly usageRepo: Repository<LicenseUsage>,
-  ) { }
+  ) {}
 
   @Get('stores')
   async listStores(
@@ -79,7 +79,10 @@ export class AdminController {
         'p.full_name as full_name',
       ])
       .where('m.store_id IN (:...storeIds)', {
-        storeIds: storeIds.length > 0 ? storeIds : ['00000000-0000-0000-0000-000000000000']
+        storeIds:
+          storeIds.length > 0
+            ? storeIds
+            : ['00000000-0000-0000-0000-000000000000'],
       })
       .getRawMany();
 
@@ -102,7 +105,10 @@ export class AdminController {
       .createQueryBuilder('u')
       .select(['u.store_id', 'u.metric', 'u.used'])
       .where('u.store_id IN (:...storeIds)', {
-        storeIds: storeIds.length > 0 ? storeIds : ['00000000-0000-0000-0000-000000000000']
+        storeIds:
+          storeIds.length > 0
+            ? storeIds
+            : ['00000000-0000-0000-0000-000000000000'],
       })
       .getMany();
 
@@ -322,7 +328,8 @@ export class AdminController {
       // 1. Existen en la base de datos
       // 2. Tienen una columna llamada 'store_id'
       // 3. No son la tabla 'stores' (esa la eliminamos al final)
-      const tablesWithStoreId: { table_name: string }[] = await queryRunner.query(`
+      const tablesWithStoreId: { table_name: string }[] =
+        await queryRunner.query(`
         SELECT DISTINCT c.table_name
         FROM information_schema.columns c
         INNER JOIN information_schema.tables t
@@ -363,7 +370,10 @@ export class AdminController {
       }
 
       for (const fk of fkDependencies) {
-        if (existingTables.includes(fk.child_table) && existingTables.includes(fk.parent_table)) {
+        if (
+          existingTables.includes(fk.child_table) &&
+          existingTables.includes(fk.parent_table)
+        ) {
           dependencyCount[fk.child_table]++;
           dependents[fk.parent_table].push(fk.child_table);
         }
@@ -407,7 +417,9 @@ export class AdminController {
           [storeId],
         );
         // result es [rows, count] en pg
-        const rowCount = Array.isArray(result) ? result[1] : (result?.rowCount ?? 0);
+        const rowCount = Array.isArray(result)
+          ? result[1]
+          : (result?.rowCount ?? 0);
         if (rowCount > 0) {
           tablesCleared++;
           deletedFromTables.push(`${tableName}(${rowCount})`);

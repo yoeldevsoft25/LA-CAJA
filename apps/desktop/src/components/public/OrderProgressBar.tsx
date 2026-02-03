@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock, ChefHat } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 export type OrderItemStatus = 'pending' | 'preparing' | 'ready'
 

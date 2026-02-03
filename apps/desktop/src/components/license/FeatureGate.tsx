@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLicenseStatus } from '@/hooks/use-license-status'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Lock, Sparkles } from 'lucide-react'
 

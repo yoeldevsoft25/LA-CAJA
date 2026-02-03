@@ -46,11 +46,7 @@ export class VectorClockService {
    * @param value - Nuevo valor (opcional, si no se provee incrementa en 1)
    * @returns Vector clock actualizado
    */
-  increment(
-    clock: VectorClock,
-    deviceId: string,
-    value?: number,
-  ): VectorClock {
+  increment(clock: VectorClock, deviceId: string, value?: number): VectorClock {
     const newClock = { ...clock };
 
     if (value !== undefined) {
@@ -207,7 +203,9 @@ export class VectorClockService {
    * @returns String serializado
    */
   serialize(clock: VectorClock): string {
-    const entries = Object.entries(clock).sort(([a], [b]) => a.localeCompare(b));
+    const entries = Object.entries(clock).sort(([a], [b]) =>
+      a.localeCompare(b),
+    );
     return entries.map(([device, seq]) => `${device}:${seq}`).join(',');
   }
 

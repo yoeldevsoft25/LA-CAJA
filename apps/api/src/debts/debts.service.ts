@@ -34,7 +34,7 @@ export class DebtsService {
     private exchangeService: ExchangeService,
     private accountingService: AccountingService,
     private whatsappMessagingService: WhatsAppMessagingService,
-  ) { }
+  ) {}
 
   async createDebtFromSale(
     storeId: string,
@@ -81,10 +81,16 @@ export class DebtsService {
 
     // Enviar notificación de WhatsApp si está habilitado (offline-first)
     try {
-      await this.whatsappMessagingService.sendDebtNotification(storeId, savedDebt.id);
+      await this.whatsappMessagingService.sendDebtNotification(
+        storeId,
+        savedDebt.id,
+      );
     } catch (error) {
       // No fallar la creación de deuda si hay error en WhatsApp
-      this.logger.warn(`Error enviando notificación de WhatsApp para deuda ${savedDebt.id}:`, error);
+      this.logger.warn(
+        `Error enviando notificación de WhatsApp para deuda ${savedDebt.id}:`,
+        error,
+      );
     }
 
     return savedDebt;
@@ -578,7 +584,10 @@ export class DebtsService {
 
       for (const sale of fiaoSalesWithoutDebt) {
         try {
-          const totals = typeof sale.totals === 'string' ? JSON.parse(sale.totals) : sale.totals;
+          const totals =
+            typeof sale.totals === 'string'
+              ? JSON.parse(sale.totals)
+              : sale.totals;
           const totalUsd = Number(totals?.total_usd || 0);
           const totalBs = Number(totals?.total_bs || 0);
 
@@ -637,7 +646,14 @@ export class DebtsService {
   async findOne(storeId: string, debtId: string): Promise<Debt> {
     const debt = await this.debtRepository.findOne({
       where: { id: debtId, store_id: storeId },
-      relations: ['customer', 'sale', 'sale.items', 'sale.items.product', 'sale.items.variant', 'payments'],
+      relations: [
+        'customer',
+        'sale',
+        'sale.items',
+        'sale.items.product',
+        'sale.items.variant',
+        'payments',
+      ],
     });
 
     if (!debt) {
@@ -658,9 +674,16 @@ export class DebtsService {
   ): Promise<{ success: boolean; error?: string }> {
     try {
       if (debtIds && debtIds.length === 0) {
-        return { success: false, error: 'Seleccione al menos una deuda para enviar' };
+        return {
+          success: false,
+          error: 'Seleccione al menos una deuda para enviar',
+        };
       }
-      const result = await this.whatsappMessagingService.sendDebtReminder(storeId, customerId, debtIds);
+      const result = await this.whatsappMessagingService.sendDebtReminder(
+        storeId,
+        customerId,
+        debtIds,
+      );
       return { success: result.queued, error: result.error };
     } catch (error: any) {
       this.logger.error(`Error enviando recordatorio de deudas:`, error);
@@ -760,7 +783,8 @@ export class DebtsService {
     }
 
     const sortedDebts = debts.sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
 
     const distribution =
@@ -802,10 +826,13 @@ export class DebtsService {
         const paymentCents = Math.round(paymentUsd * 100);
         const totalRemainingCents = Math.round(totalRemainingUsd * 100);
         const allocations = debtBalances.map((entry) =>
-          Math.floor((paymentCents * Math.round(entry.remainingUsd * 100)) / totalRemainingCents),
+          Math.floor(
+            (paymentCents * Math.round(entry.remainingUsd * 100)) /
+              totalRemainingCents,
+          ),
         );
 
-        let allocated = allocations.reduce((sum, v) => sum + v, 0);
+        const allocated = allocations.reduce((sum, v) => sum + v, 0);
         let remainder = paymentCents - allocated;
         let guard = 0;
         while (remainder > 0 && guard < 1000) {
@@ -903,7 +930,10 @@ export class DebtsService {
               payBs,
               payUsd,
               dto.method,
-              dto.note || (isSelective ? 'Pago de deudas seleccionadas' : 'Pago completo de todas las deudas'),
+              dto.note ||
+                (isSelective
+                  ? 'Pago de deudas seleccionadas'
+                  : 'Pago completo de todas las deudas'),
             ],
           );
 
@@ -937,8 +967,10 @@ export class DebtsService {
           // entonces debemos hacer el "rollover" (traslado) del saldo restante a una nueva deuda
           // y marcar la deuda actual como PAGADA.
           if (!isFullForDebt && remainingToPayUsd <= tolerance) {
-            const remainingDebtUsd = Math.round((entry.remainingUsd - payUsd) * 100) / 100;
-            const remainingDebtBs = Math.round((entry.remainingBs - payBs) * 100) / 100;
+            const remainingDebtUsd =
+              Math.round((entry.remainingUsd - payUsd) * 100) / 100;
+            const remainingDebtBs =
+              Math.round((entry.remainingBs - payBs) * 100) / 100;
 
             if (remainingDebtUsd > tolerance) {
               const rolloverDebtId = randomUUID();
@@ -957,7 +989,7 @@ export class DebtsService {
                   remainingDebtUsd,
                   `Saldo traslado de deuda ${entry.debt.sale_id ? 'Venta' : ''} (${new Date(entry.debt.created_at).toLocaleDateString()})`,
                   DebtStatus.OPEN,
-                  entry.debt.id // ID de la deuda padre
+                  entry.debt.id, // ID de la deuda padre
                 ],
               );
 
@@ -1012,11 +1044,21 @@ export class DebtsService {
     return { debts: updatedDebts, payments };
   }
 
-  async getCustomerDebtTimeline(storeId: string, customerId: string): Promise<any[]> {
+  async getCustomerDebtTimeline(
+    storeId: string,
+    customerId: string,
+  ): Promise<any[]> {
     // 1. Obtener todas las deudas del cliente (incluyendo pagadas)
     const allDebts = await this.debtRepository.find({
       where: { store_id: storeId, customer_id: customerId },
-      relations: ['payments', 'parent_debt', 'sale', 'sale.items', 'sale.items.product', 'sale.items.variant'],
+      relations: [
+        'payments',
+        'parent_debt',
+        'sale',
+        'sale.items',
+        'sale.items.product',
+        'sale.items.variant',
+      ],
       order: { created_at: 'ASC' },
     });
 
@@ -1044,18 +1086,18 @@ export class DebtsService {
 
           // Agregar pagos de esta deuda a la cadena
           if (current.payments && current.payments.length > 0) {
-            current.payments.forEach(p => {
+            current.payments.forEach((p) => {
               chain.push({
                 type: 'payment',
                 data: p,
-                debtId: current?.id
-              })
-            })
+                debtId: current?.id,
+              });
+            });
           }
 
           // Buscar si esta deuda tuvo un hijo (fue rollover)
           // La forma eficiente seria tener un mapa, pero por simplicidad buscamos en el array en memoria
-          const child = allDebts.find(d => d.parent_debt_id === current?.id);
+          const child = allDebts.find((d) => d.parent_debt_id === current?.id);
           current = child || null;
         }
         timeline.push({ type: 'chain', items: chain });

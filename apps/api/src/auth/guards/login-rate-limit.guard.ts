@@ -23,7 +23,8 @@ export class LoginRateLimitGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const ipAddress = request.ip || request.headers['x-forwarded-for'] || 'unknown';
+    const ipAddress =
+      request.ip || request.headers['x-forwarded-for'] || 'unknown';
     const body = request.body || {};
     const storeId = body.store_id;
 
@@ -91,4 +92,3 @@ export class LoginRateLimitGuard implements CanActivate {
     return true;
   }
 }
-

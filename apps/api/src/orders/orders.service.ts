@@ -268,12 +268,12 @@ export class OrdersService {
         [dto],
         manager,
       );
-      
+
       // Recargar orden completa para emitir
       const updatedOrder = await this.getOrderById(storeId, orderId);
       this.notificationsGateway.emitOrderUpdate(storeId, updatedOrder);
       this.notificationsGateway.emitKitchenUpdate(storeId, updatedOrder);
-      
+
       return items[0];
     });
   }
@@ -309,12 +309,12 @@ export class OrdersService {
 
     item.qty = qty;
     const updatedItem = await this.orderItemRepository.save(item);
-    
+
     // Recargar orden completa para emitir
     const updatedOrder = await this.getOrderById(storeId, orderId);
     this.notificationsGateway.emitOrderUpdate(storeId, updatedOrder);
     this.notificationsGateway.emitKitchenUpdate(storeId, updatedOrder);
-    
+
     return updatedItem;
   }
 
@@ -343,7 +343,7 @@ export class OrdersService {
     }
 
     await this.orderItemRepository.remove(item);
-    
+
     // Recargar orden completa para emitir
     const updatedOrder = await this.getOrderById(storeId, orderId);
     this.notificationsGateway.emitOrderUpdate(storeId, updatedOrder);
@@ -367,10 +367,10 @@ export class OrdersService {
     order.updated_at = new Date();
 
     const savedOrder = await this.orderRepository.save(order);
-    
+
     // Emitir eventos WebSocket
     this.notificationsGateway.emitOrderUpdate(storeId, savedOrder);
-    
+
     return savedOrder;
   }
 
@@ -391,11 +391,11 @@ export class OrdersService {
     order.updated_at = new Date();
 
     const savedOrder = await this.orderRepository.save(order);
-    
+
     // Emitir eventos WebSocket
     this.notificationsGateway.emitOrderUpdate(storeId, savedOrder);
     this.notificationsGateway.emitKitchenUpdate(storeId, savedOrder);
-    
+
     return savedOrder;
   }
 

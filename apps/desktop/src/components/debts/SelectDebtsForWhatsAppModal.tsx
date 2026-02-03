@@ -11,11 +11,11 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import toast from '@/lib/toast'
 import { whatsappTemplates } from '@/lib/whatsapp.utils'
 

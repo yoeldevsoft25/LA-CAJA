@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { motion, PanInfo, useMotionValue, useTransform, animate, useDragControls } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 
 interface SwipeableItemProps {

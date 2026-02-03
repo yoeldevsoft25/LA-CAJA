@@ -24,7 +24,7 @@ import { ReconcileStockDto } from './dto/reconcile-stock.dto';
 @Controller('inventory')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class InventoryController {
-  constructor(private readonly inventoryService: InventoryService) { }
+  constructor(private readonly inventoryService: InventoryService) {}
 
   private parseDateParam(value?: string): Date | undefined {
     if (!value) return undefined;
@@ -77,10 +77,7 @@ export class InventoryController {
   }
 
   @Get('stock/status')
-  async getStockStatus(
-    @Query() query: GetStockStatusDto,
-    @Request() req: any,
-  ) {
+  async getStockStatus(@Query() query: GetStockStatusDto, @Request() req: any) {
     const storeId = req.user.store_id;
     const { items, total } = await this.inventoryService.getStockStatus(
       storeId,
@@ -99,7 +96,8 @@ export class InventoryController {
   @Roles('owner')
   async getInventoryHealth(@Request() req: any) {
     const storeId = req.user.store_id;
-    const discrepancies = await this.inventoryService.verifyInventoryConsistency(storeId);
+    const discrepancies =
+      await this.inventoryService.verifyInventoryConsistency(storeId);
     return {
       ok: discrepancies.length === 0,
       count: discrepancies.length,
@@ -142,7 +140,10 @@ export class InventoryController {
   @Post('stock/reconcile-physical')
   @Roles('owner')
   @HttpCode(HttpStatus.OK)
-  async reconcilePhysicalStock(@Body() dto: ReconcileStockDto, @Request() req: any) {
+  async reconcilePhysicalStock(
+    @Body() dto: ReconcileStockDto,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
     return this.inventoryService.reconcileStock(
       storeId,
@@ -157,7 +158,10 @@ export class InventoryController {
   @HttpCode(HttpStatus.OK)
   async reconcileStock(@Request() req: any) {
     const storeId = req.user.store_id;
-    return this.inventoryService.reconcileStockFromMovements(storeId, req.user.role);
+    return this.inventoryService.reconcileStockFromMovements(
+      storeId,
+      req.user.role,
+    );
   }
 
   @Get('stock/:productId')

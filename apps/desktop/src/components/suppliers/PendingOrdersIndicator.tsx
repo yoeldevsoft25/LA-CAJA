@@ -12,7 +12,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { differenceInDays } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface PendingOrdersIndicatorProps {
   className?: string

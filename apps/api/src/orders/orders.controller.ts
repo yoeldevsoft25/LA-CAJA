@@ -83,7 +83,12 @@ export class OrdersController {
     @Request() req: any,
   ) {
     const storeId = req.user.store_id;
-    return this.ordersService.updateOrderItemQuantity(storeId, id, itemId, dto.qty);
+    return this.ordersService.updateOrderItemQuantity(
+      storeId,
+      id,
+      itemId,
+      dto.qty,
+    );
   }
 
   /**

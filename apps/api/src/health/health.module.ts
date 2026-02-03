@@ -9,10 +9,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { QueuesModule } from '../queues/queues.module';
 
 @Module({
-  imports: [
-    TerminusModule,
-    QueuesModule,
-  ],
+  imports: [TerminusModule, QueuesModule],
   controllers: [HealthController],
   providers: [
     RedisHealthIndicator,
@@ -27,4 +24,4 @@ import { QueuesModule } from '../queues/queues.module';
     WebSocketHealthIndicator,
   ],
 })
-export class HealthModule { }
+export class HealthModule {}

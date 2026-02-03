@@ -19,10 +19,7 @@ import { Store } from '../database/entities/store.entity';
 import { CreatePaymentRequestDto } from './dto/create-payment-request.dto';
 
 // Precios de los planes (USD)
-const PLAN_PRICES: Record<
-  LicensePlan,
-  { monthly: number; yearly: number }
-> = {
+const PLAN_PRICES: Record<LicensePlan, { monthly: number; yearly: number }> = {
   [LicensePlan.FREEMIUM]: { monthly: 0, yearly: 0 },
   [LicensePlan.BASICO]: { monthly: 29, yearly: 290 },
   [LicensePlan.PROFESIONAL]: { monthly: 79, yearly: 790 },
@@ -41,7 +38,7 @@ export class LicensePaymentsService {
     @InjectRepository(SubscriptionPlan)
     private readonly planRepo: Repository<SubscriptionPlan>, // Inject planRepo
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   /**
    * Obtiene los planes y precios disponibles desde la base de datos
@@ -242,9 +239,7 @@ export class LicensePaymentsService {
     }
 
     if (payment.status !== LicensePaymentStatus.VERIFIED) {
-      throw new BadRequestException(
-        'Solo se pueden aprobar pagos verificados',
-      );
+      throw new BadRequestException('Solo se pueden aprobar pagos verificados');
     }
 
     const store = payment.store;
@@ -270,9 +265,7 @@ export class LicensePaymentsService {
     payment.approved_at = new Date();
     payment.approved_by = approvedBy;
     if (notes) {
-      payment.notes = payment.notes
-        ? `${payment.notes}\n${notes}`
-        : notes;
+      payment.notes = payment.notes ? `${payment.notes}\n${notes}` : notes;
     }
     await this.paymentRepo.save(payment);
 
@@ -325,9 +318,7 @@ export class LicensePaymentsService {
     payment.rejected_by = rejectedBy;
     payment.rejection_reason = rejectionReason;
     if (notes) {
-      payment.notes = payment.notes
-        ? `${payment.notes}\n${notes}`
-        : notes;
+      payment.notes = payment.notes ? `${payment.notes}\n${notes}` : notes;
     }
 
     await this.paymentRepo.save(payment);
@@ -363,9 +354,7 @@ export class LicensePaymentsService {
   /**
    * Obtiene estadísticas de pagos
    */
-  async getPaymentStats(
-    storeId?: string,
-  ): Promise<{
+  async getPaymentStats(storeId?: string): Promise<{
     total: number;
     pending: number;
     verified: number;
@@ -378,31 +367,25 @@ export class LicensePaymentsService {
       where.store_id = storeId;
     }
 
-    const [
-      total,
-      pending,
-      verified,
-      approved,
-      rejected,
-      expired,
-    ] = await Promise.all([
-      this.paymentRepo.count({ where }),
-      this.paymentRepo.count({
-        where: { ...where, status: LicensePaymentStatus.PENDING },
-      }),
-      this.paymentRepo.count({
-        where: { ...where, status: LicensePaymentStatus.VERIFIED },
-      }),
-      this.paymentRepo.count({
-        where: { ...where, status: LicensePaymentStatus.APPROVED },
-      }),
-      this.paymentRepo.count({
-        where: { ...where, status: LicensePaymentStatus.REJECTED },
-      }),
-      this.paymentRepo.count({
-        where: { ...where, status: LicensePaymentStatus.EXPIRED },
-      }),
-    ]);
+    const [total, pending, verified, approved, rejected, expired] =
+      await Promise.all([
+        this.paymentRepo.count({ where }),
+        this.paymentRepo.count({
+          where: { ...where, status: LicensePaymentStatus.PENDING },
+        }),
+        this.paymentRepo.count({
+          where: { ...where, status: LicensePaymentStatus.VERIFIED },
+        }),
+        this.paymentRepo.count({
+          where: { ...where, status: LicensePaymentStatus.APPROVED },
+        }),
+        this.paymentRepo.count({
+          where: { ...where, status: LicensePaymentStatus.REJECTED },
+        }),
+        this.paymentRepo.count({
+          where: { ...where, status: LicensePaymentStatus.EXPIRED },
+        }),
+      ]);
 
     return {
       total,

@@ -8,12 +8,12 @@ import { WarehousesModule } from '../warehouses/warehouses.module';
 import { RecipesController } from './recipes.controller';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Product, RecipeIngredient, WarehouseStock]),
-        WarehousesModule,
-    ],
-    controllers: [RecipesController],
-    providers: [RecipesService],
-    exports: [RecipesService],
+  imports: [
+    TypeOrmModule.forFeature([Product, RecipeIngredient, WarehouseStock]),
+    WarehousesModule,
+  ],
+  controllers: [RecipesController],
+  providers: [RecipesService],
+  exports: [RecipesService],
 })
-export class RecipesModule { }
+export class RecipesModule {}

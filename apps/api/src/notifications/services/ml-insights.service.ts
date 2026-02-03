@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MLInsight, InsightType, InsightSeverity } from '../../database/entities/ml-insight.entity';
+import {
+  MLInsight,
+  InsightType,
+  InsightSeverity,
+} from '../../database/entities/ml-insight.entity';
 import { DemandPrediction } from '../../database/entities/demand-prediction.entity';
 import { DetectedAnomaly } from '../../database/entities/detected-anomaly.entity';
 import { ProductRecommendation } from '../../database/entities/product-recommendation.entity';
@@ -76,7 +80,7 @@ export class MLInsightsService {
       .leftJoinAndSelect('prediction.product', 'product')
       .where('prediction.store_id = :storeId', { storeId })
       .andWhere('prediction.predicted_date >= CURRENT_DATE')
-      .andWhere('prediction.predicted_date <= CURRENT_DATE + INTERVAL \'7 days\'')
+      .andWhere("prediction.predicted_date <= CURRENT_DATE + INTERVAL '7 days'")
       .andWhere('prediction.confidence_score >= 70')
       .orderBy('prediction.confidence_score', 'DESC')
       .limit(50)
@@ -91,10 +95,7 @@ export class MLInsightsService {
       const confidence = prediction.confidence_score;
 
       // Insight 1: Producto "on fire" (alta demanda)
-      if (
-        confidence >= 80 &&
-        predictedDemand > currentStock * 1.5
-      ) {
+      if (confidence >= 80 && predictedDemand > currentStock * 1.5) {
         const insight = await this.createInsight({
           storeId,
           insightType: 'demand_forecast',
@@ -107,7 +108,10 @@ export class MLInsightsService {
           title: `🔥 ${product.name} está en alta demanda`,
           description: `Demanda predicha: ${predictedDemand.toFixed(1)} unidades (${confidence.toFixed(0)}% confianza). Stock actual: ${currentStock}. Considera aumentar inventario.`,
           severity: predictedDemand > currentStock * 2 ? 'high' : 'medium',
-          priority: Math.min(100, Math.round(confidence + (predictedDemand / currentStock) * 10)),
+          priority: Math.min(
+            100,
+            Math.round(confidence + (predictedDemand / currentStock) * 10),
+          ),
           isActionable: true,
           suggestedActions: [
             {
@@ -150,8 +154,11 @@ export class MLInsightsService {
           1,
           Math.floor(currentStock / (predictedDemand / 7)),
         );
-        const recommendedOrder = Math.ceil(predictedDemand * 1.3 - currentStock);
-        const lostRevenue = (predictedDemand - currentStock) * (product.price_bs || 0);
+        const recommendedOrder = Math.ceil(
+          predictedDemand * 1.3 - currentStock,
+        );
+        const lostRevenue =
+          (predictedDemand - currentStock) * (product.price_bs || 0);
 
         const insight = await this.createInsight({
           storeId,
@@ -164,8 +171,16 @@ export class MLInsightsService {
           confidenceScore: confidence,
           title: `⚠️ Riesgo de Desabasto: ${product.name}`,
           description: `Stock actual (${currentStock}) insuficiente para demanda predicha (${predictedDemand.toFixed(1)}). Días hasta desabasto: ${daysUntilStockout}. Ingresos en riesgo: Bs. ${lostRevenue.toFixed(2)}`,
-          severity: daysUntilStockout <= 2 ? 'critical' : daysUntilStockout <= 5 ? 'high' : 'medium',
-          priority: Math.min(100, Math.round(confidence + (100 / daysUntilStockout))),
+          severity:
+            daysUntilStockout <= 2
+              ? 'critical'
+              : daysUntilStockout <= 5
+                ? 'high'
+                : 'medium',
+          priority: Math.min(
+            100,
+            Math.round(confidence + 100 / daysUntilStockout),
+          ),
           isActionable: true,
           suggestedActions: [
             {
@@ -263,7 +278,7 @@ export class MLInsightsService {
       .createQueryBuilder('anomaly')
       .where('anomaly.store_id = :storeId', { storeId })
       .andWhere('anomaly.resolved_at IS NULL')
-      .andWhere('anomaly.detected_at >= NOW() - INTERVAL \'24 hours\'')
+      .andWhere("anomaly.detected_at >= NOW() - INTERVAL '24 hours'")
       .orderBy('anomaly.score', 'DESC')
       .limit(20)
       .getMany();
@@ -336,7 +351,7 @@ export class MLInsightsService {
       .createQueryBuilder('rec')
       .where('rec.store_id = :storeId', { storeId })
       .andWhere('rec.score >= 75')
-      .andWhere('rec.created_at >= NOW() - INTERVAL \'7 days\'')
+      .andWhere("rec.created_at >= NOW() - INTERVAL '7 days'")
       .orderBy('rec.score', 'DESC')
       .limit(10)
       .getMany();
@@ -440,7 +455,9 @@ export class MLInsightsService {
       });
     }
 
-    query.orderBy('insight.priority', 'DESC').addOrderBy('insight.created_at', 'DESC');
+    query
+      .orderBy('insight.priority', 'DESC')
+      .addOrderBy('insight.created_at', 'DESC');
 
     if (options?.limit) {
       query.limit(options.limit);
@@ -515,11 +532,13 @@ export class MLInsightsService {
     ) {
       // Actualizar el insight existente en lugar de crear uno nuevo
       existing.description = params.description;
-      existing.confidence_score = params.confidenceScore || existing.confidence_score;
+      existing.confidence_score =
+        params.confidenceScore || existing.confidence_score;
       existing.severity = params.severity;
       existing.priority = Math.round(params.priority);
       existing.ml_data = params.mlData;
-      existing.suggested_actions = params.suggestedActions || existing.suggested_actions;
+      existing.suggested_actions =
+        params.suggestedActions || existing.suggested_actions;
       existing.updated_at = new Date();
 
       return await this.mlInsightRepository.save(existing);

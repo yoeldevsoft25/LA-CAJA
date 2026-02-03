@@ -41,7 +41,7 @@ export class LicenseBankIntegrationService {
           baseURL: apiUrl,
           headers: {
             'Content-Type': 'application/json',
-            'ClientID': clientId,
+            ClientID: clientId,
           },
           timeout: 10000,
         });
@@ -67,15 +67,13 @@ export class LicenseBankIntegrationService {
           baseURL: apiUrl,
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
           },
           timeout: 10000,
         });
         this.logger.log('API de Banesco inicializada');
       } else {
-        this.logger.warn(
-          'BANESCO_API_ENABLED=true pero falta BANESCO_API_KEY',
-        );
+        this.logger.warn('BANESCO_API_ENABLED=true pero falta BANESCO_API_KEY');
       }
     }
   }
@@ -106,9 +104,7 @@ export class LicenseBankIntegrationService {
         bank_code: payment.bank_code || undefined,
         amount: payment.amount_usd,
         // Rango de fechas: últimos 7 días
-        date_from: new Date(
-          Date.now() - 7 * 24 * 60 * 60 * 1000,
-        ).toISOString(),
+        date_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         date_to: new Date().toISOString(),
       };
 
@@ -153,9 +149,7 @@ export class LicenseBankIntegrationService {
         // Verificar que coincidan los datos
         const matches =
           transaction.reference === payment.payment_reference &&
-          Math.abs(
-            parseFloat(transaction.amount) - payment.amount_usd,
-          ) < 0.01;
+          Math.abs(parseFloat(transaction.amount) - payment.amount_usd) < 0.01;
 
         if (matches) {
           return {
@@ -167,7 +161,8 @@ export class LicenseBankIntegrationService {
           return {
             success: false,
             status: VerificationStatus.NOT_FOUND,
-            errorMessage: 'Transacción encontrada pero no coincide con los datos',
+            errorMessage:
+              'Transacción encontrada pero no coincide con los datos',
             responseData: transaction,
           };
         }
@@ -179,7 +174,10 @@ export class LicenseBankIntegrationService {
         };
       }
     } catch (error: any) {
-      this.logger.error(`Error verificando con Mercantil: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error verificando con Mercantil: ${error.message}`,
+        error.stack,
+      );
       return {
         success: false,
         status: VerificationStatus.ERROR,
@@ -222,9 +220,7 @@ export class LicenseBankIntegrationService {
         // Verificar que coincidan los datos
         const matches =
           transaction.reference === payment.payment_reference &&
-          Math.abs(
-            parseFloat(transaction.amount) - payment.amount_usd,
-          ) < 0.01;
+          Math.abs(parseFloat(transaction.amount) - payment.amount_usd) < 0.01;
 
         if (matches) {
           return {
@@ -236,7 +232,8 @@ export class LicenseBankIntegrationService {
           return {
             success: false,
             status: VerificationStatus.NOT_FOUND,
-            errorMessage: 'Transacción confirmada pero no coincide con los datos',
+            errorMessage:
+              'Transacción confirmada pero no coincide con los datos',
             responseData: transaction,
           };
         }
@@ -248,7 +245,10 @@ export class LicenseBankIntegrationService {
         };
       }
     } catch (error: any) {
-      this.logger.error(`Error verificando con Banesco: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error verificando con Banesco: ${error.message}`,
+        error.stack,
+      );
       return {
         success: false,
         status: VerificationStatus.ERROR,
@@ -260,9 +260,7 @@ export class LicenseBankIntegrationService {
   /**
    * Intenta verificar automáticamente según el método de pago
    */
-  async verifyAutomatic(
-    payment: LicensePayment,
-  ): Promise<{
+  async verifyAutomatic(payment: LicensePayment): Promise<{
     result: VerificationResult;
     method: VerificationMethod;
   }> {
@@ -290,8 +288,7 @@ export class LicenseBankIntegrationService {
       result: {
         success: false,
         status: VerificationStatus.ERROR,
-        errorMessage:
-          'No hay API configurada para este banco o método de pago',
+        errorMessage: 'No hay API configurada para este banco o método de pago',
       },
       method: VerificationMethod.OTHER,
     };
@@ -300,14 +297,8 @@ export class LicenseBankIntegrationService {
   /**
    * Genera firma para Mercantil API
    */
-  private generateMercantilSignature(
-    data: string,
-    secretKey: string,
-  ): string {
-    return crypto
-      .createHmac('sha256', secretKey)
-      .update(data)
-      .digest('hex');
+  private generateMercantilSignature(data: string, secretKey: string): string {
+    return crypto.createHmac('sha256', secretKey).update(data).digest('hex');
   }
 
   /**

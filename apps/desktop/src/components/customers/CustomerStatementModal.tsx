@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { customersService, Customer } from '@/services/customers.service'
 import { debtsService } from '@/services/debts.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { 
   Printer, 
   Loader2,

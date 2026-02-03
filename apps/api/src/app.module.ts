@@ -63,7 +63,13 @@ import { RedisCacheModule } from './common/cache/redis-cache.module';
 // Nota: LicenseWatcherService necesita NotificationsGateway, que está en NotificationsModule
 // Importar todas las entidades desde el índice centralizado
 // Esto reduce el tamaño del objeto serializado y mejora el rendimiento del bootstrap
-import { ALL_ENTITIES, Store, StoreMember, Profile, LicenseUsage } from './database/entities';
+import {
+  ALL_ENTITIES,
+  Store,
+  StoreMember,
+  Profile,
+  LicenseUsage,
+} from './database/entities';
 import { LicenseInterceptor } from './auth/interceptors/license.interceptor';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { DatabaseErrorInterceptor } from './common/interceptors/database-error.interceptor';
@@ -133,7 +139,9 @@ import { BullModule } from '@nestjs/bullmq';
         // Manejo de errores en conexiones compartidas
         sharedClient.on('error', (err: any) => {
           if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
-            console.error(`❌ Redis Connection Error: ${err.message}. Is Redis installed and running? (brew services start redis)`);
+            console.error(
+              `❌ Redis Connection Error: ${err.message}. Is Redis installed and running? (brew services start redis)`,
+            );
           } else {
             console.error('Redis Shared Client Error:', err.message);
           }
@@ -176,7 +184,7 @@ import { BullModule } from '@nestjs/bullmq';
           // Opciones por defecto para jobs
           defaultJobOptions: {
             removeOnComplete: 100, // Mantener solo los últimos 100 trabajos completados
-            removeOnFail: 200,     // Mantener los últimos 200 fallidos para debugging
+            removeOnFail: 200, // Mantener los últimos 200 fallidos para debugging
             attempts: 3,
             backoff: {
               type: 'exponential',
@@ -228,8 +236,9 @@ import { BullModule } from '@nestjs/bullmq';
         // Configuración SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
         // En produccion, SIEMPRE rechazar certificados no autorizados
         // En desarrollo, se puede usar DB_SSL_REJECT_UNAUTHORIZED=true para forzar verificacion
-        const sslRejectUnauthorizedEnv =
-          configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED');
+        const sslRejectUnauthorizedEnv = configService.get<string>(
+          'DB_SSL_REJECT_UNAUTHORIZED',
+        );
         const allowInsecureDbSsl =
           configService.get<string>('ALLOW_INSECURE_DB_SSL') === 'true';
         const requestedRejectUnauthorized =
@@ -257,12 +266,17 @@ import { BullModule } from '@nestjs/bullmq';
             : undefined;
 
         // Timeouts configurables: más largos en desarrollo local (útil para VPN)
-        const connectionTimeoutEnv = configService.get<number>('DB_CONNECTION_TIMEOUT');
-        const connectionTimeout = connectionTimeoutEnv || (isDevelopment ? 30000 : 10000); // 30s en dev, 10s en prod
+        const connectionTimeoutEnv = configService.get<number>(
+          'DB_CONNECTION_TIMEOUT',
+        );
+        const connectionTimeout =
+          connectionTimeoutEnv || (isDevelopment ? 30000 : 10000); // 30s en dev, 10s en prod
 
         // Pool configurable: más conservador en desarrollo local
-        const poolMax = configService.get<number>('DB_POOL_MAX') || (isDevelopment ? 5 : 20);
-        const poolMin = configService.get<number>('DB_POOL_MIN') || (isDevelopment ? 1 : 2);
+        const poolMax =
+          configService.get<number>('DB_POOL_MAX') || (isDevelopment ? 5 : 20);
+        const poolMin =
+          configService.get<number>('DB_POOL_MIN') || (isDevelopment ? 1 : 2);
 
         return {
           type: 'postgres',
@@ -295,12 +309,13 @@ import { BullModule } from '@nestjs/bullmq';
           autoLoadEntities: false, // Ya especificamos entities manualmente
           // SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
           // NOTA: Supabase pooler requiere SSL siempre, incluso en desarrollo
-          ssl: isCloudDatabase || isProduction
-            ? {
-              rejectUnauthorized: sslRejectUnauthorized,
-              ...(sslCa ? { ca: sslCa } : {}),
-            }
-            : false,
+          ssl:
+            isCloudDatabase || isProduction
+              ? {
+                  rejectUnauthorized: sslRejectUnauthorized,
+                  ...(sslCa ? { ca: sslCa } : {}),
+                }
+              : false,
         };
       },
       inject: [ConfigService],
@@ -387,4 +402,4 @@ import { BullModule } from '@nestjs/bullmq';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

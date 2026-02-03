@@ -136,7 +136,10 @@ export class SupplierPriceListsService {
     if (match) {
       const day = parseInt(match[1], 10);
       const month = parseInt(match[2], 10);
-      const year = parseInt(match[3].length === 2 ? `20${match[3]}` : match[3], 10);
+      const year = parseInt(
+        match[3].length === 2 ? `20${match[3]}` : match[3],
+        10,
+      );
       const date = new Date(Date.UTC(year, month - 1, day));
       return Number.isNaN(date.getTime()) ? null : date;
     }
@@ -213,10 +216,16 @@ export class SupplierPriceListsService {
         unitPriceB = priceB / unitsPerCase;
       }
 
-      if (unitPriceA == null && unitPriceB == null && priceA == null && priceB == null) {
+      if (
+        unitPriceA == null &&
+        unitPriceB == null &&
+        priceA == null &&
+        priceB == null
+      ) {
         errors.push({
           row: rowNumber,
-          message: 'Fila sin precios válidos (Price_A/Price_B/Unit_Price_A/Unit_Price_B)',
+          message:
+            'Fila sin precios válidos (Price_A/Price_B/Unit_Price_A/Unit_Price_B)',
         });
         continue;
       }
@@ -304,11 +313,19 @@ export class SupplierPriceListsService {
       grouped.get(supplierKey)!.push(row);
     }
 
-    const summaries: Array<{ id: string; name: string; supplier_name: string; items: number }> = [];
+    const summaries: Array<{
+      id: string;
+      name: string;
+      supplier_name: string;
+      items: number;
+    }> = [];
 
     for (const [supplierName, groupRows] of grouped.entries()) {
       const supplierInfo = forcedSupplier
-        ? { id: forcedSupplier.id, name: forcedSupplierName || forcedSupplier.name }
+        ? {
+            id: forcedSupplier.id,
+            name: forcedSupplierName || forcedSupplier.name,
+          }
         : await this.resolveSupplierId(storeId, null, supplierName);
 
       const dates = groupRows

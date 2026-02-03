@@ -43,12 +43,12 @@ export class QRCodesService {
     // Obtener URL del frontend desde configuración
     // Prioridad: FRONTEND_URL > URL de producción por defecto
     let baseUrl = this.configService.get<string>('FRONTEND_URL');
-    
+
     if (!baseUrl) {
       // Si no está configurado, usar la URL de producción de Netlify
       baseUrl = 'http://la-caja.netlify.app';
     }
-    
+
     return `${baseUrl}/public/qr/${qrCode}`;
   }
 
@@ -75,10 +75,13 @@ export class QRCodesService {
 
     if (qrCode) {
       // Si existe pero está inactivo o expirado, reactivarlo y actualizar URL
-      if (!qrCode.is_active || (qrCode.expires_at && qrCode.expires_at < new Date())) {
+      if (
+        !qrCode.is_active ||
+        (qrCode.expires_at && qrCode.expires_at < new Date())
+      ) {
         // Actualizar URL por si cambió la configuración
         const newPublicUrl = this.generatePublicUrl(qrCode.qr_code);
-        
+
         qrCode.is_active = true;
         qrCode.expires_at = null;
         qrCode.public_url = newPublicUrl; // Actualizar URL
@@ -91,7 +94,7 @@ export class QRCodesService {
 
         return qrCode;
       }
-      
+
       // Si está activo, verificar si la URL necesita actualizarse
       const expectedUrl = this.generatePublicUrl(qrCode.qr_code);
       if (qrCode.public_url !== expectedUrl) {
@@ -99,7 +102,7 @@ export class QRCodesService {
         qrCode.updated_at = new Date();
         qrCode = await this.qrCodeRepository.save(qrCode);
       }
-      
+
       return qrCode;
     }
 
@@ -129,10 +132,7 @@ export class QRCodesService {
   /**
    * Obtiene el código QR de una mesa
    */
-  async getQRCodeByTable(
-    storeId: string,
-    tableId: string,
-  ): Promise<QRCode> {
+  async getQRCodeByTable(storeId: string, tableId: string): Promise<QRCode> {
     const qrCode = await this.qrCodeRepository.findOne({
       where: { table_id: tableId, store_id: storeId },
     });
@@ -189,10 +189,7 @@ export class QRCodesService {
   /**
    * Regenera el código QR de una mesa (crea uno nuevo)
    */
-  async regenerateQRCode(
-    storeId: string,
-    tableId: string,
-  ): Promise<QRCode> {
+  async regenerateQRCode(storeId: string, tableId: string): Promise<QRCode> {
     // Desactivar el anterior
     const existingQR = await this.qrCodeRepository.findOne({
       where: { table_id: tableId },

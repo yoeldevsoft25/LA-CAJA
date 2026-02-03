@@ -6,10 +6,10 @@ import { publicKitchenService, type KitchenOrder } from '@/services/public-kitch
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Input } from '@/components/ui/input'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Button } from '@la-caja/ui-core'
+import { cn } from '@la-caja/ui-core'
 import OrderProgressBar, { type OrderProgressData } from '@/components/public/OrderProgressBar'
 
 export default function PublicKitchenPage() {

@@ -6,9 +6,9 @@ import { tablesService } from '@/services/tables.service'
 import toast from '@/lib/toast'
 import ReservationModal from '@/components/reservations/ReservationModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { format } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 const statusLabels: Record<Reservation['status'], string> = {
   pending: 'Pendiente',

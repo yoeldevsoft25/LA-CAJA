@@ -34,7 +34,7 @@ export class TransfersService {
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   /**
    * Genera un número único de transferencia
@@ -249,7 +249,9 @@ export class TransfersService {
       // Actualizar items y stock
       // Actualizar items y stock
       for (const item of transfer.items) {
-        const receivedDto = dto.items.find((i) => i.product_id === item.product_id);
+        const receivedDto = dto.items.find(
+          (i) => i.product_id === item.product_id,
+        );
 
         if (!receivedDto) {
           throw new BadRequestException(
@@ -292,14 +294,15 @@ export class TransfersService {
 
         // 3. Si se recibió menos, devolver la diferencia al stock disponible en origen
         if (receivedDto.quantity_received < item.quantity_shipped) {
-          const difference = item.quantity_shipped - receivedDto.quantity_received;
+          const difference =
+            item.quantity_shipped - receivedDto.quantity_received;
           await this.warehousesService.updateStock(
             transfer.from_warehouse_id,
             item.product_id,
             item.variant_id,
             difference,
             storeId,
-            manager
+            manager,
           );
         }
 
@@ -310,7 +313,7 @@ export class TransfersService {
           item.variant_id,
           receivedDto.quantity_received,
           storeId,
-          manager
+          manager,
         );
 
         // 5. Registrar Movimiento de Salida (Transfer Out) - Origen

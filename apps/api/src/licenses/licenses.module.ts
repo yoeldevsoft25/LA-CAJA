@@ -62,4 +62,4 @@ import { QuotaGuard } from './guards/quota.guard';
     QuotaGuard,
   ],
 })
-export class LicensesModule { }
+export class LicensesModule {}

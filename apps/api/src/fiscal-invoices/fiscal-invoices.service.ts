@@ -27,9 +27,12 @@ import { randomUUID } from 'crypto';
 @Injectable()
 export class FiscalInvoicesService {
   private readonly logger = new Logger(FiscalInvoicesService.name);
-  
+
   // ⚡ OPTIMIZACIÓN: Cache para configuración fiscal activa
-  private fiscalConfigCache = new Map<string, { result: boolean; timestamp: number }>();
+  private fiscalConfigCache = new Map<
+    string,
+    { result: boolean; timestamp: number }
+  >();
   private readonly FISCAL_CONFIG_CACHE_TTL = 60000; // 60 segundos
 
   constructor(
@@ -220,7 +223,7 @@ export class FiscalInvoicesService {
       const savedInvoice = await manager.save(FiscalInvoice, fiscalInvoice);
 
       // ⚡ OPTIMIZACIÓN CRÍTICA: Batch query de productos para evitar N+1
-      const productIds = sale.items.map(item => item.product_id);
+      const productIds = sale.items.map((item) => item.product_id);
       const products = await manager.find(Product, {
         where: { id: In(productIds) },
       });
@@ -276,19 +279,19 @@ export class FiscalInvoicesService {
     // ⚡ OPTIMIZACIÓN: Cache para evitar queries repetidas
     const cached = this.fiscalConfigCache.get(storeId);
     const now = Date.now();
-    
-    if (cached && (now - cached.timestamp) < this.FISCAL_CONFIG_CACHE_TTL) {
+
+    if (cached && now - cached.timestamp < this.FISCAL_CONFIG_CACHE_TTL) {
       return cached.result;
     }
-    
+
     const config = await this.fiscalConfigRepository.findOne({
       where: { store_id: storeId, is_active: true },
     });
     const result = !!config;
-    
+
     // Cachear resultado
     this.fiscalConfigCache.set(storeId, { result, timestamp: now });
-    
+
     return result;
   }
 
@@ -511,7 +514,10 @@ export class FiscalInvoicesService {
 
     // Generar asiento contable automático
     try {
-      await this.accountingService.generateEntryFromFiscalInvoice(storeId, savedInvoice);
+      await this.accountingService.generateEntryFromFiscalInvoice(
+        storeId,
+        savedInvoice,
+      );
     } catch (error) {
       // Log error pero no fallar la emisión
       this.logger.error(
@@ -590,7 +596,9 @@ export class FiscalInvoicesService {
     if (invoice.status !== 'issued') {
       throw new BadRequestException(
         'Solo puede crear nota de crédito para facturas emitidas. ' +
-          'La factura actual está en estado "' + invoice.status + '".',
+          'La factura actual está en estado "' +
+          invoice.status +
+          '".',
       );
     }
 

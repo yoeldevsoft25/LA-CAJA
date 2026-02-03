@@ -1,7 +1,7 @@
 import { motion, type HTMLMotionProps } from 'framer-motion'
 import { forwardRef, type ReactNode } from 'react'
-import { cn } from '@/lib/utils'
-import { buttonVariants } from '@/components/ui/button-variants'
+import { cn } from '@la-caja/ui-core'
+import { buttonVariants } from '@la-caja/ui-core'
 import { type VariantProps } from 'class-variance-authority'
 
 interface AnimatedButtonProps

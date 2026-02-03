@@ -14,7 +14,10 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { CheckLicense, RequiresFeature } from '../licenses/decorators/license.decorator';
+import {
+  CheckLicense,
+  RequiresFeature,
+} from '../licenses/decorators/license.decorator';
 import { FastifyReply } from 'fastify';
 import * as fs from 'fs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -34,7 +37,10 @@ import { GetGeneralLedgerDto } from './dto/get-general-ledger.dto';
 import { GetCashFlowDto } from './dto/get-cash-flow.dto';
 import { ClosePeriodDto } from './dto/close-period.dto';
 import { ReopenPeriodDto } from './dto/reopen-period.dto';
-import { ValidateAccountingDto, ReconcileAccountsDto } from './dto/validate-accounting.dto';
+import {
+  ValidateAccountingDto,
+  ReconcileAccountsDto,
+} from './dto/validate-accounting.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AccountingAccountMapping } from '../database/entities/accounting-account-mapping.entity';
@@ -52,7 +58,7 @@ export class AccountingController {
     private readonly exportService: AccountingExportService,
     @InjectRepository(AccountingAccountMapping)
     private mappingRepository: Repository<AccountingAccountMapping>,
-  ) { }
+  ) {}
 
   /**
    * Plan de Cuentas
@@ -63,7 +69,10 @@ export class AccountingController {
     @Query('active_only') activeOnly?: string,
   ) {
     const storeId = req.user.store_id;
-    return this.chartOfAccountsService.getAccounts(storeId, activeOnly === 'true');
+    return this.chartOfAccountsService.getAccounts(
+      storeId,
+      activeOnly === 'true',
+    );
   }
 
   @Get('accounts/tree')
@@ -106,13 +115,18 @@ export class AccountingController {
   @HttpCode(HttpStatus.OK)
   async initializeChartOfAccounts(
     @Request() req: any,
-    @Body() body?: { business_type?: 'retail' | 'services' | 'restaurant' | 'general' },
+    @Body()
+    body?: { business_type?: 'retail' | 'services' | 'restaurant' | 'general' },
   ) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     const businessType = body?.business_type || 'general';
     const { accounts_created, mappings_created } =
-      await this.chartOfAccountsService.initializeDefaultChartOfAccounts(storeId, userId, businessType);
+      await this.chartOfAccountsService.initializeDefaultChartOfAccounts(
+        storeId,
+        userId,
+        businessType,
+      );
     return {
       message: 'Plan de cuentas inicializado exitosamente',
       accounts_created,
@@ -124,13 +138,19 @@ export class AccountingController {
    * Asientos Contables
    */
   @Get('entries')
-  async getJournalEntries(@Request() req: any, @Query() dto: GetJournalEntriesDto) {
+  async getJournalEntries(
+    @Request() req: any,
+    @Query() dto: GetJournalEntriesDto,
+  ) {
     const storeId = req.user.store_id;
     return this.accountingService.getJournalEntries(storeId, dto);
   }
 
   @Post('entries')
-  async createJournalEntry(@Request() req: any, @Body() dto: CreateJournalEntryDto) {
+  async createJournalEntry(
+    @Request() req: any,
+    @Body() dto: CreateJournalEntryDto,
+  ) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     return this.accountingService.createJournalEntry(storeId, dto, userId);
@@ -181,12 +201,18 @@ export class AccountingController {
   }
 
   @Post('mappings')
-  async createAccountMapping(@Request() req: any, @Body() dto: CreateAccountMappingDto) {
+  async createAccountMapping(
+    @Request() req: any,
+    @Body() dto: CreateAccountMappingDto,
+  ) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
 
     // Verificar que la cuenta existe
-    const account = await this.chartOfAccountsService.getAccount(storeId, dto.account_id);
+    const account = await this.chartOfAccountsService.getAccount(
+      storeId,
+      dto.account_id,
+    );
 
     const mapping = this.mappingRepository.create({
       id: randomUUID(),
@@ -221,7 +247,10 @@ export class AccountingController {
     Object.assign(mapping, dto);
 
     if (dto.account_id) {
-      const account = await this.chartOfAccountsService.getAccount(storeId, dto.account_id);
+      const account = await this.chartOfAccountsService.getAccount(
+        storeId,
+        dto.account_id,
+      );
       mapping.account_id = account.id;
       mapping.account_code = account.account_code;
     }
@@ -230,7 +259,10 @@ export class AccountingController {
 
   @Delete('mappings/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteAccountMapping(@Request() req: any, @Param('id') mappingId: string) {
+  async deleteAccountMapping(
+    @Request() req: any,
+    @Param('id') mappingId: string,
+  ) {
     const storeId = req.user.store_id;
     await this.mappingRepository.delete({ id: mappingId, store_id: storeId });
   }
@@ -239,7 +271,10 @@ export class AccountingController {
    * Exportaciones
    */
   @Post('export')
-  async exportAccounting(@Request() req: any, @Body() dto: ExportAccountingDto) {
+  async exportAccounting(
+    @Request() req: any,
+    @Body() dto: ExportAccountingDto,
+  ) {
     const storeId = req.user.store_id;
     const userId = req.user.user_id;
     return this.exportService.exportAccounting(storeId, dto, userId);
@@ -248,7 +283,10 @@ export class AccountingController {
   @Get('exports')
   async getExports(@Request() req: any, @Query('limit') limit?: string) {
     const storeId = req.user.store_id;
-    return this.exportService.getExports(storeId, limit ? parseInt(limit, 10) : 20);
+    return this.exportService.getExports(
+      storeId,
+      limit ? parseInt(limit, 10) : 20,
+    );
   }
 
   @Get('exports/:id/download')
@@ -258,7 +296,10 @@ export class AccountingController {
     @Res() res: FastifyReply,
   ) {
     const storeId = req.user.store_id;
-    const { filePath, fileName } = await this.exportService.getExportFile(storeId, exportId);
+    const { filePath, fileName } = await this.exportService.getExportFile(
+      storeId,
+      exportId,
+    );
 
     try {
       const fileStream = fs.createReadStream(filePath);
@@ -293,10 +334,7 @@ export class AccountingController {
    * Balance General
    */
   @Get('reports/balance-sheet')
-  async getBalanceSheet(
-    @Request() req: any,
-    @Query() dto: GetBalanceSheetDto,
-  ) {
+  async getBalanceSheet(@Request() req: any, @Query() dto: GetBalanceSheetDto) {
     const storeId = req.user.store_id;
     const asOfDate = dto.as_of_date ? new Date(dto.as_of_date) : new Date();
     return this.accountingService.getBalanceSheet(storeId, asOfDate);
@@ -322,14 +360,15 @@ export class AccountingController {
    * Trial Balance (Balance de Comprobación)
    */
   @Get('reports/trial-balance')
-  async getTrialBalance(
-    @Request() req: any,
-    @Query() dto: GetTrialBalanceDto,
-  ) {
+  async getTrialBalance(@Request() req: any, @Query() dto: GetTrialBalanceDto) {
     const storeId = req.user.store_id;
     const asOfDate = dto.as_of_date ? new Date(dto.as_of_date) : new Date();
     const includeZeroBalance = dto.include_zero_balance === true;
-    return this.accountingService.getTrialBalance(storeId, asOfDate, includeZeroBalance);
+    return this.accountingService.getTrialBalance(
+      storeId,
+      asOfDate,
+      includeZeroBalance,
+    );
   }
 
   /**
@@ -353,10 +392,7 @@ export class AccountingController {
    * Estado de Flujo de Efectivo (Cash Flow Statement)
    */
   @Get('reports/cash-flow')
-  async getCashFlow(
-    @Request() req: any,
-    @Query() dto: GetCashFlowDto,
-  ) {
+  async getCashFlow(@Request() req: any, @Query() dto: GetCashFlowDto) {
     const storeId = req.user.store_id;
     return this.accountingService.getCashFlowStatement(
       storeId,
@@ -371,10 +407,7 @@ export class AccountingController {
    */
   @Post('periods/close')
   @HttpCode(HttpStatus.OK)
-  async closePeriod(
-    @Request() req: any,
-    @Body() dto: ClosePeriodDto,
-  ) {
+  async closePeriod(@Request() req: any, @Body() dto: ClosePeriodDto) {
     const storeId = req.user.store_id;
     const userId = req.user.sub;
     return this.accountingService.closePeriod(
@@ -410,10 +443,7 @@ export class AccountingController {
    * Obtener períodos contables
    */
   @Get('periods')
-  async getPeriods(
-    @Request() req: any,
-    @Query('status') status?: string,
-  ) {
+  async getPeriods(@Request() req: any, @Query('status') status?: string) {
     const storeId = req.user.store_id;
     // TODO: Implementar método en servicio para listar períodos
     // Por ahora retornar lista vacía

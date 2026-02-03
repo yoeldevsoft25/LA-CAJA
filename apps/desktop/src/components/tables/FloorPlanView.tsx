@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Square, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { tablesService, Table } from '@/services/tables.service'
 import { ordersService, Order } from '@/services/orders.service'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Button } from '@la-caja/ui-core'
+import { cn } from '@la-caja/ui-core'
 import toast from '@/lib/toast'
 
 interface FloorPlanViewProps {

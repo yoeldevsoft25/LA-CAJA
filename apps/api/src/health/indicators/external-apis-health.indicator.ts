@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { HealthIndicator, HealthIndicatorResult, HealthCheckError } from '@nestjs/terminus';
+import {
+  HealthIndicator,
+  HealthIndicatorResult,
+  HealthCheckError,
+} from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 
 @Injectable()
 export class ExternalApisHealthIndicator extends HealthIndicator {
   private axiosInstance: AxiosInstance;
-  private readonly DOLAR_VZLA_API_URL = 'https://api.dolarvzla.com/public/exchange-rate';
+  private readonly DOLAR_VZLA_API_URL =
+    'https://api.dolarvzla.com/public/exchange-rate';
   private readonly DOLAR_API_URL = 'https://ve.dolarapi.com/v1/dolares/oficial';
 
   constructor(private configService: ConfigService) {
@@ -20,7 +25,8 @@ export class ExternalApisHealthIndicator extends HealthIndicator {
     const checks: Record<string, any> = {};
     let allHealthy = true;
     const requireHealthy =
-      this.configService.get<string>('EXTERNAL_APIS_HEALTH_REQUIRED') === 'true';
+      this.configService.get<string>('EXTERNAL_APIS_HEALTH_REQUIRED') ===
+      'true';
 
     // Ejecutar verificaciones en paralelo
     const checkPromises: Promise<void>[] = [];
@@ -70,11 +76,14 @@ export class ExternalApisHealthIndicator extends HealthIndicator {
       const resendCheckPromise = (async () => {
         try {
           const startTime = Date.now();
-          const response = await this.axiosInstance.get('https://api.resend.com/domains', {
-            headers: { Authorization: `Bearer ${resendApiKey}` },
-            timeout: 5000,
-            validateStatus: () => true,
-          });
+          const response = await this.axiosInstance.get(
+            'https://api.resend.com/domains',
+            {
+              headers: { Authorization: `Bearer ${resendApiKey}` },
+              timeout: 5000,
+              validateStatus: () => true,
+            },
+          );
           const responseTime = Date.now() - startTime;
           const resendHealthy = response.status === 200;
           checks.resend = {
@@ -99,7 +108,8 @@ export class ExternalApisHealthIndicator extends HealthIndicator {
     }
 
     // 3. Verificar WhatsApp (si está configurado)
-    const whatsappEnabled = this.configService.get<string>('WHATSAPP_ENABLED') === 'true';
+    const whatsappEnabled =
+      this.configService.get<string>('WHATSAPP_ENABLED') === 'true';
     if (whatsappEnabled) {
       checks.whatsapp = {
         status: 'up',

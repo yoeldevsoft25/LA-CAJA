@@ -64,13 +64,3 @@ export class SecretValidator {
     this.validateAdminSecret(configService.get<string>('ADMIN_SECRET'));
   }
 }
-
-
-
-
-
-
-
-
-
-

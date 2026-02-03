@@ -8,9 +8,13 @@ import { ExchangeModule } from '../exchange/exchange.module';
 import { LicensesModule } from '../licenses/licenses.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Product, RecipeIngredient]), ExchangeModule, LicensesModule],
+  imports: [
+    TypeOrmModule.forFeature([Product, RecipeIngredient]),
+    ExchangeModule,
+    LicensesModule,
+  ],
   controllers: [ProductsController],
   providers: [ProductsService],
   exports: [ProductsService],
 })
-export class ProductsModule { }
+export class ProductsModule {}

@@ -83,14 +83,22 @@ export class AccountingExportService {
           filePath = await this.exportToVioTechFormat(exportRecord.id, entries);
           break;
         default:
-          throw new Error(`Tipo de exportación no soportado: ${dto.export_type}`);
+          throw new Error(
+            `Tipo de exportación no soportado: ${dto.export_type}`,
+          );
       }
 
       const stats = fs.statSync(filePath);
       fileSize = stats.size;
 
-      const totalAmountBs = entries.reduce((sum, e) => sum + Number(e.total_debit_bs), 0);
-      const totalAmountUsd = entries.reduce((sum, e) => sum + Number(e.total_debit_usd), 0);
+      const totalAmountBs = entries.reduce(
+        (sum, e) => sum + Number(e.total_debit_bs),
+        0,
+      );
+      const totalAmountUsd = entries.reduce(
+        (sum, e) => sum + Number(e.total_debit_usd),
+        0,
+      );
 
       exportRecord.file_path = filePath;
       exportRecord.file_size = fileSize;
@@ -105,7 +113,8 @@ export class AccountingExportService {
       return exportRecord;
     } catch (error) {
       exportRecord.status = 'failed';
-      exportRecord.error_message = error instanceof Error ? error.message : String(error);
+      exportRecord.error_message =
+        error instanceof Error ? error.message : String(error);
       await this.exportRepository.save(exportRecord);
       throw error;
     }
@@ -114,12 +123,17 @@ export class AccountingExportService {
   /**
    * Exportar a CSV
    */
-  private async exportToCSV(exportId: string, entries: JournalEntry[]): Promise<string> {
+  private async exportToCSV(
+    exportId: string,
+    entries: JournalEntry[],
+  ): Promise<string> {
     const filePath = path.join(this.exportsDir, `${exportId}.csv`);
     const lines: string[] = [];
 
     // Headers
-    lines.push('Fecha,Asiento,Tipo,Descripción,Cuenta,Código Cuenta,Nombre Cuenta,Débito BS,Crédito BS,Débito USD,Crédito USD');
+    lines.push(
+      'Fecha,Asiento,Tipo,Descripción,Cuenta,Código Cuenta,Nombre Cuenta,Débito BS,Crédito BS,Débito USD,Crédito USD',
+    );
 
     // Data
     for (const entry of entries) {
@@ -149,7 +163,10 @@ export class AccountingExportService {
   /**
    * Exportar a Excel
    */
-  private async exportToExcel(exportId: string, entries: JournalEntry[]): Promise<string> {
+  private async exportToExcel(
+    exportId: string,
+    entries: JournalEntry[],
+  ): Promise<string> {
     const filePath = path.join(this.exportsDir, `${exportId}.xlsx`);
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Asientos Contables');
@@ -199,7 +216,10 @@ export class AccountingExportService {
   /**
    * Exportar a JSON
    */
-  private async exportToJSON(exportId: string, entries: JournalEntry[]): Promise<string> {
+  private async exportToJSON(
+    exportId: string,
+    entries: JournalEntry[],
+  ): Promise<string> {
     const filePath = path.join(this.exportsDir, `${exportId}.json`);
     const data = entries.map((entry) => ({
       entry_number: entry.entry_number,
@@ -230,9 +250,12 @@ export class AccountingExportService {
   /**
    * Exportar a formato VioTech (preparado para sincronización)
    */
-  private async exportToVioTechFormat(exportId: string, entries: JournalEntry[]): Promise<string> {
+  private async exportToVioTechFormat(
+    exportId: string,
+    entries: JournalEntry[],
+  ): Promise<string> {
     const filePath = path.join(this.exportsDir, `${exportId}_viotech.json`);
-    
+
     // Formato específico para VioTech core
     const viotechData = {
       version: '1.0',
@@ -271,7 +294,10 @@ export class AccountingExportService {
   /**
    * Obtener exportaciones
    */
-  async getExports(storeId: string, limit: number = 20): Promise<AccountingExport[]> {
+  async getExports(
+    storeId: string,
+    limit: number = 20,
+  ): Promise<AccountingExport[]> {
     return this.exportRepository.find({
       where: { store_id: storeId },
       order: { created_at: 'DESC' },
@@ -282,7 +308,10 @@ export class AccountingExportService {
   /**
    * Descargar archivo de exportación
    */
-  async getExportFile(storeId: string, exportId: string): Promise<{ filePath: string; fileName: string }> {
+  async getExportFile(
+    storeId: string,
+    exportId: string,
+  ): Promise<{ filePath: string; fileName: string }> {
     const exportRecord = await this.exportRepository.findOne({
       where: { id: exportId, store_id: storeId },
     });
@@ -292,7 +321,9 @@ export class AccountingExportService {
     }
 
     if (exportRecord.status !== 'completed' || !exportRecord.file_path) {
-      throw new BadRequestException('La exportación no está completa o no tiene archivo');
+      throw new BadRequestException(
+        'La exportación no está completa o no tiene archivo',
+      );
     }
 
     if (!fs.existsSync(exportRecord.file_path)) {
@@ -305,4 +336,3 @@ export class AccountingExportService {
     };
   }
 }
-

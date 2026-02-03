@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -52,7 +48,7 @@ export class SetupService {
     private fiscalConfigsService: FiscalConfigsService,
     private paymentMethodConfigsService: PaymentMethodConfigsService,
     private analyticsDefaultsService: AnalyticsDefaultsService,
-  ) { }
+  ) {}
 
   /**
    * Configuración automática completa para una nueva tienda
@@ -148,7 +144,10 @@ export class SetupService {
 
       // 7. Configurar Analíticas Predeterminadas
       try {
-        await this.analyticsDefaultsService.applyDefaultThresholds(storeId, userId);
+        await this.analyticsDefaultsService.applyDefaultThresholds(
+          storeId,
+          userId,
+        );
         details.analytics_defaults_configured = true;
       } catch (error) {
         this.logger.error(`Error configurando analíticas: ${error}`);
@@ -164,14 +163,19 @@ export class SetupService {
       };
     } catch (error) {
       this.logger.error(`Error en setup de tienda ${storeId}:`, error);
-      throw new BadRequestException(`Error durante la configuración: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      throw new BadRequestException(
+        `Error durante la configuración: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+      );
     }
   }
 
   /**
    * Crear almacén por defecto
    */
-  private async createDefaultWarehouse(storeId: string, userId: string): Promise<Warehouse> {
+  private async createDefaultWarehouse(
+    storeId: string,
+    userId: string,
+  ): Promise<Warehouse> {
     const existing = await this.warehouseRepository.findOne({
       where: { store_id: storeId, is_default: true },
     });
@@ -198,7 +202,10 @@ export class SetupService {
   /**
    * Crear lista de precios por defecto
    */
-  private async createDefaultPriceList(storeId: string, userId: string): Promise<PriceList> {
+  private async createDefaultPriceList(
+    storeId: string,
+    userId: string,
+  ): Promise<PriceList> {
     const existing = await this.priceListRepository.findOne({
       where: { store_id: storeId, is_default: true },
     });
@@ -230,7 +237,11 @@ export class SetupService {
     userId: string,
     businessType: BusinessType,
   ): Promise<void> {
-    await this.chartOfAccountsService.initializeDefaultChartOfAccounts(storeId, userId, businessType);
+    await this.chartOfAccountsService.initializeDefaultChartOfAccounts(
+      storeId,
+      userId,
+      businessType,
+    );
   }
 
   /**
@@ -301,10 +312,10 @@ export class SetupService {
       method: PaymentMethod;
       sortOrder: number;
     }> = [
-        { method: 'CASH_BS' as PaymentMethod, sortOrder: 20 },
-        { method: 'CASH_USD' as PaymentMethod, sortOrder: 10 },
-        { method: 'PAGO_MOVIL' as PaymentMethod, sortOrder: 30 },
-      ];
+      { method: 'CASH_BS' as PaymentMethod, sortOrder: 20 },
+      { method: 'CASH_USD' as PaymentMethod, sortOrder: 10 },
+      { method: 'PAGO_MOVIL' as PaymentMethod, sortOrder: 30 },
+    ];
 
     for (const { method, sortOrder } of defaultMethods) {
       const existing = await this.paymentMethodConfigsService.getConfig(
@@ -370,9 +381,8 @@ export class SetupService {
     const fiscalConfig = await this.fiscalConfigsService.findOne(storeId);
 
     // Verificar métodos de pago habilitados
-    const paymentMethods = await this.paymentMethodConfigsService.getConfigs(
-      storeId,
-    );
+    const paymentMethods =
+      await this.paymentMethodConfigsService.getConfigs(storeId);
     const enabledPaymentMethods = paymentMethods.filter((pm) => pm.enabled);
 
     const missingSteps: string[] = [];

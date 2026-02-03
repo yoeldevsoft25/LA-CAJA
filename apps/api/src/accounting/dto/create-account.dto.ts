@@ -54,14 +54,3 @@ export class CreateAccountDto {
   @IsObject()
   metadata?: Record<string, any>;
 }
-
-
-
-
-
-
-
-
-
-
-

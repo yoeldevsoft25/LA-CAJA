@@ -43,9 +43,11 @@ import { LicensesModule } from '../licenses/licenses.module';
     LicensesModule,
   ],
   controllers: [AccountingController],
-  providers: [ChartOfAccountsService, AccountingService, AccountingExportService],
+  providers: [
+    ChartOfAccountsService,
+    AccountingService,
+    AccountingExportService,
+  ],
   exports: [ChartOfAccountsService, AccountingService, AccountingExportService],
 })
-export class AccountingModule { }
-
-
+export class AccountingModule {}

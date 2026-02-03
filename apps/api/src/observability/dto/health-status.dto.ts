@@ -4,7 +4,10 @@ export class ServiceHealthDto {
   @ApiProperty({ description: 'Nombre del servicio' })
   name: string;
 
-  @ApiProperty({ description: 'Estado del servicio', enum: ['up', 'down', 'degraded'] })
+  @ApiProperty({
+    description: 'Estado del servicio',
+    enum: ['up', 'down', 'degraded'],
+  })
   status: 'up' | 'down' | 'degraded';
 
   @ApiProperty({ description: 'Tiempo de respuesta en ms', required: false })
@@ -27,7 +30,10 @@ export class HealthStatusDto {
   @ApiProperty({ description: 'Uptime objetivo (99.9%)' })
   targetUptime: number;
 
-  @ApiProperty({ description: 'Lista de servicios y su estado', type: [ServiceHealthDto] })
+  @ApiProperty({
+    description: 'Lista de servicios y su estado',
+    type: [ServiceHealthDto],
+  })
   services: ServiceHealthDto[];
 
   @ApiProperty({ description: 'Timestamp de la verificación' })

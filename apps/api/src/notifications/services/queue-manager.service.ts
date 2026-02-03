@@ -81,7 +81,9 @@ export class QueueManagerService implements OnModuleInit {
     const delay = time.getTime() - Date.now();
 
     if (delay < 0) {
-      this.logger.warn(`Cannot schedule digest in the past for store ${storeId}`);
+      this.logger.warn(
+        `Cannot schedule digest in the past for store ${storeId}`,
+      );
       return;
     }
 
@@ -116,7 +118,9 @@ export class QueueManagerService implements OnModuleInit {
         await this.scheduleMLInsightsProcessing(store.id);
       }
 
-      this.logger.log(`✅ Scheduled ML insights processing for ${stores.length} stores`);
+      this.logger.log(
+        `✅ Scheduled ML insights processing for ${stores.length} stores`,
+      );
     } catch (error) {
       this.logger.error(`Error in hourly ML insights processing:`, error);
     }
@@ -210,7 +214,9 @@ export class QueueManagerService implements OnModuleInit {
         );
       }
 
-      this.logger.log(`✅ Scheduled weekly reports for ${stores.length} stores`);
+      this.logger.log(
+        `✅ Scheduled weekly reports for ${stores.length} stores`,
+      );
     } catch (error) {
       this.logger.error(`Error generating weekly owner reports:`, error);
     }

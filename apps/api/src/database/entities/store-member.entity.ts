@@ -55,7 +55,10 @@ export class StoreMember {
   /**
    * Incrementa los intentos fallidos y bloquea si es necesario
    */
-  incrementFailedAttempts(maxAttempts: number = 5, lockDurationMinutes: number = 15): void {
+  incrementFailedAttempts(
+    maxAttempts: number = 5,
+    lockDurationMinutes: number = 15,
+  ): void {
     this.failed_login_attempts += 1;
     if (this.failed_login_attempts >= maxAttempts) {
       const lockUntil = new Date();

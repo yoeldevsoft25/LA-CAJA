@@ -11,7 +11,8 @@ export class UpdateWhatsAppConfigDto {
   @IsString()
   @MaxLength(20)
   @Matches(/^58\d{10}$/, {
-    message: 'El número de WhatsApp debe estar en formato internacional (ej: 584121234567)',
+    message:
+      'El número de WhatsApp debe estar en formato internacional (ej: 584121234567)',
   })
   whatsapp_number?: string;
 

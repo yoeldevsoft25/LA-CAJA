@@ -3,7 +3,7 @@ import { SwipeableItem } from '@/components/ui/swipeable-item'
 import { Trash2, ShoppingCart } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CartItemRow } from './CartItemRow'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface CartListProps {

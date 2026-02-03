@@ -27,9 +27,7 @@ export interface PostProcessSaleJob {
   },
 })
 export class SalesPostProcessingQueueProcessor extends WorkerHost {
-  private readonly logger = new Logger(
-    SalesPostProcessingQueueProcessor.name,
-  );
+  private readonly logger = new Logger(SalesPostProcessingQueueProcessor.name);
 
   constructor(
     private fiscalInvoicesService: FiscalInvoicesService,
@@ -66,8 +64,10 @@ export class SalesPostProcessingQueueProcessor extends WorkerHost {
         if (generateFiscalInvoice && hasFiscalConfig) {
           await job.updateProgress(30);
 
-          const existingInvoice =
-            await this.fiscalInvoicesService.findBySale(storeId, saleId);
+          const existingInvoice = await this.fiscalInvoicesService.findBySale(
+            storeId,
+            saleId,
+          );
 
           if (existingInvoice) {
             fiscalInvoiceFound = true;

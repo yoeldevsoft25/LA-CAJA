@@ -64,7 +64,7 @@ export class LicenseWatcherService implements OnModuleInit, OnModuleDestroy {
         store.license_notes =
           store.license_notes ?? 'Expirada automáticamente por cron';
         await this.storeRepo.save(store);
-        
+
         // Notificar cambio de licencia vía WebSocket
         this.notificationsGateway.emitLicenseStatusChange(store.id, {
           license_status: store.license_status,
@@ -72,11 +72,11 @@ export class LicenseWatcherService implements OnModuleInit, OnModuleDestroy {
           license_plan: store.license_plan,
           license_grace_days: store.license_grace_days,
         });
-        
+
         this.logger.log(
           `Licencia expirada para tienda ${store.id} (${oldStatus} -> expired)`,
         );
-        
+
         expired++;
         updated++;
         continue;

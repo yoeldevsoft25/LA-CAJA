@@ -289,11 +289,7 @@ export class DashboardService {
 
       const productsWithStock = await this.productRepository
         .createQueryBuilder('product')
-        .leftJoin(
-          'product_lots',
-          'lot',
-          'lot.product_id = product.id',
-        )
+        .leftJoin('product_lots', 'lot', 'lot.product_id = product.id')
         .leftJoin(
           `(${warehouseStockSubquery.getQuery()})`,
           'stock',
@@ -588,11 +584,11 @@ export class DashboardService {
       .createQueryBuilder('item')
       .leftJoin('item.sale', 'sale')
       .leftJoin('item.product', 'product')
-        .where('sale.store_id = :storeId', { storeId })
-        .andWhere('sale.voided_at IS NULL')
-        .andWhere('product.id IS NOT NULL')
-        .andWhere('sale.sold_at >= :start', { start: startDate })
-        .andWhere('sale.sold_at <= :end', { end: endDate })
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere('product.id IS NOT NULL')
+      .andWhere('sale.sold_at >= :start', { start: startDate })
+      .andWhere('sale.sold_at <= :end', { end: endDate })
       .select('product.id', 'product_id')
       .addSelect('product.name', 'product_name')
       .addSelect('product.is_weight_product', 'is_weight_product')
@@ -615,7 +611,9 @@ export class DashboardService {
       .getRawMany();
 
     const isWeight = (p: { is_weight_product: unknown }) =>
-      p.is_weight_product === true || p.is_weight_product === 1 || p.is_weight_product === 't';
+      p.is_weight_product === true ||
+      p.is_weight_product === 1 ||
+      p.is_weight_product === 't';
     const topByWeight = allTop.filter(isWeight).slice(0, 10);
     const topByUnit = allTop.filter((p) => !isWeight(p)).slice(0, 10);
 

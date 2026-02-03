@@ -97,7 +97,9 @@ export class PublicOrdersService {
     const orderItems = dto.items.map((item) => {
       const product = products.find((p) => p.id === item.product_id);
       if (!product) {
-        throw new BadRequestException(`Producto ${item.product_id} no encontrado`);
+        throw new BadRequestException(
+          `Producto ${item.product_id} no encontrado`,
+        );
       }
 
       return this.orderItemRepository.create({
@@ -121,10 +123,10 @@ export class PublicOrdersService {
     const updatedTable = await this.tableRepository.save(table);
 
     // Recargar orden con items
-    const finalOrder = await this.orderRepository.findOne({
+    const finalOrder = (await this.orderRepository.findOne({
       where: { id: savedOrder.id },
       relations: ['items', 'table'],
-    }) as Order;
+    })) as Order;
 
     // Emitir eventos WebSocket para notificar en tiempo real
     if (finalOrder) {

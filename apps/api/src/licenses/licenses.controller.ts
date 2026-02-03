@@ -29,7 +29,7 @@ export class LicensesController {
     private readonly paymentsService: LicensePaymentsService,
     private readonly verificationService: LicenseVerificationService,
     private readonly licenseService: LicenseService,
-  ) { }
+  ) {}
 
   /**
    * GET /licenses/status
@@ -107,6 +107,4 @@ export class LicensesController {
     const storeId = req.user.store_id;
     return this.paymentsService.listPayments(storeId, status, 50, 0);
   }
-
-
 }

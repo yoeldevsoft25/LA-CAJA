@@ -139,22 +139,20 @@ export class SalesController {
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req: any) {
     const storeId = req.user.store_id;
-    
+
     // Validar que storeId esté presente
     if (!storeId) {
       throw new UnauthorizedException('Store ID no válido');
     }
-    
+
     // El servicio valida store_id en la query, pero reforzamos aquí
     const sale = await this.salesService.findOne(storeId, id);
-    
+
     // Validación adicional: TODOS los usuarios solo pueden ver ventas de su tienda
     if (sale.store_id !== storeId) {
-      throw new UnauthorizedException(
-        'No tienes permisos para ver esta venta',
-      );
+      throw new UnauthorizedException('No tienes permisos para ver esta venta');
     }
-    
+
     return sale;
   }
 
@@ -181,22 +179,22 @@ export class SalesController {
     }
     const storeId = req.user.store_id;
     const userId = req.user.sub;
-    
+
     // Validar que storeId esté presente
     if (!storeId) {
       throw new UnauthorizedException('Store ID no válido');
     }
-    
+
     // Obtener la venta para validar que pertenece a la tienda del usuario
     const sale = await this.salesService.findOne(storeId, id);
-    
+
     // Validación adicional: asegurar que la venta pertenece a la tienda del usuario
     if (sale.store_id !== storeId) {
       throw new UnauthorizedException(
         'No tienes permisos para anular esta venta',
       );
     }
-    
+
     return this.salesService.voidSale(storeId, id, userId, dto.reason);
   }
 
@@ -210,22 +208,22 @@ export class SalesController {
   ) {
     const storeId = req.user.store_id;
     const userId = req.user.sub;
-    
+
     // Validar que storeId esté presente
     if (!storeId) {
       throw new UnauthorizedException('Store ID no válido');
     }
-    
+
     // Obtener la venta para validar que pertenece a la tienda del usuario
     const sale = await this.salesService.findOne(storeId, id);
-    
+
     // Validación adicional: asegurar que la venta pertenece a la tienda del usuario
     if (sale.store_id !== storeId) {
       throw new UnauthorizedException(
         'No tienes permisos para devolver items de esta venta',
       );
     }
-    
+
     return this.salesService.returnItems(storeId, id, dto, userId);
   }
 }

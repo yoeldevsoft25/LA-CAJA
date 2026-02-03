@@ -62,7 +62,7 @@ export class AuthService {
     private emailService: EmailService,
     private usageService: UsageService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;
@@ -279,7 +279,12 @@ export class AuthService {
       await queryRunner.manager.save(EmailVerificationToken, emailToken);
 
       // Incrementar uso de usuarios (Owner + Cashier = 2)
-      await this.usageService.increment(savedStore.id, 'users', 2, queryRunner.manager);
+      await this.usageService.increment(
+        savedStore.id,
+        'users',
+        2,
+        queryRunner.manager,
+      );
 
       // Commit de la transacción
       await queryRunner.commitTransaction();
@@ -289,13 +294,21 @@ export class AuthService {
       try {
         // Verificar que el servicio de email esté disponible
         if (!this.emailService.isAvailable()) {
-          this.logger.warn(`⚠️ Email service not available - cannot send verification email to ${dto.owner_email}`);
-          this.logger.warn('   Please configure RESEND_API_KEY in environment variables');
+          this.logger.warn(
+            `⚠️ Email service not available - cannot send verification email to ${dto.owner_email}`,
+          );
+          this.logger.warn(
+            '   Please configure RESEND_API_KEY in environment variables',
+          );
         } else {
-          this.logger.log(`📧 Sending verification email to ${dto.owner_email}`);
+          this.logger.log(
+            `📧 Sending verification email to ${dto.owner_email}`,
+          );
         }
 
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://veloxpos.app';
+        const frontendUrl =
+          this.configService.get<string>('FRONTEND_URL') ||
+          'https://veloxpos.app';
         const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
         const htmlBody = this.generateEmailHtml(
@@ -321,7 +334,7 @@ export class AuthService {
             <p style="margin: 32px 0 0 0; color: #94a3b8; font-size: 14px; text-align: center; line-height: 1.5;">
               Este enlace de verificación expirará en 24 horas por razones de seguridad.
             </p>
-          `
+          `,
         );
 
         await this.emailService.sendEmail({
@@ -333,9 +346,13 @@ export class AuthService {
           textBody: `Bienvenido a Velox POS\n\nHola ${dto.owner_name},\n\nGracias por registrarte en Velox POS. Tu tienda ${dto.store_name} ha sido creada exitosamente.\n\nPara completar tu registro, verifica tu dirección de email visitando:\n${verificationUrl}\n\nEste enlace expirará en 24 horas.`,
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         const errorStack = error instanceof Error ? error.stack : undefined;
-        this.logger.error(`❌ Error enviando email de verificación a ${dto.owner_email}: ${errorMessage}`, errorStack);
+        this.logger.error(
+          `❌ Error enviando email de verificación a ${dto.owner_email}: ${errorMessage}`,
+          errorStack,
+        );
 
         // Log detalle del error para debugging
         if (error instanceof Error) {
@@ -371,7 +388,10 @@ export class AuthService {
         try {
           await queryRunner.rollbackTransaction();
         } catch (rollbackError) {
-          this.logger.error('Error al hacer rollback (ignorado):', rollbackError);
+          this.logger.error(
+            'Error al hacer rollback (ignorado):',
+            rollbackError,
+          );
         }
       }
       throw error;
@@ -384,7 +404,9 @@ export class AuthService {
   /**
    * Verifica un email usando un token de verificación
    */
-  async verifyEmail(token: string): Promise<{ verified: boolean; message: string }> {
+  async verifyEmail(
+    token: string,
+  ): Promise<{ verified: boolean; message: string }> {
     const emailToken = await this.emailVerificationTokenRepository.findOne({
       where: { token },
       relations: ['profile'],
@@ -395,7 +417,9 @@ export class AuthService {
     }
 
     if (!emailToken.isActive()) {
-      throw new BadRequestException('Token de verificación expirado o ya usado');
+      throw new BadRequestException(
+        'Token de verificación expirado o ya usado',
+      );
     }
 
     // Marcar token como usado
@@ -463,11 +487,14 @@ export class AuthService {
 
     // Verificar que el servicio de email esté disponible
     if (!this.emailService.isAvailable()) {
-      throw new BadRequestException('El servicio de email no está disponible. Por favor configura RESEND_API_KEY.');
+      throw new BadRequestException(
+        'El servicio de email no está disponible. Por favor configura RESEND_API_KEY.',
+      );
     }
 
     // Enviar email
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://veloxpos.app';
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'https://veloxpos.app';
     const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
     this.logger.log(`📧 Sending verification email to ${profile.email}`);
@@ -493,7 +520,7 @@ export class AuthService {
           <p style="margin: 32px 0 0 0; color: #94a3b8; font-size: 14px; text-align: center; line-height: 1.5;">
             Este enlace de verificación expirará en 24 horas por razones de seguridad.
           </p>
-        `
+        `,
       );
 
       await this.emailService.sendEmail({
@@ -505,9 +532,13 @@ export class AuthService {
         textBody: `Verifica tu email - Velox POS\n\nHola ${profile.full_name || 'Usuario'},\n\nGracias por registrarte en Velox POS. Para completar tu registro, verifica tu dirección de email visitando:\n${verificationUrl}\n\nEste enlace expirará en 24 horas.`,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`❌ Error reenviando email de verificación a ${profile.email}: ${errorMessage}`, errorStack);
+      this.logger.error(
+        `❌ Error reenviando email de verificación a ${profile.email}: ${errorMessage}`,
+        errorStack,
+      );
 
       // Log detalle del error para debugging
       if (error instanceof Error) {
@@ -517,7 +548,9 @@ export class AuthService {
         });
       }
 
-      throw new BadRequestException(`Error al enviar email de verificación: ${errorMessage}`);
+      throw new BadRequestException(
+        `Error al enviar email de verificación: ${errorMessage}`,
+      );
     }
   }
 
@@ -579,7 +612,10 @@ export class AuthService {
       });
     } catch (error: any) {
       // Si la tabla no existe, continuar sin verificar 2FA
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         this.logger.warn(
           `Tabla two_factor_auth no existe.Migración 55 pendiente.Continuando sin verificar 2FA.`,
         );
@@ -606,7 +642,7 @@ export class AuthService {
       storeId: validMember.store_id,
       role: validMember.role,
       fullName: validMember.profile?.full_name,
-      allMembersInStore: members.map(m => ({
+      allMembersInStore: members.map((m) => ({
         userId: m.user_id,
         role: m.role,
         hasPin: !!m.pin_hash,
@@ -691,9 +727,15 @@ export class AuthService {
     });
 
     // Si es un dispositivo nuevo, notificar por email
-    if (!existingDeviceSession && validMember.profile?.email && validMember.profile?.email_verified) {
+    if (
+      !existingDeviceSession &&
+      validMember.profile?.email &&
+      validMember.profile?.email_verified
+    ) {
       try {
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+        const frontendUrl =
+          this.configService.get<string>('FRONTEND_URL') ||
+          'http://localhost:5173';
         const htmlBody = this.generateEmailHtml(
           'Nuevo dispositivo detectado',
           'Nuevo dispositivo detectado',
@@ -711,7 +753,7 @@ export class AuthService {
               <li>Revoca todas las sesiones si es necesario</li>
             </ol>
             <p style="margin: 0; color: #94a3b8; font-size: 14px; text-align: center;">Si fuiste tú, puedes ignorar este email.</p>
-          `
+          `,
         );
 
         await this.emailService.sendEmail({
@@ -722,7 +764,9 @@ export class AuthService {
           htmlBody,
           textBody: `Nuevo dispositivo detectado - Velox POS\n\nHola ${validMember.profile.full_name || 'Usuario'},\n\nSe detectó un inicio de sesión desde un nuevo dispositivo.\n\nIP: ${ipAddress || 'Desconocida'}\nFecha: ${new Date().toLocaleString('es-VE')}\n\nSi no fuiste tú, cambia tu PIN inmediatamente y revisa tus sesiones activas.`,
         });
-        this.logger.log(`Email de nuevo dispositivo enviado a: ${validMember.profile.email} `);
+        this.logger.log(
+          `Email de nuevo dispositivo enviado a: ${validMember.profile.email} `,
+        );
       } catch (error) {
         this.logger.error('Error enviando email de nuevo dispositivo:', error);
         // No fallar el login si falla el email
@@ -835,7 +879,9 @@ export class AuthService {
 
     if (isRevoked) {
       const revokedReason = refreshToken.revoked_reason;
-      const revokedAgoMs = revokedAt ? now.getTime() - revokedAt.getTime() : null;
+      const revokedAgoMs = revokedAt
+        ? now.getTime() - revokedAt.getTime()
+        : null;
       const withinGrace =
         revokedReason === 'rotated' &&
         revokedAt !== null &&
@@ -1109,7 +1155,7 @@ export class AuthService {
         userId,
         storeId,
         searchedFor: { user_id: userId, store_id: storeId },
-        allMembersInStore: allMembers.map(m => ({
+        allMembersInStore: allMembers.map((m) => ({
           user_id: m.user_id,
           store_id: m.store_id,
           role: m.role,
@@ -1137,7 +1183,9 @@ export class AuthService {
 
   async getAllMembersInStore(
     storeId: string,
-  ): Promise<Array<{ user_id: string; role: string; full_name: string | null }>> {
+  ): Promise<
+    Array<{ user_id: string; role: string; full_name: string | null }>
+  > {
     const members = await this.storeMemberRepository.find({
       where: { store_id: storeId },
       relations: ['profile'],
@@ -1165,9 +1213,12 @@ export class AuthService {
 
     if (!profile) {
       // No revelar si el email existe o no por seguridad
-      this.logger.warn(`Intento de recuperación de PIN para email no encontrado: ${dto.email} `);
+      this.logger.warn(
+        `Intento de recuperación de PIN para email no encontrado: ${dto.email} `,
+      );
       return {
-        message: 'Si el email existe, recibirás un enlace para recuperar tu PIN',
+        message:
+          'Si el email existe, recibirás un enlace para recuperar tu PIN',
       };
     }
 
@@ -1182,17 +1233,18 @@ export class AuthService {
 
     if (!member) {
       // No revelar si el email existe o no por seguridad
-      this.logger.warn(`Intento de recuperación de PIN para usuario no perteneciente a tienda: ${dto.email} `);
+      this.logger.warn(
+        `Intento de recuperación de PIN para usuario no perteneciente a tienda: ${dto.email} `,
+      );
       return {
-        message: 'Si el email existe, recibirás un enlace para recuperar tu PIN',
+        message:
+          'Si el email existe, recibirás un enlace para recuperar tu PIN',
       };
     }
 
     // Verificar que el email exista y esté verificado
     if (!profile.email) {
-      throw new BadRequestException(
-        'El usuario no tiene un email registrado',
-      );
+      throw new BadRequestException('El usuario no tiene un email registrado');
     }
 
     if (!profile.email_verified) {
@@ -1229,7 +1281,9 @@ export class AuthService {
 
     // Enviar email de recuperación
     try {
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:5173';
       const resetUrl = `${frontendUrl}/reset-pin?token=${recoveryToken}`;
 
       const htmlBody = this.generateEmailHtml(
@@ -1252,7 +1306,7 @@ export class AuthService {
           <p style="margin: 32px 0 0 0; color: #94a3b8; font-size: 14px; text-align: center; line-height: 1.5;">
             Este enlace expirará en 1 hora por razones de seguridad.
           </p>
-        `
+        `,
       );
 
       await this.emailService.sendEmail({
@@ -1264,7 +1318,9 @@ export class AuthService {
         textBody: `Recuperación de PIN - Velox POS\n\nHola ${profile.full_name || 'Usuario'},\n\nPara restablecer tu PIN, por favor visita el siguiente enlace:\n${resetUrl}\n\nEste enlace expirará en 1 hora.`,
       });
 
-      this.logger.log(`Email de recuperación de PIN enviado a: ${profile.email}`);
+      this.logger.log(
+        `Email de recuperación de PIN enviado a: ${profile.email}`,
+      );
     } catch (error) {
       this.logger.error('Error enviando email de recuperación de PIN:', error);
       throw new BadRequestException('Error al enviar email de recuperación');
@@ -1289,7 +1345,9 @@ export class AuthService {
     }
 
     if (!recoveryToken.isActive()) {
-      throw new BadRequestException('Token de recuperación expirado o ya usado');
+      throw new BadRequestException(
+        'Token de recuperación expirado o ya usado',
+      );
     }
 
     // Marcar token como usado
@@ -1325,7 +1383,8 @@ export class AuthService {
     this.logger.log(`PIN restablecido para usuario: ${recoveryToken.user_id}`);
 
     return {
-      message: 'PIN restablecido exitosamente. Por favor inicia sesión con tu nuevo PIN.',
+      message:
+        'PIN restablecido exitosamente. Por favor inicia sesión con tu nuevo PIN.',
     };
   }
 
@@ -1353,7 +1412,10 @@ export class AuthService {
    * Inicia el proceso de habilitación de 2FA
    * Genera un secret y QR code para configurar en app de autenticación
    */
-  async initiate2FA(userId: string, storeId: string): Promise<{
+  async initiate2FA(
+    userId: string,
+    storeId: string,
+  ): Promise<{
     secret: string;
     qrCodeUrl: string;
     backupCodes: string[];
@@ -1393,7 +1455,10 @@ export class AuthService {
         where: { user_id: userId, store_id: storeId },
       });
     } catch (error: any) {
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1418,7 +1483,10 @@ export class AuthService {
     try {
       await this.twoFactorAuthRepository.save(twoFactor);
     } catch (error: any) {
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1450,7 +1518,10 @@ export class AuthService {
         where: { user_id: userId, store_id: storeId },
       });
     } catch (error: any) {
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1459,7 +1530,9 @@ export class AuthService {
     }
 
     if (!twoFactor) {
-      throw new NotFoundException('2FA no iniciado. Debes iniciar el proceso primero.');
+      throw new NotFoundException(
+        '2FA no iniciado. Debes iniciar el proceso primero.',
+      );
     }
 
     if (twoFactor.is_enabled) {
@@ -1484,7 +1557,10 @@ export class AuthService {
     try {
       await this.twoFactorAuthRepository.save(twoFactor);
     } catch (error: any) {
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1514,7 +1590,10 @@ export class AuthService {
         where: { user_id: userId, store_id: storeId },
       });
     } catch (error: any) {
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1558,7 +1637,10 @@ export class AuthService {
     try {
       await this.twoFactorAuthRepository.save(twoFactor);
     } catch (error: any) {
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1592,7 +1674,10 @@ export class AuthService {
         },
       });
     } catch (error: any) {
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         throw new BadRequestException(
           'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
         );
@@ -1625,7 +1710,10 @@ export class AuthService {
           try {
             await this.twoFactorAuthRepository.save(twoFactor);
           } catch (error: any) {
-            if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+            if (
+              error?.code === '42P01' ||
+              error?.message?.includes('does not exist')
+            ) {
               throw new BadRequestException(
                 'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
               );
@@ -1641,7 +1729,10 @@ export class AuthService {
       try {
         await this.twoFactorAuthRepository.save(twoFactor);
       } catch (error: any) {
-        if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+        if (
+          error?.code === '42P01' ||
+          error?.message?.includes('does not exist')
+        ) {
           throw new BadRequestException(
             'La tabla two_factor_auth no existe. Por favor, ejecuta la migración 55_two_factor_auth.sql primero.',
           );
@@ -1660,7 +1751,11 @@ export class AuthService {
   /**
    * Genera el HTML estándar para los correos electrónicos de la plataforma
    */
-  private generateEmailHtml(title: string, headline: string, contentHtml: string): string {
+  private generateEmailHtml(
+    title: string,
+    headline: string,
+    contentHtml: string,
+  ): string {
     return `
       <!DOCTYPE html>
       <html lang="es">
@@ -1746,7 +1841,10 @@ export class AuthService {
       };
     } catch (error: any) {
       // Si la tabla no existe, asumir que 2FA no está habilitado
-      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      if (
+        error?.code === '42P01' ||
+        error?.message?.includes('does not exist')
+      ) {
         this.logger.warn(
           `Tabla two_factor_auth no existe. Migración 55 pendiente. Retornando 2FA deshabilitado.`,
         );

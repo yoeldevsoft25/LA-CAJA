@@ -22,7 +22,15 @@ import { LicensesModule } from '../licenses/licenses.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Store, Profile, StoreMember, RefreshToken, EmailVerificationToken, PinRecoveryToken, TwoFactorAuth]),
+    TypeOrmModule.forFeature([
+      Store,
+      Profile,
+      StoreMember,
+      RefreshToken,
+      EmailVerificationToken,
+      PinRecoveryToken,
+      TwoFactorAuth,
+    ]),
     NotificationsModule,
     SecurityModule, // ✅ Módulo de seguridad para auditoría
     LicensesModule, // ✅ Control de licencias y cuotas
@@ -35,7 +43,7 @@ import { LicensesModule } from '../licenses/licenses.module';
         if (!jwtSecret) {
           throw new Error(
             'JWT_SECRET debe estar configurado en las variables de entorno. ' +
-            'En producción, esto es obligatorio por seguridad.',
+              'En producción, esto es obligatorio por seguridad.',
           );
         }
 
@@ -52,7 +60,12 @@ import { LicensesModule } from '../licenses/licenses.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LoginRateLimitGuard, TokenCleanupService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    LoginRateLimitGuard,
+    TokenCleanupService,
+  ],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

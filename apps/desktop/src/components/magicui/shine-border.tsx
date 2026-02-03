@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@la-caja/ui-core";
 
 type TColorProp = string | string[];
 

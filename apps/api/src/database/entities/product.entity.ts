@@ -119,6 +119,8 @@ export class Product {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 
-  @OneToMany(() => RecipeIngredient, (ri) => ri.recipe_product, { cascade: true })
+  @OneToMany(() => RecipeIngredient, (ri) => ri.recipe_product, {
+    cascade: true,
+  })
   ingredients: RecipeIngredient[];
 }

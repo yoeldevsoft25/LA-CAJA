@@ -3,7 +3,7 @@ import { Zap, Scale } from 'lucide-react'
 import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.service'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface QuickProductsGridProps {
   onProductClick: (product: QuickProduct) => void

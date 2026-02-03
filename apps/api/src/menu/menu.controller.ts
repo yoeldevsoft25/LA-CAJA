@@ -86,7 +86,10 @@ export class MenuController {
         product,
       };
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       throw new NotFoundException('Producto no encontrado');
@@ -99,7 +102,13 @@ export class MenuController {
    */
   @Post('orders')
   @HttpCode(HttpStatus.CREATED)
-  async createOrder(@Body() dto: { qr_code: string; items: Array<{ product_id: string; qty: number; note?: string | null }> }) {
+  async createOrder(
+    @Body()
+    dto: {
+      qr_code: string;
+      items: Array<{ product_id: string; qty: number; note?: string | null }>;
+    },
+  ) {
     try {
       const order = await this.publicOrdersService.createOrderFromMenu(dto);
       return {
@@ -133,7 +142,8 @@ export class MenuController {
         throw new BadRequestException('Código QR requerido');
       }
 
-      const { order, items } = await this.publicOrdersService.getCurrentOrderByQR(qrCode);
+      const { order, items } =
+        await this.publicOrdersService.getCurrentOrderByQR(qrCode);
 
       if (!order) {
         return {
@@ -146,8 +156,12 @@ export class MenuController {
 
       // Calcular progreso
       const totalItems = items.length;
-      const pendingItems = items.filter((item) => item.status === 'pending').length;
-      const preparingItems = items.filter((item) => item.status === 'preparing').length;
+      const pendingItems = items.filter(
+        (item) => item.status === 'pending',
+      ).length;
+      const preparingItems = items.filter(
+        (item) => item.status === 'preparing',
+      ).length;
       const readyItems = items.filter((item) => item.status === 'ready').length;
 
       return {

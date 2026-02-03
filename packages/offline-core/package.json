@@ -1,0 +1,18 @@
+{
+    "name": "@la-caja/offline-core",
+    "version": "1.0.0",
+    "description": "Offline storage and sync utilities for Velox POS",
+    "type": "module",
+    "main": "dist/index.js",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "clean": "rm -rf dist"
+    },
+    "dependencies": {},
+    "peerDependencies": {},
+    "devDependencies": {
+        "typescript": "^5.0.0"
+    }
+}

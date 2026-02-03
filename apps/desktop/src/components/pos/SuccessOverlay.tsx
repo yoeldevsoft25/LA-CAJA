@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { Check } from "lucide-react"
 import { useEffect, useState, useMemo } from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@la-caja/ui-core"
 
 interface SuccessOverlayProps {
     isOpen: boolean

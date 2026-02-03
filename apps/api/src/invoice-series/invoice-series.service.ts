@@ -22,7 +22,7 @@ export class InvoiceSeriesService {
     @InjectRepository(InvoiceSeries)
     private seriesRepository: Repository<InvoiceSeries>,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   /**
    * Crea una nueva serie de factura
@@ -150,18 +150,27 @@ export class InvoiceSeriesService {
       );
 
       if (!result || !result[0] || result[0].length === 0) {
-        throw new NotFoundException('Serie de factura no encontrada o inactiva');
+        throw new NotFoundException(
+          'Serie de factura no encontrada o inactiva',
+        );
       }
 
       // ⚡ FIX: result[0] es el array de filas, result[0][0] es el primer objeto
       const series = result[0][0] as InvoiceSeries;
       if (debug) {
-        this.logger.debug(`[INVOICE] Result structure: ${JSON.stringify(result, null, 2)}`);
-        this.logger.debug(`[INVOICE] Extracted series: ${JSON.stringify(series, null, 2)}`);
+        this.logger.debug(
+          `[INVOICE] Result structure: ${JSON.stringify(result, null, 2)}`,
+        );
+        this.logger.debug(
+          `[INVOICE] Extracted series: ${JSON.stringify(series, null, 2)}`,
+        );
       }
-      const currentNumber = Number(series.current_number) || Number(series.start_number) || 1;
+      const currentNumber =
+        Number(series.current_number) || Number(series.start_number) || 1;
       if (debug) {
-        this.logger.debug(`[INVOICE] Calculated currentNumber: ${currentNumber}`);
+        this.logger.debug(
+          `[INVOICE] Calculated currentNumber: ${currentNumber}`,
+        );
       }
       if (isNaN(currentNumber) || currentNumber <= 0) {
         throw new BadRequestException(
@@ -207,7 +216,9 @@ export class InvoiceSeriesService {
         [storeId],
       );
       if (debug) {
-        this.logger.debug(`[INVOICE] Result structure: ${JSON.stringify(result, null, 2)}`);
+        this.logger.debug(
+          `[INVOICE] Result structure: ${JSON.stringify(result, null, 2)}`,
+        );
       }
       if (!result || !result[0] || result[0].length === 0) {
         throw new NotFoundException(
@@ -218,12 +229,19 @@ export class InvoiceSeriesService {
       // ⚡ FIX: result[0] es el array de filas, result[0][0] es el primer objeto
       const series = result[0][0] as InvoiceSeries;
       if (debug) {
-        this.logger.debug(`[INVOICE] Extracted series: ${JSON.stringify(series, null, 2)}`);
+        this.logger.debug(
+          `[INVOICE] Extracted series: ${JSON.stringify(series, null, 2)}`,
+        );
       }
       // Use explicit null check to allow 0 as valid value
-      const currentNumber = series.current_number != null ? Number(series.current_number) : (series.start_number || 1);
+      const currentNumber =
+        series.current_number != null
+          ? Number(series.current_number)
+          : series.start_number || 1;
       if (debug) {
-        this.logger.debug(`[INVOICE] Calculated currentNumber: ${currentNumber}`);
+        this.logger.debug(
+          `[INVOICE] Calculated currentNumber: ${currentNumber}`,
+        );
       }
       if (isNaN(currentNumber) || currentNumber <= 0) {
         throw new BadRequestException(

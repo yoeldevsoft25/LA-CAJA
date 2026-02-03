@@ -24,7 +24,7 @@ import { DebtStatus } from '../database/entities/debt.entity';
 export class DebtsController {
   private readonly logger = new Logger(DebtsController.name);
 
-  constructor(private readonly debtsService: DebtsService) { }
+  constructor(private readonly debtsService: DebtsService) {}
 
   @Post('from-sale/:saleId')
   @HttpCode(HttpStatus.CREATED)
@@ -107,7 +107,11 @@ export class DebtsController {
     @Request() req: any,
   ) {
     const storeId = req.user.store_id;
-    return this.debtsService.sendDebtReminder(storeId, customerId, dto?.debt_ids);
+    return this.debtsService.sendDebtReminder(
+      storeId,
+      customerId,
+      dto?.debt_ids,
+    );
   }
 
   @Post('customer/:customerId/pay-all')

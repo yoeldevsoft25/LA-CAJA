@@ -75,8 +75,7 @@ export class NotificationsQueueProcessor extends WorkerHost {
 
     this.logger.log(`Processing ML insights for store ${storeId}`);
 
-    const count =
-      await this.orchestratorService.processMLInsights(storeId);
+    const count = await this.orchestratorService.processMLInsights(storeId);
 
     await job.updateProgress(100);
 
@@ -114,9 +113,7 @@ export class NotificationsQueueProcessor extends WorkerHost {
   /**
    * Genera digest diario
    */
-  private async generateDailyDigest(
-    job: Job<DailyDigestJob>,
-  ): Promise<void> {
+  private async generateDailyDigest(job: Job<DailyDigestJob>): Promise<void> {
     const { storeId } = job.data;
 
     this.logger.log(`Generating daily digest for store ${storeId}`);
@@ -148,10 +145,7 @@ export class NotificationsQueueProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   onFailed(job: Job, error: Error) {
-    this.logger.error(
-      `Job ${job.name} (${job.id}) failed:`,
-      error.message,
-    );
+    this.logger.error(`Job ${job.name} (${job.id}) failed:`, error.message);
   }
 
   @OnWorkerEvent('progress')

@@ -11,7 +11,12 @@ import {
 import { Store } from './store.entity';
 import { Profile } from './profile.entity';
 
-export type AccountType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+export type AccountType =
+  | 'asset'
+  | 'liability'
+  | 'equity'
+  | 'revenue'
+  | 'expense';
 
 @Entity('chart_of_accounts')
 @Index(['store_id'])
@@ -74,14 +79,3 @@ export class ChartOfAccount {
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
 }
-
-
-
-
-
-
-
-
-
-
-

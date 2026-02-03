@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { History, Package, ArrowDown, ArrowUp, X, AlertTriangle } from 'lucide-react'
 import { productLotsService, ProductLot } from '@/services/product-lots.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface LotMovementsListProps {
   isOpen: boolean

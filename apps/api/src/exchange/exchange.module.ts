@@ -27,4 +27,4 @@ import { RealTimeAnalyticsModule } from '../realtime-analytics/realtime-analytic
   providers: [ExchangeService, SalePaymentsService],
   exports: [ExchangeService, SalePaymentsService],
 })
-export class ExchangeModule { }
+export class ExchangeModule {}

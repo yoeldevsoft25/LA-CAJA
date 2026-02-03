@@ -7,13 +7,3 @@ export class GetIncomeStatementDto {
   @IsDateString()
   end_date: string;
 }
-
-
-
-
-
-
-
-
-
-

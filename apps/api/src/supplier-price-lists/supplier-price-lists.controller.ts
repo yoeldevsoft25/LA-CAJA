@@ -19,7 +19,9 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @UseGuards(JwtAuthGuard)
 @Roles('owner')
 export class SupplierPriceListsController {
-  constructor(private readonly supplierPriceListsService: SupplierPriceListsService) {}
+  constructor(
+    private readonly supplierPriceListsService: SupplierPriceListsService,
+  ) {}
 
   @Post('import/csv')
   @HttpCode(HttpStatus.OK)
@@ -32,7 +34,10 @@ export class SupplierPriceListsController {
   }
 
   @Get()
-  async getLists(@Query('supplier_id') supplierId: string, @Request() req: any) {
+  async getLists(
+    @Query('supplier_id') supplierId: string,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
     return this.supplierPriceListsService.getLists(storeId, supplierId);
   }

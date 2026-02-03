@@ -29,7 +29,10 @@ export class ObservabilityService {
         },
       ]);
 
-      const uptimeStats = await this.uptimeTracker.calculateUptime(undefined, 30);
+      const uptimeStats = await this.uptimeTracker.calculateUptime(
+        undefined,
+        30,
+      );
       const activeAlerts = await this.alertService.getActiveAlerts();
 
       // Determinar estado general

@@ -15,13 +15,3 @@ export class RefreshTokenResponseDto {
   refresh_token: string;
   expires_in: number; // Tiempo de expiración del access token en segundos
 }
-
-
-
-
-
-
-
-
-
-

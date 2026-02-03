@@ -24,4 +24,4 @@ import { RecipesModule } from '../recipes/recipes.module';
   providers: [KitchenDisplayService],
   exports: [KitchenDisplayService],
 })
-export class KitchenDisplayModule { }
+export class KitchenDisplayModule {}

@@ -33,7 +33,7 @@ import VariantSelector from '@/components/variants/VariantSelector'
 import WeightInputModal from '@/components/pos/WeightInputModal'
 import POSCart from '@/components/pos/cart/POSCart'
 import { SuccessOverlay } from '@/components/pos/SuccessOverlay'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
 import { useOrientation } from '@/hooks/use-orientation'
 

@@ -1,6 +1,6 @@
 import { FileText, Tag, Users, Split } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { cn } from '@la-caja/ui-core'
+import { Button } from '@la-caja/ui-core'
 import {
     DropdownMenu,
     DropdownMenuContent,

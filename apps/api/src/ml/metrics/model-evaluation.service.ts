@@ -257,10 +257,7 @@ export class ModelEvaluationService {
         const forecast = predictFn(rollingTrain);
         testPredicted.push(forecast);
         testActual.push(point.value);
-        rollingTrain = [
-          ...rollingTrain,
-          { date: point.date, value: forecast },
-        ];
+        rollingTrain = [...rollingTrain, { date: point.date, value: forecast }];
       }
 
       actual.push(...testActual);

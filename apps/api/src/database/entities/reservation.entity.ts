@@ -10,7 +10,12 @@ import { Store } from './store.entity';
 import { Table } from './table.entity';
 import { Customer } from './customer.entity';
 
-export type ReservationStatus = 'pending' | 'confirmed' | 'seated' | 'cancelled' | 'completed';
+export type ReservationStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'seated'
+  | 'cancelled'
+  | 'completed';
 
 /**
  * Entidad para reservas de mesas

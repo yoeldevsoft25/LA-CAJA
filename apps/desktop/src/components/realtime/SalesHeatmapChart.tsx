@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSalesHeatmap } from '@/hooks/useSalesHeatmap'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Calendar } from 'lucide-react'

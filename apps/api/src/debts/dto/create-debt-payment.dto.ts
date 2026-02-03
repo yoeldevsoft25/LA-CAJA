@@ -1,4 +1,14 @@
-import { IsNumber, IsString, IsIn, Min, IsOptional, IsBoolean, IsArray, ArrayMinSize, IsUUID } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  IsIn,
+  Min,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  ArrayMinSize,
+  IsUUID,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateDebtPaymentDto {

@@ -166,7 +166,10 @@ export class MLService {
         avgQuantity = totalQuantity / totalDays;
       } else {
         // Si no hay ventas, usar stock actual como referencia
-        const currentStock = await this.getCurrentStock(storeId, dto.product_id);
+        const currentStock = await this.getCurrentStock(
+          storeId,
+          dto.product_id,
+        );
         avgQuantity = currentStock > 0 ? currentStock / 7 : 1;
       }
 
@@ -223,17 +226,15 @@ export class MLService {
       date: d.date,
       value: d.quantity,
     }));
-    const zeroRatio =
-      totalDays > 0 ? (totalDays - nonZeroDays) / totalDays : 0;
+    const zeroRatio = totalDays > 0 ? (totalDays - nonZeroDays) / totalDays : 0;
     const ensembleResult = this.forecastingModel.ensembleForecast(quantities);
     const { bestModel, bestEvaluation, selectedModel } =
       this.evaluateForecastModels(seriesData, quantities, zeroRatio);
 
     const baseForecast = selectedModel.forecast(quantities);
     const seriesStats = this.getSeriesStats(quantities);
-    const trendFeatures = this.featureEngineering.generateTrendFeatures(
-      seriesData,
-    );
+    const trendFeatures =
+      this.featureEngineering.generateTrendFeatures(seriesData);
     const errorStats = this.getErrorStats(bestEvaluation?.residuals || []);
     const baseConfidence = bestEvaluation
       ? this.calculateConfidenceFromError(bestEvaluation.mae, seriesStats.mean)
@@ -271,8 +272,7 @@ export class MLService {
         : 1;
     const volatilityFactor =
       seriesStats.mean > 0
-        ? 1 -
-          Math.min(0.2, trendFeatures.volatility / seriesStats.mean / 2)
+        ? 1 - Math.min(0.2, trendFeatures.volatility / seriesStats.mean / 2)
         : 1;
 
     for (let i = 1; i <= dto.days_ahead; i++) {
@@ -578,9 +578,7 @@ export class MLService {
         },
       );
 
-      const modelMetrics = Array.from(
-        evaluation.modelEvaluations.entries(),
-      )
+      const modelMetrics = Array.from(evaluation.modelEvaluations.entries())
         .map(([model, metrics]) => ({
           model,
           mae: metrics.mae,
@@ -1048,9 +1046,9 @@ export class MLService {
     }
 
     let fallbackModel = zeroRatio > 0.4 ? 'croston_ensemble' : 'ensemble';
-    let bestEvaluation:
-      | ReturnType<ModelEvaluationService['walkForwardValidate']>
-      | null = null;
+    let bestEvaluation: ReturnType<
+      ModelEvaluationService['walkForwardValidate']
+    > | null = null;
 
     if (modelEvaluations.size > 0) {
       const sorted = Array.from(modelEvaluations.entries()).sort(
@@ -1060,10 +1058,11 @@ export class MLService {
       bestEvaluation = sorted[0]?.[1] || null;
     }
 
-    const selectedModel =
-      candidates.find((candidate) => candidate.id === fallbackModel)?.enabled
-        ? candidates.find((candidate) => candidate.id === fallbackModel)!
-        : candidates.find((candidate) => candidate.enabled) || candidates[0];
+    const selectedModel = candidates.find(
+      (candidate) => candidate.id === fallbackModel,
+    )?.enabled
+      ? candidates.find((candidate) => candidate.id === fallbackModel)!
+      : candidates.find((candidate) => candidate.enabled) || candidates[0];
 
     return {
       candidates,

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { Calculator, RefreshCw, DollarSign } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -9,7 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 // Denominaciones de Bs (Venezuela 2025)
 const BS_DENOMINATIONS = [

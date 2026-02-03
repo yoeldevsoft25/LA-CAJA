@@ -35,7 +35,7 @@ async function bootstrap() {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline para el dashboard
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
@@ -73,7 +73,8 @@ async function bootstrap() {
   // CORS restringido a orígenes permitidos
   const nodeEnv = configService.get<string>('NODE_ENV');
   const isDevelopment = nodeEnv !== 'production';
-  const allowAllOriginsLocal = configService.get<string>('ALLOW_ALL_ORIGINS_LOCAL') === 'true';
+  const allowAllOriginsLocal =
+    configService.get<string>('ALLOW_ALL_ORIGINS_LOCAL') === 'true';
 
   const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS');
   const extraOrigins = [
@@ -85,10 +86,10 @@ async function bootstrap() {
   const originList = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => origin.trim())
     : [
-      'http://localhost:5173',
-      'http://localhost:4173',
-      'http://localhost:3000',
-    ]; // Defaults para desarrollo (5173) y preview (4173)
+        'http://localhost:5173',
+        'http://localhost:4173',
+        'http://localhost:3000',
+      ]; // Defaults para desarrollo (5173) y preview (4173)
   const origins = Array.from(new Set([...originList, ...extraOrigins]));
 
   // Obtener puerto antes de usarlo
@@ -125,7 +126,8 @@ async function bootstrap() {
   });
 
   // Configurar Swagger/OpenAPI
-  const swaggerEnabled = configService.get<string>('SWAGGER_ENABLED') !== 'false';
+  const swaggerEnabled =
+    configService.get<string>('SWAGGER_ENABLED') !== 'false';
   if (swaggerEnabled) {
     const config = new DocumentBuilder()
       .setTitle('Velox POS API')
@@ -162,9 +164,15 @@ async function bootstrap() {
       .addTag('fiscal', 'Facturación fiscal')
       .addTag('reports', 'Reportes y análisis')
       .addTag('backup', 'Respaldo de datos')
-      .addServer('https://veloxpos2.share.zrok.io', 'Servidor de desarrollo (Zrok)')
+      .addServer(
+        'https://veloxpos2.share.zrok.io',
+        'Servidor de desarrollo (Zrok)',
+      )
       .addServer('http://localhost:3000', 'Servidor de desarrollo')
-      .addServer('https://la-caja-8i4h.onrender.com', 'Servidor de Producción (Render)')
+      .addServer(
+        'https://la-caja-8i4h.onrender.com',
+        'Servidor de Producción (Render)',
+      )
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
@@ -189,7 +197,9 @@ async function bootstrap() {
   logger.log(`🚀 API listening on http://localhost:${port}`);
 
   if (isDevelopment && allowAllOriginsLocal) {
-    logger.warn(`⚠️  CORS: PERMITIENDO TODOS LOS ORÍGENES (modo desarrollo + VPN)`);
+    logger.warn(
+      `⚠️  CORS: PERMITIENDO TODOS LOS ORÍGENES (modo desarrollo + VPN)`,
+    );
   } else {
     logger.log(`📋 CORS permitido para: ${origins.join(', ')}`);
   }

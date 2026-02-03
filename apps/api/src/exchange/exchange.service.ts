@@ -134,7 +134,11 @@ export function calculateBsChangeBreakdown(changeBs: number): {
 } {
   const denominations = [500, 200, 100, 50, 20, 10, 5, 1];
   let remaining = toCents(changeBs);
-  const bills: Array<{ denomination: number; count: number; subtotal: number }> = [];
+  const bills: Array<{
+    denomination: number;
+    count: number;
+    subtotal: number;
+  }> = [];
 
   for (const denom of denominations) {
     const count = Math.floor(remaining / 100 / denom);
@@ -167,7 +171,8 @@ export class ExchangeService {
   private readonly CACHE_DURATION_MS = 1000 * 60 * 60; // 1 hora
   private readonly axiosInstance: AxiosInstance;
   private readonly DOLAR_API_URL = 'https://ve.dolarapi.com/v1/dolares/oficial';
-  private readonly DOLAR_VZLA_API_URL = 'https://api.dolarvzla.com/public/exchange-rate';
+  private readonly DOLAR_VZLA_API_URL =
+    'https://api.dolarvzla.com/public/exchange-rate';
   private fetchPromise: Promise<BCVRateResponse | null> | null = null;
 
   constructor(
@@ -435,7 +440,7 @@ export class ExchangeService {
     storeId: string,
     updates: Partial<StoreRateConfig>,
   ): Promise<StoreRateConfig> {
-    let config = await this.getStoreRateConfig(storeId);
+    const config = await this.getStoreRateConfig(storeId);
 
     // Actualizar solo los campos proporcionados
     Object.assign(config, updates);
@@ -568,7 +573,9 @@ export class ExchangeService {
         };
         const cacheKey = `${storeId}-BCV`;
         this.cachedRates.set(cacheKey, cached);
-        this.logger.log(`Usando última tasa manual como fallback: ${lastManualRate.rate}`);
+        this.logger.log(
+          `Usando última tasa manual como fallback: ${lastManualRate.rate}`,
+        );
         return cached;
       }
     }
@@ -580,7 +587,7 @@ export class ExchangeService {
     try {
       // Intentar primero con DolarVZLA (nuevo endpoint más actualizado)
       this.logger.log('Obteniendo tasa BCV desde DolarVZLA...');
-      
+
       try {
         const response = await this.axiosInstance.get<DolarVZLAResponse>(
           this.DOLAR_VZLA_API_URL,
@@ -589,7 +596,9 @@ export class ExchangeService {
         const data = response.data;
 
         if (!data.current?.usd || data.current.usd <= 0) {
-          this.logger.warn('DolarVZLA devolvió un valor USD inválido, intentando fallback...');
+          this.logger.warn(
+            'DolarVZLA devolvió un valor USD inválido, intentando fallback...',
+          );
         } else {
           this.logger.log(
             `Tasa BCV obtenida desde DolarVZLA: ${data.current.usd} (fecha: ${data.current.date})`,
@@ -688,7 +697,10 @@ export class ExchangeService {
     }
   }
 
-  private async saveApiRate(storeId: string, rate: number): Promise<ExchangeRate> {
+  private async saveApiRate(
+    storeId: string,
+    rate: number,
+  ): Promise<ExchangeRate> {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);

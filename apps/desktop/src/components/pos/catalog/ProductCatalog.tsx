@@ -3,7 +3,7 @@ import { Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Scal
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import { motion } from 'framer-motion'
 
 // Definición de tipos mínimos necesarios si no se importan de /services

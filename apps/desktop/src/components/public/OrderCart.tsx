@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Plus, Minus, ShoppingCart, Loader2, ChevronDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { useMutation } from '@tanstack/react-query'
 import { publicMenuService } from '@/services/public-menu.service'
 import toast from '@/lib/toast'
 import type { PublicProduct } from '@/services/public-menu.service'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface CartItem {
   product: PublicProduct

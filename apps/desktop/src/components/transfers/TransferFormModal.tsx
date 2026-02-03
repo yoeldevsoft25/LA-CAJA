@@ -9,7 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import {
     Form,
     FormControl,
@@ -19,7 +19,7 @@ import {
     FormMessage,
     FormDescription,
 } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import { Input } from '@la-caja/ui-core'
 import { Textarea } from '@/components/ui/textarea'
 import {
     Select,
@@ -33,7 +33,7 @@ import { productsService, Product } from '@/services/products.service'
 import { CreateTransferDto } from '@/services/transfers.service'
 import { ArrowRight, Package, Check, X, Search, AlertCircle, MapPin, Calendar } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 // Schemas
 const routeBaseSchema = z.object({

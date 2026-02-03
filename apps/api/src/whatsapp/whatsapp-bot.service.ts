@@ -31,10 +31,10 @@ interface BotInstance {
 
 /** Códigos de desconexión que NO deben provocar reconexión automática */
 const NO_RECONNECT_CODES = [
-  DisconnectReason.loggedOut,           // 401 - usuario cerró sesión
-  DisconnectReason.forbidden,           // 403 - cuenta baneada/restricción
+  DisconnectReason.loggedOut, // 401 - usuario cerró sesión
+  DisconnectReason.forbidden, // 403 - cuenta baneada/restricción
   DisconnectReason.multideviceMismatch, // 411 - incompatibilidad multi-dispositivo
-  DisconnectReason.connectionReplaced,  // 440 - otro dispositivo tomó la sesión
+  DisconnectReason.connectionReplaced, // 440 - otro dispositivo tomó la sesión
 ];
 
 /**
@@ -68,12 +68,18 @@ export class WhatsAppBotService implements OnModuleDestroy {
    * Si el bot ya existe pero no está conectado y no hay QR, lo reinicializa
    * @param isInteractive Si es true, permite generar QR. Si es false (background), aborta si se requiere QR.
    */
-  async initializeBot(storeId: string, forceReinit: boolean = false, isInteractive: boolean = false): Promise<void> {
+  async initializeBot(
+    storeId: string,
+    forceReinit: boolean = false,
+    isInteractive: boolean = false,
+  ): Promise<void> {
     const existingBot = this.bots.get(storeId);
 
     // Si se fuerza reinicialización, desconectar y eliminar bot existente
     if (forceReinit && existingBot) {
-      this.logger.log(`Forzando reinicialización del bot para tienda ${storeId}`);
+      this.logger.log(
+        `Forzando reinicialización del bot para tienda ${storeId}`,
+      );
       existingBot.isClosing = true;
       if (existingBot.presenceIntervalId) {
         clearInterval(existingBot.presenceIntervalId);
@@ -99,16 +105,22 @@ export class WhatsAppBotService implements OnModuleDestroy {
       if (existingBot.qrCode) {
         // En modo interactivo, retornamos (ya está listo para escanear)
         if (isInteractive) {
-          this.logger.log(`Bot ya inicializado con QR disponible para tienda ${storeId}`);
+          this.logger.log(
+            `Bot ya inicializado con QR disponible para tienda ${storeId}`,
+          );
           return;
         }
         // En modo NO interactivo, si hay un QR esperando, lo matamos para no consumir recursos
-        this.logger.log(`Bot con QR pendiente en modo no-interactivo. Limpiando para tienda ${storeId}`);
+        this.logger.log(
+          `Bot con QR pendiente en modo no-interactivo. Limpiando para tienda ${storeId}`,
+        );
         // Se procederá a reinicializar (y caerá en la validación de QR abajo)
       }
 
       // Si no está conectado, reinicializar
-      this.logger.log(`Bot existe pero sin conexión (interactive=${isInteractive}), reinicializando para tienda ${storeId}`);
+      this.logger.log(
+        `Bot existe pero sin conexión (interactive=${isInteractive}), reinicializando para tienda ${storeId}`,
+      );
       existingBot.isClosing = true;
       if (existingBot.presenceIntervalId) {
         clearInterval(existingBot.presenceIntervalId);
@@ -145,14 +157,19 @@ export class WhatsAppBotService implements OnModuleDestroy {
 
     try {
       const { version } = await fetchLatestBaileysVersion();
-      this.logger.log(`Inicializando bot para tienda ${storeId} con Baileys v${version.join('.')}`);
+      this.logger.log(
+        `Inicializando bot para tienda ${storeId} con Baileys v${version.join('.')}`,
+      );
 
       const socket = makeWASocket({
         version,
         printQRInTerminal: false,
         auth: {
           creds: state.creds,
-          keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+          keys: makeCacheableSignalKeyStore(
+            state.keys,
+            pino({ level: 'silent' }),
+          ),
         },
         logger: pino({ level: 'silent' }), // Silenciar logs de Baileys
         generateHighQualityLinkPreview: true,
@@ -183,19 +200,25 @@ export class WhatsAppBotService implements OnModuleDestroy {
         const { connection, lastDisconnect, qr } = update;
 
         // Solo asignar si connection es un ConnectionState válido
-        if (connection && ['close', 'connecting', 'open'].includes(connection)) {
-          botInstance.connectionState = connection as unknown as ConnectionState;
+        if (
+          connection &&
+          ['close', 'connecting', 'open'].includes(connection)
+        ) {
+          botInstance.connectionState =
+            connection as unknown as ConnectionState;
         } else {
           botInstance.connectionState = null;
         }
 
         if (qr) {
           if (!isInteractive) {
-            this.logger.warn(`⚠️ Se requiere QR para tienda ${storeId} pero no estamos en modo interactivo. Abortando y limpiando sesión.`);
+            this.logger.warn(
+              `⚠️ Se requiere QR para tienda ${storeId} pero no estamos en modo interactivo. Abortando y limpiando sesión.`,
+            );
             botInstance.isClosing = true;
             try {
               socket.end(undefined);
-            } catch { }
+            } catch {}
             this.bots.delete(storeId);
 
             // IMPORTANTE: Limpiar la sesión corrupta/inválida para evitar loops infinitos de intento de conexión
@@ -209,7 +232,10 @@ export class WhatsAppBotService implements OnModuleDestroy {
             botInstance.qrCode = qrCodeDataUrl;
             this.logger.log(`QR code generado para tienda ${storeId}`);
           } catch (error) {
-            this.logger.error(`Error generando QR code para tienda ${storeId}:`, error);
+            this.logger.error(
+              `Error generando QR code para tienda ${storeId}:`,
+              error,
+            );
           }
         }
 
@@ -223,10 +249,12 @@ export class WhatsAppBotService implements OnModuleDestroy {
           botInstance.isConnected = false;
           botInstance.qrCode = null;
 
-          const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+          const statusCode = (lastDisconnect?.error as Boom)?.output
+            ?.statusCode;
           const shouldReconnect =
             !botInstance.isClosing &&
-            (statusCode === undefined || !NO_RECONNECT_CODES.includes(statusCode));
+            (statusCode === undefined ||
+              !NO_RECONNECT_CODES.includes(statusCode));
 
           if (botInstance.isClosing) {
             // Cierre intencional (forceReinit o reinicio): no reconectar
@@ -238,15 +266,21 @@ export class WhatsAppBotService implements OnModuleDestroy {
             const attempts = (this.reconnectAttempts.get(storeId) ?? 0) + 1;
             this.reconnectAttempts.set(storeId, attempts);
             // Backoff: 3s, 6s, 12s, 24s, 48s, 60s (máx 60s)
-            const delayMs = Math.min(3000 * Math.pow(2, Math.min(attempts - 1, 4)), 60_000);
+            const delayMs = Math.min(
+              3000 * Math.pow(2, Math.min(attempts - 1, 4)),
+              60_000,
+            );
             this.logger.log(
               `Reconectando bot para tienda ${storeId} en ${delayMs / 1000}s (intento ${attempts})…`,
             );
             setTimeout(() => {
-              // En reconexión automática mantenemos el modo background (interactive=false) 
+              // En reconexión automática mantenemos el modo background (interactive=false)
               // a menos que hayamos implementado persistencia de esa bandera, pero seguro asumir false
               this.initializeBot(storeId, false, false).catch((error) => {
-                this.logger.error(`Error reconectando bot para tienda ${storeId}:`, error);
+                this.logger.error(
+                  `Error reconectando bot para tienda ${storeId}:`,
+                  error,
+                );
               });
             }, delayMs);
           } else {
@@ -267,7 +301,9 @@ export class WhatsAppBotService implements OnModuleDestroy {
           }
           botInstance.presenceIntervalId = setInterval(() => {
             if (botInstance.socket && botInstance.isConnected) {
-              botInstance.socket.sendPresenceUpdate('available').catch(() => { });
+              botInstance.socket
+                .sendPresenceUpdate('available')
+                .catch(() => {});
             }
           }, WhatsAppBotService.PRESENCE_INTERVAL_MS);
 
@@ -276,11 +312,16 @@ export class WhatsAppBotService implements OnModuleDestroy {
             // Extraer número de WhatsApp del JID (formato: 584121234567@s.whatsapp.net)
             const number = jid.split('@')[0];
             botInstance.whatsappNumber = number;
-            this.logger.log(`Bot conectado para tienda ${storeId}. Número: ${number}`);
+            this.logger.log(
+              `Bot conectado para tienda ${storeId}. Número: ${number}`,
+            );
 
             // Actualizar número de WhatsApp en la base de datos
             this.updateWhatsAppNumberInDB(storeId, number).catch((error) => {
-              this.logger.error(`Error actualizando número de WhatsApp en BD para tienda ${storeId}:`, error);
+              this.logger.error(
+                `Error actualizando número de WhatsApp en BD para tienda ${storeId}:`,
+                error,
+              );
             });
           }
         } else if (connection === 'connecting') {
@@ -291,7 +332,10 @@ export class WhatsAppBotService implements OnModuleDestroy {
 
       // Manejar errores - Baileys no tiene evento 'error' directo, se manejan en connection.update
     } catch (error) {
-      this.logger.error(`Error inicializando bot para tienda ${storeId}:`, error);
+      this.logger.error(
+        `Error inicializando bot para tienda ${storeId}:`,
+        error,
+      );
       this.bots.delete(storeId);
       throw error;
     }
@@ -343,7 +387,10 @@ export class WhatsAppBotService implements OnModuleDestroy {
       const files = readdirSync(sessionPath);
       // Baileys guarda creds.json y archivos de keys
       // Si hay al menos creds.json, hay una sesión guardada
-      return files.some(file => file === 'creds.json' || file.startsWith('app-state-sync-key'));
+      return files.some(
+        (file) =>
+          file === 'creds.json' || file.startsWith('app-state-sync-key'),
+      );
     } catch {
       return false;
     }
@@ -407,13 +454,18 @@ export class WhatsAppBotService implements OnModuleDestroy {
         text: message,
       });
 
-      this.logger.log(`Mensaje enviado a ${formattedPhone} para tienda ${storeId}`);
+      this.logger.log(
+        `Mensaje enviado a ${formattedPhone} para tienda ${storeId}`,
+      );
       return {
         success: true,
         messageId: result?.key?.id ?? undefined,
       };
     } catch (error: any) {
-      this.logger.error(`Error enviando mensaje para tienda ${storeId}:`, error);
+      this.logger.error(
+        `Error enviando mensaje para tienda ${storeId}:`,
+        error,
+      );
       return {
         success: false,
         error: error.message || 'Error desconocido al enviar mensaje',
@@ -459,7 +511,10 @@ export class WhatsAppBotService implements OnModuleDestroy {
         rmSync(sessionPath, { recursive: true, force: true });
         this.logger.log(`Sesión eliminada para tienda ${storeId}`);
       } catch (error) {
-        this.logger.error(`Error eliminando sesión para tienda ${storeId}:`, error);
+        this.logger.error(
+          `Error eliminando sesión para tienda ${storeId}:`,
+          error,
+        );
       }
     }
   }
@@ -483,7 +538,10 @@ export class WhatsAppBotService implements OnModuleDestroy {
   /**
    * Actualiza el número de WhatsApp en la base de datos cuando se conecta
    */
-  private async updateWhatsAppNumberInDB(storeId: string, whatsappNumber: string): Promise<void> {
+  private async updateWhatsAppNumberInDB(
+    storeId: string,
+    whatsappNumber: string,
+  ): Promise<void> {
     try {
       let config = await this.whatsappConfigRepository.findOne({
         where: { store_id: storeId },
@@ -493,7 +551,9 @@ export class WhatsAppBotService implements OnModuleDestroy {
         // Actualizar número existente
         config.whatsapp_number = whatsappNumber;
         await this.whatsappConfigRepository.save(config);
-        this.logger.log(`Número de WhatsApp actualizado en BD para tienda ${storeId}: ${whatsappNumber}`);
+        this.logger.log(
+          `Número de WhatsApp actualizado en BD para tienda ${storeId}: ${whatsappNumber}`,
+        );
       } else {
         // Crear configuración si no existe
         config = this.whatsappConfigRepository.create({
@@ -505,10 +565,15 @@ export class WhatsAppBotService implements OnModuleDestroy {
           debt_reminders_enabled: false,
         });
         await this.whatsappConfigRepository.save(config);
-        this.logger.log(`Configuración de WhatsApp creada en BD para tienda ${storeId} con número ${whatsappNumber}`);
+        this.logger.log(
+          `Configuración de WhatsApp creada en BD para tienda ${storeId} con número ${whatsappNumber}`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Error actualizando número de WhatsApp en BD para tienda ${storeId}:`, error);
+      this.logger.error(
+        `Error actualizando número de WhatsApp en BD para tienda ${storeId}:`,
+        error,
+      );
       throw error;
     }
   }

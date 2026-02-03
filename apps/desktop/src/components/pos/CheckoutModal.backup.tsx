@@ -13,8 +13,8 @@ import { promotionsService } from '@/services/promotions.service'
 import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
 import { calculateRoundedChange, roundToNearestDenomination, calculateChange, formatChangeBreakdown } from '@/utils/vzla-denominations'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -30,7 +30,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'
 import { SplitPaymentItem, PaymentMethod } from '@/types/split-payment.types'

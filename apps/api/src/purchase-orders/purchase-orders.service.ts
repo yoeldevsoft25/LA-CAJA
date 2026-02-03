@@ -43,7 +43,7 @@ export class PurchaseOrdersService {
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   /**
    * Genera un número único de orden de compra
@@ -279,14 +279,22 @@ export class PurchaseOrdersService {
 
         // Registrar diferencias en la nota del item si existe discrepancia
         if (totalDifference !== 0) {
-          const differenceNote = totalDifference > 0
-            ? `[Excedente: +${totalDifference} unidades]`
-            : `[Faltante: ${totalDifference} unidades]`;
+          const differenceNote =
+            totalDifference > 0
+              ? `[Excedente: +${totalDifference} unidades]`
+              : `[Faltante: ${totalDifference} unidades]`;
 
           // Agregar o actualizar nota de diferencia
-          if (item.note && (item.note.includes('[Faltante:') || item.note.includes('[Excedente:'))) {
+          if (
+            item.note &&
+            (item.note.includes('[Faltante:') ||
+              item.note.includes('[Excedente:'))
+          ) {
             // Reemplazar nota de diferencia anterior
-            item.note = item.note.replace(/\[(Faltante|Excedente):[^\]]+\]/g, differenceNote);
+            item.note = item.note.replace(
+              /\[(Faltante|Excedente):[^\]]+\]/g,
+              differenceNote,
+            );
           } else {
             // Agregar nota de diferencia
             item.note = item.note
@@ -317,7 +325,6 @@ export class PurchaseOrdersService {
               ref: {
                 purchase_order_id: order.id,
                 supplier_id: order.supplier_id,
-
               },
             },
             userId,
@@ -353,7 +360,10 @@ export class PurchaseOrdersService {
       // Generar asiento contable automático si la orden está completada
       if (savedOrder.status === 'completed') {
         try {
-          await this.accountingService.generateEntryFromPurchaseOrder(storeId, savedOrder);
+          await this.accountingService.generateEntryFromPurchaseOrder(
+            storeId,
+            savedOrder,
+          );
         } catch (error) {
           // Log error pero no fallar la recepción
           this.logger.error(

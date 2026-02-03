@@ -25,12 +25,22 @@ export class MetricsInterceptor implements NestInterceptor {
         next: () => {
           const duration = (Date.now() - startTime) / 1000; // en segundos
           const status = response.statusCode || 200;
-          this.metricsService.recordHttpRequest(method, route, status, duration);
+          this.metricsService.recordHttpRequest(
+            method,
+            route,
+            status,
+            duration,
+          );
         },
         error: (error) => {
           const duration = (Date.now() - startTime) / 1000;
           const status = error.status || 500;
-          this.metricsService.recordHttpRequest(method, route, status, duration);
+          this.metricsService.recordHttpRequest(
+            method,
+            route,
+            status,
+            duration,
+          );
         },
       }),
     );

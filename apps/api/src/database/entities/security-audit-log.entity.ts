@@ -56,13 +56,3 @@ export class SecurityAuditLog {
   @Index()
   created_at: Date;
 }
-
-
-
-
-
-
-
-
-
-

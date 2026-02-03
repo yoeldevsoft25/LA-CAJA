@@ -31,17 +31,17 @@ export class HealthController {
     private bullmq: BullMQHealthIndicator,
     private externalApis: ExternalApisHealthIndicator,
     private websocket: WebSocketHealthIndicator,
-  ) { }
+  ) {}
 
   // Cache simple para mejorar rendimiento
-  private cache: Map<string, { result: any, time: number }> = new Map();
+  private cache: Map<string, { result: any; time: number }> = new Map();
   private readonly CACHE_TTL = 30000; // 30 segundos (aumentado para reducir carga)
 
   private async checkWithCache(key: string, checkFn: () => Promise<any>) {
     const now = Date.now();
     const cached = this.cache.get(key);
 
-    if (cached && (now - cached.time < this.CACHE_TTL)) {
+    if (cached && now - cached.time < this.CACHE_TTL) {
       return cached.result;
     }
 
@@ -56,11 +56,13 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Sistema saludable' })
   @ApiResponse({ status: 503, description: 'Sistema no saludable' })
   check() {
-    return this.checkWithCache('general', () => this.health.check([
-      () => this.db.pingCheck('database'),
-      () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024), // 300MB
-      () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024), // 500MB
-    ]));
+    return this.checkWithCache('general', () =>
+      this.health.check([
+        () => this.db.pingCheck('database'),
+        () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024), // 300MB
+        () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024), // 500MB
+      ]),
+    );
   }
 
   @Get('database')
@@ -69,9 +71,9 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Base de datos saludable' })
   @ApiResponse({ status: 503, description: 'Base de datos no disponible' })
   checkDatabase() {
-    return this.checkWithCache('database', () => this.health.check([
-      () => this.db.pingCheck('database'),
-    ]));
+    return this.checkWithCache('database', () =>
+      this.health.check([() => this.db.pingCheck('database')]),
+    );
   }
 
   @Get('redis')
@@ -80,9 +82,9 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Redis saludable' })
   @ApiResponse({ status: 503, description: 'Redis no disponible' })
   checkRedis() {
-    return this.checkWithCache('redis', () => this.health.check([
-      () => this.redis.isHealthy('redis'),
-    ]));
+    return this.checkWithCache('redis', () =>
+      this.health.check([() => this.redis.isHealthy('redis')]),
+    );
   }
 
   @Get('queues')
@@ -91,20 +93,23 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Colas saludables' })
   @ApiResponse({ status: 503, description: 'Colas con problemas' })
   checkQueues() {
-    return this.checkWithCache('queues', () => this.health.check([
-      () => this.bullmq.isHealthy('bullmq'),
-    ]));
+    return this.checkWithCache('queues', () =>
+      this.health.check([() => this.bullmq.isHealthy('bullmq')]),
+    );
   }
 
   @Get('external')
   @HealthCheck()
   @ApiOperation({ summary: 'Health check de APIs externas' })
   @ApiResponse({ status: 200, description: 'APIs externas saludables' })
-  @ApiResponse({ status: 503, description: 'Algunas APIs externas no disponibles' })
+  @ApiResponse({
+    status: 503,
+    description: 'Algunas APIs externas no disponibles',
+  })
   checkExternal() {
-    return this.checkWithCache('external', () => this.health.check([
-      () => this.externalApis.isHealthy('external_apis'),
-    ]));
+    return this.checkWithCache('external', () =>
+      this.health.check([() => this.externalApis.isHealthy('external_apis')]),
+    );
   }
 
   @Get('websocket')
@@ -112,11 +117,10 @@ export class HealthController {
   @ApiOperation({ summary: 'Health check de WebSocket' })
   @ApiResponse({ status: 200, description: 'WebSocket operacional' })
   checkWebSocket() {
-    return this.checkWithCache('websocket', () => this.health.check([
-      () => this.websocket.isHealthy('websocket'),
-    ]));
+    return this.checkWithCache('websocket', () =>
+      this.health.check([() => this.websocket.isHealthy('websocket')]),
+    );
   }
-
 
   @Get('detailed')
   @HealthCheck()
@@ -124,23 +128,25 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Todos los servicios saludables' })
   @ApiResponse({ status: 503, description: 'Algunos servicios no saludables' })
   async checkDetailed() {
-    return this.checkWithCache('detailed', () => this.health.check([
-      () => this.db.pingCheck('database'),
-      () => this.redis.isHealthy('redis'),
-      () => this.bullmq.isHealthy('bullmq'),
-      () => this.websocket.isHealthy('websocket'),
-      () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
-      () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024),
-      () =>
-        this.disk.checkStorage('storage', {
-          path: path.resolve('/'),
-          thresholdPercent: 0.9, // 90% de uso máximo
-        }),
-    ]));
+    return this.checkWithCache('detailed', () =>
+      this.health.check([
+        () => this.db.pingCheck('database'),
+        () => this.redis.isHealthy('redis'),
+        () => this.bullmq.isHealthy('bullmq'),
+        () => this.websocket.isHealthy('websocket'),
+        () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
+        () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024),
+        () =>
+          this.disk.checkStorage('storage', {
+            path: path.resolve('/'),
+            thresholdPercent: 0.9, // 90% de uso máximo
+          }),
+      ]),
+    );
   }
 
   @Cron('*/45 * * * * *') // Run every 45 seconds to keep cache fresh (TTL is 30s but we stretch a bit to avoid overlap)
-  // Actually, TTL is 30s. If we run every 45s, we have gaps. 
+  // Actually, TTL is 30s. If we run every 45s, we have gaps.
   // Let's run every 25s to ensure ALWAYS warm.
   @Cron('*/25 * * * * *')
   async warmUpCache() {
@@ -150,13 +156,23 @@ export class HealthController {
     // No esperamos el resultado, solo iniciamos
     try {
       // 1. Warm ups individuales
-      void this.checkWithCache('database', () => this.health.check([() => this.db.pingCheck('database')]));
-      void this.checkWithCache('redis', () => this.health.check([() => this.redis.isHealthy('redis')]));
-      void this.checkWithCache('queues', () => this.health.check([() => this.bullmq.isHealthy('bullmq')]));
-      void this.checkWithCache('websocket', () => this.health.check([() => this.websocket.isHealthy('websocket')]));
+      void this.checkWithCache('database', () =>
+        this.health.check([() => this.db.pingCheck('database')]),
+      );
+      void this.checkWithCache('redis', () =>
+        this.health.check([() => this.redis.isHealthy('redis')]),
+      );
+      void this.checkWithCache('queues', () =>
+        this.health.check([() => this.bullmq.isHealthy('bullmq')]),
+      );
+      void this.checkWithCache('websocket', () =>
+        this.health.check([() => this.websocket.isHealthy('websocket')]),
+      );
 
       // 2. Warm up external (only if not recently checked, handled by checkWithCache logic)
-      void this.checkWithCache('external', () => this.health.check([() => this.externalApis.isHealthy('external_apis')]));
+      void this.checkWithCache('external', () =>
+        this.health.check([() => this.externalApis.isHealthy('external_apis')]),
+      );
 
       // 3. Warm up detailed (uses cached individual checks mostly, but re-aggregates)
       // Note: checkDetailed calls the same internal checks.

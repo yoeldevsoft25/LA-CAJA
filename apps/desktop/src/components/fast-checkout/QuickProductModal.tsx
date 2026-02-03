@@ -7,13 +7,13 @@ import { Zap, Search, Check } from 'lucide-react'
 import { QuickProduct, CreateQuickProductRequest } from '@/services/fast-checkout.service'
 import { productsService } from '@/services/products.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 const quickProductSchema = z.object({
   product_id: z.string().uuid('Selecciona un producto'),

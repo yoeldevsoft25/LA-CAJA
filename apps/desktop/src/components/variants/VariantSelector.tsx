@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { Layers } from 'lucide-react'
 import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 interface VariantSelectorProps {
   isOpen: boolean

@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ChartOfAccountsTree from '@/components/accounting/ChartOfAccountsTree'
 // ⚡ OPTIMIZACIÓN: Lazy load de modales grandes - solo cargar cuando se abren

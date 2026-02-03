@@ -6,7 +6,7 @@ import { Brain, AlertTriangle, TrendingUp, Package } from 'lucide-react'
 import { formatAnomalySeverity } from '@/utils/ml-formatters'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { ArrowRight } from 'lucide-react'
 import ProductRecommendations from '@/components/ml/ProductRecommendations'
 

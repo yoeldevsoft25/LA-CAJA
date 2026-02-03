@@ -1,4 +1,11 @@
-import { IsOptional, IsEnum, IsDateString, IsInt, Min, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  IsInt,
+  Min,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { JournalEntryType } from './create-journal-entry.dto';
 
@@ -35,14 +42,3 @@ export class GetJournalEntriesDto {
   @Min(1)
   limit?: number = 50;
 }
-
-
-
-
-
-
-
-
-
-
-

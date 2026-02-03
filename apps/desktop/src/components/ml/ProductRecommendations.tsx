@@ -4,7 +4,7 @@ import { useRecommendations } from '@/hooks/useRecommendations'
 import { ProductRecommendation } from '@/types/ml.types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import {
   Select,
   SelectContent,

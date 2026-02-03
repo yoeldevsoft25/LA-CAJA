@@ -18,8 +18,8 @@ const ProductSerialsModal = lazy(() => import('@/components/serials/ProductSeria
 const ImportCSVModal = lazy(() => import('@/components/products/ImportCSVModal'))
 const CleanDuplicatesModal = lazy(() => import('@/components/products/CleanDuplicatesModal'))
 import ProductCard from '@/components/products/ProductCard'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@la-caja/ui-core'
+import { Input } from '@la-caja/ui-core'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
 import { PullToRefreshIndicator } from '@/components/ui/pull-to-refresh-indicator'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 import {
   DropdownMenu,
   DropdownMenuContent,

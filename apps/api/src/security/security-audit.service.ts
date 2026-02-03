@@ -82,7 +82,7 @@ export class SecurityAuditService {
   ): Promise<number> {
     try {
       const since = new Date(Date.now() - minutes * 60 * 1000);
-      
+
       // Si el identificador empieza con "store:", buscar por store_id
       if (identifier.startsWith('store:')) {
         const storeId = identifier.replace('store:', '');
@@ -94,7 +94,7 @@ export class SecurityAuditService {
           },
         });
       }
-      
+
       // Por defecto, buscar por IP
       return await this.auditRepository.count({
         where: {

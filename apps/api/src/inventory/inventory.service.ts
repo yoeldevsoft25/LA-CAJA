@@ -85,7 +85,8 @@ export class InventoryService {
     warehouseId?: string,
     manager?: EntityManager,
   ) {
-    const repo = manager?.getRepository(WarehouseStock) || this.warehouseStockRepository;
+    const repo =
+      manager?.getRepository(WarehouseStock) || this.warehouseStockRepository;
     const query = repo
       .createQueryBuilder('stock')
       .select('stock.product_id', 'product_id')
@@ -114,7 +115,7 @@ export class InventoryService {
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   async stockReceived(
     storeId: string,
@@ -136,12 +137,16 @@ export class InventoryService {
       let warehouseId: string | null = null;
       if (dto.warehouse_id) {
         // Verificar existencia de bodega
-        const warehouse = await manager.findOne('Warehouse', { where: { id: dto.warehouse_id, store_id: storeId } });
+        const warehouse = await manager.findOne('Warehouse', {
+          where: { id: dto.warehouse_id, store_id: storeId },
+        });
         if (!warehouse) throw new NotFoundException('Bodega no encontrada');
         warehouseId = dto.warehouse_id;
       } else {
-        const defaultWarehouse =
-          await this.warehousesService.getDefaultOrFirst(storeId, manager);
+        const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(
+          storeId,
+          manager,
+        );
         warehouseId = defaultWarehouse.id;
       }
       if (!warehouseId) {
@@ -154,7 +159,11 @@ export class InventoryService {
       const unitCostUsd = this.roundToTwoDecimals(dto.unit_cost_usd);
 
       // Obtener stock actual (usando query runner de la transacción)
-      const currentStock = await this.getCurrentStock(storeId, dto.product_id, manager);
+      const currentStock = await this.getCurrentStock(
+        storeId,
+        dto.product_id,
+        manager,
+      );
 
       // Actualizar costos del producto con costo promedio ponderado
       if (product.is_weight_product) {
@@ -165,10 +174,16 @@ export class InventoryService {
           | 'oz';
         const currentCostPerWeightUsd =
           product.cost_per_weight_usd ??
-          this.getPerWeightCostFromBase(Number(product.cost_usd || 0), weightUnit);
+          this.getPerWeightCostFromBase(
+            Number(product.cost_usd || 0),
+            weightUnit,
+          );
         const currentCostPerWeightBs =
           product.cost_per_weight_bs ??
-          this.getPerWeightCostFromBase(Number(product.cost_bs || 0), weightUnit);
+          this.getPerWeightCostFromBase(
+            Number(product.cost_bs || 0),
+            weightUnit,
+          );
 
         const avgCostPerWeightUsd = this.calculateWeightedAverage(
           currentStock,
@@ -226,7 +241,7 @@ export class InventoryService {
         null, // variant_id: productos sin variantes
         dto.qty,
         storeId,
-        manager
+        manager,
       );
 
       // 2) Crear y guardar el movimiento
@@ -271,24 +286,32 @@ export class InventoryService {
       let warehouseId: string | null = null;
       if (dto.warehouse_id) {
         // Validar que la bodega existe y pertenece a la tienda
-        const warehouse = await manager.findOne('Warehouse', { where: { id: dto.warehouse_id, store_id: storeId } });
+        const warehouse = await manager.findOne('Warehouse', {
+          where: { id: dto.warehouse_id, store_id: storeId },
+        });
         if (!warehouse) throw new NotFoundException('Bodega no encontrada');
         warehouseId = dto.warehouse_id;
       } else {
-        const defaultWarehouse =
-          await this.warehousesService.getDefaultOrFirst(storeId, manager);
+        const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(
+          storeId,
+          manager,
+        );
         warehouseId = defaultWarehouse.id;
       }
 
       // Verificar que no se ajuste a negativo en la bodega específica
       if (dto.qty_delta < 0 && warehouseId) {
-        // Nota: getStock devuelve array, habría que sumar. 
-        // Para simplificar dentro de la tx podríamos confiar en updateStock que usa GREATEST(0, ...) 
+        // Nota: getStock devuelve array, habría que sumar.
+        // Para simplificar dentro de la tx podríamos confiar en updateStock que usa GREATEST(0, ...)
         // O re-implementar validación. Por ahora mantenemos la validación estricta usando query manual o servicio si soporta manager.
         // warehousesService.getStock NO soporta manager aun, pero updateStock si.
         // Dado el riesgo, añadimos manager a getStock en el futuro o hacemos query manual rapida aquí.
         // Por simplicidad para este fix critico, validaremos stock actual usando query directa
-        const currentStock = await this.warehousesService.getTotalStockQuantity(storeId, dto.product_id, null); // Ojo: esto no usa manager, podría leer dato viejo.
+        const currentStock = await this.warehousesService.getTotalStockQuantity(
+          storeId,
+          dto.product_id,
+          null,
+        ); // Ojo: esto no usa manager, podría leer dato viejo.
         // Mejor usar getCurrentStock que ya soporta manager y da el total global.
         // Pero arriba la validación era "en esta bodega".
         // Omitimos validación estricta de "negativo" prev-tx porque updateStock ya hace GREATEST(0, ...).
@@ -324,7 +347,7 @@ export class InventoryService {
           null,
           dto.qty_delta,
           storeId,
-          manager
+          manager,
         );
       }
       return saved;
@@ -339,7 +362,10 @@ export class InventoryService {
           relations: ['product'],
         });
         if (movementWithRelations) {
-          await this.accountingService.generateEntryFromInventoryAdjustment(storeId, movementWithRelations);
+          await this.accountingService.generateEntryFromInventoryAdjustment(
+            storeId,
+            movementWithRelations,
+          );
         }
       } catch (error) {
         // Log error pero no fallar el ajuste de inventario
@@ -353,8 +379,16 @@ export class InventoryService {
     return savedMovement;
   }
 
-  async getCurrentStock(storeId: string, productId: string, manager?: EntityManager): Promise<number> {
-    const stockSubquery = this.buildWarehouseStockSubquery(storeId, undefined, manager);
+  async getCurrentStock(
+    storeId: string,
+    productId: string,
+    manager?: EntityManager,
+  ): Promise<number> {
+    const stockSubquery = this.buildWarehouseStockSubquery(
+      storeId,
+      undefined,
+      manager,
+    );
     const repo = manager?.getRepository(Product) || this.productRepository;
     const result = await repo
       .createQueryBuilder('product')
@@ -465,11 +499,11 @@ export class InventoryService {
           'stock.product_id = product.id',
         )
         .setParameters(stockSubquery.getParameters())
-        .where('product.store_id = :storeId', { storeId })
-        ;
-
+        .where('product.store_id = :storeId', { storeId });
       if (is_active !== undefined) {
-        countQuery.andWhere('product.is_active = :isActive', { isActive: is_active });
+        countQuery.andWhere('product.is_active = :isActive', {
+          isActive: is_active,
+        });
       } else {
         countQuery.andWhere('product.is_active = true');
       }
@@ -576,7 +610,9 @@ export class InventoryService {
 
     if (startDate) {
       const start = this.normalizeStartDate(new Date(startDate));
-      query.andWhere('movement.happened_at >= :startDate', { startDate: start });
+      query.andWhere('movement.happened_at >= :startDate', {
+        startDate: start,
+      });
     }
 
     if (endDate) {
@@ -715,7 +751,9 @@ export class InventoryService {
     note?: string,
   ): Promise<{ reset_count: number; movements: InventoryMovement[] }> {
     if (role !== 'owner') {
-      throw new ForbiddenException('Solo un owner puede vaciar todo el inventario');
+      throw new ForbiddenException(
+        'Solo un owner puede vaciar todo el inventario',
+      );
     }
 
     // Obtener todos los productos con stock > 0
@@ -782,10 +820,13 @@ export class InventoryService {
     role: string,
   ): Promise<{ ok: boolean; message: string }> {
     if (role !== 'owner') {
-      throw new ForbiddenException('Solo un owner puede ejecutar la reconciliación de stock');
+      throw new ForbiddenException(
+        'Solo un owner puede ejecutar la reconciliación de stock',
+      );
     }
 
-    const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(storeId);
+    const defaultWarehouse =
+      await this.warehousesService.getDefaultOrFirst(storeId);
 
     const updateSql = `
       WITH expected AS (
@@ -845,7 +886,10 @@ export class InventoryService {
     });
 
     this.logger.log(`Reconciliación de stock ejecutada para store ${storeId}`);
-    return { ok: true, message: 'Reconciliación de stock ejecutada correctamente' };
+    return {
+      ok: true,
+      message: 'Reconciliación de stock ejecutada correctamente',
+    };
   }
 
   /**
@@ -860,18 +904,23 @@ export class InventoryService {
     role: string,
   ): Promise<{ reconciled: number; adjustments: InventoryMovement[] }> {
     if (role !== 'owner') {
-      throw new ForbiddenException('Solo un owner puede reconciliar inventario');
+      throw new ForbiddenException(
+        'Solo un owner puede reconciliar inventario',
+      );
     }
 
     const adjustments: InventoryMovement[] = [];
-    const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(storeId);
+    const defaultWarehouse =
+      await this.warehousesService.getDefaultOrFirst(storeId);
 
     await this.dataSource.transaction(async (manager) => {
       for (const item of dto.items) {
         // Validar fecha
         const countedAt = new Date(item.counted_at);
         if (isNaN(countedAt.getTime())) {
-          this.logger.warn(`Fecha inválida en reconciliación para producto ${item.product_id}: ${item.counted_at}`);
+          this.logger.warn(
+            `Fecha inválida en reconciliación para producto ${item.product_id}: ${item.counted_at}`,
+          );
           continue;
         }
 
@@ -880,7 +929,9 @@ export class InventoryService {
         const movementsAfter = await manager
           .createQueryBuilder(InventoryMovement, 'im')
           .where('im.store_id = :storeId', { storeId })
-          .andWhere('im.product_id = :productId', { productId: item.product_id })
+          .andWhere('im.product_id = :productId', {
+            productId: item.product_id,
+          })
           .andWhere('im.happened_at > :countedAt', { countedAt })
           .select('SUM(im.qty_delta)', 'delta')
           .getRawOne();
@@ -893,7 +944,11 @@ export class InventoryService {
         const expectedCurrentStock = item.quantity + deltaSinceCount;
 
         // 3. Obtener Stock Real en Sistema HOY
-        const currentSystemStock = await this.getCurrentStock(storeId, item.product_id, manager);
+        const currentSystemStock = await this.getCurrentStock(
+          storeId,
+          item.product_id,
+          manager,
+        );
 
         // 4. Calcular el Ajuste necesario
         // Ajuste = Stock Esperado - Stock Sistema
@@ -943,7 +998,9 @@ export class InventoryService {
       }
     });
 
-    this.logger.log(`Live Inventory Reconcile: Procesados ${dto.items.length} items, Generados ${adjustments.length} ajustes.`);
+    this.logger.log(
+      `Live Inventory Reconcile: Procesados ${dto.items.length} items, Generados ${adjustments.length} ajustes.`,
+    );
     return { reconciled: dto.items.length, adjustments };
   }
   /**

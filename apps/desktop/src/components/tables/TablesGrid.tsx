@@ -24,7 +24,7 @@ import { ordersService, Order } from '@/services/orders.service'
 import toast from '@/lib/toast'
 import TableModal from './TableModal'
 import TableQRCodeModal from './TableQRCodeModal'
-import { Button } from '@/components/ui/button'
+import { Button } from '@la-caja/ui-core'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -51,7 +51,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
+import { cn } from '@la-caja/ui-core'
 
 const statusLabels: Record<TableStatus, string> = {
   available: 'Disponible',
