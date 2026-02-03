@@ -28,10 +28,13 @@
   - **Sprint 4.2 ✅ cerrado:** extraccion de `AccountingPeriodService` + pruebas de periodo.
   - **Sprint 4.3 ✅ cerrado:** extraccion de `AccountingSharedService` y eliminacion de ciclo circular entre servicios.
   - **Sprint 4.4 ✅ cerrado:** extraccion de `AccountingReportingService`, ajuste robusto de DI en `AccountingPeriodService`, pruebas del bloque reporting.
+- **Sprint 5 (Data Platform & Migraciones):** **🟡 En ejecucion (5.1-5.2 completados)**
+  - Gobernanza de migraciones con validaciones automaticas y ADR aceptado.
+  - Rehearsal/upgrade/backfill endurecidos con politica PROD-SAFE (allowlist local).
+  - Base de particionado `events` preparada con migraciones `V/D`.
 - **Sprint 7 (Performance comercial):** **🟡 Parcial**
   - Refactor UX/UI del checkout modal (PWA + Desktop) ya integrado.
   - Sigue pendiente plan formal de chunking y reduccion de bundle grande.
-- **Sprint 5 (Data Platform & Migraciones):** **⏳ Siguiente en cola**
 - **Sprints 6/8/9/10:** **⏳ Pendientes**
 
 ### Evidencia tecnica reciente (commits en `main`)
@@ -45,6 +48,7 @@
 - `068a646` refactor(accounting): extract period service and add focused tests
 - `0318ad2` refactor(accounting): extract shared helpers to remove service cycle
 - `a6a70f0` refactor(accounting): extract reporting service and fix period DI wiring
+- `6d5d192` docs(roadmap): close sprint 4 and update execution status
 
 ### KPI operativo (ultimo estado validado)
 
@@ -74,6 +78,17 @@
   - Nuevo `AccountingReportingService` y delegacion desde `AccountingService`.
   - Fix robusto de inyeccion en `AccountingPeriodService` para evitar fallo runtime de Nest.
   - Evidencia: commit `a6a70f0`.
+
+### Estado de Sprint 5 (tracking secuencial)
+
+- **Sprint 5.1 (migration governance):** **✅ Cerrado**
+  - Convencion V/D + timestamp, ADR-005 aceptado, guia operativa.
+  - Validador automatizado y pruebas de gobernanza.
+- **Sprint 5.2 (rehearsal + partitioning foundation):** **✅ Cerrado**
+  - Scripts `migration-rehearsal`, `migration-upgrade-rehearsal` y `partitioning-backfill` con guardas PROD-SAFE.
+  - Bloqueo estricto de host remoto y ejecucion destructiva fuera de entorno local permitido.
+  - Migraciones `V20260203105300__prepare_partitioning_events_schema.sql` y `D20260203105400__seed_partitioning_metadata.sql`.
+  - Evidencia tecnica: `validate:migrations`, build API, lint-ratchet y test del validador en PASS.
 
 ---
 
