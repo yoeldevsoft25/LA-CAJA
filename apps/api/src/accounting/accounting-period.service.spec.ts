@@ -1,8 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountingPeriodService } from './accounting-period.service';
 import { AccountingService } from './accounting.service';
+import { AccountingSharedService } from './accounting-shared.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AccountingPeriod, AccountingPeriodStatus } from '../database/entities/accounting-period.entity';
+import {
+    AccountingPeriod,
+    AccountingPeriodStatus,
+} from '../database/entities/accounting-period.entity';
 import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
@@ -17,6 +21,9 @@ const mockRepository = () => ({
 
 const mockAccountingService = () => ({
     getIncomeStatement: jest.fn(),
+});
+
+const mockAccountingSharedService = () => ({
     generateEntryNumber: jest.fn(),
     calculateAccountBalancesBatch: jest.fn(),
     updateAccountBalances: jest.fn(),
@@ -34,10 +41,26 @@ describe('AccountingPeriodService', () => {
             providers: [
                 AccountingPeriodService,
                 { provide: AccountingService, useFactory: mockAccountingService },
-                { provide: getRepositoryToken(AccountingPeriod), useFactory: mockRepository },
-                { provide: getRepositoryToken(JournalEntry), useFactory: mockRepository },
-                { provide: getRepositoryToken(JournalEntryLine), useFactory: mockRepository },
-                { provide: getRepositoryToken(ChartOfAccount), useFactory: mockRepository },
+                {
+                    provide: AccountingSharedService,
+                    useFactory: mockAccountingSharedService,
+                },
+                {
+                    provide: getRepositoryToken(AccountingPeriod),
+                    useFactory: mockRepository,
+                },
+                {
+                    provide: getRepositoryToken(JournalEntry),
+                    useFactory: mockRepository,
+                },
+                {
+                    provide: getRepositoryToken(JournalEntryLine),
+                    useFactory: mockRepository,
+                },
+                {
+                    provide: getRepositoryToken(ChartOfAccount),
+                    useFactory: mockRepository,
+                },
             ],
         }).compile();
 

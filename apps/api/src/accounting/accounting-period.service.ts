@@ -3,8 +3,6 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,6 +14,7 @@ import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
 import { AccountingService } from './accounting.service';
+import { AccountingSharedService } from './accounting-shared.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -31,10 +30,7 @@ export class AccountingPeriodService {
     private journalEntryLineRepository: Repository<JournalEntryLine>,
     @InjectRepository(ChartOfAccount)
     private accountRepository: Repository<ChartOfAccount>,
-    // TODO [Technical Debt - Sprint 4.3]: Circular dependency with AccountingService.
-    // Current strategy: Use forwardRef to allow logic extraction without breaking legacy coupling.
-    // Next step: Extract shared helpers (entry generation, balances) to a third 'AccountingSharedService' to break the cycle.
-    @Inject(forwardRef(() => AccountingService))
+    private sharedService: AccountingSharedService,
     private accountingService: AccountingService,
   ) {}
 
@@ -215,7 +211,7 @@ export class AccountingPeriodService {
     }
 
     const entryDate = periodEnd;
-    const entryNumber = await this.accountingService.generateEntryNumber(
+    const entryNumber = await this.sharedService.generateEntryNumber(
       storeId,
       entryDate,
     );
@@ -235,7 +231,7 @@ export class AccountingPeriodService {
     const revenueAccountIds = revenueAccounts.map((a) => a.id);
     const revenueBalances =
       revenueAccountIds.length > 0
-        ? await this.accountingService.calculateAccountBalancesBatch(
+        ? await this.sharedService.calculateAccountBalancesBatch(
             storeId,
             revenueAccountIds,
             periodEnd,
@@ -289,7 +285,7 @@ export class AccountingPeriodService {
     const expenseAccountIds = expenseAccounts.map((a) => a.id);
     const expenseBalances =
       expenseAccountIds.length > 0
-        ? await this.accountingService.calculateAccountBalancesBatch(
+        ? await this.sharedService.calculateAccountBalancesBatch(
             storeId,
             expenseAccountIds,
             periodEnd,
@@ -384,12 +380,8 @@ export class AccountingPeriodService {
 
     await this.journalEntryLineRepository.save(entryLines);
 
-    // Actualizar saldos vía AccountingService
-    await this.accountingService.updateAccountBalances(
-      storeId,
-      entryDate,
-      lines,
-    );
+    // Actualizar saldos vía AccountingSharedService
+    await this.sharedService.updateAccountBalances(storeId, entryDate, lines);
 
     // Actualizar período
     period.status = AccountingPeriodStatus.CLOSED;
