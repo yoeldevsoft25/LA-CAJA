@@ -271,6 +271,19 @@ export class DashboardService {
     let totalStockValueBs = 0;
     let totalStockValueUsd = 0;
     try {
+      const perWeightFallbackBs = `CASE
+        WHEN product.weight_unit = 'g' THEN COALESCE(product.cost_bs, 0) * 0.001
+        WHEN product.weight_unit = 'lb' THEN COALESCE(product.cost_bs, 0) * 0.45359237
+        WHEN product.weight_unit = 'oz' THEN COALESCE(product.cost_bs, 0) * 0.028349523125
+        ELSE COALESCE(product.cost_bs, 0)
+      END`;
+      const perWeightFallbackUsd = `CASE
+        WHEN product.weight_unit = 'g' THEN COALESCE(product.cost_usd, 0) * 0.001
+        WHEN product.weight_unit = 'lb' THEN COALESCE(product.cost_usd, 0) * 0.45359237
+        WHEN product.weight_unit = 'oz' THEN COALESCE(product.cost_usd, 0) * 0.028349523125
+        ELSE COALESCE(product.cost_usd, 0)
+      END`;
+
       const inventoryValuationRows = await this.productRepository
         .createQueryBuilder('product')
         .leftJoin(
@@ -290,28 +303,52 @@ export class DashboardService {
         .addSelect('COALESCE(stock.current_stock, 0)', 'stock')
         .addSelect(
           `CASE
-            WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0
-              THEN COALESCE(
-                SUM(lot.remaining_quantity * lot.unit_cost_bs) / NULLIF(SUM(lot.remaining_quantity), 0),
-                COALESCE(product.cost_bs, 0)
-              )
-            ELSE COALESCE(product.cost_bs, 0)
+            WHEN product.is_weight_product = true THEN
+              CASE
+                WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
+                  SUM(lot.remaining_quantity * lot.unit_cost_bs) / NULLIF(SUM(lot.remaining_quantity), 0),
+                  COALESCE(product.cost_per_weight_bs, ${perWeightFallbackBs})
+                )
+                ELSE COALESCE(product.cost_per_weight_bs, ${perWeightFallbackBs})
+              END
+            ELSE
+              CASE
+                WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
+                  SUM(lot.remaining_quantity * lot.unit_cost_bs) / NULLIF(SUM(lot.remaining_quantity), 0),
+                  COALESCE(product.cost_bs, 0)
+                )
+                ELSE COALESCE(product.cost_bs, 0)
+              END
           END`,
           'unit_cost_bs',
         )
         .addSelect(
           `CASE
-            WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0
-              THEN COALESCE(
-                SUM(lot.remaining_quantity * lot.unit_cost_usd) / NULLIF(SUM(lot.remaining_quantity), 0),
-                COALESCE(product.cost_usd, 0)
-              )
-            ELSE COALESCE(product.cost_usd, 0)
+            WHEN product.is_weight_product = true THEN
+              CASE
+                WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
+                  SUM(lot.remaining_quantity * lot.unit_cost_usd) / NULLIF(SUM(lot.remaining_quantity), 0),
+                  COALESCE(product.cost_per_weight_usd, ${perWeightFallbackUsd})
+                )
+                ELSE COALESCE(product.cost_per_weight_usd, ${perWeightFallbackUsd})
+              END
+            ELSE
+              CASE
+                WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0 THEN COALESCE(
+                  SUM(lot.remaining_quantity * lot.unit_cost_usd) / NULLIF(SUM(lot.remaining_quantity), 0),
+                  COALESCE(product.cost_usd, 0)
+                )
+                ELSE COALESCE(product.cost_usd, 0)
+              END
           END`,
           'unit_cost_usd',
         )
         .groupBy('product.id')
         .addGroupBy('stock.current_stock')
+        .addGroupBy('product.is_weight_product')
+        .addGroupBy('product.weight_unit')
+        .addGroupBy('product.cost_per_weight_bs')
+        .addGroupBy('product.cost_per_weight_usd')
         .addGroupBy('product.cost_bs')
         .addGroupBy('product.cost_usd')
         .getRawMany();
