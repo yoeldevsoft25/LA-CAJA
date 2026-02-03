@@ -14,6 +14,7 @@ import { ProductLot } from '../database/entities/product-lot.entity';
 import { DebtStatus } from '../database/entities/debt.entity';
 import { ReportsService } from '../reports/reports.service';
 import { RedisCacheService } from '../common/cache/redis-cache.service';
+import { ExchangeService } from '../exchange/exchange.service';
 
 /**
  * Servicio para Dashboard Ejecutivo con KPIs consolidados
@@ -45,6 +46,7 @@ export class DashboardService {
     private productLotRepository: Repository<ProductLot>,
     private reportsService: ReportsService,
     private cache: RedisCacheService,
+    private exchangeService: ExchangeService,
   ) {}
 
   /**
@@ -345,6 +347,16 @@ export class DashboardService {
         const stock = Math.max(parseFloat(row.stock) || 0, 0);
         totalStockValueBs += stock * Number(row.unit_cost_bs || 0);
         totalStockValueUsd += stock * Number(row.unit_cost_usd || 0);
+      }
+
+      // Mantener consistencia con BCV actual cuando hay valoración en USD.
+      // Si no hay tasa o no hay USD, se conserva el cálculo en Bs por costo base.
+      if (totalStockValueUsd > 0) {
+        const bcv = await this.exchangeService.getBCVRate(storeId);
+        const bcvRate = Number(bcv?.rate || 0);
+        if (bcvRate > 0) {
+          totalStockValueBs = totalStockValueUsd * bcvRate;
+        }
       }
     } catch (error) {
       // Si hay error, usar 0 como valor por defecto

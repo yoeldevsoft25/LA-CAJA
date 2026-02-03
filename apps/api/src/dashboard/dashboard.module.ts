@@ -13,6 +13,7 @@ import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { Shift } from '../database/entities/shift.entity';
 import { ProductLot } from '../database/entities/product-lot.entity';
 import { ReportsModule } from '../reports/reports.module';
+import { ExchangeModule } from '../exchange/exchange.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ReportsModule } from '../reports/reports.module';
       ProductLot,
     ]),
     ReportsModule,
+    ExchangeModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],
