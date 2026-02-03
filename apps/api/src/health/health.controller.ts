@@ -59,7 +59,7 @@ export class HealthController {
   check() {
     return this.checkWithCache('general', () =>
       this.health.check([
-        () => this.db.pingCheck('database'),
+        () => this.db.pingCheck('database', { timeout: 10000 }),
         () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024), // 300MB
         () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024), // 500MB
       ]),
@@ -73,7 +73,7 @@ export class HealthController {
   @ApiResponse({ status: 503, description: 'Base de datos no disponible' })
   checkDatabase() {
     return this.checkWithCache('database', () =>
-      this.health.check([() => this.db.pingCheck('database')]),
+      this.health.check([() => this.db.pingCheck('database', { timeout: 10000 })]),
     );
   }
 
@@ -131,7 +131,7 @@ export class HealthController {
   async checkDetailed() {
     return this.checkWithCache('detailed', () =>
       this.health.check([
-        () => this.db.pingCheck('database'),
+        () => this.db.pingCheck('database', { timeout: 10000 }),
         () => this.redis.isHealthy('redis'),
         () => this.bullmq.isHealthy('bullmq'),
         () => this.websocket.isHealthy('websocket'),
@@ -146,41 +146,37 @@ export class HealthController {
     );
   }
 
-  @Cron('*/45 * * * * *') // Run every 45 seconds to keep cache fresh (TTL is 30s but we stretch a bit to avoid overlap)
-  // Actually, TTL is 30s. If we run every 45s, we have gaps.
-  // Let's run every 25s to ensure ALWAYS warm.
   @Cron('*/25 * * * * *')
   async warmUpCache() {
     this.logger.debug('Warming up health check cache...');
 
-    // Ejecutar verificaciones en background para llenar la cache
-    // No esperamos el resultado, solo iniciamos
     try {
-      // 1. Warm ups individuales
-      void this.checkWithCache('database', () =>
-        this.health.check([() => this.db.pingCheck('database')]),
-      );
-      void this.checkWithCache('redis', () =>
-        this.health.check([() => this.redis.isHealthy('redis')]),
-      );
-      void this.checkWithCache('queues', () =>
-        this.health.check([() => this.bullmq.isHealthy('bullmq')]),
-      );
-      void this.checkWithCache('websocket', () =>
-        this.health.check([() => this.websocket.isHealthy('websocket')]),
-      );
+      const warmups = await Promise.allSettled([
+        this.checkDatabase(),
+        this.checkRedis(),
+        this.checkQueues(),
+        this.checkWebSocket(),
+        this.checkExternal(),
+        this.checkDetailed(),
+      ]);
 
-      // 2. Warm up external (only if not recently checked, handled by checkWithCache logic)
-      void this.checkWithCache('external', () =>
-        this.health.check([() => this.externalApis.isHealthy('external_apis')]),
-      );
-
-      // 3. Warm up detailed (uses cached individual checks mostly, but re-aggregates)
-      // Note: checkDetailed calls the same internal checks.
-      // Ideally we should cache the RESULTS of the underlying indicators, not just the controller response.
-      // But our current 'checkWithCache' caches the controller response.
-      // So calling checkDetailed here is good.
-      await this.checkDetailed();
+      warmups.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const checks = [
+            'database',
+            'redis',
+            'queues',
+            'websocket',
+            'external',
+            'detailed',
+          ];
+          const error =
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason);
+          this.logger.debug(`${checks[index]} warm-up failed: ${error}`);
+        }
+      });
 
       this.logger.debug('Health check cache warmed up successfully');
     } catch (e) {
