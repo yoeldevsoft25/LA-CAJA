@@ -211,6 +211,10 @@ export default defineConfig(({ mode }) => ({
       '@': path.resolve(__dirname, './src'),
       '@la-caja/domain': path.resolve(__dirname, '../../packages/domain/src/index.ts'),
       '@la-caja/sync': path.resolve(__dirname, '../../packages/sync/src/index.ts'),
+      '@la-caja/offline-core': path.resolve(__dirname, '../../packages/offline-core/src/index.ts'),
+      '@la-caja/api-client': path.resolve(__dirname, '../../packages/api-client/src/index.ts'),
+      '@la-caja/ui-core': path.resolve(__dirname, '../../packages/ui-core/src/index.ts'),
+      '@la-caja/app-core': path.resolve(__dirname, '../../packages/app-core/src/index.ts'),
     },
     dedupe: [
       'react',
