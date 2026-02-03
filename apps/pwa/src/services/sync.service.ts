@@ -75,6 +75,11 @@ class SyncServiceClass {
   private cacheManager: CacheManager;
   private reconnectOrchestrator: ReconnectSyncOrchestrator | null = null;
 
+  // ===== ANTI-STORM: Deduplicación de recovery =====
+  private isRecoveryRunning = false;
+  private lastRecoveryTime = 0;
+  private readonly RECOVERY_COOLDOWN_MS = 8000; // 8 segundos entre recoveries
+
   // ===== CALLBACKS PARA INVALIDAR CACHE Y NOTIFICAR =====
   private onSyncCompleteCallbacks: Array<(syncedCount: number) => void> = [];
   private onSyncErrorCallbacks: Array<(error: Error) => void> = [];
@@ -152,44 +157,74 @@ class SyncServiceClass {
 
     // ✅ OFFLINE-FIRST: Listener adicional para online (hard recovery inmediato)
     window.addEventListener('online', () => {
-      this.logger.info('🌐 Evento online detectado, ejecutando hard recovery');
+      this.logger.debug('🌐 Evento online detectado');
       this.metrics.recordEvent('online_event', {});
-      if (this.isInitialized) {
-        this.hardRecoverySync().catch((err) => {
-          this.logger.error('Error en hard recovery desde evento online', err);
-        });
-      }
+      void this.requestRecovery('online');
     });
 
     // ✅ OFFLINE-FIRST: Listener para visibilitychange (app vuelve a foreground)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && navigator.onLine && this.isInitialized) {
-        this.logger.info('👁️ App visible + online, verificando pendientes');
-        this.metrics.recordEvent('visibility_change_sync', {});
-        // Verificar si hay pendientes y sincronizar
-        const stats = this.syncQueue?.getStats();
-        if (stats && stats.pending > 0) {
-          this.logger.info(`Detectados ${stats.pending} eventos pendientes, sincronizando...`);
-          this.hardRecoverySync().catch((err) => {
-            this.logger.error('Error en sync por visibilitychange', err);
-          });
-        }
+        void this.requestRecovery('visibility');
       }
     });
 
     // ✅ OFFLINE-FIRST: Listener para focus (ventana recupera foco)
     window.addEventListener('focus', () => {
       if (navigator.onLine && this.isInitialized) {
-        this.logger.debug('🎯 Ventana recuperó foco + online');
-        const stats = this.syncQueue?.getStats();
-        if (stats && stats.pending > 0) {
-          this.logger.info(`Focus + ${stats.pending} pendientes, sincronizando...`);
-          this.hardRecoverySync().catch((err) => {
-            this.logger.error('Error en sync por focus', err);
-          });
-        }
+        void this.requestRecovery('focus');
       }
     });
+  }
+
+  /**
+   * ✅ ANTI-STORM: Centraliza todas las fuentes de recovery con deduplicación
+   * - Mutex global: solo 1 recovery a la vez
+   * - Cooldown temporal: mínimo 8s entre recoveries
+   * - Logging estructurado de skips
+   */
+  private async requestRecovery(source: 'online' | 'visibility' | 'focus' | 'orchestrator'): Promise<void> {
+    if (!this.isInitialized) {
+      this.pendingSyncOnInit = true;
+      return;
+    }
+
+    // Anti-storm: cooldown check
+    const now = Date.now();
+    const timeSinceLastRecovery = now - this.lastRecoveryTime;
+    if (timeSinceLastRecovery < this.RECOVERY_COOLDOWN_MS) {
+      this.logger.debug(`Recovery skipped (cooldown), source=${source}, wait=${this.RECOVERY_COOLDOWN_MS - timeSinceLastRecovery}ms`);
+      this.metrics.recordEvent('recovery_skipped_cooldown', { source, time_remaining: this.RECOVERY_COOLDOWN_MS - timeSinceLastRecovery });
+      return;
+    }
+
+    // Anti-storm: mutex check
+    if (this.isRecoveryRunning) {
+      this.logger.debug(`Recovery skipped (already running), source=${source}`);
+      this.metrics.recordEvent('recovery_skipped_duplicate', { source });
+      return;
+    }
+
+    // Check if there's anything to sync
+    const stats = this.syncQueue?.getStats();
+    const dbPending = await db.getPendingEvents(1).then(e => e.length).catch(() => 0);
+    if (stats?.pending === 0 && dbPending === 0) {
+      this.logger.debug(`Recovery skipped (nothing pending), source=${source}`);
+      return;
+    }
+
+    this.isRecoveryRunning = true;
+    this.lastRecoveryTime = now;
+    this.logger.info(`🔄 Recovery iniciado, source=${source}`);
+    this.metrics.recordEvent('recovery_started', { source });
+
+    try {
+      await this.hardRecoverySync();
+    } catch (err) {
+      this.logger.error(`Recovery falló, source=${source}`, err);
+    } finally {
+      this.isRecoveryRunning = false;
+    }
   }
 
   /**
@@ -466,41 +501,85 @@ class SyncServiceClass {
       this.logger.info('⬇️ Ejecutando pull de eventos del servidor...');
       await this.pullFromServer();
 
-      const totalDuration = Date.now() - startTime;
-      this.logger.info(`✅ Hard Recovery completado en ${totalDuration}ms (${syncedCount} eventos sincronizados)`);
+      // 4. Reconciliar cola memoria vs IndexedDB
+      await this.reconcileQueueState();
 
-      // 4. Emitir evento global para notificar a la UI
-      if (syncedCount > 0) {
+      const totalDuration = Date.now() - startTime;
+      const finalQueueDepth = this.syncQueue.getStats().pending;
+      this.logger.info(`✅ Hard Recovery completado en ${totalDuration}ms (${syncedCount} eventos sincronizados, queue=${finalQueueDepth})`);
+
+      // 5. Emitir evento global para notificar a la UI
+      if (syncedCount > 0 || queueDepthAfter !== finalQueueDepth) {
         window.dispatchEvent(new CustomEvent('sync:completed', {
           detail: {
             syncedCount,
-            queueDepthAfter,
+            queueDepthAfter: finalQueueDepth,
             duration: totalDuration,
             source: 'hard_recovery'
           }
         }));
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       const duration = Date.now() - startTime;
-      this.logger.error('❌ Hard Recovery falló', err);
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.logger.error('❌ Hard Recovery falló', error);
       this.metrics.recordEvent('push_failed', {
-        error: err?.message || 'Unknown error',
-        error_name: err?.name,
+        error: error.message || 'Unknown error',
+        error_name: error.name,
         duration_ms: duration
       });
 
       // ✅ FALLBACK: Si SW falló, intentar foreground recovery
-      if (err?.message?.includes('400') || err?.name === 'ValidationError') {
+      if (error.message?.includes('400') || error.name === 'ValidationError') {
         this.logger.warn('⚠️ Error de validación detectado, activando fallback foreground');
         this.metrics.recordEvent('fallback_foreground', {
           reason: 'validation_error',
-          error: err.message
+          error: error.message
         });
         // El retry automático de SyncQueue se encargará del reintento
       }
 
       throw err;
+    }
+  }
+
+  /**
+   * ✅ QUEUE CONSISTENCY: Reconcilia cola en memoria con IndexedDB
+   * Fuente de verdad: IndexedDB
+   * - Si DB=0 => vaciar cola en memoria
+   * - Si DB!=memoria => reconstruir cola desde DB
+   */
+  private async reconcileQueueState(): Promise<void> {
+    if (!this.syncQueue) return;
+
+    const memoryPending = this.syncQueue.getStats().pending;
+    const dbPending = await db.getPendingEvents(1000);
+
+    this.logger.debug(`[Reconcile] memory=${memoryPending}, db=${dbPending.length}`);
+
+    // Caso 1: DB vacío, limpiar memoria
+    if (dbPending.length === 0 && memoryPending > 0) {
+      this.logger.info(`[Reconcile] DB=0, clearing memory queue (was ${memoryPending})`);
+      this.syncQueue.clear();
+      this.metrics.recordEvent('queue_reconciled', { action: 'cleared', memory_before: memoryPending, db: 0 });
+      return;
+    }
+
+    // Caso 2: Mismatch significativo, reconstruir desde DB
+    if (Math.abs(dbPending.length - memoryPending) > 0) {
+      this.logger.info(`[Reconcile] Mismatch detected: memory=${memoryPending}, db=${dbPending.length}. Rebuilding...`);
+      this.syncQueue.clear();
+      if (dbPending.length > 0) {
+        const baseEvents = dbPending.map((le) => this.localEventToBaseEvent(le));
+        this.syncQueue.enqueueBatch(baseEvents);
+      }
+      this.metrics.recordEvent('queue_reconciled', {
+        action: 'rebuilt',
+        memory_before: memoryPending,
+        db: dbPending.length,
+        memory_after: this.syncQueue.getStats().pending
+      });
     }
   }
 

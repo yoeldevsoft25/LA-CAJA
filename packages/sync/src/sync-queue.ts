@@ -59,7 +59,7 @@ export class SyncQueue {
    */
   enqueue(event: BaseEvent): void {
     const priority = getEventPriority(event.type);
-    
+
     const queuedEvent: QueuedEvent = {
       event,
       priority,
@@ -256,7 +256,7 @@ export class SyncQueue {
    */
   private async scheduleRetry(queuedEvent: QueuedEvent): Promise<void> {
     const delay = this.retryStrategy.calculateDelay(queuedEvent.attemptCount);
-    
+
     setTimeout(async () => {
       // Verificar que el evento todavía existe y está pendiente
       const current = this.queue.get(queuedEvent.event.event_id);
@@ -288,5 +288,13 @@ export class SyncQueue {
    */
   async flush(): Promise<void> {
     await this.batchSync.flush();
+  }
+
+  /**
+   * Limpia completamente la cola (para reconciliación)
+   */
+  clear(): void {
+    this.queue.clear();
+    this.updateMetricsPendingCount();
   }
 }

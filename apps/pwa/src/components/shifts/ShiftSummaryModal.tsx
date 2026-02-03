@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { FileText } from 'lucide-react'
 import { shiftsService, ShiftSummary } from '@/services/shifts.service'
 import { format } from 'date-fns'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -59,6 +59,9 @@ export default function ShiftSummaryModal({
             <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             Resumen del Turno
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Detalle completo de los montos, ventas y diferencias del turno seleccionado.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">

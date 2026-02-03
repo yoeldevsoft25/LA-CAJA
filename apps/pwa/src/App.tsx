@@ -10,7 +10,7 @@ import { useAuth } from './stores/auth.store'
 import { getDefaultRoute } from './lib/permissions'
 import { syncService } from './services/sync.service'
 import { realtimeWebSocketService } from './services/realtime-websocket.service'
-import { usePushNotifications } from './hooks/usePushNotifications'
+// import { usePushNotifications } from './hooks/usePushNotifications'
 import { useActivityTracker } from './hooks/use-activity-tracker'
 import { useLicenseStatus } from './hooks/use-license-status'
 import { Loader2 } from 'lucide-react'
@@ -122,7 +122,7 @@ const PublicKitchenPage = lazy(() => import('./pages/public/PublicKitchenPage'))
 function App() {
   const { user, isAuthenticated, showLoader: authShowLoader, setShowLoader } = useAuth()
   const { isOnline, wasOffline } = useOnline()
-  const { isSupported, subscribe } = usePushNotifications()
+  // const { isSupported, subscribe } = usePushNotifications() // Ya no se usa automáticamente en App
   const [isLoaderComplete, setIsLoaderComplete] = useState(false)
   const queryClient = useQueryClient()
 
@@ -257,55 +257,9 @@ function App() {
     }
   }, [isOnline, wasOffline])
 
-  // Suscribirse a push notifications usando el SW de VitePWA (solo una vez al autenticarse)
-  useEffect(() => {
-    if (!isAuthenticated || !isSupported || !('serviceWorker' in navigator)) {
-      return
-    }
-
-    // Solo intentar suscribirse si hay conexión a internet
-    if (!isOnline) {
-      if (import.meta.env.DEV) {
-        console.debug('[PushNotifications] Sin conexión, omitiendo suscripción')
-      }
-      return
-    }
-
-    let timeoutId: NodeJS.Timeout | null = null
-
-    // Usar el service worker ya registrado por VitePWA
-    navigator.serviceWorker.ready
-      .then(() => {
-        if (import.meta.env.DEV) {
-          console.log('[PushNotifications] SW listo, intentando suscribirse...')
-        }
-        // Intentar suscribirse después de un delay (solo una vez)
-        timeoutId = setTimeout(() => {
-          subscribe().catch((error) => {
-            // Silenciar errores - push notifications son opcionales
-            // El servicio ya valida todos los campos antes de enviar
-            // Solo loguear en desarrollo para debugging
-            if (import.meta.env.DEV) {
-              const errorMessage = error?.response?.data?.message || error?.message || 'Error desconocido'
-              console.debug('[PushNotifications] No se pudo suscribir (opcional):', errorMessage)
-            }
-          })
-        }, 3000)
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV) {
-          console.debug('[PushNotifications] Service Worker no disponible:', error)
-        }
-      })
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-    }
-    // Solo ejecutar cuando cambia isAuthenticated, no cuando cambia subscribe
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, isSupported, isOnline])
+  // Efecto eliminado: Suscripción automática a push notifications
+  // Ahora se debe solicitar explícitamente mediante UI (botón en perfil/configuración)
+  // para cumplir con las guías de navegador: "Only request notification permission in response to a user gesture"
 
   // Set initial loader state
   useEffect(() => {

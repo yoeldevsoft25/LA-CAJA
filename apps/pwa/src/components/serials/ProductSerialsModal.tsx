@@ -1,6 +1,6 @@
 import { Product } from '@/services/products.service'
 import ProductSerialsList from './ProductSerialsList'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 interface ProductSerialsModalProps {
   isOpen: boolean
@@ -20,6 +20,9 @@ export default function ProductSerialsModal({
       <DialogContent className="max-w-5xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">Seriales de {product.name}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Administración de números de serie para {product.name}.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">

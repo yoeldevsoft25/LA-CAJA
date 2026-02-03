@@ -212,28 +212,35 @@ export class ProductsCacheService {
    * Precarga índice de barcodes en memoria para escaneo ultra rápido
    */
   async warmBarcodeIndex(storeId: string): Promise<void> {
-    if (!storeId) return; // Guard clause for invalid storeId
-    if (this.barcodeIndexStoreId === storeId && this.barcodeIndex.size > 0) return;
+    // ✅ Sanitización robusta de storeId
+    if (!storeId || typeof storeId !== 'string' || storeId.trim() === '') {
+      console.debug('[ProductsCache] warmBarcodeIndex skipped: invalid storeId');
+      return;
+    }
+
+    const sanitizedStoreId = storeId.trim();
+    if (this.barcodeIndexStoreId === sanitizedStoreId && this.barcodeIndex.size > 0) return;
 
     try {
       const locals = await db.products
         .where('[store_id+is_active]')
-        .equals([storeId, true] as any) // Dexie handles boolean in compound index, but storeId must be valid
+        .equals([sanitizedStoreId, true] as unknown as string)
         .toArray();
 
       this.barcodeIndex.clear();
-      this.barcodeIndexStoreId = storeId;
+      this.barcodeIndexStoreId = sanitizedStoreId;
       for (const local of locals) {
-        if (local.barcode) {
+        if (local.barcode && typeof local.barcode === 'string') {
           const normalized = normalizeBarcode(local.barcode) ?? local.barcode;
           this.barcodeIndex.set(normalized, local);
         }
       }
     } catch (err) {
-      // Catch DataError or other IDB errors
+      // Catch DataError or other IDB errors - log as debug to avoid console spam
       if (err instanceof Error && err.name === 'DataError') {
-        console.warn('warmBarcodeIndex encountered DataError (likely invalid key)', err);
+        console.debug('[ProductsCache] warmBarcodeIndex DataError (invalid key in DB)', err.message);
       } else {
+        // Re-throw non-DataError exceptions
         throw err;
       }
     }
