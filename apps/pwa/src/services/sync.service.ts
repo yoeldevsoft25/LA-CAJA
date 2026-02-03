@@ -88,20 +88,26 @@ class SyncServiceClass {
 
   /**
    * Configura listeners para cambios de conectividad
+   * ✅ OFFLINE-FIRST: Reconnect hard-recovery sin depender de F5
    */
   private setupConnectivityListeners(): void {
-    // Inicializar orquestador de reconexión
+    // Inicializar orquestador de reconexión con parámetros más agresivos
     this.reconnectOrchestrator = new ReconnectSyncOrchestrator({
-      debounceMs: 2000, // Esperar 2s de estabilidad
-      throttleMs: 10000, // No sincronizar más de una vez cada 10s por reconexión
+      debounceMs: 500, // Reducido de 2s a 500ms para respuesta más rápida
+      throttleMs: 5000, // Reducido de 10s a 5s para reintentos más frecuentes
     });
 
     this.reconnectOrchestrator.init(
       async () => {
         // Callback de sincronización (Orquestador)
         if (this.isInitialized) {
-          this.logger.info('Orquestador disparó sincronización');
-          await this.fullSync();
+          this.logger.info('🔄 Orquestador disparó sincronización por reconexión');
+          this.metrics.recordEvent('reconnect_triggered', {
+            queue_depth_before: this.syncQueue?.getStats().pending || 0
+          });
+
+          // ✅ HARD RECOVERY: Flush inmediato + Pull
+          await this.hardRecoverySync();
         } else {
           this.logger.debug('Orquestador disparó sync, pero no está inicializado. Marcando pendiente.');
           this.pendingSyncOnInit = true;
@@ -112,30 +118,77 @@ class SyncServiceClass {
       },
       {
         onReconnectDetected: (source) => {
-          this.logger.debug(`Reconexión detectada vía ${source}`);
+          this.logger.info(`🌐 Reconexión detectada vía ${source}`);
+          this.metrics.recordEvent('reconnect_detected', { source });
         },
         onSyncStarted: (source) => {
-          this.logger.info(`Iniciando sync por reconexión (${source})`);
+          this.logger.info(`▶️ Iniciando sync por reconexión (${source})`);
           this.metrics.recordEvent('reconnect_sync_started', { source });
         },
         onSyncSuccess: (source) => {
-          this.logger.info(`Sync por reconexión exitoso (${source})`);
-          this.metrics.recordEvent('reconnect_sync_success', { source });
+          this.logger.info(`✅ Sync por reconexión exitoso (${source})`);
+          this.metrics.recordEvent('reconnect_sync_success', {
+            source,
+            queue_depth_after: this.syncQueue?.getStats().pending || 0
+          });
         },
         onSyncFailed: (source, error) => {
-          this.logger.warn(`Sync por reconexión falló (${source})`, { error: error.message });
+          this.logger.warn(`❌ Sync por reconexión falló (${source})`, { error: error.message });
           this.metrics.recordEvent('reconnect_sync_failed', {
             source,
-            error: error.message
+            error: error.message,
+            error_name: error.name
           });
         },
       }
     );
 
-    // Legacy listeners para manejo de estado offline UI (si se necesita)
+    // ✅ OFFLINE-FIRST: Listener adicional para offline (registrar background sync)
     window.addEventListener('offline', () => {
-      this.logger.warn('Conexión perdida');
+      this.logger.warn('📵 Conexión perdida');
+      this.metrics.recordEvent('connection_lost', {});
       this.registerBackgroundSync().catch(() => { });
+    });
+
+    // ✅ OFFLINE-FIRST: Listener adicional para online (hard recovery inmediato)
+    window.addEventListener('online', () => {
+      this.logger.info('🌐 Evento online detectado, ejecutando hard recovery');
+      this.metrics.recordEvent('online_event', {});
+      if (this.isInitialized) {
+        this.hardRecoverySync().catch((err) => {
+          this.logger.error('Error en hard recovery desde evento online', err);
+        });
+      }
+    });
+
+    // ✅ OFFLINE-FIRST: Listener para visibilitychange (app vuelve a foreground)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && navigator.onLine && this.isInitialized) {
+        this.logger.info('👁️ App visible + online, verificando pendientes');
+        this.metrics.recordEvent('visibility_change_sync', {});
+        // Verificar si hay pendientes y sincronizar
+        const stats = this.syncQueue?.getStats();
+        if (stats && stats.pending > 0) {
+          this.logger.info(`Detectados ${stats.pending} eventos pendientes, sincronizando...`);
+          this.hardRecoverySync().catch((err) => {
+            this.logger.error('Error en sync por visibilitychange', err);
+          });
+        }
+      }
+    });
+
+    // ✅ OFFLINE-FIRST: Listener para focus (ventana recupera foco)
+    window.addEventListener('focus', () => {
+      if (navigator.onLine && this.isInitialized) {
+        this.logger.debug('🎯 Ventana recuperó foco + online');
+        const stats = this.syncQueue?.getStats();
+        if (stats && stats.pending > 0) {
+          this.logger.info(`Focus + ${stats.pending} pendientes, sincronizando...`);
+          this.hardRecoverySync().catch((err) => {
+            this.logger.error('Error en sync por focus', err);
+          });
+        }
+      }
     });
   }
 
@@ -313,9 +366,24 @@ class SyncServiceClass {
       }
       await db.kv.put({ key: 'device_id', value: deviceId });
       await db.kv.put({ key: 'store_id', value: storeId });
-      // Auth token should be handled by auth service/interceptor, but SW needs it.
-      // Assuming persistence logic is handled elsewhere or via local storage sync
-      // We add store_id here as requested.
+
+      // ✅ Persistir auth_token para que SW pueda autenticarse
+      // El token debe estar en los headers de axios
+      const authHeader = api.defaults.headers.common['Authorization'];
+      if (authHeader && typeof authHeader === 'string') {
+        const token = authHeader.replace('Bearer ', '');
+        await db.kv.put({ key: 'auth_token', value: token });
+        this.logger.debug('Auth token persistido para SW');
+      } else {
+        this.logger.warn('No se encontró auth token en headers de API');
+      }
+
+      this.logger.info('✅ Contexto SW persistido correctamente', {
+        hasApiUrl: !!api.defaults.baseURL,
+        hasToken: !!authHeader,
+        storeId,
+        deviceId
+      });
     } catch (err: any) {
       this.logger.warn('Error persistiendo contexto SW', err);
     }
@@ -337,6 +405,102 @@ class SyncServiceClass {
 
     } catch (err) {
       this.logger.error('Full sync falló', err);
+    }
+  }
+
+  /**
+   * ✅ OFFLINE-FIRST: Hard Recovery Sync
+   * Ejecuta recuperación agresiva al reconectar:
+   * 1. Recargar pendientes desde IndexedDB (por si hay eventos que no están en memoria)
+   * 2. Flush inmediato de todos los pendientes
+   * 3. Pull de eventos del servidor
+   * 
+   * NO depende de Background Sync para el camino crítico
+   */
+  private async hardRecoverySync(): Promise<void> {
+    if (!this.isInitialized || !this.syncQueue) {
+      this.logger.warn('hardRecoverySync llamado pero servicio no inicializado');
+      return;
+    }
+
+    if (!navigator.onLine) {
+      this.logger.debug('hardRecoverySync omitido: sin conexión');
+      return;
+    }
+
+    const startTime = Date.now();
+    this.logger.info('🚀 Iniciando Hard Recovery Sync');
+
+    try {
+      // 1. Recargar pendientes desde IndexedDB (por si hay eventos que no están en cola)
+      const pendingEvents = await db.getPendingEvents(1000);
+      const queueDepthBefore = this.syncQueue.getStats().pending;
+
+      this.logger.info(`📊 Pendientes en IndexedDB: ${pendingEvents.length}, en cola: ${queueDepthBefore}`);
+      this.metrics.recordEvent('pending_loaded', {
+        count: pendingEvents.length,
+        queue_depth: queueDepthBefore
+      });
+
+      // Si hay eventos en DB que no están en cola, agregarlos
+      if (pendingEvents.length > queueDepthBefore) {
+        const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
+        this.syncQueue.enqueueBatch(baseEvents);
+        this.logger.info(`➕ Agregados ${pendingEvents.length - queueDepthBefore} eventos a la cola`);
+      }
+
+      // 2. Flush inmediato con retry
+      this.logger.info('⬆️ Ejecutando flush de eventos pendientes...');
+      await this.syncQueue.flush();
+
+      const queueDepthAfter = this.syncQueue.getStats().pending;
+      const syncedCount = queueDepthBefore - queueDepthAfter;
+
+      this.metrics.recordEvent('push_success', {
+        synced_count: syncedCount,
+        queue_depth_after: queueDepthAfter,
+        duration_ms: Date.now() - startTime
+      });
+
+      // 3. Pull de eventos del servidor
+      this.logger.info('⬇️ Ejecutando pull de eventos del servidor...');
+      await this.pullFromServer();
+
+      const totalDuration = Date.now() - startTime;
+      this.logger.info(`✅ Hard Recovery completado en ${totalDuration}ms (${syncedCount} eventos sincronizados)`);
+
+      // 4. Emitir evento global para notificar a la UI
+      if (syncedCount > 0) {
+        window.dispatchEvent(new CustomEvent('sync:completed', {
+          detail: {
+            syncedCount,
+            queueDepthAfter,
+            duration: totalDuration,
+            source: 'hard_recovery'
+          }
+        }));
+      }
+
+    } catch (err: any) {
+      const duration = Date.now() - startTime;
+      this.logger.error('❌ Hard Recovery falló', err);
+      this.metrics.recordEvent('push_failed', {
+        error: err?.message || 'Unknown error',
+        error_name: err?.name,
+        duration_ms: duration
+      });
+
+      // ✅ FALLBACK: Si SW falló, intentar foreground recovery
+      if (err?.message?.includes('400') || err?.name === 'ValidationError') {
+        this.logger.warn('⚠️ Error de validación detectado, activando fallback foreground');
+        this.metrics.recordEvent('fallback_foreground', {
+          reason: 'validation_error',
+          error: err.message
+        });
+        // El retry automático de SyncQueue se encargará del reintento
+      }
+
+      throw err;
     }
   }
 
@@ -522,6 +686,7 @@ class SyncServiceClass {
 
   /**
    * Notifica a todos los callbacks registrados que se completó la sincronización
+   * ✅ OFFLINE-FIRST: Emite evento global para invalidar UI sin F5
    */
   private notifySyncComplete(syncedCount: number): void {
     // Invalidar cache de entidades críticas después de sincronizar
@@ -529,6 +694,15 @@ class SyncServiceClass {
     this.invalidateCriticalCaches().catch((error) => {
       this.logger.error('Error invalidating caches', error);
     });
+
+    // ✅ Emitir evento global para que la UI se actualice
+    window.dispatchEvent(new CustomEvent('sync:completed', {
+      detail: {
+        syncedCount,
+        timestamp: Date.now(),
+        source: 'periodic_sync'
+      }
+    }));
 
     this.onSyncCompleteCallbacks.forEach((callback) => {
       try {

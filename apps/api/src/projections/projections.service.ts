@@ -16,6 +16,7 @@ import { randomUUID } from 'crypto';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
+import { InvoiceSeriesService } from '../invoice-series/invoice-series.service';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
 import {
   SaleCreatedPayload,
@@ -62,6 +63,7 @@ export class ProjectionsService {
     private fiscalInvoicesService: FiscalInvoicesService,
     private warehousesService: WarehousesService,
     private metricsService: SyncMetricsService,
+    private invoiceSeriesService: InvoiceSeriesService,
   ) { }
 
   private toBoolean(value: unknown): boolean {
@@ -529,6 +531,30 @@ export class ProjectionsService {
         throw new Error('No se pudo generar el número de venta');
       }
 
+      // ✅ FIX OFFLINE-FIRST: Generar número de factura usando InvoiceSeriesService
+      // Esto asegura que las ventas sincronizadas desde offline tengan invoice_full_number
+      let invoiceSeriesId: string | null = null;
+      let invoiceNumber: string | null = null;
+      let invoiceFullNumber: string | null = null;
+
+      try {
+        const invoiceData = await this.invoiceSeriesService.generateNextInvoiceNumber(
+          event.store_id,
+          undefined, // Usar serie por defecto
+        );
+        invoiceSeriesId = invoiceData.series.id;
+        invoiceNumber = invoiceData.invoice_number;
+        invoiceFullNumber = invoiceData.invoice_full_number;
+        this.logger.debug(
+          `[PROJECTION] Número de factura generado: ${invoiceFullNumber} para venta ${payload.sale_id}`,
+        );
+      } catch (error) {
+        // Si no hay series configuradas, la venta se crea sin número de factura
+        this.logger.warn(
+          `[PROJECTION] No se pudo generar número de factura para venta ${payload.sale_id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+
       // Crear venta (Upsert)
       const sale = manager.getRepository(Sale).create({
         id: payload.sale_id,
@@ -544,6 +570,10 @@ export class ProjectionsService {
           payload.customer?.customer_id || payload.customer_id || null,
         sold_by_user_id: event.actor_user_id,
         note: payload.note || null,
+        // ✅ FIX: Asignar invoice_full_number a ventas sincronizadas
+        invoice_series_id: invoiceSeriesId,
+        invoice_number: invoiceNumber,
+        invoice_full_number: invoiceFullNumber,
       });
 
       const s = await manager.getRepository(Sale).save(sale);

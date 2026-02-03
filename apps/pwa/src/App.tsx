@@ -171,10 +171,54 @@ function App() {
       }
     });
 
+    // ✅ OFFLINE-FIRST: Listener para evento global sync:completed
+    // Emitido por hardRecoverySync y notifySyncComplete
+    const handleSyncCompleted = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        syncedCount: number;
+        queueDepthAfter: number;
+        duration: number;
+        source: string;
+      }>;
+
+      const { syncedCount, queueDepthAfter, duration, source } = customEvent.detail;
+
+      console.log(`[App] 🎉 Evento global sync:completed recibido`, {
+        syncedCount,
+        queueDepthAfter,
+        duration,
+        source
+      });
+
+      // Invalidar caches críticos
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['cash'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+
+      // Notificar al usuario solo si hay eventos sincronizados
+      if (syncedCount > 0) {
+        toast.success(
+          `✅ ${syncedCount} ${syncedCount === 1 ? 'evento sincronizado' : 'eventos sincronizados'}`,
+          {
+            duration: 3000,
+            icon: '🔄',
+            description: queueDepthAfter > 0
+              ? `Quedan ${queueDepthAfter} pendientes`
+              : 'Todo sincronizado'
+          }
+        );
+      }
+    };
+
+    window.addEventListener('sync:completed', handleSyncCompleted);
+
     // Cleanup: desuscribirse cuando el componente se desmonte
     return () => {
       unsubscribeComplete();
       unsubscribeError();
+      window.removeEventListener('sync:completed', handleSyncCompleted);
     };
   }, [isAuthenticated, queryClient])
 

@@ -20,6 +20,7 @@ import { Job } from 'bullmq';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
+import { InvoiceSeriesService } from '../invoice-series/invoice-series.service';
 
 // Mock WhatsApp to avoid ESM issues
 jest.mock('../whatsapp/whatsapp-messaging.service');
@@ -113,6 +114,17 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
                 { provide: getRepositoryToken(Customer), useValue: mockRepo },
                 { provide: getRepositoryToken(DebtPayment), useValue: mockRepo },
                 { provide: getRepositoryToken(RecipeIngredient), useValue: mockRepo },
+                {
+                    provide: InvoiceSeriesService,
+                    useValue: {
+                        generateNextInvoiceNumber: jest.fn().mockResolvedValue({
+                            series: { id: 'series-1' },
+                            invoice_number: '000001',
+                            invoice_full_number: 'FAC-A-000001',
+                        }),
+                        getDefaultSeries: jest.fn().mockResolvedValue({ id: 'series-1', code: 'A' }),
+                    },
+                },
             ],
         }).compile();
 

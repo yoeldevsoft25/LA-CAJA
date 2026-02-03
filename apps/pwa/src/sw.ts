@@ -115,18 +115,35 @@ async function updateCatalogs() {
 import { db } from '@/db/database'
 
 async function syncEvents() {
-    console.log('[SW] Iniciando sincronización de fondo...')
+    const startTime = Date.now();
+    console.log('[SW] 🚀 Iniciando sincronización de fondo...')
 
     try {
-        // 1. Obtener configuración
+        // 1. Obtener configuración y validar contexto completo
         const apiUrlEntry = await db.kv.get('api_url')
         const tokenEntry = await db.kv.get('auth_token')
+        const storeIdEntry = await db.kv.get('store_id')
+        const deviceIdEntry = await db.kv.get('device_id')
 
         const apiUrl = apiUrlEntry?.value
         const token = tokenEntry?.value
+        const storeId = storeIdEntry?.value
+        const deviceId = deviceIdEntry?.value || await getDeviceId()
 
-        if (!apiUrl || !token) {
-            console.warn('[SW] No hay API URL o token configurado. Abortando sync.')
+        // ✅ Validación completa de contexto
+        const missingContext = [];
+        if (!apiUrl) missingContext.push('api_url');
+        if (!token) missingContext.push('auth_token');
+        if (!storeId) missingContext.push('store_id');
+        if (!deviceId) missingContext.push('device_id');
+
+        if (missingContext.length > 0) {
+            console.warn(`[SW] ⚠️ Contexto incompleto. Faltantes: ${missingContext.join(', ')}. Abortando sync.`)
+            console.log('[SW] 📊 Telemetría: sync_aborted', {
+                reason: 'missing_context',
+                missing: missingContext,
+                duration_ms: Date.now() - startTime
+            });
             return
         }
 
@@ -134,27 +151,36 @@ async function syncEvents() {
         const pendingEvents = await db.getPendingEvents(50)
 
         if (pendingEvents.length === 0) {
-            console.log('[SW] No hay eventos pendientes.')
+            console.log('[SW] ✅ No hay eventos pendientes.')
+            console.log('[SW] 📊 Telemetría: sync_completed', {
+                synced_count: 0,
+                duration_ms: Date.now() - startTime
+            });
             return
         }
 
-        console.log(`[SW] Sincronizando ${pendingEvents.length} eventos...`)
+        console.log(`[SW] 📤 Sincronizando ${pendingEvents.length} eventos...`)
+        console.log('[SW] 📊 Telemetría: sync_started', {
+            pending_count: pendingEvents.length,
+            queue_depth: pendingEvents.length
+        });
 
         // 3. Preparar payload (igual que SyncService)
-        const storeIdEntry = await db.kv.get('store_id')
-        const deviceId = await getDeviceId()
-
+        // ⚡ IMPORTANTE: El backend NO espera store_id/device_id dentro de cada evento
+        // Solo en el DTO principal. Removerlos explícitamente.
         const payload = {
-            store_id: storeIdEntry?.value,
+            store_id: storeId,
             device_id: deviceId,
-            client_version: 'pwa-1.0.0', // Podría venir de config
+            client_version: 'pwa-sw-1.0.0',
             events: pendingEvents.map(e => {
-                const { id, sync_status, sync_attempts, synced_at, ...rest } = e
+                // Remover campos de sincronización Y campos que van en el DTO principal
+                const { id, sync_status, sync_attempts, synced_at, store_id: _, device_id: __, ...rest } = e
                 return rest
             })
         }
 
-        // 4. Enviar a API
+        // 4. Enviar a API con telemetría
+        const fetchStartTime = Date.now();
         const response = await fetch(`${apiUrl}/sync/push`, {
             method: 'POST',
             headers: {
@@ -165,17 +191,54 @@ async function syncEvents() {
             body: JSON.stringify(payload)
         })
 
+        const fetchDuration = Date.now() - fetchStartTime;
+
+        // ✅ Manejo mejorado de errores HTTP
         if (!response.ok) {
-            throw new Error(`API error: ${response.status}`)
+            const errorBody = await response.text().catch(() => 'No response body');
+            const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+            console.error(`[SW] ❌ Error en /sync/push`, {
+                status: response.status,
+                statusText: response.statusText,
+                endpoint: `${apiUrl}/sync/push`,
+                body: errorBody,
+                duration_ms: fetchDuration
+            });
+
+            console.log('[SW] 📊 Telemetría: sync_failed', {
+                error: errorMessage,
+                status: response.status,
+                endpoint: '/sync/push',
+                pending_count: pendingEvents.length,
+                duration_ms: Date.now() - startTime
+            });
+
+            // Si es 400, loguear payload para debugging
+            if (response.status === 400) {
+                console.error('[SW] 🔍 Payload que causó 400:', JSON.stringify(payload, null, 2));
+                console.log('[SW] 📊 Telemetría: validation_error', {
+                    status: 400,
+                    events_count: payload.events.length,
+                    store_id: payload.store_id,
+                    device_id: payload.device_id
+                });
+            }
+
+            throw new Error(errorMessage)
         }
 
         const result = await response.json()
 
         // 5. Procesar respuesta (actualizar estados en DB)
+        let acceptedCount = 0;
+        let rejectedCount = 0;
+        let conflictedCount = 0;
+
         // Marcar aceptados
         if (result.accepted && result.accepted.length > 0) {
+            acceptedCount = result.accepted.length;
             const updates = result.accepted.map((ack: any) => {
-                // Buscar el evento local por event_id
                 return db.localEvents.where('event_id').equals(ack.event_id).modify({
                     sync_status: 'synced',
                     synced_at: Date.now()
@@ -184,39 +247,58 @@ async function syncEvents() {
             await Promise.all(updates)
         }
 
-        // Marcar rechazados/conflictos
+        // Marcar rechazados
         if (result.rejected && result.rejected.length > 0) {
+            rejectedCount = result.rejected.length;
             const updates = result.rejected.map((rej: any) => {
                 return db.localEvents.where('event_id').equals(rej.event_id).modify({
-                    sync_status: 'failed', // O manejar error específico
+                    sync_status: 'failed',
                     last_error: rej.message
                 })
             })
             await Promise.all(updates)
+
+            console.warn('[SW] ⚠️ Eventos rechazados:', result.rejected);
         }
 
+        // Marcar conflictos
         if (result.conflicted && result.conflicted.length > 0) {
-            // Manejar conflictos
-            // ... (lógica simplificada para SW, idealmente marcar como 'conflict')
+            conflictedCount = result.conflicted.length;
             const updates = result.conflicted.map((conf: any) => {
                 return db.localEvents.where('event_id').equals(conf.event_id).modify({
                     sync_status: 'conflict'
                 })
             })
             await Promise.all(updates)
+
+            console.warn('[SW] ⚠️ Eventos en conflicto:', result.conflicted);
         }
 
-        console.log('[SW] Sincronización completada.')
+        const totalDuration = Date.now() - startTime;
+        console.log(`[SW] ✅ Sincronización completada en ${totalDuration}ms`)
+        console.log('[SW] 📊 Telemetría: sync_success', {
+            accepted_count: acceptedCount,
+            rejected_count: rejectedCount,
+            conflicted_count: conflictedCount,
+            total_duration_ms: totalDuration,
+            fetch_duration_ms: fetchDuration
+        });
 
         // Si hay más eventos, volver a intentar (recursivo o loop)
-        // El navegador puede matar el SW, pero 'waitUntil' ayuda.
         const remaining = await db.getPendingEvents(1)
         if (remaining.length > 0) {
+            console.log(`[SW] 🔄 Quedan ${remaining.length} eventos, continuando...`);
             await syncEvents() // Procesar siguiente batch
         }
 
-    } catch (error) {
-        console.error('[SW] Error en sincronización:', error)
+    } catch (error: any) {
+        const duration = Date.now() - startTime;
+        console.error('[SW] ❌ Error en sincronización:', error)
+        console.log('[SW] 📊 Telemetría: sync_error', {
+            error: error?.message || 'Unknown error',
+            error_name: error?.name,
+            duration_ms: duration
+        });
         // No relanzar error para evitar reintentos infinitos inmediatos del navegador
     }
 }

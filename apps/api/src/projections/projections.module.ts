@@ -13,6 +13,7 @@ import { WhatsAppModule } from '../whatsapp/whatsapp.module';
 import { FiscalInvoicesModule } from '../fiscal-invoices/fiscal-invoices.module';
 import { WarehousesModule } from '../warehouses/warehouses.module';
 import { ObservabilityModule } from '../observability/observability.module';
+import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ObservabilityModule } from '../observability/observability.module';
     FiscalInvoicesModule,
     WarehousesModule,
     ObservabilityModule,
+    InvoiceSeriesModule,
   ],
   providers: [ProjectionsService],
   exports: [ProjectionsService],
