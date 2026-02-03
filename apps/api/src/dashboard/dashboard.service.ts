@@ -265,50 +265,61 @@ export class DashboardService {
       lowStockCount = 0;
     }
 
-    // Calcular valor de inventario (considera productos con y sin lotes)
+    // Calcular valor de inventario.
+    // Fuente de verdad para cantidad: stock agregado por bodega.
+    // Para costo unitario: promedio ponderado de lotes (si existe), con fallback a costo del producto.
     let totalStockValueBs = 0;
     let totalStockValueUsd = 0;
     try {
-      const lotTotals = await this.productLotRepository
-        .createQueryBuilder('lot')
-        .leftJoin('lot.product', 'product')
-        .where('product.store_id = :storeId', { storeId })
-        .andWhere('product.is_active = true')
-        .select(
-          'COALESCE(SUM(lot.remaining_quantity * lot.unit_cost_bs), 0)',
-          'total_bs',
-        )
-        .addSelect(
-          'COALESCE(SUM(lot.remaining_quantity * lot.unit_cost_usd), 0)',
-          'total_usd',
-        )
-        .getRawOne();
-
-      totalStockValueBs += Number(lotTotals?.total_bs || 0);
-      totalStockValueUsd += Number(lotTotals?.total_usd || 0);
-
-      const productsWithStock = await this.productRepository
+      const inventoryValuationRows = await this.productRepository
         .createQueryBuilder('product')
-        .leftJoin('product_lots', 'lot', 'lot.product_id = product.id')
         .leftJoin(
           `(${warehouseStockSubquery.getQuery()})`,
           'stock',
           'stock.product_id = product.id',
         )
+        .leftJoin(
+          'product_lots',
+          'lot',
+          'lot.product_id = product.id AND lot.remaining_quantity > 0',
+        )
         .setParameters(warehouseStockSubquery.getParameters())
         .where('product.store_id = :storeId', { storeId })
         .andWhere('product.is_active = true')
-        .andWhere('lot.id IS NULL')
         .select('product.id', 'id')
-        .addSelect('product.cost_bs', 'cost_bs')
-        .addSelect('product.cost_usd', 'cost_usd')
         .addSelect('COALESCE(stock.current_stock, 0)', 'stock')
+        .addSelect(
+          `CASE
+            WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0
+              THEN COALESCE(
+                SUM(lot.remaining_quantity * lot.unit_cost_bs) / NULLIF(SUM(lot.remaining_quantity), 0),
+                COALESCE(product.cost_bs, 0)
+              )
+            ELSE COALESCE(product.cost_bs, 0)
+          END`,
+          'unit_cost_bs',
+        )
+        .addSelect(
+          `CASE
+            WHEN COALESCE(SUM(lot.remaining_quantity), 0) > 0
+              THEN COALESCE(
+                SUM(lot.remaining_quantity * lot.unit_cost_usd) / NULLIF(SUM(lot.remaining_quantity), 0),
+                COALESCE(product.cost_usd, 0)
+              )
+            ELSE COALESCE(product.cost_usd, 0)
+          END`,
+          'unit_cost_usd',
+        )
+        .groupBy('product.id')
+        .addGroupBy('stock.current_stock')
+        .addGroupBy('product.cost_bs')
+        .addGroupBy('product.cost_usd')
         .getRawMany();
 
-      for (const product of productsWithStock) {
-        const stock = parseFloat(product.stock) || 0;
-        totalStockValueBs += stock * Number(product.cost_bs || 0);
-        totalStockValueUsd += stock * Number(product.cost_usd || 0);
+      for (const row of inventoryValuationRows) {
+        const stock = Math.max(parseFloat(row.stock) || 0, 0);
+        totalStockValueBs += stock * Number(row.unit_cost_bs || 0);
+        totalStockValueUsd += stock * Number(row.unit_cost_usd || 0);
       }
     } catch (error) {
       // Si hay error, usar 0 como valor por defecto
