@@ -85,14 +85,27 @@ async function bootstrap() {
     'https://veloxpos.netlify.app',
   ].filter((origin): origin is string => Boolean(origin));
 
+  const normalizeOrigin = (value: string): string =>
+    value.trim().replace(/\/+$/, '');
+
   const originList = allowedOrigins
-    ? allowedOrigins.split(',').map((origin) => origin.trim())
+    ? allowedOrigins.split(',').map((origin) => normalizeOrigin(origin))
     : [
       'http://localhost:5173',
       'http://localhost:4173',
       'http://localhost:3000',
     ]; // Defaults para desarrollo (5173) y preview (4173)
-  const origins = Array.from(new Set([...originList, ...extraOrigins]));
+  const origins = Array.from(
+    new Set([...originList, ...extraOrigins.map((origin) => normalizeOrigin(origin))]),
+  );
+  const allowedOriginSet = new Set(origins);
+
+  const isTauriOrigin = (value: string): boolean => {
+    return (
+      value === 'tauri://localhost' ||
+      /^https:\/\/tauri\.localhost(?::\d+)?$/i.test(value)
+    );
+  };
 
   // Obtener puerto antes de usarlo
   const port = configService.get<number>('PORT') || 3000;
@@ -109,10 +122,16 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      if (!origin || origins.includes(origin)) {
+      const normalizedOrigin = origin ? normalizeOrigin(origin) : origin;
+
+      if (
+        !normalizedOrigin ||
+        allowedOriginSet.has(normalizedOrigin) ||
+        isTauriOrigin(normalizedOrigin)
+      ) {
         callback(null, true);
       } else {
-        logger.warn(`CORS bloqueado para origen: ${origin}`);
+        logger.warn(`CORS bloqueado para origen: ${normalizedOrigin}`);
         callback(new Error('No permitido por CORS'));
       }
     },
