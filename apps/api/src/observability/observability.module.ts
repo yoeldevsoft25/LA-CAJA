@@ -4,6 +4,7 @@ import { ObservabilityController } from './observability.controller';
 import { ObservabilityService } from './services/observability.service';
 import { AlertService } from './services/alert.service';
 import { UptimeTrackerService } from './services/uptime-tracker.service';
+import { SyncMetricsService } from './services/sync-metrics.service';
 import { Alert } from './entities/alert.entity';
 import { UptimeRecord } from './entities/uptime-record.entity';
 import { TerminusModule } from '@nestjs/terminus';
@@ -25,8 +26,9 @@ import { HealthModule } from '../health/health.module';
     ObservabilityService,
     AlertService,
     UptimeTrackerService,
+    SyncMetricsService,
     ObservabilityGateway,
   ],
-  exports: [ObservabilityService, AlertService, UptimeTrackerService],
+  exports: [ObservabilityService, AlertService, UptimeTrackerService, SyncMetricsService],
 })
-export class ObservabilityModule {}
+export class ObservabilityModule { }

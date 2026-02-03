@@ -5,6 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Store } from './store.entity';
 import { SaleItem } from './sale-item.entity';
@@ -70,8 +72,8 @@ export class Sale {
       note?: string;
     }>;
     cash_payment?: {
-      received_usd: number; // Monto recibido en USD físico
-      change_bs?: number; // Cambio dado en Bs
+      received_usd: number;
+      change_bs?: number;
       change_rounding?: {
         mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT';
         exact_change_bs: number;
@@ -81,8 +83,8 @@ export class Sale {
       };
     };
     cash_payment_bs?: {
-      received_bs: number; // Monto recibido en Bs físico
-      change_bs?: number; // Cambio dado en Bs (redondeado)
+      received_bs: number;
+      change_bs?: number;
       change_rounding?: {
         mode: 'EXACT' | 'CUSTOMER' | 'MERCHANT';
         exact_change_bs: number;
@@ -134,8 +136,14 @@ export class Sale {
   invoice_number: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  invoice_full_number: string | null; // Número completo: "A-001", "FAC-B-123", etc.
+  invoice_full_number: string | null;
 
   @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })
   items: SaleItem[];
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  created_at: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updated_at: Date;
 }

@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, UpdateDateColumn } from 'typeorm';
 import { Store } from './store.entity';
 
 export enum CashSessionStatus {
@@ -51,4 +51,7 @@ export class CashSession {
 
   @Column({ type: 'text', nullable: true })
   note: string | null;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updated_at: Date;
 }

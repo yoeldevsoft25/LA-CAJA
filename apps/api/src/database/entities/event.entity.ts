@@ -51,4 +51,10 @@ export class Event {
 
   @Column({ type: 'text', nullable: true })
   full_payload_hash: string | null;
+
+  @Column({ type: 'text', default: 'pending' }) // pending, processed, failed
+  projection_status: string;
+
+  @Column({ type: 'text', nullable: true })
+  projection_error: string | null;
 }
