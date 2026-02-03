@@ -24,7 +24,8 @@
     "db:rehearsal:upgrade": "ts-node -r tsconfig-paths/register scripts/migration-upgrade-rehearsal.ts",
     "db:rehearsal:upgrade:dry": "ts-node -r tsconfig-paths/register scripts/migration-upgrade-rehearsal.ts --dry-run",
     "db:partitioning:backfill": "ts-node -r tsconfig-paths/register scripts/partitioning-backfill.ts",
-    "db:partitioning:backfill:dry": "ts-node -r tsconfig-paths/register scripts/partitioning-backfill.ts --dry-run"
+    "db:partitioning:backfill:dry": "ts-node -r tsconfig-paths/register scripts/partitioning-backfill.ts --dry-run",
+    "debug:pg-mem": "ts-node -r tsconfig-paths/register scripts/debug-pg-mem.ts"
   },
   "dependencies": {
     "@bull-board/api": "^6.16.2",

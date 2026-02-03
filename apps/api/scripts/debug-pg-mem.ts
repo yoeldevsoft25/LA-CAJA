@@ -1,5 +1,5 @@
 import { newDb } from 'pg-mem';
-import { ALL_ENTITIES } from '../database/entities';
+import { ALL_ENTITIES } from '../src/database/entities';
 
 async function run() {
   const db = newDb();
@@ -12,9 +12,6 @@ async function run() {
     implementation: () => 'test',
     name: 'current_database',
   });
-
-  // Register potential missing types to test
-  // db.public.registerType({ name: 'tsvector' });
 
   try {
     const ds = await db.adapters.createTypeormDataSource({
