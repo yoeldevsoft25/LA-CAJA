@@ -125,7 +125,7 @@ export class SyncService {
     private usageService: UsageService,
     @InjectQueue('sales-projections')
     private salesProjectionQueue: Queue,
-  ) { }
+  ) {}
 
   async push(
     dto: PushSyncDto,
@@ -185,9 +185,28 @@ export class SyncService {
         // ⚡ OPTIMIZACIÓN: Validaciones simplificadas para SaleCreated
         // Las validaciones pesadas se hacen en la proyección asíncrona
         if (event.type === 'SaleCreated') {
+          if (
+            authenticatedUserId &&
+            event.actor?.user_id &&
+            event.actor.user_id !== authenticatedUserId
+          ) {
+            rejected.push({
+              event_id: event.event_id,
+              seq: event.seq,
+              code: 'SECURITY_ERROR',
+              message:
+                'El usuario del evento no coincide con el usuario autenticado.',
+            });
+            continue;
+          }
+
           const payload = event.payload as any;
           // Validación básica rápida (sin queries pesadas)
-          if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
+          if (
+            !payload ||
+            !Array.isArray(payload.items) ||
+            payload.items.length === 0
+          ) {
             rejected.push({
               event_id: event.event_id,
               seq: event.seq,
@@ -279,7 +298,9 @@ export class SyncService {
           // ===== OFFLINE-FIRST FIELDS =====
           vector_clock: eventVectorClock,
           causal_dependencies: event.causal_dependencies || [],
-          conflict_status: conflictResult.hasConflict ? 'auto_resolved' : 'resolved',
+          conflict_status: conflictResult.hasConflict
+            ? 'auto_resolved'
+            : 'resolved',
           delta_payload: event.delta_payload || null,
           full_payload_hash: fullPayloadHash,
         });
@@ -422,11 +443,16 @@ export class SyncService {
       return {
         valid: false,
         code: 'SECURITY_ERROR',
-        message: 'El usuario del evento no coincide con el usuario autenticado.',
+        message:
+          'El usuario del evento no coincide con el usuario autenticado.',
       };
     }
 
-    if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
+    if (
+      !payload ||
+      !Array.isArray(payload.items) ||
+      payload.items.length === 0
+    ) {
       return {
         valid: false,
         code: 'VALIDATION_ERROR',
@@ -484,7 +510,9 @@ export class SyncService {
       where: { id: In(productIds), store_id: storeId },
     });
 
-    const productMap = new Map(products.map((product) => [product.id, product]));
+    const productMap = new Map(
+      products.map((product) => [product.id, product]),
+    );
     const allowedDeviation = 0.05;
     const tolerance = 0.01;
     const roundTwo = (value: number) => Math.round(value * 100) / 100;
@@ -619,13 +647,15 @@ export class SyncService {
     const expectedDiscountBs = roundTwo(computedDiscountBs);
     const expectedDiscountUsd = roundTwo(computedDiscountUsd);
     const expectedTotalBs = roundTwo(expectedSubtotalBs - expectedDiscountBs);
-    const expectedTotalUsd = roundTwo(expectedSubtotalUsd - expectedDiscountUsd);
+    const expectedTotalUsd = roundTwo(
+      expectedSubtotalUsd - expectedDiscountUsd,
+    );
 
     if (
       Math.abs(expectedSubtotalBs - Number(payload.totals.subtotal_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedSubtotalUsd - Number(payload.totals.subtotal_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -636,9 +666,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedDiscountBs - Number(payload.totals.discount_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedDiscountUsd - Number(payload.totals.discount_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -649,9 +679,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedTotalBs - Number(payload.totals.total_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedTotalUsd - Number(payload.totals.total_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -667,12 +697,13 @@ export class SyncService {
           ? (expectedDiscountUsd / expectedSubtotalUsd) * 100
           : 0;
 
-    const discountValidation = await this.discountRulesService.requiresAuthorization(
-      storeId,
-      expectedDiscountBs,
-      expectedDiscountUsd,
-      discountPercentage,
-    );
+    const discountValidation =
+      await this.discountRulesService.requiresAuthorization(
+        storeId,
+        expectedDiscountBs,
+        expectedDiscountUsd,
+        discountPercentage,
+      );
 
     if (discountValidation.error) {
       return {
@@ -952,13 +983,16 @@ export class SyncService {
 
     let filteredEvents = events;
     if (excludeDeviceId) {
-      filteredEvents = events.filter(e => e.device_id !== excludeDeviceId);
+      filteredEvents = events.filter((e) => e.device_id !== excludeDeviceId);
     }
 
-    const maxDate = events.length > 0 ? events[events.length - 1].received_at.getTime() : since.getTime();
+    const maxDate =
+      events.length > 0
+        ? events[events.length - 1].received_at.getTime()
+        : since.getTime();
 
     // Mapear a formato DTO
-    const dtos = filteredEvents.map(e => ({
+    const dtos = filteredEvents.map((e) => ({
       event_id: e.event_id,
       type: e.type,
       seq: e.seq, // Del dispositivo original
@@ -967,15 +1001,15 @@ export class SyncService {
       received_at: e.received_at.getTime(),
       actor: {
         user_id: e.actor_user_id,
-        role: e.actor_role
+        role: e.actor_role,
       },
       payload: e.payload,
-      vector_clock: e.vector_clock
+      vector_clock: e.vector_clock,
     }));
 
     return {
       events: dtos,
-      last_server_time: maxDate
+      last_server_time: maxDate,
     };
   }
 }

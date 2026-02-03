@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint Ratchet (no regressions)
+        run: npm run lint:ratchet
+
+      - name: Build shared packages
+        run: npm run build:packages
+
+      - name: Build API
+        run: npm run build --workspace=apps/api
+
+      - name: Build PWA
+        run: npm run build --workspace=apps/pwa
+
+      - name: Build Desktop
+        run: npm run build --workspace=apps/desktop
+
+      - name: Test API
+        run: npm run test --workspace=apps/api -- --runInBand
+
+      - name: Test PWA
+        run: npm run test --workspace=apps/pwa -- --run
+
+      - name: Test Desktop
+        run: npm run test:run --workspace=apps/desktop

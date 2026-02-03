@@ -1,0 +1,374 @@
+# VELOX POS Linea A 2026
+## Arquitectura objetivo + Plan Maestro de Sprints para dominar el mercado
+
+**Fecha:** 2026-02-03  
+**Rol aplicado:** `.cursor/agents/architect.md`  
+**Estado:** Propuesta ejecutable basada en analisis del repositorio + benchmarking externo
+
+---
+
+## 0) Vision: la propuesta que hace temblar la competencia
+
+**Velox POS Linea A** = un POS **offline-first real**, **auditado por eventos**, **multi-canal (PWA + Desktop + Android)** y con **inteligencia operativa** (prediccion + automatizacion) que entrega:
+
+- continuidad operativa incluso con conectividad inestable;
+- cierres de caja y trazabilidad confiables para auditoria;
+- velocidad de operacion de mostrador (menos friccion, mas ventas/hora);
+- una plataforma escalable para crecer de decenas a miles de tiendas.
+
+Objetivo estrategico: que Velox no compita por "tener funciones", sino por **confiabilidad, velocidad y capacidad de evolucion**.
+
+---
+
+## 1) Analisis profundo del estado actual (auditado en repo)
+
+## 1.1 Fortalezas reales
+
+1. **Base tecnologica potente:** monorepo con `apps/api` (NestJS + Fastify), `apps/pwa` (React + Vite + Dexie + PWA), `apps/desktop` (Tauri + React), paquetes de dominio/sync.
+2. **Capacidad funcional amplia en backend:** 52 controladores, 52 modulos, ~404 rutas decoradas, 100+ entidades.
+3. **Offline-first ya iniciado:** cola de sincronizacion, vector clocks, conflictos, cache local e IndexedDB.
+4. **Base de seguridad inicial presente:** JWT, validacion de secrets, `helmet`, throttling, interceptores de validacion por `store_id`.
+5. **Capacidad de build parcial saludable:** API y PWA construyen en produccion.
+
+## 1.2 Hallazgos criticos (bloqueadores para Linea A)
+
+1. **Duplicacion estructural PWA/Desktop extremadamente alta**
+   - 405 rutas de archivo equivalentes entre ambos frontends.
+   - 347 archivos identicos (86% de duplicacion exacta).
+   - Existe script de copia manual `scripts/copy-pwa-to-desktop.ps1`.
+
+2. **Servicios y componentes sobredimensionados**
+   - Backend: `accounting.service.ts` (~4237 lineas), `sales.service.ts` (~2665), `ml.service.ts` (~1837), `auth.service.ts` (~1762).
+   - Frontend: multiples pantallas/componentes >1000 lineas.
+
+3. **Calidad de ingenieria inconsistente**
+   - `npm run build --workspace=apps/desktop` falla por tipado en `apps/desktop/src/lib/api.ts:270`.
+   - `npm run test --workspace=apps/pwa -- --run` falla (dependencia faltante `@testing-library/dom`).
+   - `npm run lint --workspace=apps/pwa` falla (50 errores, 20 warnings).
+   - `apps/desktop` no tiene script `test`.
+
+4. **Desalineacion arquitectonica**
+   - Se declara Event Sourcing/CQRS global, pero en la practica hay combinacion de rutas CRUD directas + rutas por eventos.
+   - `packages/application` (capa de casos de uso) esta practicamente vacio.
+
+5. **Deuda de datos y migraciones**
+   - 115 archivos SQL de migracion; 14 numeraciones duplicadas (colisiones de versionado).
+   - Mezcla de migraciones estructurales + scripts de correccion puntual en el mismo flujo.
+
+6. **Riesgo de seguridad/dependencias**
+   - `npm audit --json`: 23 vulnerabilidades (5 high, 13 moderate, 5 low).
+
+7. **Performance frontend mejorable para escala**
+   - Chunk `react-vendor` en PWA ~1.54 MB (minificado), con warnings de chunking/dynamic import.
+
+## 1.3 Baseline tecnico cuantificado (hoy)
+
+- `apps/api/src`: **462 archivos TS**, ~**72,107 LOC**.
+- `apps/pwa/src`: **405 archivos TS/TSX**, ~**98,585 LOC**.
+- `apps/desktop/src`: **403 archivos TS/TSX**, ~**97,638 LOC**.
+- Uso de `any` en codigo (api+pwa+desktop+packages): **1458**.
+- `console.*` en codigo: **304**.
+- Tests API: **13 suites** (12 pass / 1 fail actualmente).
+
+---
+
+## 2) Benchmark externo: arquitecturas recomendadas y decision para Velox
+
+## 2.1 Arquitecturas evaluadas
+
+| Estilo | Donde brilla | Riesgo principal | Decision para Velox |
+|---|---|---|---|
+| Modular Monolith | Equipos small/medium, alta velocidad de producto, limites claros por dominio | Derivar a "big ball of mud" si no se gobiernan limites | **SI, arquitectura base ahora** |
+| Microservices | Escala organizacional alta, despliegues independientes por dominio | Complejidad operacional prematura | **NO ahora; SI como evolucion selectiva** |
+| Event-Driven + CQRS + Event Sourcing | Auditoria, trazabilidad, asincronia, integraciones | Mayor complejidad de consistencia y modelado | **SI, en dominios criticos (ventas/pagos/inventario/sync)** |
+| Serverless puntual | Tareas elasticas/event-driven, jobs no core | Acoplamiento a proveedor/costo variable | **SI, solo para jobs satelite (reportes, analitica)** |
+
+## 2.2 Decision arquitectonica principal
+
+Adoptar una **Arquitectura Hibrida de Linea A**:
+
+1. **Core transaccional en Modular Monolith** (backend actual, pero refactorizado por bounded contexts).
+2. **Event backbone fuerte** para dominios auditables y offline-first.
+3. **Frontend unificado en paquetes compartidos** + shells especificos (PWA / Desktop / Android).
+4. **Observabilidad y SRE by design** (SLOs + error budgets + trazas end-to-end).
+5. **Seguridad operativa continua** (ASVS + hardening + supply-chain hygiene).
+
+---
+
+## 3) Arquitectura objetivo Linea A (Target State)
+
+## 3.1 Mapa de alto nivel
+
+```text
+Canales
+  PWA Shell      Desktop Shell (Tauri)      Android Shell
+       \              |                    /
+        \             |                   /
+             Shared Front Platform
+      (UI kit + app-core + api-client + offline-core)
+                         |
+                    API Gateway Layer
+                         |
+             Velox Backend Modular Core
+  Sales | Inventory | Accounting | CRM | Fiscal | Licensing | Notifications
+                         |
+               Event Backbone + Job Queues
+                         |
+              PostgreSQL (RLS + particiones)
+          + Redis (colas/cache) + Object Storage
+                         |
+         Observability Plane (metrics, traces, logs)
+```
+
+## 3.2 Principios de arquitectura Linea A
+
+1. **Modularidad dura:** limites de dominio y contratos internos explicitos.
+2. **Offline-first sin excepciones en flujos POS criticos.**
+3. **Eventual consistency controlada:** comandos y proyecciones con idempotencia.
+4. **Seguridad por defecto:** menor privilegio, trazabilidad y verificabilidad.
+5. **Operabilidad como feature:** todo dominio nace con metricas y alertas.
+6. **Arquitectura con ADRs:** cada decision importante queda registrada.
+
+## 3.3 Bounded contexts propuestos (backend)
+
+- **Commerce Core:** Sales, Payments, Discounts, Cash/Shift.
+- **Catalog & Inventory:** Products, Variants, Lots, Warehouses, Transfers.
+- **Finance & Fiscal:** Accounting, Fiscal Invoices, Exchange.
+- **Customer Ops:** Customers, Debts, Reservations, Orders/Tables.
+- **Platform & Growth:** Auth, Licenses, Notifications, Observability, ML.
+
+---
+
+## 4) ADRs estrategicos iniciales (con trade-offs)
+
+## ADR-001: Mantener Modular Monolith como core 2026
+- **Pros:** velocidad, menor complejidad operativa, mejor coherencia transaccional.
+- **Cons:** requiere gobernanza estricta para evitar acoplamiento.
+- **Alternativas:** microservices inmediatos.
+- **Decision:** **aceptada** para 2026H1.
+
+## ADR-002: Frontend unificado por paquetes compartidos
+- **Pros:** elimina duplicacion, reduce bugs por drift, acelera releases.
+- **Cons:** migracion inicial demandante.
+- **Alternativas:** mantener copia PWA->Desktop.
+- **Decision:** **aceptada** (el script de copia pasa a deprecado).
+
+## ADR-003: Event Sourcing selectivo (no dogmatico)
+- **Pros:** auditabilidad y reconciliacion robusta donde importa.
+- **Cons:** complejidad en modelado y replay.
+- **Alternativas:** CRUD puro en todos los dominios.
+- **Decision:** **aceptada** para ventas/pagos/inventario/sync.
+
+## ADR-004: Data governance estricto de migraciones
+- **Pros:** despliegues repetibles, menos deuda de esquema.
+- **Cons:** disciplina de equipo obligatoria.
+- **Alternativas:** seguir con scripts ad-hoc.
+- **Decision:** **aceptada**.
+
+## ADR-005: SRE + observabilidad estandar (OpenTelemetry)
+- **Pros:** MTTR menor, decisiones por datos, trazabilidad real.
+- **Cons:** costo inicial de instrumentacion.
+- **Alternativas:** logs dispersos sin estandar.
+- **Decision:** **aceptada**.
+
+## ADR-006: Seguridad continua (ASVS L2 + dependencias)
+- **Pros:** menor superficie de riesgo, confianza enterprise.
+- **Cons:** trabajo continuo, no puntual.
+- **Alternativas:** auditorias esporadicas.
+- **Decision:** **aceptada**.
+
+---
+
+## 5) Plan Maestro de Sprints (10 sprints / 20 semanas)
+
+> Cadencia sugerida: **2 semanas por sprint**.  
+> Cada sprint cierra con demo, metricas, retro y decision de continuidad.
+
+## Sprint 1 - Estabilizacion de plataforma
+**Objetivo:** pasar de "funciona parcialmente" a "base confiable".
+
+**Entregables:**
+- Build de Desktop en verde.
+- Suite minima de tests en Desktop.
+- PWA tests operativos (`@testing-library/dom` y setup estable).
+- Pipeline CI unico (build+test+lint) para API/PWA/Desktop.
+
+**DoD/KPIs:**
+- 100% builds verdes en CI para los 3 canales.
+- 0 bloqueos tipo "missing script/dependency".
+
+## Sprint 2 - Unificacion Frontend (anti-duplicacion)
+**Objetivo:** eliminar el cuello de botella PWA/Desktop.
+
+**Entregables:**
+- `packages/ui-core` y `packages/app-core` creados.
+- Mover componentes/paginas/servicios compartibles a paquetes.
+- Reemplazar `copy-pwa-to-desktop.ps1` por workspace shared imports.
+
+**DoD/KPIs:**
+- Duplicacion exacta PWA/Desktop < 40%.
+- Tiempo de entrega de feature cross-platform reducido >= 30%.
+
+## Sprint 3 - Refactor dominio Commerce Core I
+**Objetivo:** partir `SalesService` en vertical slices mantenibles.
+
+**Entregables:**
+- Separacion en command/query services.
+- Casos de uso en `packages/application` para ventas.
+- Tests de contrato para endpoints criticos POS.
+
+**DoD/KPIs:**
+- Ningun archivo del dominio ventas > 1500 lineas.
+- Cobertura de tests en dominio ventas >= 70% (unit+integration).
+
+## Sprint 4 - Refactor dominio Finance/Fiscal y Auth
+**Objetivo:** bajar riesgo operacional por servicios gigantes.
+
+**Entregables:**
+- Division de `accounting.service.ts` por subdominios.
+- Hardening de auth/session/refresh con pruebas de seguridad.
+- Reducir dependencias circulares (`forwardRef`) al minimo.
+
+**DoD/KPIs:**
+- Ningun servicio > 2000 lineas.
+- Incidencias de auth por regresion = 0 en QA.
+
+## Sprint 5 - Data Platform & Migraciones Linea A
+**Objetivo:** gobernanza de datos enterprise-grade.
+
+**Entregables:**
+- Convencion unica de versionado de migraciones.
+- Separacion formal: migracion estructural vs data-fix operacional.
+- Test automatizado de migracion en entorno limpio + entorno con datos.
+- Plan de particion para tabla `events` y politicas de archivado.
+
+**DoD/KPIs:**
+- 0 colisiones de version de migracion nuevas.
+- Tiempo de query historica critica reducido >= 25%.
+
+## Sprint 6 - Offline-first de clase mundial
+**Objetivo:** ampliar offline real mas alla de flujos basicos.
+
+**Entregables:**
+- Cobertura de eventos offline para mas dominios (orders/transfers/payments prioritarios).
+- UX de conflictos con resolucion guiada.
+- Idempotencia reforzada en jobs/proyecciones.
+
+**DoD/KPIs:**
+- Tasa de sincronizacion exitosa > 99.5% en pruebas de red intermitente.
+- Conflictos sin resolver < 0.5% de eventos.
+
+## Sprint 7 - Performance comercial
+**Objetivo:** convertir velocidad en ventaja competitiva visible.
+
+**Entregables:**
+- Plan de chunking real (route/domain split), limpieza import dinamico/estatico redundante.
+- Reduccion de chunk principal y mejora de TTI.
+- Optimizacion de queries y cache API para dashboard/POS.
+
+**DoD/KPIs:**
+- `react-vendor` < 900 KB minificado.
+- TTI en dispositivo medio < 2.5s.
+- Operaciones POS frecuentes < 120ms local.
+
+## Sprint 8 - Observabilidad y SRE
+**Objetivo:** operacion predecible a escala.
+
+**Entregables:**
+- Instrumentacion OpenTelemetry (API + colas + frontend clave).
+- Dashboards SLO: disponibilidad, latencia, sync success rate.
+- Alertas accionables + runbooks de incidentes.
+
+**DoD/KPIs:**
+- MTTD < 5 min, MTTR < 30 min en incidentes simulados.
+- Error budget definido y monitoreado por servicio critico.
+
+## Sprint 9 - Seguridad y confianza enterprise
+**Objetivo:** convertir seguridad en ventaja de venta.
+
+**Entregables:**
+- Cerrar vulnerabilidades high/moderate priorizadas.
+- Checklist ASVS L2 aplicado a modulos criticos.
+- Endurecimiento de secretos, sesiones, auditoria y dependencias.
+
+**DoD/KPIs:**
+- Vulnerabilidades HIGH = 0.
+- Hallazgos criticos de pentest interno = 0.
+
+## Sprint 10 - Diferenciacion competitiva y lanzamiento Linea A
+**Objetivo:** transformar capacidad tecnica en propuesta comercial irresistible.
+
+**Entregables:**
+- "Modo Operacion Continua" (offline resiliente + reconciliacion automatica).
+- "Copiloto Comercial" (reabastecimiento sugerido, alertas de margen/anomalias).
+- Programa piloto controlado + playbook de rollout.
+
+**DoD/KPIs:**
+- Exito piloto >= 95% en tiendas objetivo.
+- Mejora medible de rotacion/merma/margen en piloto.
+
+---
+
+## 6) Quality Gates globales por sprint (obligatorios)
+
+1. **Arquitectura:** ADR actualizado para cambios de alto impacto.
+2. **Codigo:** lint y typecheck verdes en apps afectadas.
+3. **Pruebas:** unit + integration + smoke e2e en rutas criticas.
+4. **Seguridad:** escaneo de dependencias y secretos.
+5. **Operacion:** metricas y logs de nuevas rutas/servicios.
+6. **Datos:** scripts de migracion con rollback probado.
+
+---
+
+## 7) Riesgos y mitigaciones
+
+1. **Riesgo:** refactor grande frene roadmap funcional.  
+   **Mitigacion:** feature flags + migracion por vertical slices.
+
+2. **Riesgo:** deuda historica de migraciones genere bloqueos en produccion.  
+   **Mitigacion:** entornos de rehearsal + pipeline de migracion versionado.
+
+3. **Riesgo:** duplicacion frontend reaparezca.  
+   **Mitigacion:** regla de arquitectura en CI (no-copy policy + shared package enforcement).
+
+4. **Riesgo:** sobrecarga por alcance competitivo.  
+   **Mitigacion:** priorizacion por valor de negocio + tablero de KPIs quincenal.
+
+---
+
+## 8) Plan de arranque inmediato (primeras 2 semanas)
+
+1. Corregir build blocker Desktop (`apps/desktop/src/lib/api.ts`).
+2. Arreglar test harness PWA y dependencias faltantes.
+3. Crear workflow CI unificado y quality gates minimos.
+4. Crear carpeta de ADRs (`docs/architecture/adr/`) con ADR-001..006.
+5. Definir arquitectura de `packages/ui-core` y `packages/app-core`.
+
+---
+
+## 9) Fuentes externas utilizadas (benchmark arquitectura)
+
+- AWS Well-Architected Framework (6 pilares).
+- Google Cloud Architecture Framework (patrones de resiliencia y desacoplamiento).
+- Google Cloud ADR guidance (Architecture Decision Records).
+- Microsoft Azure Architecture Center (architecture styles, CQRS).
+- Martin Fowler (Monolith First).
+- AWS Prescriptive Guidance (Event Sourcing pattern).
+- PostgreSQL docs (Row Security Policies, Partitioning).
+- Supabase docs (RLS guide/performance).
+- React Router docs (automatic code splitting).
+- BullMQ docs (idempotent jobs).
+- OpenTelemetry project/docs.
+- Google SRE Workbook (error budgets).
+- DORA open source metrics reference.
+- OWASP ASVS 5.0.
+- MDN Service Workers.
+
+---
+
+## Cierre ejecutivo
+
+Velox ya tiene una base muy superior a muchos POS del mercado.  
+Lo que falta para Linea A no es "mas features sueltas": es **arquitectura disciplinada + calidad operacional + velocidad de ejecucion**.
+
+Si ejecutamos este plan de 10 sprints con rigor, Velox pasa de "producto prometedor" a **plataforma dominante**.

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { getQueueToken } from '@nestjs/bullmq';
 import { SyncService } from './sync.service';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
@@ -9,6 +10,7 @@ import { VectorClockService } from './vector-clock.service';
 import { CRDTService } from './crdt.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
 import { DiscountRulesService } from '../discounts/discount-rules.service';
+import { UsageService } from '../licenses/usage.service';
 import { PushSyncDto } from './dto/push-sync.dto';
 
 jest.mock('../projections/projections.service', () => ({
@@ -34,6 +36,13 @@ describe('SyncService', () => {
   };
   const vectorClockService = {
     fromEvent: jest.fn().mockReturnValue({}),
+  };
+  const usageService = {
+    increment: jest.fn(),
+  };
+  const salesProjectionQueue = {
+    add: jest.fn(),
+    addBulk: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -71,6 +80,14 @@ describe('SyncService', () => {
         {
           provide: DiscountRulesService,
           useValue: {},
+        },
+        {
+          provide: UsageService,
+          useValue: usageService,
+        },
+        {
+          provide: getQueueToken('sales-projections'),
+          useValue: salesProjectionQueue,
         },
       ],
     }).compile();

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import { useAuth, type AuthUser } from '@/stores/auth.store';
 import { createLogger } from '@/lib/logger';
 
@@ -267,8 +267,12 @@ api.interceptors.request.use(
 
     const baseUrl = config.baseURL || api.defaults.baseURL || '';
     if (baseUrl.includes('ngrok-free.dev')) {
-      config.headers = config.headers ?? {};
-      config.headers['ngrok-skip-browser-warning'] = '1';
+      const headers =
+        config.headers instanceof AxiosHeaders
+          ? config.headers
+          : AxiosHeaders.from(config.headers);
+      headers.set('ngrok-skip-browser-warning', '1');
+      config.headers = headers;
     }
     return config;
   },
