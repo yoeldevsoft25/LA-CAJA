@@ -4,17 +4,23 @@ services:
   redis:
     image: redis:7-alpine
     container_name: la-caja-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis-data:/data
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    # Usamos pass para seguridad premium. Si no usas pass, cambia protected-mode a 'no' en redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "la-caja-dev-password"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "la-caja-dev-password", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G # Un poco más que el maxmemory de redis.conf para overhead
 
 volumes:
   redis-data:

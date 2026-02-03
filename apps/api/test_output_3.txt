@@ -1,0 +1,133 @@
+FAIL src/sales/sales-returns.integration.spec.ts (11.685 s)
+  Sales Returns Integration (Transactional - Sqlite)
+    returnItems (Partial Return)
+      ✕ should create return header, return items, adjust debt, and create stock movement (3 ms)
+    returnSale (Full Return)
+      ✕ should return all items, zero out debt, and update sale totals
+      ✕ should rejection return if debt has payments
+
+  ● Sales Returns Integration (Transactional - Sqlite) › returnItems (Partial Return) › should create return header, return items, adjust debt, and create stock movement
+
+    Nest can't resolve dependencies of the DashboardService (SaleRepository, SaleItemRepository, ProductRepository, DebtRepository, DebtPaymentRepository, WarehouseStockRepository, PurchaseOrderRepository, FiscalInvoiceRepository, ShiftRepository, ProductLotRepository, ReportsService, ?). Please make sure that the argument RedisCacheService at index [11] is available in the DashboardModule context.
+
+    Potential solutions:
+    - Is DashboardModule a valid NestJS module?
+    - If RedisCacheService is a provider, is it part of the current DashboardModule?
+    - If RedisCacheService is exported from a separate @Module, is that module imported within DashboardModule?
+      @Module({
+        imports: [ /* the Module containing RedisCacheService */ ]
+      })
+
+      73 |         });
+      74 |
+    > 75 |         const moduleFixture: TestingModule = await Test.createTestingModule({
+         |                                              ^
+      76 |             imports: [
+      77 |                 ConfigModule.forRoot({
+      78 |                     isGlobal: true,
+
+      at TestingInjector.lookupComponentInParentModules (../../../node_modules/@nestjs/core/injector/injector.js:262:19)
+      at TestingInjector.resolveComponentInstance (../../../node_modules/@nestjs/core/injector/injector.js:215:33)
+      at TestingInjector.resolveComponentInstance (../../../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../../../node_modules/@nestjs/core/injector/injector.js:129:38)
+          at async Promise.all (index 11)
+      at TestingInjector.resolveConstructorParams (../../../node_modules/@nestjs/core/injector/injector.js:144:27)
+      at TestingInjector.loadInstance (../../../node_modules/@nestjs/core/injector/injector.js:70:13)
+      at TestingInjector.loadProvider (../../../node_modules/@nestjs/core/injector/injector.js:98:9)
+      at ../../../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../../../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../../../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 37)
+      at TestingInstanceLoader.createInstances (../../../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../../../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../../../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../../../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../../../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (sales/sales-returns.integration.spec.ts:75:46)
+
+  ● Sales Returns Integration (Transactional - Sqlite) › returnSale (Full Return) › should return all items, zero out debt, and update sale totals
+
+    Nest can't resolve dependencies of the DashboardService (SaleRepository, SaleItemRepository, ProductRepository, DebtRepository, DebtPaymentRepository, WarehouseStockRepository, PurchaseOrderRepository, FiscalInvoiceRepository, ShiftRepository, ProductLotRepository, ReportsService, ?). Please make sure that the argument RedisCacheService at index [11] is available in the DashboardModule context.
+
+    Potential solutions:
+    - Is DashboardModule a valid NestJS module?
+    - If RedisCacheService is a provider, is it part of the current DashboardModule?
+    - If RedisCacheService is exported from a separate @Module, is that module imported within DashboardModule?
+      @Module({
+        imports: [ /* the Module containing RedisCacheService */ ]
+      })
+
+      73 |         });
+      74 |
+    > 75 |         const moduleFixture: TestingModule = await Test.createTestingModule({
+         |                                              ^
+      76 |             imports: [
+      77 |                 ConfigModule.forRoot({
+      78 |                     isGlobal: true,
+
+      at TestingInjector.lookupComponentInParentModules (../../../node_modules/@nestjs/core/injector/injector.js:262:19)
+      at TestingInjector.resolveComponentInstance (../../../node_modules/@nestjs/core/injector/injector.js:215:33)
+      at TestingInjector.resolveComponentInstance (../../../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../../../node_modules/@nestjs/core/injector/injector.js:129:38)
+          at async Promise.all (index 11)
+      at TestingInjector.resolveConstructorParams (../../../node_modules/@nestjs/core/injector/injector.js:144:27)
+      at TestingInjector.loadInstance (../../../node_modules/@nestjs/core/injector/injector.js:70:13)
+      at TestingInjector.loadProvider (../../../node_modules/@nestjs/core/injector/injector.js:98:9)
+      at ../../../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../../../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../../../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 37)
+      at TestingInstanceLoader.createInstances (../../../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../../../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../../../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../../../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../../../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (sales/sales-returns.integration.spec.ts:75:46)
+
+  ● Sales Returns Integration (Transactional - Sqlite) › returnSale (Full Return) › should rejection return if debt has payments
+
+    Nest can't resolve dependencies of the DashboardService (SaleRepository, SaleItemRepository, ProductRepository, DebtRepository, DebtPaymentRepository, WarehouseStockRepository, PurchaseOrderRepository, FiscalInvoiceRepository, ShiftRepository, ProductLotRepository, ReportsService, ?). Please make sure that the argument RedisCacheService at index [11] is available in the DashboardModule context.
+
+    Potential solutions:
+    - Is DashboardModule a valid NestJS module?
+    - If RedisCacheService is a provider, is it part of the current DashboardModule?
+    - If RedisCacheService is exported from a separate @Module, is that module imported within DashboardModule?
+      @Module({
+        imports: [ /* the Module containing RedisCacheService */ ]
+      })
+
+      73 |         });
+      74 |
+    > 75 |         const moduleFixture: TestingModule = await Test.createTestingModule({
+         |                                              ^
+      76 |             imports: [
+      77 |                 ConfigModule.forRoot({
+      78 |                     isGlobal: true,
+
+      at TestingInjector.lookupComponentInParentModules (../../../node_modules/@nestjs/core/injector/injector.js:262:19)
+      at TestingInjector.resolveComponentInstance (../../../node_modules/@nestjs/core/injector/injector.js:215:33)
+      at TestingInjector.resolveComponentInstance (../../../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../../../node_modules/@nestjs/core/injector/injector.js:129:38)
+          at async Promise.all (index 11)
+      at TestingInjector.resolveConstructorParams (../../../node_modules/@nestjs/core/injector/injector.js:144:27)
+      at TestingInjector.loadInstance (../../../node_modules/@nestjs/core/injector/injector.js:70:13)
+      at TestingInjector.loadProvider (../../../node_modules/@nestjs/core/injector/injector.js:98:9)
+      at ../../../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../../../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../../../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 37)
+      at TestingInstanceLoader.createInstances (../../../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../../../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../../../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../../../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../../../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (sales/sales-returns.integration.spec.ts:75:46)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 3 total
+Snapshots:   0 total
+Time:        12.302 s, estimated 16 s
+Ran all test suites matching /src\/sales\/sales-returns.integration.spec.ts/i.
