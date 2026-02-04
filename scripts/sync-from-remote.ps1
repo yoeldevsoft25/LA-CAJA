@@ -75,22 +75,30 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Descargando e importando..." -ForegroundColor Gray
 
-# Comando Pipe en PowerShell
-# Nota: PowerShell maneja pipes de texto diferente a bash/sh. 
-# Para binary pipes seguros entre procesos docker, cmd /c es a veces más fiable, 
-# pero intentaremos la sintaxis nativa de PS primero o un workaround si falla.
-# El problema de PS es que puede corromper encoding binario.
-# USANDO CMD /C para garantizar el pipe binario crudo que pg_dump custom format necesita.
+$tempFile = "dump_temp.bak"
 
-$dumpCmd = "docker run --rm -i postgres:17-alpine pg_dump ""$ConnectionString"" --no-owner --no-acl --format=custom"
-$restoreCmd = "docker exec -i la-caja-db pg_restore -U postgres -d la_caja --no-owner --no-acl --clean --if-exists"
+# 1. Download dump
+Write-Host "Paso A: Descargando dump remoto..." -ForegroundColor Gray
+# Usamos cmd /c para que el '>' sea manejado por CMD (binario puro) y no por PowerShell
+cmd /c "docker run --rm -i postgres:17-alpine pg_dump ""$ConnectionString"" --no-owner --no-acl --format=custom > $tempFile"
 
-cmd /c "$dumpCmd | $restoreCmd"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Error descargando el dump."
+    if (Test-Path $tempFile) { Remove-Item $tempFile }
+    exit 1
+}
+
+# 2. Restore dump
+Write-Host "Paso B: Restaurando dump localmente..." -ForegroundColor Gray
+# Usamos cmd /c para que el '<' sea manejado por CMD (binario puro)
+cmd /c "docker exec -i la-caja-db pg_restore -U postgres -d la_caja --no-owner --no-acl --clean --if-exists < $tempFile"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ ¡Migración Completada Exitosamente!" -ForegroundColor Green
     Write-Host "Tu base de datos local ahora es un clon de producción."
 } else {
     Write-Error "`n❌ Hubo un error durante la migración."
-    exit 1
 }
+
+# Limpiar
+if (Test-Path $tempFile) { Remove-Item $tempFile }

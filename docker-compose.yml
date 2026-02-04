@@ -23,7 +23,7 @@ services:
           memory: 2.5G
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: la-caja-db
     restart: unless-stopped
     shm_size: '8gb'
