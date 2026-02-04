@@ -19,10 +19,10 @@ if [ ! -f "package.json" ]; then
   exit 1
 fi
 
-# Verificar que PM2 está instalado
-if ! command -v pm2 &> /dev/null; then
-  echo -e "${YELLOW}⚠️  PM2 no está instalado. Instalando...${NC}"
-  npm install -g pm2
+# Verificar que PM2 está disponible vía npx
+if ! npx pm2 --version &> /dev/null; then
+  echo -e "${YELLOW}⚠️  PM2 no está disponible. Asegúrate de que esté instalado en las dependencias.${NC}"
+  exit 1
 fi
 
 # Verificar que existe .env.production
@@ -62,13 +62,13 @@ mkdir -p apps/api/logs
 
 # 7. Reiniciar PM2
 echo -e "${GREEN}🔄 Reiniciando aplicación con PM2...${NC}"
-if pm2 list | grep -q "la-caja-api"; then
+if npx pm2 list | grep -q "la-caja-api"; then
   # Si ya está corriendo, reiniciar
-  pm2 restart la-caja-api --update-env
+  npx pm2 restart la-caja-api --update-env
 else
   # Si no está corriendo, iniciar
   cd apps/api
-  pm2 start ecosystem.config.js --env production
+  npx pm2 start ecosystem.config.js --env production
   cd ../..
 fi
 
@@ -89,13 +89,13 @@ fi
 # 10. Mostrar estado
 echo ""
 echo -e "${GREEN}📊 Estado de PM2:${NC}"
-pm2 status
+npx pm2 status
 
 echo ""
 echo -e "${GREEN}✅ Deploy completado exitosamente!${NC}"
 echo ""
 echo "Comandos útiles:"
-echo "  pm2 logs la-caja-api          # Ver logs"
-echo "  pm2 monit                     # Monitor en tiempo real"
-echo "  pm2 restart la-caja-api       # Reiniciar"
-echo "  pm2 stop la-caja-api          # Detener"
+echo "  npx pm2 logs la-caja-api          # Ver logs"
+echo "  npx pm2 monit                     # Monitor en tiempo real"
+echo "  npx pm2 restart la-caja-api       # Reiniciar"
+echo "  npx pm2 stop la-caja-api          # Detener"
