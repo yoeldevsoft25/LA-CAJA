@@ -20,6 +20,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (isPublic) {
       return true;
     }
+
+    const request = context.switchToHttp().getRequest();
+    if (request?.isFederationAuthenticated === true) {
+      return true;
+    }
+
     return super.canActivate(context);
   }
 

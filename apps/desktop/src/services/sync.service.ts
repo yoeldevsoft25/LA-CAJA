@@ -1093,8 +1093,11 @@ class SyncServiceClass {
           ? `HTTP ${status}: ${data.message}`
           : axiosError?.message || 'Error desconocido al sincronizar';
       const err = new Error(message);
-      if (status && status >= 400 && status < 500) {
+      if (status === 400 || status === 404) {
         err.name = 'ValidationError';
+      } else if (status === 401 || status === 403) {
+        // Keep retrying on auth/access during outages/failover transitions.
+        err.name = 'TransientAuthError';
       }
 
       // 🔔 Notificar error de sincronización
@@ -1157,6 +1160,42 @@ class SyncServiceClass {
   }
 
   /**
+   * Recupera eventos marcados como dead por errores transitorios de auth/red.
+   * Evita perder cola tras caídas de servidor o failover.
+   */
+  private async recoverTransientDeadEvents(): Promise<number> {
+    const now = Date.now();
+    let recovered = 0;
+
+    await db.localEvents
+      .where('sync_status')
+      .equals('dead')
+      .and((evt) => {
+        const code = String(evt.last_error_code || '').toLowerCase();
+        const message = String(evt.last_error || '').toLowerCase();
+        return (
+          code === 'transientautherror' ||
+          message.includes('http 401') ||
+          message.includes('http 403') ||
+          message.includes('forbidden') ||
+          message.includes('network') ||
+          message.includes('timeout')
+        );
+      })
+      .modify((evt: LocalEvent) => {
+        evt.sync_status = 'retrying';
+        evt.next_retry_at = now;
+        recovered++;
+      });
+
+    if (recovered > 0) {
+      this.logger.warn(`♻️ Recuperados ${recovered} eventos dead transitorios para reintento`);
+    }
+
+    return recovered;
+  }
+
+  /**
    * ✅ SPRINT 6.1B: Helper para telemetría de UX
    */
   private recordUXTelemetry(event: string, metadata: Record<string, any> = {}): void {
@@ -1172,6 +1211,8 @@ class SyncServiceClass {
     if (!this.syncQueue) return;
 
     try {
+      await this.recoverTransientDeadEvents();
+
       // Cargar TODOS los eventos pendientes, no solo 100
       const pendingEvents = await db.getPendingEvents(1000); // Aumentado a 1000
       const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
@@ -1243,8 +1284,6 @@ class SyncServiceClass {
       error?.message?.includes('VALIDATION_ERROR') ||
       error?.message?.includes('SECURITY_ERROR') ||
       error?.message?.includes('HTTP 400') ||
-      error?.message?.includes('HTTP 401') ||
-      error?.message?.includes('HTTP 403') ||
       error?.message?.includes('HTTP 404');
 
     const event = await eventRepository.findByEventId(eventId);
