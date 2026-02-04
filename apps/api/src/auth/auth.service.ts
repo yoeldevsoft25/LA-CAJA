@@ -62,7 +62,7 @@ export class AuthService {
     private emailService: EmailService,
     private usageService: UsageService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;
@@ -655,14 +655,20 @@ export class AuthService {
       throw new UnauthorizedException('Tienda no encontrada');
     }
 
-    // Autocompletar licencia para tiendas antiguas sin datos
+    // Autocompletar licencia para tiendas antiguas sin datos (Safe Mode)
     if (!store.license_status || !store.license_expires_at) {
       const trial = this.getTrialExpiration();
-      store.license_status = 'active';
+      store.license_status = store.license_status || 'active';
       store.license_plan = store.license_plan ?? trial.plan;
-      store.license_expires_at = trial.expiresAt;
+      store.license_expires_at = store.license_expires_at || trial.expiresAt;
       store.license_grace_days = store.license_grace_days ?? trial.graceDays;
-      await this.storeRepository.save(store);
+
+      try {
+        await this.storeRepository.save(store);
+      } catch (e) {
+        this.logger.warn(`⚠️ No se pudo auto-actualizar licencia de la tienda: ${e instanceof Error ? e.message : String(e)}`);
+        // No fallar el login por esto, permitir que el proceso siga
+      }
     }
 
     const now = Date.now();
@@ -703,7 +709,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: `${this.ACCESS_TOKEN_EXPIRES_IN} s`,
+      expiresIn: `${this.ACCESS_TOKEN_EXPIRES_IN}s`, // Fix: removing space between number and 's'
     });
 
     // DETECCIÓN DE NUEVOS DISPOSITIVOS: Generar fingerprint del dispositivo

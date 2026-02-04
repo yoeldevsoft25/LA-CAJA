@@ -5,7 +5,7 @@ import { DataSource } from 'typeorm';
 export class DbRepairService implements OnModuleInit {
   private readonly logger = new Logger(DbRepairService.name);
 
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) { }
 
   async onModuleInit() {
     this.logger.log(
@@ -133,14 +133,21 @@ export class DbRepairService implements OnModuleInit {
 
       // 5. Verificar columnas de licencia en la tabla stores (Migration 89)
       this.logger.log('Verificando columnas de licencia en tabla stores...');
-      await queryRunner.query(`
-              ALTER TABLE stores 
-              ADD COLUMN IF NOT EXISTS license_status text DEFAULT 'active',
-              ADD COLUMN IF NOT EXISTS license_expires_at timestamptz,
-              ADD COLUMN IF NOT EXISTS license_grace_days integer DEFAULT 3,
-              ADD COLUMN IF NOT EXISTS license_plan text,
-              ADD COLUMN IF NOT EXISTS license_notes text;
-            `);
+      const columnQueries = [
+        'ALTER TABLE stores ADD COLUMN IF NOT EXISTS license_status text DEFAULT \'active\'',
+        'ALTER TABLE stores ADD COLUMN IF NOT EXISTS license_expires_at timestamptz',
+        'ALTER TABLE stores ADD COLUMN IF NOT EXISTS license_grace_days integer DEFAULT 3',
+        'ALTER TABLE stores ADD COLUMN IF NOT EXISTS license_plan text',
+        'ALTER TABLE stores ADD COLUMN IF NOT EXISTS license_notes text',
+      ];
+
+      for (const query of columnQueries) {
+        try {
+          await queryRunner.query(query);
+        } catch (e) {
+          this.logger.warn(`⚠️ No se pudo asegurar columna en stores: ${e instanceof Error ? e.message : String(e)} `);
+        }
+      }
     } finally {
       await queryRunner.release();
     }
