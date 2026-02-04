@@ -25,6 +25,8 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Install dependencies
         run: npm install
@@ -50,3 +52,4 @@ jobs:
           releaseBody: "Release de Velox POS para Windows y macOS generado automáticamente por GitHub Actions."
           releaseDraft: true
           prerelease: false
+          args: ${{ matrix.platform == 'macos-latest' && '--target universal-apple-darwin' || '' }}
