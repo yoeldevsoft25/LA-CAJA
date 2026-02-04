@@ -1303,7 +1303,6 @@ class SyncServiceClass {
   private async pruneSyncedEvents(): Promise<void> {
     try {
       const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-      const cutoff = Date.now() - SEVEN_DAYS_MS;
 
       // Usar índice compuesto [sync_status+created_at] si existe, o filtrar manualmente
       // Dexie: db.localEvents.where('sync_status').equals('synced').and(evt => evt.created_at < cutoff).delete()

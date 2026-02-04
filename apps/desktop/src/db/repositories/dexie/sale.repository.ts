@@ -26,15 +26,23 @@ export class DexieSaleRepository implements ISaleRepository {
         return db.sales.count();
     }
 
-    async findByStoreId(storeId: string, limit?: number): Promise<LocalSale[]> {
-        const query = db.sales
-            .where('store_id')
-            .equals(storeId);
+    async getDailySales(storeId: string, timestamp: number): Promise<LocalSale[]> {
+        const startOfDay = new Date(timestamp).setHours(0, 0, 0, 0);
+        const endOfDay = new Date(timestamp).setHours(23, 59, 59, 999);
 
+        const sales = await db.sales
+            .where('[store_id+sold_at]')
+            .between([storeId, startOfDay], [storeId, endOfDay])
+            .toArray();
+
+        return sales;
+    }
+
+    async findByStoreId(storeId: string, limit?: number): Promise<LocalSale[]> {
         // Dexie optimization: reverse() for most recent first if indexed by 'store_id' alone might not be date-ordered.
         // database.ts index: '[store_id+sold_at]'
 
-        let sales = await db.sales
+        const sales = await db.sales
             .where('[store_id+sold_at]')
             .between([storeId, Dexie.minKey], [storeId, Dexie.maxKey])
             .reverse() // Newest first

@@ -1,6 +1,5 @@
 import { db, LocalProduct } from '@/db/database';
 import { IProductRepository, ProductFilterOptions } from '@/db/repositories/types';
-import Dexie from 'dexie';
 
 export class DexieProductRepository implements IProductRepository {
     async findById(id: string): Promise<LocalProduct | undefined> {

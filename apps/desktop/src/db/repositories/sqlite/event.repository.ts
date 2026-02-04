@@ -5,12 +5,12 @@ import { LocalEvent } from '@/db/database';
 export const sqliteEventRepository: IEventRepository = {
     async add(event: LocalEvent): Promise<void> {
         const sql = `
-            INSERT INTO local_events (
-                event_id, store_id, device_id, seq, type, payload,
-                sync_status, sync_attempts, created_at, next_retry_at,
-                vector_clock, metadata
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+            INSERT INTO local_events(
+    event_id, store_id, device_id, seq, type, payload,
+    sync_status, sync_attempts, created_at, next_retry_at,
+    vector_clock, metadata
+) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
         const params = [
             event.event_id,
             event.store_id,
@@ -42,12 +42,12 @@ export const sqliteEventRepository: IEventRepository = {
 
     async getPending(limit: number): Promise<LocalEvent[]> {
         // First get normal pending events ordered by creation
-        let sql = `
-            SELECT * FROM local_events
+        const sql = `
+SELECT * FROM local_events
             WHERE sync_status = 'pending'
             ORDER BY created_at ASC
-            LIMIT ?
-        `;
+LIMIT ?
+    `;
         const pending = await sqliteService.select<any[]>(sql, [limit]);
 
         // If we haven't reached limit, check for retrying events that are due
@@ -56,9 +56,9 @@ export const sqliteEventRepository: IEventRepository = {
             const sqlRetry = `
                 SELECT * FROM local_events
                 WHERE sync_status = 'retrying' AND next_retry_at <= ?
-                ORDER BY created_at ASC
-                LIMIT ?
-            `;
+    ORDER BY created_at ASC
+LIMIT ?
+    `;
             const retrying = await sqliteService.select<any[]>(sqlRetry, [now, limit - pending.length]);
             pending.push(...retrying);
         }
@@ -67,7 +67,7 @@ export const sqliteEventRepository: IEventRepository = {
     },
 
     async findByEventId(eventId: string): Promise<LocalEvent | undefined> {
-        const sql = `SELECT * FROM local_events WHERE event_id = ?`;
+        const sql = `SELECT * FROM local_events WHERE event_id = ? `;
         const rows = await sqliteService.select<any[]>(sql, [eventId]);
         if (rows.length === 0) return undefined;
         return mapRowToLocalEvent(rows[0]);
@@ -79,7 +79,7 @@ export const sqliteEventRepository: IEventRepository = {
         const sql = `
             UPDATE local_events
             SET sync_status = 'synced', synced_at = ?
-            WHERE event_id IN (${placeholders})
+    WHERE event_id IN(${placeholders})
         `;
         await sqliteService.execute(sql, [Date.now(), ...eventIds]);
     },
@@ -89,11 +89,11 @@ export const sqliteEventRepository: IEventRepository = {
         const sql = `
             UPDATE local_events
             SET sync_status = ?,
-                last_error = ?,
-                sync_attempts = sync_attempts + 1,
-                next_retry_at = ?
-            WHERE event_id = ?
-        `;
+    last_error = ?,
+    sync_attempts = sync_attempts + 1,
+    next_retry_at = ?
+        WHERE event_id = ?
+            `;
         await sqliteService.execute(sql, [status, error, nextRetryAt || null, eventId]);
     },
 
@@ -101,10 +101,10 @@ export const sqliteEventRepository: IEventRepository = {
         const sql = `
             UPDATE local_events
             SET sync_status = 'pending',
-                sync_attempts = 0,
-                next_retry_at = ?
-            WHERE sync_status = 'failed'
-        `;
+    sync_attempts = 0,
+    next_retry_at = ?
+        WHERE sync_status = 'failed'
+            `;
         await sqliteService.execute(sql, [Date.now()]);
     },
 
@@ -112,7 +112,7 @@ export const sqliteEventRepository: IEventRepository = {
         const sql = `
             SELECT MAX(seq) as max_seq FROM local_events
             WHERE store_id = ? AND device_id = ?
-        `;
+    `;
         const result = await sqliteService.select<{ max_seq: number }>(sql, [storeId, deviceId]);
         // Result is array of rows
         return result[0]?.max_seq || 0;
@@ -129,7 +129,7 @@ export const sqliteEventRepository: IEventRepository = {
         const sql = `
             DELETE FROM local_events 
             WHERE sync_status = 'synced' AND synced_at < ?
-        `;
+    `;
         // Execute returns result with rowsAffected in some drivers, 
         // need to check what sqliteService.execute returns. 
         // Assuming we can't easily get count, we'll return 0 or check API.

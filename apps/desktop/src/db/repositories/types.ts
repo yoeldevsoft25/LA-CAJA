@@ -1,5 +1,4 @@
 import { LocalProduct, LocalSale, LocalCustomer } from '@/db/database';
-import { BaseEvent } from '@la-caja/domain';
 import { LocalEvent } from '../database';
 
 export interface ICustomerRepository extends IRepository<LocalCustomer, string> {

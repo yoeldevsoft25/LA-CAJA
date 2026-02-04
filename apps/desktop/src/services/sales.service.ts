@@ -377,7 +377,6 @@ export const salesService = {
 
       // Obtener productos del cache para calcular totales y precios
       const { db } = await import('@/db/database')
-      const { productRepository } = await import('@/db/repositories')
       let subtotalBs = 0
       let subtotalUsd = 0
       let discountBs = 0
