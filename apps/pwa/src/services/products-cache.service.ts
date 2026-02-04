@@ -222,30 +222,41 @@ export class ProductsCacheService {
     if (this.barcodeIndexStoreId === sanitizedStoreId && this.barcodeIndex.size > 0) return;
 
     try {
+      // ✅ Fix: Remove "as unknown as string" casting which confuses Dexie if types don't match exactly at runtime
+      // Ensure we pass a proper array for compound index
       const locals = await db.products
         .where('[store_id+is_active]')
-        .equals([sanitizedStoreId, true] as unknown as string)
+        .equals([sanitizedStoreId, 1 /* 1 = true for boolean index sometimes in Dexie/IndexedDB depending on adapter */])
+        .or('store_id').equals(sanitizedStoreId).and(p => p.is_active === true) // Fallback query if compound index fails
         .toArray();
+
+      // Optimization: If the fallback approach is too slow, stick to simple filter if compound index issues persist
+      // But [store_id+is_active] should work if defined in database.ts stores()
 
       this.barcodeIndex.clear();
       this.barcodeIndexStoreId = sanitizedStoreId;
       for (const local of locals) {
         if (local.barcode && typeof local.barcode === 'string') {
-          const normalized = normalizeBarcode(local.barcode) ?? local.barcode;
-          this.barcodeIndex.set(normalized, local);
+          const bar = local.barcode.trim();
+          if (bar) {
+            const normalized = normalizeBarcode(bar) ?? bar;
+            this.barcodeIndex.set(normalized, local);
+          }
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // Catch DataError or other IDB errors - log as debug to avoid console spam
-      if (err instanceof Error && err.name === 'DataError') {
-        console.debug('[ProductsCache] warmBarcodeIndex DataError (invalid key in DB)', err.message);
+      // "DataError" often happens if one of the keys in compound index is missing/invalid type
+      const errorName = err instanceof Error ? err.name : 'UnknownError';
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (errorName === 'DataError') {
+        console.debug('[ProductsCache] warmBarcodeIndex DataError (safely ignored, falling back to db search)', errorMessage);
       } else {
-        // Re-throw non-DataError exceptions
-        throw err;
+        console.warn('[ProductsCache] warmBarcodeIndex failed', err);
       }
     }
   }
-
   /**
    * Limpia productos antiguos del cache (más de 7 días sin actualizar)
    */

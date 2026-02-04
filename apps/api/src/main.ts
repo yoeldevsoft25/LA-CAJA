@@ -86,7 +86,7 @@ async function bootstrap() {
   ].filter((origin): origin is string => Boolean(origin));
 
   const normalizeOrigin = (value: string): string =>
-    value.trim().replace(/\/+$/, '');
+    value.trim().toLowerCase().replace(/\/+$/, '');
 
   const originList = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => normalizeOrigin(origin))
@@ -131,7 +131,7 @@ async function bootstrap() {
       ) {
         callback(null, true);
       } else {
-        logger.warn(`CORS bloqueado para origen: ${normalizedOrigin}`);
+        logger.warn(`CORS bloqueado para origen: ${origin} (Normalizado: ${normalizedOrigin})`);
         callback(new Error('No permitido por CORS'));
       }
     },

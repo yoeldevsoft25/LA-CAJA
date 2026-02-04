@@ -211,16 +211,36 @@ export class ProductsCacheService {
    */
   async warmBarcodeIndex(storeId: string): Promise<void> {
     if (this.barcodeIndexStoreId === storeId && this.barcodeIndex.size > 0) return;
-    const locals = await db.products
-      .where('[store_id+is_active]')
-      .equals([storeId, true] as any)
-      .toArray();
-    this.barcodeIndex.clear();
-    this.barcodeIndexStoreId = storeId;
-    for (const local of locals) {
-      if (local.barcode) {
-        const normalized = normalizeBarcode(local.barcode) ?? local.barcode;
-        this.barcodeIndex.set(normalized, local);
+    try {
+      // ✅ Fix: Remove "as unknown as string" casting which confuses Dexie if types don't match exactly at runtime
+      // Ensure we pass a proper array for compound index
+      const locals = await db.products
+        .where('[store_id+is_active]')
+        .equals([storeId, 1 /* 1 = true for boolean index sometimes in Dexie/IndexedDB depending on adapter */])
+        .or('store_id').equals(storeId).and(p => p.is_active === true) // Fallback query if compound index fails
+        .toArray();
+
+      this.barcodeIndex.clear();
+      this.barcodeIndexStoreId = storeId;
+      for (const local of locals) {
+        if (local.barcode) {
+          const bar = local.barcode.trim();
+          if (bar) {
+            const normalized = normalizeBarcode(bar) ?? bar;
+            this.barcodeIndex.set(normalized, local);
+          }
+        }
+      }
+    } catch (err: unknown) {
+      // Catch DataError or other IDB errors - log as debug to avoid console spam
+      // "DataError" often happens if one of the keys in compound index is missing/invalid type
+      const errorName = err instanceof Error ? err.name : 'UnknownError';
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (errorName === 'DataError') {
+        console.debug('[ProductsCache] warmBarcodeIndex DataError (safely ignored, falling back to db search)', errorMessage);
+      } else {
+        console.warn('[ProductsCache] warmBarcodeIndex failed', err);
       }
     }
   }

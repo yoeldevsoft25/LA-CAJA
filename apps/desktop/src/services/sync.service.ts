@@ -104,6 +104,7 @@ class SyncServiceClass {
         // Callback de sincronización
         if (this.isInitialized) {
           this.logger.info('Orquestador disparó sincronización');
+          // ✅ HARD RECOVERY: Route through requestRecovery to respect mutex/cooldown
           await this.requestRecovery('orchestrator');
         } else {
           this.logger.debug('Orquestador disparó sync, pero no está inicializado. Marcando pendiente.');
@@ -409,29 +410,38 @@ class SyncServiceClass {
     if (!this.syncQueue) return;
 
     const memoryPending = this.syncQueue.getStats().pending;
-    const dbPending = await db.getPendingEvents(1000);
+    try {
+      // Use getPendingEvents which is optimized with index
+      const dbPendingEvents = await db.getPendingEvents(1000);
+      const dbPendingCount = dbPendingEvents.length;
 
-    if (dbPending.length === 0 && memoryPending > 0) {
-      this.syncQueue.clear();
-      this.metrics.recordEvent('queue_reconciled', {
-        action: 'cleared',
-        memory_before: memoryPending,
-        db: 0,
-      });
-      return;
-    }
-
-    if (dbPending.length !== memoryPending) {
-      this.syncQueue.clear();
-      if (dbPending.length > 0) {
-        this.syncQueue.enqueueBatch(dbPending.map((event) => this.localEventToBaseEvent(event)));
+      // Case 1: DB has 0 pending but memory has some.
+      if (dbPendingCount === 0 && memoryPending > 0) {
+        this.logger.warn(`[Reconcile] Phantom pending detected! DB=0, Mem=${memoryPending}. Clearing memory queue.`);
+        this.syncQueue.clear();
+        this.metrics.recordEvent('queue_reconciled', { action: 'cleared_phantom', memory_before: memoryPending, db: 0 });
+        return;
       }
-      this.metrics.recordEvent('queue_reconciled', {
-        action: 'rebuilt',
-        memory_before: memoryPending,
-        db: dbPending.length,
-        memory_after: this.syncQueue.getStats().pending,
-      });
+
+      // Case 2: Count mismatch (DB vs Memory).
+      if (dbPendingCount !== memoryPending) {
+        this.logger.warn(`[Reconcile] Count mismatch! DB=${dbPendingCount}, Mem=${memoryPending}. Rebuilding memory queue.`);
+        this.syncQueue.clear();
+
+        if (dbPendingCount > 0) {
+          const baseEvents = dbPendingEvents.map((le) => this.localEventToBaseEvent(le));
+          this.syncQueue.enqueueBatch(baseEvents);
+        }
+
+        this.metrics.recordEvent('queue_reconciled', {
+          action: 'rebuilt_mismatch',
+          memory_before: memoryPending,
+          db: dbPendingCount,
+          memory_after: this.syncQueue.getStats().pending
+        });
+      }
+    } catch (error) {
+      this.logger.error('[Reconcile] Failed to reconcile queue state', error);
     }
   }
 

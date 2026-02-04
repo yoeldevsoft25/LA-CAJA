@@ -130,7 +130,7 @@ export const customersService = {
    */
   async search(search?: string): Promise<Customer[]> {
     const cacheKey = search ? `customers:search:${search}` : 'customers:all'
-    
+
     // 1. Intentar desde cache
     if (navigator.onLine) {
       const cached = await customerCache.get<Customer[]>(cacheKey)
@@ -138,13 +138,18 @@ export const customersService = {
         logger.debug('Cache hit', { cacheKey })
         return cached
       }
+    } else {
+      // OFFLINE: If searching empty string, return recent customers from DB
+      if (!search || search.trim() === '') {
+        return this.searchOffline('');
+      }
     }
 
     // 2. Si offline, buscar en IndexedDB local
     if (!navigator.onLine) {
       logger.debug('Offline mode: searching in IndexedDB')
       const localCustomers = await db.customers.toArray()
-      
+
       if (search) {
         const searchLower = search.toLowerCase()
         const filtered = localCustomers.filter(
@@ -167,7 +172,7 @@ export const customersService = {
           updated_at: new Date(c.updated_at).toISOString(),
         }))
       }
-      
+
       return localCustomers.map((c) => ({
         id: c.id,
         store_id: c.store_id,
@@ -249,7 +254,7 @@ export const customersService = {
    */
   async getById(id: string): Promise<Customer> {
     const cacheKey = `customer:${id}`
-    
+
     // 1. Intentar desde cache
     if (navigator.onLine) {
       const cached = await customerCache.get<Customer>(cacheKey)
@@ -386,16 +391,21 @@ export const customersService = {
    */
   async searchOffline(search?: string): Promise<Customer[]> {
     const localCustomers = await db.customers.toArray()
-    
-    if (search) {
+
+    if (search && search.trim() !== '') {
       const searchLower = search.toLowerCase()
+      // Use efficient filtering
       const filtered = localCustomers.filter(
         (c) =>
           c.name.toLowerCase().includes(searchLower) ||
           (c.document_id && c.document_id.toLowerCase().includes(searchLower)) ||
           (c.phone && c.phone.toLowerCase().includes(searchLower))
       )
-      return filtered.map((c) => ({
+
+      // Limit results for performance
+      const LIMITED = filtered.slice(0, 50);
+
+      return LIMITED.map((c) => ({
         id: c.id,
         store_id: c.store_id,
         name: c.name,
@@ -408,7 +418,24 @@ export const customersService = {
         updated_at: new Date(c.updated_at).toISOString(),
       }))
     }
-    
+
+    // If no search, return recent ones (limited)
+    return localCustomers
+      .sort((a, b) => b.updated_at - a.updated_at)
+      .slice(0, 50)
+      .map((c) => ({
+        id: c.id,
+        store_id: c.store_id,
+        name: c.name,
+        document_id: c.document_id,
+        phone: c.phone,
+        email: null,
+        credit_limit: null,
+        note: c.note,
+        created_at: new Date(c.cached_at).toISOString(),
+        updated_at: new Date(c.updated_at).toISOString(),
+      }))
+
     return localCustomers.map((c) => ({
       id: c.id,
       store_id: c.store_id,
@@ -431,7 +458,7 @@ export const customersService = {
     if (!localCustomer) {
       return null
     }
-    
+
     return {
       id: localCustomer.id,
       store_id: localCustomer.store_id,

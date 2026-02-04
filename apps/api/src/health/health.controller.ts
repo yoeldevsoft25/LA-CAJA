@@ -174,13 +174,15 @@ export class HealthController {
             result.reason instanceof Error
               ? result.reason.message
               : String(result.reason);
-          this.logger.debug(`${checks[index]} warm-up failed: ${error}`);
+          // Usar warn en lugar de debug para visibilidad, pero sin stack trace completo para reducir ruido
+          this.logger.warn(`Health check background warmup failed for ${checks[index]}: ${error}`);
         }
       });
 
       this.logger.debug('Health check cache warmed up successfully');
     } catch (e) {
-      this.logger.warn('Error warming up health cache (background)', e);
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      this.logger.error(`Critical error in health cache background task: ${errorMsg}`, e instanceof Error ? e.stack : undefined);
     }
   }
 
