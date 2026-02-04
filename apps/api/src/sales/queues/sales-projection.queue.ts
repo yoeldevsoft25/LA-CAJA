@@ -21,7 +21,7 @@ export interface ProjectSaleEventJob {
  * para no bloquear la respuesta al cliente
  */
 @Processor('sales-projections', {
-  concurrency: 10,
+  concurrency: 3, // ⚡ Safe limit for Supabase Free Tier + App Pool (Prevent timeouts)
   limiter: {
     max: 100,
     duration: 1000,
