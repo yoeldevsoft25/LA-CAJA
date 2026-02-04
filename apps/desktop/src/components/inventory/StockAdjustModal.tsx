@@ -339,6 +339,7 @@ export default function StockAdjustModal({
     if (!product) return
     stockAdjustMutation.mutate({
       ...data,
+      qty_delta: data.qty_delta,
       product_id: product.product_id,
     })
   }

@@ -19,7 +19,8 @@ fi
 # Excluimos archivos que podrían ser específicos de cada plataforma si fuera necesario
 # Pero por ahora queremos paridad total excepto por la configuración de Vite/Tauri que está fuera de src
 
-cp -av "$pwaSrcRoot/"* "$desktopSrcRoot/"
+# Usamos rsync para tener exclusiones (main.tsx es específico de cada plataforma)
+rsync -av --exclude='main.tsx' "$pwaSrcRoot/" "$desktopSrcRoot/"
 
 echo ""
 echo -e "\033[0;32m¡Sincronización TOTAL completada con éxito!\033[0m"
