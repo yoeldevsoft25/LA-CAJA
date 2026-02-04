@@ -3,6 +3,7 @@ import { syncService, SyncStatus } from '@/services/sync.service'
 import { CircuitState } from '@la-caja/offline-core'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, AlertCircle } from 'lucide-react'
+import { useOnline } from '@/hooks/use-online'
 
 export function SyncStatusBadge() {
     const [status, setStatus] = useState<SyncStatus>({
@@ -13,25 +14,17 @@ export function SyncStatusBadge() {
         isServerAvailable: true,
         serverStatus: CircuitState.CLOSED,
     })
-    const [isOnline, setIsOnline] = useState(navigator.onLine)
+    const { isOnline } = useOnline()
 
     useEffect(() => {
         const updateStats = () => {
             setStatus(syncService.getStatus())
         }
 
-        const handleOnline = () => setIsOnline(true)
-        const handleOffline = () => setIsOnline(false)
-
-        window.addEventListener('online', handleOnline)
-        window.addEventListener('offline', handleOffline)
-
         const interval = setInterval(updateStats, 2000)
         updateStats()
 
         return () => {
-            window.removeEventListener('online', handleOnline)
-            window.removeEventListener('offline', handleOffline)
             clearInterval(interval)
         }
     }, [])

@@ -19,6 +19,7 @@ import { ReconnectSyncOrchestrator } from '@la-caja/sync';
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
 import { createLogger } from '@/lib/logger';
+import { connectivityService } from '@/services/connectivity.service';
 import { projectionManager } from './projection.manager';
 import toast from '@/lib/toast';
 
@@ -158,30 +159,29 @@ class SyncServiceClass {
       }
     );
 
-    // ✅ OFFLINE-FIRST: Listener adicional para offline (registrar background sync)
-    window.addEventListener('offline', () => {
-      this.logger.warn('📵 Conexión perdida');
-      this.metrics.recordEvent('connection_lost', {});
-      this.registerBackgroundSync().catch(() => { });
-    });
-
-    // ✅ OFFLINE-FIRST: Listener adicional para online (hard recovery inmediato)
-    window.addEventListener('online', () => {
-      this.logger.debug('🌐 Evento online detectado');
-      this.metrics.recordEvent('online_event', {});
-      void this.requestRecovery('online');
+    // ✅ OFFLINE-FIRST: Usar ConnectivityService en lugar de eventos raw
+    connectivityService.addListener((isOnline) => {
+      if (isOnline) {
+        this.logger.debug('🌐 Conectividad detectada (ConnectivityService)');
+        this.metrics.recordEvent('online_event', {});
+        void this.requestRecovery('online');
+      } else {
+        this.logger.warn('📵 Conectividad perdida (ConnectivityService)');
+        this.metrics.recordEvent('connection_lost', {});
+        this.registerBackgroundSync().catch(() => { });
+      }
     });
 
     // ✅ OFFLINE-FIRST: Listener para visibilitychange (app vuelve a foreground)
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && navigator.onLine && this.isInitialized) {
+      if (document.visibilityState === 'visible' && connectivityService.online && this.isInitialized) {
         void this.requestRecovery('visibility');
       }
     });
 
     // ✅ OFFLINE-FIRST: Listener para focus (ventana recupera foco)
     window.addEventListener('focus', () => {
-      if (navigator.onLine && this.isInitialized) {
+      if (connectivityService.online && this.isInitialized) {
         void this.requestRecovery('focus');
       }
     });
@@ -335,7 +335,7 @@ class SyncServiceClass {
         this.logger.info('Inicializando servicio de sincronización', {
           storeId,
           deviceId,
-          isOnline: navigator.onLine,
+          isOnline: connectivityService.online,
         });
 
         this.storeId = storeId;
@@ -374,7 +374,7 @@ class SyncServiceClass {
         this.logger.info('Servicio de sincronización inicializado correctamente');
 
         // Sincronización inicial
-        if ((this.pendingSyncOnInit || navigator.onLine)) {
+        if ((this.pendingSyncOnInit || connectivityService.online)) {
           await this.fullSync(); // Flush + Pull
           this.pendingSyncOnInit = false;
         }
@@ -459,7 +459,7 @@ class SyncServiceClass {
       return;
     }
 
-    if (!navigator.onLine) {
+    if (!connectivityService.online) {
       this.logger.debug('hardRecoverySync omitido: sin conexión');
       return;
     }
@@ -640,7 +640,7 @@ class SyncServiceClass {
       this.logger.debug('Evento encolado, esperando batching automático');
 
       // Si estamos offline, registrar background sync
-      if (!navigator.onLine) {
+      if (!connectivityService.online) {
         await this.registerBackgroundSync();
       }
 
@@ -658,7 +658,7 @@ class SyncServiceClass {
           if (this.syncQueue) {
             this.syncQueue.enqueue(event);
             // Si estamos offline, registrar background sync
-            if (!navigator.onLine) {
+            if (!connectivityService.online) {
               await this.registerBackgroundSync();
             }
           }
@@ -740,7 +740,7 @@ class SyncServiceClass {
       return;
     }
 
-    if (!navigator.onLine) {
+    if (!connectivityService.online) {
       this.logger.debug('syncNow() omitido: sin conexión');
       return;
     }
@@ -1297,7 +1297,7 @@ class SyncServiceClass {
 
     this.syncIntervalId = setInterval(async () => {
       // 1. PUSH: Enviar pendientes si hay conexión
-      if (navigator.onLine && this.syncQueue) {
+      if (connectivityService.online && this.syncQueue) {
         const stats = this.syncQueue.getStats();
         if (stats.pending > 0) {
           await this.syncQueue.flush().catch((err) => {
@@ -1307,7 +1307,7 @@ class SyncServiceClass {
       }
 
       // 2. PULL: Traer nuevos eventos si hay conexión
-      if (navigator.onLine && this.storeId && this.deviceId) {
+      if (connectivityService.online && this.storeId && this.deviceId) {
         await this.pullFromServer().catch((err) => {
           this.logger.debug('Error en pull periódico', err);
         });
@@ -1346,7 +1346,7 @@ class SyncServiceClass {
    * Obtiene eventos nuevos del servidor y los aplica localmente
    */
   async pullFromServer(): Promise<void> {
-    if (!this.storeId || !this.deviceId || !navigator.onLine) return;
+    if (!this.storeId || !this.deviceId || !connectivityService.online) return;
 
     // Cursor robusto v2: (timestamp, event_id)
     const cursorKeyV2 = 'last_pull_cursor_v2';
