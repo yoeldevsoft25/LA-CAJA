@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { Repository, In, MoreThan } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
 import { CashSession } from '../database/entities/cash-session.entity';
@@ -138,8 +138,11 @@ export class SyncService {
     const accepted: AcceptedEventDto[] = [];
     const rejected: RejectedEventDto[] = [];
     const conflicted: ConflictedEventDto[] = [];
+    let serverVectorClock: Record<string, number> = {};
     let lastProcessedSeq = 0;
     const startTime = Date.now();
+    let productUsageIncrements = 0;
+    let invoiceUsageIncrements = 0;
 
     if (!dto.events || dto.events.length === 0) {
       return {
@@ -148,6 +151,7 @@ export class SyncService {
         conflicted: [],
         server_time: Date.now(),
         last_processed_seq: 0,
+        server_vector_clock: {},
       };
     }
 
@@ -234,6 +238,13 @@ export class SyncService {
 
         // 2c. Dedupe por event_id (idempotencia)
         if (existingEventIds.has(event.event_id)) {
+          const dedupeClock =
+            event.vector_clock ||
+            this.vectorClockService.fromEvent(dto.device_id, event.seq);
+          serverVectorClock = this.vectorClockService.merge(
+            serverVectorClock,
+            dedupeClock,
+          );
           accepted.push({
             event_id: event.event_id,
             seq: event.seq,
@@ -312,17 +323,22 @@ export class SyncService {
 
         eventsToSave.push(eventEntity);
 
-        // Incrementar cuotas según el tipo de evento
+        // Acumular cuotas para aplicar de forma transaccional al final
         if (event.type === 'ProductCreated') {
-          await this.usageService.increment(dto.store_id, 'products');
+          productUsageIncrements++;
         } else if (event.type === 'SaleCreated') {
-          await this.usageService.increment(dto.store_id, 'invoices_per_month');
+          invoiceUsageIncrements++;
         }
 
         accepted.push({
           event_id: event.event_id,
           seq: event.seq,
         });
+
+        serverVectorClock = this.vectorClockService.merge(
+          serverVectorClock,
+          eventVectorClock,
+        );
 
         if (event.seq > lastProcessedSeq) {
           lastProcessedSeq = event.seq;
@@ -345,7 +361,27 @@ export class SyncService {
 
     // 7. Guardar todos los eventos nuevos en batch
     if (eventsToSave.length > 0) {
-      await this.eventRepository.save(eventsToSave);
+      await this.eventRepository.manager.transaction(async (manager) => {
+        await manager.getRepository(Event).save(eventsToSave);
+
+        if (productUsageIncrements > 0) {
+          await this.usageService.increment(
+            dto.store_id,
+            'products',
+            productUsageIncrements,
+            manager,
+          );
+        }
+
+        if (invoiceUsageIncrements > 0) {
+          await this.usageService.increment(
+            dto.store_id,
+            'invoices_per_month',
+            invoiceUsageIncrements,
+            manager,
+          );
+        }
+      });
 
       // 🌐 FEDERATION RELAY: Forward events to remote server
       // Avoid infinite loops by not relaying events that came from federation
@@ -445,6 +481,7 @@ export class SyncService {
       conflicted,
       server_time: Date.now(),
       last_processed_seq: lastProcessedSeq,
+      server_vector_clock: serverVectorClock,
     };
   }
 
@@ -876,7 +913,7 @@ export class SyncService {
       SELECT *
       FROM events
       WHERE store_id = $1
-        AND type LIKE $2
+        AND type ILIKE $2
         AND (
           payload @> jsonb_build_object('product_id', $3::text)
           OR payload @> jsonb_build_object('sale_id', $3::text)
@@ -991,30 +1028,44 @@ export class SyncService {
     since: Date,
     excludeDeviceId?: string,
     limit: number = 100,
-  ): Promise<{ events: any[]; last_server_time: number }> {
-    const events = await this.eventRepository.find({
-      where: {
-        store_id: storeId,
-        received_at: MoreThan(since),
-      },
-      order: {
-        received_at: 'ASC',
-      },
-      take: limit,
-    });
+    cursorEventId?: string,
+  ): Promise<{
+    events: any[];
+    last_server_time: number;
+    last_server_event_id: string | null;
+  }> {
+    const safeCursorEventId =
+      cursorEventId && cursorEventId.trim().length > 0
+        ? cursorEventId
+        : '00000000-0000-0000-0000-000000000000';
 
-    let filteredEvents = events;
+    const qb = this.eventRepository
+      .createQueryBuilder('event')
+      .where('event.store_id = :storeId', { storeId })
+      .andWhere(
+        '(event.received_at > :since OR (event.received_at = :since AND event.event_id > :cursorEventId))',
+        { since, cursorEventId: safeCursorEventId },
+      )
+      .orderBy('event.received_at', 'ASC')
+      .addOrderBy('event.event_id', 'ASC')
+      .take(limit);
+
     if (excludeDeviceId) {
-      filteredEvents = events.filter((e) => e.device_id !== excludeDeviceId);
+      qb.andWhere('event.device_id != :excludeDeviceId', { excludeDeviceId });
     }
+
+    const events = await qb.getMany();
 
     const maxDate =
       events.length > 0
         ? events[events.length - 1].received_at.getTime()
         : since.getTime();
 
+    const lastServerEventId =
+      events.length > 0 ? events[events.length - 1].event_id : safeCursorEventId;
+
     // Mapear a formato DTO
-    const dtos = filteredEvents.map((e) => ({
+    const dtos = events.map((e) => ({
       event_id: e.event_id,
       type: e.type,
       seq: e.seq, // Del dispositivo original
@@ -1032,6 +1083,7 @@ export class SyncService {
     return {
       events: dtos,
       last_server_time: maxDate,
+      last_server_event_id: lastServerEventId,
     };
   }
 }

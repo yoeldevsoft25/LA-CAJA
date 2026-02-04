@@ -28,7 +28,7 @@ test.describe('Funcionalidad Offline', () => {
     // Verificar en IndexedDB que evento se guardó
     const pendingEvents = await page.evaluate(async () => {
       return new Promise<number>((resolve) => {
-        const request = indexedDB.open('LaCajaDB', 4);
+        const request = indexedDB.open('LaCajaDB', 7);
         request.onsuccess = () => {
           const db = request.result;
           const transaction = db.transaction(['localEvents'], 'readonly');

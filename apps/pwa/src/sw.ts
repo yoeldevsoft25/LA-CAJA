@@ -252,8 +252,11 @@ async function syncEvents() {
             rejectedCount = result.rejected.length;
             const updates = result.rejected.map((rej: any) => {
                 return db.localEvents.where('event_id').equals(rej.event_id).modify({
-                    sync_status: 'failed',
-                    last_error: rej.message
+                    // Rechazo del servidor = error permanente (DLQ local)
+                    sync_status: 'dead',
+                    last_error: rej.message,
+                    last_error_code: rej.code || 'REJECTED',
+                    next_retry_at: 0,
                 })
             })
             await Promise.all(updates)
@@ -288,7 +291,10 @@ async function syncEvents() {
         const remaining = await db.getPendingEvents(1)
         if (remaining.length > 0) {
             console.log(`[SW] 🔄 Quedan ${remaining.length} eventos, continuando...`);
-            await syncEvents() // Procesar siguiente batch
+            // Evita recursión profunda en backlogs grandes.
+            setTimeout(() => {
+                void syncEvents();
+            }, 0);
         }
 
     } catch (error: any) {

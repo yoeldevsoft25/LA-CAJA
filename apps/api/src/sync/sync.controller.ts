@@ -72,6 +72,7 @@ export class SyncController {
   @Get('pull')
   async pull(
     @Query('last_checkpoint') lastCheckpoint: string,
+    @Query('cursor_event_id') cursorEventId: string,
     @Query('device_id') deviceId: string,
     @Request() req: any,
   ) {
@@ -79,7 +80,13 @@ export class SyncController {
     const since = new Date(Number(lastCheckpoint) || 0);
 
     // Si no envía device_id, no excluimos nada (sería raro pero válido)
-    return this.syncService.pullEvents(storeId, since, deviceId);
+    return this.syncService.pullEvents(
+      storeId,
+      since,
+      deviceId,
+      100,
+      cursorEventId,
+    );
   }
 
   @Post('resolve-conflict')

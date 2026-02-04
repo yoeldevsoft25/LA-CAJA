@@ -107,4 +107,5 @@ export class PushSyncResponseDto {
   conflicted: ConflictedEventDto[];
   server_time: number;
   last_processed_seq: number;
+  server_vector_clock?: Record<string, number>;
 }

@@ -13,6 +13,7 @@ import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { UsageService } from '../licenses/usage.service';
 import { PushSyncDto } from './dto/push-sync.dto';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
+import { FederationSyncService } from './federation-sync.service';
 
 jest.mock('../projections/projections.service', () => ({
   ProjectionsService: class ProjectionsService { },
@@ -25,6 +26,15 @@ describe('SyncService', () => {
     find: jest.fn().mockResolvedValue([]),
     save: jest.fn(),
     create: jest.fn(),
+    manager: {
+      transaction: jest.fn().mockImplementation(async (cb) =>
+        cb({
+          getRepository: () => ({
+            save: jest.fn().mockResolvedValue(undefined),
+          }),
+        }),
+      ),
+    },
   };
   const productRepository = {
     find: jest.fn(),
@@ -98,6 +108,12 @@ describe('SyncService', () => {
             trackSyncPull: jest.fn(),
             trackProjectionFailureFatal: jest.fn(),
             trackSyncProcessed: jest.fn() // Added missing method
+          },
+        },
+        {
+          provide: FederationSyncService,
+          useValue: {
+            replicateEvent: jest.fn(),
           },
         },
       ],

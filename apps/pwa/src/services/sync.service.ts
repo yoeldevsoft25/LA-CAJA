@@ -46,6 +46,12 @@ export interface PushSyncResponseDto {
   server_vector_clock?: Record<string, number>;
 }
 
+interface PullSyncResponseDto {
+  events: BaseEvent[];
+  last_server_time: number;
+  last_server_event_id?: string | null;
+}
+
 export interface SyncStatus {
   isSyncing: boolean;
   pendingCount: number;
@@ -56,6 +62,7 @@ export interface SyncStatus {
 }
 
 class SyncServiceClass {
+  private readonly ZERO_UUID = '00000000-0000-0000-0000-000000000000';
   private syncQueue: SyncQueue | null = null;
   private metrics: SyncMetricsCollector;
   private isInitialized = false;
@@ -336,16 +343,7 @@ class SyncServiceClass {
 
         // ✅ OFFLINE-FIRST: Inicializar Vector Clock Manager
         this.vectorClockManager = new VectorClockManager(deviceId);
-
-        // Reintentar eventos fallidos
-        try {
-          const resetCount = await db.resetFailedEventsToPending();
-          if (resetCount > 0) {
-            this.logger.info('Eventos fallidos reseteados a pendiente', { resetCount });
-          }
-        } catch (error) {
-          this.logger.warn('No se pudieron resetear eventos fallidos', { error });
-        }
+        await this.ensureSequenceCounterConsistency(storeId, deviceId);
 
         // Crear la cola de sincronización con callback personalizado
         this.syncQueue = new SyncQueue(
@@ -607,6 +605,19 @@ class SyncServiceClass {
    * Si no está inicializado, guarda directamente en la BD (modo offline seguro)
    */
   async enqueueEvent(event: BaseEvent): Promise<void> {
+    if (!event.store_id && this.storeId) {
+      event.store_id = this.storeId;
+    }
+    if (!event.store_id) {
+      throw new Error('store_id es requerido para encolar eventos offline');
+    }
+    if (!event.device_id) {
+      event.device_id = this.deviceId || this.getOrCreateDeviceId();
+    }
+
+    // Fuente única de secuencia local: siempre se asigna de forma atómica aquí.
+    event.seq = await this.allocateSeq(event.store_id, event.device_id);
+
     // ✅ OFFLINE-FIRST: Agregar vector clock al evento
     if (this.vectorClockManager) {
       const vectorClock = this.vectorClockManager.tick();
@@ -657,6 +668,34 @@ class SyncServiceClass {
           this.logger.warn('No se pudo inicializar automáticamente, pero el evento está guardado', { error });
         }
       }
+    }
+  }
+
+  private async allocateSeq(storeId: string, deviceId: string): Promise<number> {
+    const counterKey = `seq_counter:${storeId}:${deviceId}`;
+    return db.transaction('rw', db.kv, async () => {
+      const current = await db.kv.get(counterKey);
+      const nextSeq = Number(current?.value || 0) + 1;
+      await db.kv.put({ key: counterKey, value: nextSeq });
+      return nextSeq;
+    });
+  }
+
+  private async ensureSequenceCounterConsistency(storeId: string, deviceId: string): Promise<void> {
+    try {
+      const counterKey = `seq_counter:${storeId}:${deviceId}`;
+      const [maxSeqEvent, currentCounter] = await Promise.all([
+        db.localEvents.orderBy('seq').last(),
+        db.kv.get(counterKey),
+      ]);
+      const maxSeq = Number(maxSeqEvent?.seq || 0);
+      const storedCounter = Number(currentCounter?.value || 0);
+
+      if (maxSeq > storedCounter) {
+        await db.kv.put({ key: counterKey, value: maxSeq });
+      }
+    } catch (error) {
+      this.logger.warn('No se pudo reconciliar contador de secuencia local', { error });
     }
   }
 
@@ -957,6 +996,7 @@ class SyncServiceClass {
 
     if (invalidActorEventIds.length > 0) {
       const error = new Error('Eventos inválidos (falta actor.user_id UUID). Se marcan como failed.');
+      error.name = 'ValidationError';
       for (const evtId of invalidActorEventIds) {
         await this.markEventAsFailed(evtId, error);
       }
@@ -1165,6 +1205,11 @@ class SyncServiceClass {
    */
   private async saveEventToDB(event: BaseEvent): Promise<void> {
     const localEvent = this.eventToLocalEvent(event);
+    const existing = await db.localEvents.where('event_id').equals(localEvent.event_id).first();
+    if (existing) {
+      // Idempotencia local: no duplicar el mismo event_id en el outbox
+      return;
+    }
     await db.localEvents.add(localEvent);
   }
 
@@ -1176,6 +1221,10 @@ class SyncServiceClass {
       event_id: eventId,
       sync_status: 'synced' as const,
       synced_at: Date.now(),
+      acked_at: Date.now(),
+      next_retry_at: 0,
+      last_error: null as string | null,
+      last_error_code: null as string | null,
     }));
 
     for (const update of updates) {
@@ -1184,6 +1233,10 @@ class SyncServiceClass {
         await db.localEvents.update(event.id!, {
           sync_status: update.sync_status,
           synced_at: update.synced_at,
+          acked_at: update.acked_at,
+          next_retry_at: update.next_retry_at,
+          last_error: update.last_error,
+          last_error_code: update.last_error_code,
         });
       }
     }
@@ -1197,13 +1250,38 @@ class SyncServiceClass {
     if (error?.name === 'OfflineError' || error?.message?.includes('Sin conexión')) {
       return;
     }
+
+    const isValidationError =
+      error?.name === 'ValidationError' ||
+      error?.name === 'SECURITY_ERROR' ||
+      error?.name === 'VALIDATION_ERROR' ||
+      error?.message?.includes('VALIDATION_ERROR') ||
+      error?.message?.includes('SECURITY_ERROR') ||
+      error?.message?.includes('HTTP 400') ||
+      error?.message?.includes('HTTP 401') ||
+      error?.message?.includes('HTTP 403') ||
+      error?.message?.includes('HTTP 404');
+
     const event = await db.localEvents.where('event_id').equals(eventId).first();
     if (event) {
+      const attempts = (event.sync_attempts || 0) + 1;
+      const nextRetryAt = Date.now() + this.computeRetryDelay(attempts);
       await db.localEvents.update(event.id!, {
-        sync_status: 'failed',
-        sync_attempts: (event.sync_attempts || 0) + 1,
+        sync_status: isValidationError ? 'dead' : 'retrying',
+        sync_attempts: attempts,
+        next_retry_at: isValidationError ? 0 : nextRetryAt,
+        last_error: error.message || null,
+        last_error_code: error.name || null,
       });
     }
+  }
+
+  private computeRetryDelay(attempt: number): number {
+    const base = 1000;
+    const max = 60_000;
+    const exponential = Math.min(base * Math.pow(2, Math.max(0, attempt - 1)), max);
+    const jitter = Math.floor(exponential * 0.2 * (Math.random() * 2 - 1));
+    return Math.max(0, exponential + jitter);
   }
 
   /**
@@ -1270,24 +1348,39 @@ class SyncServiceClass {
   async pullFromServer(): Promise<void> {
     if (!this.storeId || !this.deviceId || !navigator.onLine) return;
 
-    // Obtener último checkpoint (timestamp de recepción del último evento pull)
-    // Usamos KV store para persistir este cursor
-    const kvKey = 'last_pull_checkpoint';
-    const lastCheckpointItem = await db.kv.get(kvKey);
-    const lastCheckpoint = lastCheckpointItem?.value || 0;
+    // Cursor robusto v2: (timestamp, event_id)
+    const cursorKeyV2 = 'last_pull_cursor_v2';
+    const legacyKey = 'last_pull_checkpoint';
+
+    const cursorItem = await db.kv.get(cursorKeyV2);
+    const legacyItem = await db.kv.get(legacyKey);
+
+    const cursor =
+      cursorItem?.value && typeof cursorItem.value === 'object'
+        ? cursorItem.value
+        : {
+          ts: typeof legacyItem?.value === 'number' ? legacyItem.value : 0,
+          event_id: this.ZERO_UUID,
+        };
+
+    const lastCheckpoint = Number(cursor?.ts || 0);
+    const lastEventId = typeof cursor?.event_id === 'string' ? cursor.event_id : this.ZERO_UUID;
 
     try {
-      this.logger.debug('Iniciando Pull Sync', { lastCheckpoint });
+      this.logger.debug('Iniciando Pull Sync', { lastCheckpoint, lastEventId });
 
-      const response = await api.get<{ events: BaseEvent[]; last_server_time: number }>('/sync/pull', {
+      const response = await api.get<PullSyncResponseDto>('/sync/pull', {
         params: {
           last_checkpoint: lastCheckpoint,
+          cursor_event_id: lastEventId,
           device_id: this.deviceId // Para excluir eventos propios
         }
       });
 
       const events = response.data?.events ?? [];
       const last_server_time = response.data?.last_server_time ?? lastCheckpoint;
+      const last_server_event_id =
+        response.data?.last_server_event_id || (events.length > 0 ? events[events.length - 1]?.event_id : lastEventId);
 
       if (events.length > 0) {
         this.logger.info(`Recibidos ${events.length} eventos nuevos del servidor`);
@@ -1295,9 +1388,15 @@ class SyncServiceClass {
         // Aplicar eventos a la DB local
         await projectionManager.applyEvents(events);
 
-        // Actualizar checkpoint solo si procesamos con éxito
-        // Usamos last_server_time que nos devuelve el servidor para ser precisos
-        await db.kv.put({ key: kvKey, value: last_server_time });
+        // Cursor v2 + compatibilidad legacy
+        await db.kv.put({
+          key: cursorKeyV2,
+          value: {
+            ts: last_server_time,
+            event_id: last_server_event_id || this.ZERO_UUID,
+          },
+        });
+        await db.kv.put({ key: legacyKey, value: last_server_time });
 
         // Notificar cambios (invalidar caches)
         // Esto refrescará las UI que dependen de useQuery
@@ -1318,6 +1417,9 @@ class SyncServiceClass {
       ...event,
       sync_status: 'pending',
       sync_attempts: 0,
+      next_retry_at: Date.now(),
+      last_error: null,
+      last_error_code: null,
     };
   }
 
@@ -1325,11 +1427,25 @@ class SyncServiceClass {
    * Convierte LocalEvent a BaseEvent
    */
   private localEventToBaseEvent(localEvent: LocalEvent): BaseEvent {
-    const { id, sync_status, sync_attempts, synced_at, ...baseEvent } = localEvent;
+    const {
+      id,
+      sync_status,
+      sync_attempts,
+      synced_at,
+      acked_at,
+      next_retry_at,
+      last_error,
+      last_error_code,
+      ...baseEvent
+    } = localEvent;
     void id;
     void sync_status;
     void sync_attempts;
     void synced_at;
+    void acked_at;
+    void next_retry_at;
+    void last_error;
+    void last_error_code;
     return baseEvent;
   }
 }
