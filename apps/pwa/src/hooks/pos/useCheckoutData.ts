@@ -23,7 +23,7 @@ export function useCheckoutData(options: {
         selectedCustomerId,
     } = options
     const normalizedSearch = customerSearch?.trim() ?? ''
-    const shouldFetchCustomers = isOpen && !!storeId && (normalizedSearch.length >= 2 || !!selectedCustomerId)
+    const shouldFetchCustomers = isOpen && !!storeId
 
     // Exchange rate
     const exchangeRateQuery = useQuery({
@@ -37,7 +37,7 @@ export function useCheckoutData(options: {
 
     // Customers
     const customersQuery = useQuery({
-        queryKey: ['customers', storeId, normalizedSearch, selectedCustomerId],
+        queryKey: ['customers', storeId, normalizedSearch || 'all', selectedCustomerId || 'none'],
         queryFn: async () => {
             if (normalizedSearch.length >= 2) {
                 return customersService.search(normalizedSearch)
@@ -50,7 +50,9 @@ export function useCheckoutData(options: {
                     return []
                 }
             }
-            return []
+            // Importante para offline-first:
+            // precarga clientes base para que el buscador funcione sin internet.
+            return customersService.search('')
         },
         enabled: shouldFetchCustomers,
         staleTime: 1000 * 60 * 2, // 2 minutos
