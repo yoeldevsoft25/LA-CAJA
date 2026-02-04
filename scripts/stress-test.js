@@ -34,17 +34,45 @@ async function run() {
                 event: {
                     event_id: uuidv4(),
                     type: 'SaleCreated',
+                    created_at: new Date().toISOString(),
                     payload: {
+                        sale_id: uuidv4(),
                         items: [
-                            { product_id: 'P1', quantity: 1, price: 10.5 },
-                            { product_id: 'P2', quantity: 2, price: 20.0 },
-                            { product_id: 'P3', quantity: 5, price: 5.99 }
+                            {
+                                item_id: uuidv4(),
+                                product_id: 'P1',
+                                qty: 1,
+                                unit_price_bs: 10.5,
+                                unit_price_usd: 0.3,
+                                discount_bs: 0,
+                                discount_usd: 0
+                            },
+                            {
+                                item_id: uuidv4(),
+                                product_id: 'P2',
+                                qty: 2,
+                                unit_price_bs: 20.0,
+                                unit_price_usd: 0.6,
+                                discount_bs: 0,
+                                discount_usd: 0
+                            }
                         ],
-                        total: 80.45,
+                        totals: {
+                            total_bs: 50.5,
+                            total_usd: 1.5,
+                            tax_bs: 0,
+                            discount_bs: 0
+                        },
+                        payment: {
+                            method: 'CASH',
+                            amount_bs: 50.5,
+                            amount_usd: 0,
+                            currency: 'BS'
+                        },
                         cash_session_id: uuidv4(),
                         customer_id: uuidv4()
                     },
-                    actor: { user_id: uuidv4() },
+                    actor_user_id: uuidv4(), // Fix: actor_user_id at top level
                     store_id: uuidv4(),
                     device_id: uuidv4(),
                     vector_clock: { 'nuclear-node': i }
@@ -66,7 +94,7 @@ async function run() {
     console.log('INSTRUCCIONES DE MONITOREO:');
     console.log('1. Abre tu Administrador de Tareas (RAM y CPU).');
     console.log('2. Verás como los procesos de Node.js empiezan a trabajar en paralelo.');
-    console.log('3. Con 40 workers, el Ryzen debería devorar estos 20k eventos en segundos.');
+    console.log('3. Con 100 workers, el Ryzen debería devorar estos 500k eventos rápidamente.');
     console.log('---------------------------------------------------------');
 
     await queue.close();
