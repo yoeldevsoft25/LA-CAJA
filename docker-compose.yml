@@ -39,7 +39,7 @@ services:
     # effective_cache_size: 20GB (Uso agresivo de RAM para cache de disco)
     # maintenance_work_mem: 2GB (Para reconstrucción de índices a velocidad rayo)
     # work_mem: 128MB (Para reportes complejos sin usar disco)
-    # max_connections: 200 (Para soportar ráfagas de sincronización masivas)
+    # max_connections: 500 (Para soportar 1,000 tiendas sin quejas)
     command: >
       postgres
       -c shared_buffers=8GB
@@ -53,8 +53,8 @@ services:
       -c effective_io_concurrency=200
       -c work_mem=128MB
       -c min_wal_size=1GB
-      -c max_wal_size=8GB
-      -c max_connections=200
+      -c max_wal_size=16GB
+      -c max_connections=500
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -63,7 +63,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 16G # Reservamos hasta la mitad de tu memoria física para la BD rápida
+          memory: 24G # Máximo estiramiento de RAM para picos de 1,000 tiendas
 
 volumes:
   redis-data:
