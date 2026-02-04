@@ -77,6 +77,10 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { StoreIdValidationInterceptor } from './common/interceptors/store-id-validation.interceptor';
 import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
 import { BullModule } from '@nestjs/bullmq';
+import {
+  isLocalDbHost,
+  resolveDbConnection,
+} from './database/db-connection.config';
 
 @Module({
   imports: [
@@ -211,28 +215,23 @@ import { BullModule } from '@nestjs/bullmq';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const databaseUrl = configService.get<string>('DATABASE_URL');
-
-        if (!databaseUrl) {
-          throw new Error('DATABASE_URL no está configurada en .env');
-        }
-
-        // Parsear la URL manualmente
-        const url = new URL(databaseUrl);
+        const resolvedDb = resolveDbConnection((key) =>
+          configService.get<string>(key),
+        );
         const isProduction =
           configService.get<string>('NODE_ENV') === 'production';
         const isDevelopment = !isProduction;
 
         // Detectar si es un servicio cloud que usa certificados autofirmados
         const isCloudDatabase =
-          url.hostname.includes('supabase.co') ||
-          url.hostname.includes('pooler.supabase.com') ||
-          url.hostname.includes('render.com') ||
-          url.hostname.includes('aws') ||
-          url.hostname.includes('azure') ||
-          url.hostname.includes('gcp') ||
+          resolvedDb.host.includes('supabase.co') ||
+          resolvedDb.host.includes('pooler.supabase.com') ||
+          resolvedDb.host.includes('render.com') ||
+          resolvedDb.host.includes('aws') ||
+          resolvedDb.host.includes('azure') ||
+          resolvedDb.host.includes('gcp') ||
           (configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'false' &&
-            !['localhost', '127.0.0.1', 'postgres'].includes(url.hostname));
+            !isLocalDbHost(resolvedDb.host));
 
         // Configuración SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
         // En produccion, SIEMPRE rechazar certificados no autorizados
@@ -281,11 +280,11 @@ import { BullModule } from '@nestjs/bullmq';
 
         return {
           type: 'postgres',
-          host: url.hostname,
-          port: parseInt(url.port || '5432', 10),
-          username: url.username,
-          password: decodeURIComponent(url.password), // Decodificar contraseña URL-encoded
-          database: url.pathname.slice(1), // Remover el '/' inicial
+          host: resolvedDb.host,
+          port: resolvedDb.port,
+          username: resolvedDb.username,
+          password: resolvedDb.password,
+          database: resolvedDb.database,
           // Usar array centralizado de entidades para reducir serialización
           entities: ALL_ENTITIES,
           synchronize: false, // Usamos migraciones SQL manuales
@@ -312,7 +311,7 @@ import { BullModule } from '@nestjs/bullmq';
           // NOTA: Supabase pooler requiere SSL siempre, incluso en desarrollo
           ssl:
             (isCloudDatabase || isProduction) &&
-              !['localhost', '127.0.0.1', 'postgres'].includes(url.hostname)
+              !isLocalDbHost(resolvedDb.host)
               ? {
                 rejectUnauthorized: sslRejectUnauthorized,
                 ...(sslCa ? { ca: sslCa } : {}),
