@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Search, User, X, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@la-caja/ui-core'
-import { Button } from '@la-caja/ui-core'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface Customer {
     id: string

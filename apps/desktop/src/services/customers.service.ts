@@ -394,6 +394,7 @@ export const customersService = {
 
     if (search && search.trim() !== '') {
       const searchLower = search.toLowerCase()
+      // Use efficient filtering
       const filtered = localCustomers.filter(
         (c) =>
           c.name.toLowerCase().includes(searchLower) ||

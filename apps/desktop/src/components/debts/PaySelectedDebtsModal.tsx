@@ -2,22 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { DollarSign, AlertTriangle, CheckCircle, ListChecks } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { DollarSign, AlertTriangle, CheckCircle, ListChecks, RefreshCw } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals, PaymentMethod, CreateDebtPaymentDto } from '@/services/debts.service'
 import { exchangeService } from '@/services/exchange.service'
 import toast from '@/lib/toast'
 import { useOnline } from '@/hooks/use-online'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 const LIVE_BCV_REFETCH_MS = 30_000
 const roundCurrency = (value: number) => Math.round(value * 100) / 100
@@ -25,7 +25,7 @@ const roundCurrency = (value: number) => Math.round(value * 100) / 100
 const paymentSchema = z.object({
   amount_usd: z.number().min(0.01, 'El monto debe ser mayor a 0'),
   amount_bs: z.number().min(0.01, 'El monto debe ser mayor a 0'),
-  method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER']),
+  method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER', 'ROLLOVER']),
   note: z.string().optional(),
 })
 
@@ -59,7 +59,10 @@ export default function PaySelectedDebtsModal({
   const [amountMode, setAmountMode] = useState<'amount' | 'percentage'>('amount')
   const [percentage, setPercentage] = useState(100)
   const [distribution, setDistribution] = useState<'SEQUENTIAL' | 'PROPORTIONAL'>('PROPORTIONAL')
+
   const { isOnline } = useOnline()
+  const queryClient = useQueryClient()
+  const [isRefreshingRate, setIsRefreshingRate] = useState(false)
 
   const {
     register,
@@ -78,7 +81,8 @@ export default function PaySelectedDebtsModal({
     },
   })
 
-  const { data: bcvRateData } = useQuery({
+  // Obtener tasa BCV logic
+  const { data: bcvRateData, refetch: refetchRate } = useQuery({
     queryKey: ['exchange', 'bcv'],
     queryFn: () => exchangeService.getBCVRate(true),
     staleTime: 0,
@@ -91,6 +95,14 @@ export default function PaySelectedDebtsModal({
   })
 
   const exchangeRate = bcvRateData?.rate || 0
+
+  const handleRefreshRate = async () => {
+    setIsRefreshingRate(true)
+    await queryClient.invalidateQueries({ queryKey: ['exchange', 'bcv'] })
+    await refetchRate()
+    setIsRefreshingRate(false)
+    toast.success('Tasa actualizada')
+  }
 
   const selectedDebts = useMemo(
     () => openDebts.filter((d) => selectedDebtIds.includes(d.id)),
@@ -119,18 +131,60 @@ export default function PaySelectedDebtsModal({
       ? roundCurrency(totals.totalRemainingUsd * exchangeRate)
       : totals.totalRemainingBsLegacy
 
+  // Observar
   const amountUsd = watch('amount_usd')
   const selectedMethod = watch('method')
 
-  useEffect(() => {
-    if (amountUsd > 0 && exchangeRate > 0) {
-      const calculatedBs = Math.round(amountUsd * exchangeRate * 100) / 100
-      setValue('amount_bs', calculatedBs, { shouldValidate: false })
-    } else if (amountUsd <= 0) {
-      setValue('amount_bs', 0, { shouldValidate: false })
-    }
-  }, [amountUsd, exchangeRate, setValue])
+  // Manejadores de cambio bidireccional (Solo activos en modo Amount)
+  const handleUsdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (amountMode === 'percentage') return // Ignorar si es porcentaje (aunque debe ser readonly)
 
+    const val = parseFloat(e.target.value)
+    setValue('amount_usd', isNaN(val) ? 0 : val)
+
+    if (!isNaN(val) && exchangeRate > 0) {
+      const calculatedBs = roundCurrency(val * exchangeRate)
+      setValue('amount_bs', calculatedBs, { shouldValidate: true })
+    } else {
+      setValue('amount_bs', 0)
+    }
+  }
+
+  const handleBsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (amountMode === 'percentage') return // Ignorar en modo porcentaje
+
+    const val = parseFloat(e.target.value)
+    setValue('amount_bs', isNaN(val) ? 0 : val)
+
+    if (!isNaN(val) && exchangeRate > 0) {
+      const calculatedUsd = roundCurrency(val / exchangeRate)
+      setValue('amount_usd', calculatedUsd, { shouldValidate: true })
+    } else {
+      setValue('amount_usd', 0)
+    }
+  }
+
+  // Efecto para calcular cuando cambia el porcentaje
+  useEffect(() => {
+    if (!isOpen) return
+    if (amountMode === 'percentage') {
+      const pct = Math.min(100, Math.max(0, percentage))
+      const computedUsd = Math.round((totals.totalRemainingUsd * pct / 100) * 100) / 100
+      setValue('amount_usd', computedUsd, { shouldValidate: true })
+
+      // También calcular Bs
+      if (exchangeRate > 0) {
+        const computedBs = roundCurrency(computedUsd * exchangeRate)
+        setValue('amount_bs', computedBs)
+      } else {
+        setValue('amount_bs', 0)
+      }
+
+      setDistribution('PROPORTIONAL')
+    }
+  }, [amountMode, percentage, totals.totalRemainingUsd, isOpen, setValue, exchangeRate])
+
+  // Reset al abrir
   useEffect(() => {
     if (isOpen) {
       setAmountMode('amount')
@@ -146,15 +200,6 @@ export default function PaySelectedDebtsModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, totals.totalRemainingUsd, totals.totalRemainingBsLegacy, totals.selectedCount, reset])
 
-  useEffect(() => {
-    if (!isOpen) return
-    if (amountMode === 'percentage') {
-      const pct = Math.min(100, Math.max(0, percentage))
-      const computedUsd = Math.round((totals.totalRemainingUsd * pct / 100) * 100) / 100
-      setValue('amount_usd', computedUsd, { shouldValidate: true })
-      setDistribution('PROPORTIONAL')
-    }
-  }, [amountMode, percentage, totals.totalRemainingUsd, isOpen, setValue])
 
   const paySelectedMutation = useMutation({
     mutationFn: (data: CreateDebtPaymentDto) => {
@@ -195,7 +240,7 @@ export default function PaySelectedDebtsModal({
         return
       }
     }
-    if (data.amount_usd > totals.totalRemainingUsd + 0.01) {
+    if (data.amount_usd > totals.totalRemainingUsd + 0.05) {
       toast.error(
         `El monto excede el total seleccionado ($${totals.totalRemainingUsd.toFixed(2)})`
       )
@@ -238,7 +283,7 @@ export default function PaySelectedDebtsModal({
           </Card>
 
           {/* Alerta si el monto es mayor */}
-          {amountUsd > 0 && amountUsd > totals.totalRemainingUsd && (
+          {amountUsd > 0 && amountUsd > totals.totalRemainingUsd + 0.05 && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Atención</AlertTitle>
@@ -318,9 +363,16 @@ export default function PaySelectedDebtsModal({
                   step="0.01"
                   min="0"
                   className={cn('pl-9', errors.amount_usd && 'border-destructive')}
-                  {...register('amount_usd', {
-                    valueAsNumber: true,
-                  })}
+                  {...(() => {
+                    const { onChange, ...rest } = register('amount_usd', { valueAsNumber: true })
+                    return {
+                      ...rest,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        onChange(e)
+                        handleUsdChange(e)
+                      }
+                    }
+                  })()}
                   readOnly={amountMode === 'percentage'}
                 />
               </div>
@@ -329,16 +381,45 @@ export default function PaySelectedDebtsModal({
               )}
             </div>
 
-            {/* Monto Bs (calculado) */}
+            {/* Monto Bs */}
             <div className="space-y-2">
-              <Label htmlFor="amount_bs">Monto en Bs</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="amount_bs">Monto en Bs</Label>
+                {exchangeRate > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Tasa BCV: {exchangeRate.toFixed(2)} Bs/USD
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={handleRefreshRate}
+                      disabled={isRefreshingRate || !isOnline}
+                      title="Actualizar Tasa"
+                    >
+                      <RefreshCw className={cn("w-3 h-3", isRefreshingRate && "animate-spin")} />
+                    </Button>
+                  </div>
+                )}
+              </div>
               <Input
                 id="amount_bs"
                 type="number"
                 step="0.01"
-                readOnly
+                readOnly={amountMode === 'percentage'}
                 className={cn(errors.amount_bs && 'border-destructive')}
-                {...register('amount_bs', { valueAsNumber: true })}
+                {...(() => {
+                  const { onChange, ...rest } = register('amount_bs', { valueAsNumber: true })
+                  return {
+                    ...rest,
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      onChange(e)
+                      handleBsChange(e)
+                    }
+                  }
+                })()}
               />
               {errors.amount_bs && (
                 <p className="text-sm text-destructive">{errors.amount_bs.message}</p>
@@ -352,7 +433,7 @@ export default function PaySelectedDebtsModal({
               </Label>
               <RadioGroup
                 value={selectedMethod}
-                onValueChange={(value) => setValue('method', value as any)}
+                onValueChange={(value) => setValue('method', value as PaymentFormData['method'])}
                 className="grid grid-cols-2 gap-x-4 gap-y-3"
               >
                 {paymentMethods.map((method) => (

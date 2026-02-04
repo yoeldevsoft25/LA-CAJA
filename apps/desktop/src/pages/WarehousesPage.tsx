@@ -20,7 +20,7 @@ import {
 import { inventoryService } from '@/services/inventory.service'
 import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -43,7 +43,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WarehouseFormModal } from '@/components/warehouses/WarehouseFormModal'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 export default function WarehousesPage() {
   const { user } = useAuth()
@@ -191,7 +191,7 @@ export default function WarehousesPage() {
   const getTypeColor = (type: string) => {
     const types: Record<string, string> = {
       'STORE': 'bg-blue-100 text-blue-800 border-blue-200',
-      'MAIN': 'bg-blue-100 text-blue-800 border-blue-200',
+      'MAIN': 'bg-purple-100 text-purple-800 border-purple-200',
       'SHOWROOM': 'bg-pink-100 text-pink-800 border-pink-200',
       'TRANSIT': 'bg-amber-100 text-amber-800 border-amber-200',
       'DAMAGED': 'bg-red-100 text-red-800 border-red-200'
@@ -351,7 +351,7 @@ export default function WarehousesPage() {
 
       {/* Stock Preview Modal */}
       <Dialog open={showStock} onOpenChange={setShowStock}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" />
@@ -369,33 +369,38 @@ export default function WarehousesPage() {
                   <p>Esta bodega no tiene existencias registradas</p>
                 </div>
               ) : (
-                <div className="divide-y">
+                <div className="divide-y overflow-x-hidden">
                   {warehouseStock.map((stock) => (
-                    <div key={stock.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                      <div className="flex-1 min-w-0 mr-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium truncate">{stock.product?.name}</p>
-                          {stock.variant && (
-                            <Badge variant="secondary" className="text-[10px] h-5">
-                              {stock.variant.variant_type}: {stock.variant.variant_value}
-                            </Badge>
+                    <div key={stock.id} className="p-4 hover:bg-muted/30 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        {/* Producto Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className="font-medium text-sm sm:text-base">{stock.product?.name}</p>
+                            {stock.variant && (
+                              <Badge variant="secondary" className="text-[10px] h-5 shrink-0">
+                                {stock.variant.variant_type}: {stock.variant.variant_value}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            SKU: {stock.product?.sku || 'N/A'}
+                          </p>
+                        </div>
+
+                        {/* Stock Info - Horizontal en mobile y desktop */}
+                        <div className="flex gap-6 sm:gap-8">
+                          <div>
+                            <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Disponible</p>
+                            <p className="text-xl sm:text-2xl font-bold font-mono tabular-nums">{stock.stock}</p>
+                          </div>
+                          {stock.reserved > 0 && (
+                            <div>
+                              <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Reservado</p>
+                              <p className="text-xl sm:text-2xl font-bold text-amber-600 font-mono tabular-nums">{stock.reserved}</p>
+                            </div>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          SKU: {stock.product?.sku || 'N/A'}
-                        </p>
-                      </div>
-                      <div className="flex gap-6 text-right">
-                        <div>
-                          <p className="text-[10px] uppercase text-muted-foreground font-semibold">Disponible</p>
-                          <p className="text-lg font-bold font-mono">{stock.stock}</p>
-                        </div>
-                        {stock.reserved > 0 && (
-                          <div>
-                            <p className="text-[10px] uppercase text-muted-foreground font-semibold">Reservado</p>
-                            <p className="text-lg font-bold text-amber-600 font-mono">{stock.reserved}</p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}

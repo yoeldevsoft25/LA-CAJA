@@ -9,7 +9,7 @@ import {
   FileText,
 } from 'lucide-react'
 import { fiscalInvoicesService } from '@/services/fiscal-invoices.service'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Input } from '@la-caja/ui-core'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import FiscalInvoicePrintView from '@/components/fiscal/FiscalInvoicePrintView'
 

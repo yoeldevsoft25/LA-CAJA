@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X, Cloud, CloudOff, DollarSign as DollarSignIcon } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { FileText, Eye, Calendar as CalendarIcon, AlertCircle, Printer, Receipt, Download, Filter, X, Cloud, CloudOff, DollarSign as DollarSignIcon, UserCircle } from 'lucide-react'
+// import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { salesService, Sale } from '@/services/sales.service'
 import { useAuth } from '@/stores/auth.store'
 import SaleDetailModal from '@/components/sales/SaleDetailModal'
 import { format, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +33,7 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
 import { printService } from '@/services/print.service'
 import { SwipeableItem } from '@/components/ui/swipeable-item'
@@ -116,6 +116,30 @@ export default function SalesPage() {
   const [maxAmountUsd, setMaxAmountUsd] = useState<string>('')
   const [customerSearch, setCustomerSearch] = useState<string>('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+
+  // Presets de fecha
+  const setDatePreset = (preset: 'today' | 'yesterday' | 'week') => {
+    const now = new Date()
+    switch (preset) {
+      case 'today':
+        setDateFrom(now)
+        setDateTo(now)
+        break
+      case 'yesterday':
+        const yesterday = new Date(now)
+        yesterday.setDate(now.getDate() - 1)
+        setDateFrom(yesterday)
+        setDateTo(yesterday)
+        break
+      case 'week':
+        const weekAgo = new Date(now)
+        weekAgo.setDate(now.getDate() - 7)
+        setDateFrom(weekAgo)
+        setDateTo(now)
+        break
+    }
+    setCurrentPage(1)
+  }
 
   // Convertir fechas a formato string para la API (usando zona horaria configurada)
   const effectiveDateFrom = dateFrom ? formatDateInAppTimeZone(dateFrom) : formatDateInAppTimeZone()
@@ -422,59 +446,54 @@ export default function SalesPage() {
     <div className="h-full max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Historial de Ventas</h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">
-              {activeFiltersCount > 0 ? (
-                <>
-                  {sales.length} de {rawSales.length} ventas mostradas
-                  {' · '}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetAdvancedFilters}
-                    className="h-auto p-0 text-xs underline"
-                  >
-                    Limpiar filtros
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {total} venta{total !== 1 ? 's' : ''} en el período seleccionado
-                </>
-              )}
-              {' · '}
-              Zona horaria: {getTimeZoneLabel()}
-            </p>
-          </div>
-          {total > 0 && (
-            <div className="flex flex-col sm:flex-row items-end gap-2 sm:gap-4">
-              <div className="flex gap-4 text-right">
-                <div>
-                  <p className="text-xs text-muted-foreground">Total en Bs</p>
-                  <p className="text-lg font-bold text-foreground">
-                    {totalSalesBs.toFixed(2)} Bs
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total en USD</p>
-                  <p className="text-lg font-bold text-foreground">
-                    ${totalSalesUsd.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportExcel}
-                className="min-h-[44px] min-w-[44px]"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exportar Excel
-              </Button>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight">Historial de Ventas</h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {activeFiltersCount > 0 ? (
+                  <>
+                    <span className="font-medium text-foreground">{sales.length}</span> de {rawSales.length} ventas
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium text-foreground">{total}</span> venta{total !== 1 ? 's' : ''}
+                  </>
+                )}
+              </p>
+              <span className="text-muted-foreground/30 hidden sm:inline">•</span>
+              <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <Cloud className="w-3 h-3 h-3" />
+                Zona: {getTimeZoneLabel()}
+              </p>
             </div>
-          )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-4">
+            <div className="bg-primary/5 border border-primary/10 rounded-xl p-2 sm:p-3 flex flex-col justify-center">
+              <span className="text-[10px] sm:text-xs text-primary/70 font-bold uppercase tracking-wider">Total Bs</span>
+              <span className="text-sm sm:text-lg font-black text-primary tabular-nums">
+                {totalSalesBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-2 sm:p-3 flex flex-col justify-center">
+              <span className="text-[10px] sm:text-xs text-emerald-600/70 font-bold uppercase tracking-wider">Total USD</span>
+              <span className="text-sm sm:text-lg font-black text-emerald-600 tabular-nums">
+                ${totalSalesUsd.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              className="col-span-2 sm:col-auto h-10 sm:h-12 border-muted/40 hover:bg-white shadow-sm font-semibold"
+              disabled={sales.length === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              <span className="sm:hidden lg:inline">Exportar Excel</span>
+              <span className="hidden sm:inline lg:hidden">Exportar</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -483,7 +502,7 @@ export default function SalesPage() {
         <CardContent className="p-3 sm:p-4">
           <div className="space-y-3 sm:space-y-4">
             {/* Filtros de fecha */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 items-end">
               <DatePicker
                 date={dateFrom}
                 onDateChange={(date) => {
@@ -500,13 +519,45 @@ export default function SalesPage() {
                 }}
                 label="Hasta"
               />
+
+              {/* Presets rápidos */}
+              <div className="col-span-1 sm:col-span-2 lg:col-span-1">
+                <Label className="text-xs sm:text-sm font-semibold mb-2 block">Accesos Rápidos</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    onClick={() => setDatePreset('today')}
+                  >
+                    Hoy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    onClick={() => setDatePreset('yesterday')}
+                  >
+                    Ayer
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    onClick={() => setDatePreset('week')}
+                  >
+                    7 días
+                  </Button>
+                </div>
+              </div>
+
               <div className="flex items-end">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={handleResetDates}
-                  className="w-full"
+                  className="w-full h-10 text-muted-foreground hover:text-foreground text-xs font-bold uppercase tracking-widest"
                 >
-                  Reiniciar
+                  Reiniciar Fechas
                 </Button>
               </div>
             </div>
@@ -544,19 +595,19 @@ export default function SalesPage() {
               {showAdvancedFilters && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pt-2">
                   {/* Método de pago */}
-                  <div>
-                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                  <div className="space-y-2">
+                    <Label className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
                       Método de Pago
                     </Label>
                     <Select
                       value={paymentMethodFilter}
                       onValueChange={setPaymentMethodFilter}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="all">Todos los métodos</SelectItem>
                         {Object.entries(paymentMethodLabels).map(([value, label]) => (
                           <SelectItem key={value} value={value}>
                             {label}
@@ -567,85 +618,67 @@ export default function SalesPage() {
                   </div>
 
                   {/* Estado */}
-                  <div>
-                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                      Estado
+                  <div className="space-y-2">
+                    <Label className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                      Estado de Venta
                     </Label>
                     <Select
                       value={statusFilter}
                       onValueChange={(v) => setStatusFilter(v as 'all' | 'completed' | 'voided')}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        <SelectItem value="completed">Completadas</SelectItem>
-                        <SelectItem value="voided">Anuladas</SelectItem>
+                        <SelectItem value="all">Todas las ventas</SelectItem>
+                        <SelectItem value="completed">Solo completadas</SelectItem>
+                        <SelectItem value="voided">Solo anuladas</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {/* Estado de deuda */}
-                  <div>
-                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
+                  <div className="space-y-2">
+                    <Label className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
                       Estado de Deuda
                     </Label>
                     <Select
                       value={debtFilter}
                       onValueChange={(v) => setDebtFilter(v as 'all' | 'with_debt' | 'without_debt' | 'paid')}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todas</SelectItem>
-                        <SelectItem value="with_debt">Con deuda pendiente</SelectItem>
+                        <SelectItem value="all">Todas las deudas</SelectItem>
+                        <SelectItem value="with_debt">Pendientes</SelectItem>
                         <SelectItem value="without_debt">Sin deuda</SelectItem>
-                        <SelectItem value="paid">Deuda pagada</SelectItem>
+                        <SelectItem value="paid">Pagadas</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {/* Monto mínimo USD */}
-                  <div>
-                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                      Monto Mínimo (USD)
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={minAmountUsd}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinAmountUsd(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  {/* Monto máximo USD */}
-                  <div>
-                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                      Monto Máximo (USD)
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={maxAmountUsd}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxAmountUsd(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-
                   {/* Búsqueda por cliente */}
-                  <div>
-                    <Label className="text-xs sm:text-sm font-semibold mb-2 block">
-                      Buscar Cliente
+                  <div className="space-y-2 lg:col-span-2">
+                    <Label className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                      Cliente (Nombre o CI)
                     </Label>
-                    <Input
-                      type="text"
-                      value={customerSearch}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
-                      placeholder="Nombre o cédula/RIF"
-                    />
+                    <div className="relative">
+                      <X
+                        className={cn(
+                          "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors",
+                          !customerSearch && "hidden"
+                        )}
+                        onClick={() => setCustomerSearch('')}
+                      />
+                      <Input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
+                        placeholder="Ej: Juan Perez o 12345678"
+                        className="h-11 border-muted/40 bg-white/60 pr-10"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -761,78 +794,87 @@ export default function SalesPage() {
                         >
                           <Card
                             className={cn(
-                              'transition-colors cursor-pointer',
-                              isVoided && 'bg-muted/40 border-muted',
-                              isPending && 'bg-orange-50 border-orange-200 border-l-4',
-                              isPaid && 'bg-green-50 border-green-200 border-l-4'
+                              'transition-all duration-200 cursor-pointer active:scale-[0.98]',
+                              isVoided && 'bg-muted/30 border-muted opacity-80',
+                              isPending && 'bg-orange-50/50 border-orange-200 border-l-4 border-l-orange-500 shadow-sm',
+                              isPaid && 'bg-emerald-50/50 border-emerald-200 border-l-4 border-l-emerald-500 shadow-sm',
+                              !isVoided && !isPending && !isPaid && 'bg-white hover:border-primary/30'
                             )}
                             onClick={() => handleViewDetail(sale)}
                           >
                             <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <p className="font-semibold text-foreground text-sm">
-                                      {format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}
-                                    </p>
-                                    {isVoided && (
-                                      <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
-                                        Anulada
-                                      </Badge>
-                                    )}
-                                    {sale.id.startsWith('temp-') || sale.sync_status === 'pending' ? (
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger>
-                                            <CloudOff className="w-3.5 h-3.5 text-amber-500" />
-                                          </TooltipTrigger>
-                                          <TooltipContent>Pendiente de sincronizar</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    ) : (
-                                      <Cloud className="w-3.5 h-3.5 text-success/60" />
-                                    )}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className={cn(
+                                    "w-8 h-8 rounded-full flex items-center justify-center",
+                                    isVoided ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                                  )}>
+                                    <Receipt className="w-4 h-4" />
                                   </div>
-
-                                  {sale.invoice_full_number && (
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <Receipt className="w-3.5 h-3.5 text-primary" />
-                                      <p className="font-mono font-semibold text-primary text-xs">
-                                        {sale.invoice_full_number}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  <p className="text-xs text-muted-foreground mb-2">
-                                    {itemCount} producto{itemCount !== 1 ? 's' : ''}
-                                  </p>
-
-                                  {isFIAO && sale.debt && isPending && sale.debt.remaining_bs !== undefined && (
-                                    <p className="text-xs font-medium text-orange-600 mt-1">
-                                      Pendiente: {Number(sale.debt.remaining_bs).toFixed(2)} Bs
+                                  <div>
+                                    <p className="font-bold text-foreground text-sm uppercase tracking-tight">
+                                      {sale.invoice_full_number || `#${sale.id.substring(0, 6)}`}
                                     </p>
-                                  )}
+                                    <p className="text-[10px] text-muted-foreground font-medium">
+                                      {format(new Date(sale.sold_at), 'hh:mm a')}
+                                    </p>
+                                  </div>
                                 </div>
-
-                                <div className="text-right flex-shrink-0">
-                                  <p className="font-bold text-foreground text-base">
+                                <div className="text-right">
+                                  <p className={cn(
+                                    "font-black text-base tabular-nums",
+                                    isVoided ? "line-through text-muted-foreground" : "text-foreground"
+                                  )}>
+                                    ${Number(sale.totals.total_usd).toFixed(2)}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
                                     {Number(sale.totals.total_bs).toFixed(2)} Bs
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    ${Number(sale.totals.total_usd).toFixed(2)} USD
-                                  </p>
-                                  <Badge variant="secondary" className="mt-1 text-[10px]">
-                                    {paymentMethodLabels[sale.payment.method] || sale.payment.method}
-                                  </Badge>
                                 </div>
                               </div>
 
-                              <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-                                <span>Desliza para acciones →</span>
-                                {sale.customer && (
-                                  <span className="truncate max-w-[150px]">{sale.customer.name}</span>
-                                )}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex flex-wrap gap-1.5 flex-1">
+                                  <Badge variant="outline" className="bg-muted/50 border-none text-[10px] px-2 py-0">
+                                    {paymentMethodLabels[sale.payment.method] || sale.payment.method}
+                                  </Badge>
+                                  {itemCount > 0 && (
+                                    <Badge variant="outline" className="bg-muted/50 border-none text-[10px] px-2 py-0">
+                                      {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                                    </Badge>
+                                  )}
+                                  {isVoided && (
+                                    <Badge variant="destructive" className="text-[10px] px-2 py-0">
+                                      Anulada
+                                    </Badge>
+                                  )}
+                                  {isPending && (
+                                    <Badge className="bg-orange-500 text-white text-[10px] px-2 py-0">
+                                      Deuda
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  {sale.sync_status === 'pending' ? (
+                                    <CloudOff className="w-3.5 h-3.5 text-amber-500" />
+                                  ) : (
+                                    <Cloud className="w-3.5 h-3.5 text-emerald-500/50" />
+                                  )}
+                                  <Eye className="w-4 h-4 text-primary/40" />
+                                </div>
                               </div>
+
+                              {sale.customer && (
+                                <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
+                                  <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+                                    <UserCircle className="w-3 h-3 text-muted-foreground" />
+                                  </div>
+                                  <p className="text-xs font-semibold text-muted-foreground truncate">
+                                    {sale.customer.name}
+                                  </p>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         </SwipeableItem>

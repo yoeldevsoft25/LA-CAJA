@@ -1,5 +1,5 @@
 import { Barcode, Volume2, VolumeX } from 'lucide-react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
 export type ScannerStatus = 'idle' | 'scanning' | 'success' | 'error'

@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Plus, Trash2, CreditCard, Wallet, Banknote, DollarSign, AlertCircle, CircleCheckBig } from 'lucide-react'
 import { PaymentMethod, SplitPaymentItem } from '@/types/split-payment.types'
 import { VENEZUELAN_BANKS } from '@/constants/venezuelan-banks'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@la-caja/ui-core'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface SplitPaymentManagerProps {
   payments: SplitPaymentItem[]

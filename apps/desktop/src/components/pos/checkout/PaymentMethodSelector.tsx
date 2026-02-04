@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import { CreditCard, Wallet, Banknote, Split, Fingerprint, Smartphone } from 'lucide-react'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { SinglePaymentMethod } from '@/types/checkout.types'
 
 interface PaymentMethodSelectorProps {

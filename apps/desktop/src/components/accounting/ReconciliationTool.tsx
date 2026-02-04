@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { accountingValidationService } from '@/services/accounting.service'
 import { Calendar as CalendarIcon, RefreshCw, Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 /**
  * Componente para reconciliación de cuentas contables

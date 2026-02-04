@@ -16,10 +16,10 @@ import {
   Lock,
   Quote,
 } from 'lucide-react'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 const sectionFade: Variants = {
   hidden: { opacity: 0, y: 24 },

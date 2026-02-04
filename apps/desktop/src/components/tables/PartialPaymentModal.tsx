@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { DollarSign } from 'lucide-react'
 import { CreatePartialPaymentRequest } from '@/services/orders.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -96,10 +96,10 @@ export default function PartialPaymentModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
+          <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
-            Pago Parcial (Recibo Parcial)
+            Pago Parcial (Recibo)
           </DialogTitle>
         </DialogHeader>
 
@@ -113,14 +113,14 @@ export default function PartialPaymentModal({
               </Alert>
 
               {/* Total de la orden */}
-              <div className="p-4 border border-border rounded-lg bg-muted/50">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-foreground">Total de la Orden:</span>
+              <div className="p-4 border border-primary/20 rounded-2xl bg-primary/5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Pendiente</span>
                   <div className="text-right">
-                    <p className="font-semibold text-foreground">
-                      ${orderTotal.usd.toFixed(2)} USD
+                    <p className="text-lg font-black text-primary tabular-nums leading-none">
+                      ${orderTotal.usd.toFixed(2)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs font-bold text-muted-foreground tabular-nums mt-1">
                       {orderTotal.bs.toFixed(2)} Bs
                     </p>
                   </div>
@@ -128,60 +128,64 @@ export default function PartialPaymentModal({
               </div>
 
               {/* Monto en Bs */}
-              <div>
-                <Label htmlFor="amount_bs">
-                  Monto en Bolívares <span className="text-destructive">*</span>
+              <div className="space-y-2">
+                <Label htmlFor="amount_bs" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Monto en Bolívares
                 </Label>
                 <Input
                   id="amount_bs"
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   min="0"
                   max={orderTotal.bs}
                   {...register('amount_bs', { valueAsNumber: true })}
-                  className="mt-2"
+                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white shadow-sm font-bold"
                   placeholder="0.00"
                   disabled={isLoading}
                 />
                 {errors.amount_bs && (
-                  <p className="mt-1 text-sm text-destructive">{errors.amount_bs.message}</p>
+                  <p className="mt-1 text-sm text-destructive font-bold">{errors.amount_bs.message}</p>
                 )}
                 {amountBs > orderTotal.bs && (
-                  <p className="mt-1 text-sm text-warning">
+                  <p className="mt-1 text-sm text-warning font-bold">
                     El monto excede el total de la orden
                   </p>
                 )}
               </div>
 
               {/* Monto en USD */}
-              <div>
-                <Label htmlFor="amount_usd">
-                  Monto en Dólares <span className="text-destructive">*</span>
+              <div className="space-y-2">
+                <Label htmlFor="amount_usd" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Monto en Dólares
                 </Label>
                 <Input
                   id="amount_usd"
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   min="0"
                   max={orderTotal.usd}
                   {...register('amount_usd', { valueAsNumber: true })}
-                  className="mt-2"
+                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white shadow-sm font-bold"
                   placeholder="0.00"
                   disabled={isLoading}
                 />
                 {errors.amount_usd && (
-                  <p className="mt-1 text-sm text-destructive">{errors.amount_usd.message}</p>
+                  <p className="mt-1 text-sm text-destructive font-bold">{errors.amount_usd.message}</p>
                 )}
                 {amountUsd > orderTotal.usd && (
-                  <p className="mt-1 text-sm text-warning">
+                  <p className="mt-1 text-sm text-warning font-bold">
                     El monto excede el total de la orden
                   </p>
                 )}
               </div>
 
               {/* Método de pago */}
-              <div>
-                <Label htmlFor="payment_method">Método de Pago</Label>
+              <div className="space-y-2">
+                <Label htmlFor="payment_method" className="text-sm sm:text-base font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                  Método de Pago
+                </Label>
                 <Select
                   value={paymentMethod}
                   onValueChange={(value) =>
@@ -189,7 +193,7 @@ export default function PartialPaymentModal({
                   }
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="mt-2">
+                  <SelectTrigger className="h-12 text-base border-muted/40 bg-white/60 shadow-sm font-medium">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -204,13 +208,13 @@ export default function PartialPaymentModal({
               </div>
 
               {/* Nota */}
-              <div>
-                <Label htmlFor="note">Nota (Opcional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="note" className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Nota (Opcional)</Label>
                 <Textarea
                   id="note"
                   {...register('note')}
                   rows={2}
-                  className="mt-2 resize-none"
+                  className="text-base border-muted/40 bg-white/60 focus:bg-white shadow-sm resize-none"
                   placeholder="Notas sobre el pago parcial..."
                   maxLength={500}
                   disabled={isLoading}
@@ -219,19 +223,19 @@ export default function PartialPaymentModal({
 
               {/* Resumen */}
               {(amountBs > 0 || amountUsd > 0) && (
-                <div className="p-4 border border-primary/50 rounded-lg bg-primary/5">
+                <div className="p-4 border-2 border-primary/20 rounded-2xl bg-primary/5 shadow-inner">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Pago Parcial:</span>
-                      <span className="font-semibold text-foreground">
-                        ${amountUsd.toFixed(2)} USD / {amountBs.toFixed(2)} Bs
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Pago Actual</span>
+                      <span className="font-black text-foreground tabular-nums">
+                        ${amountUsd.toFixed(2)} / {amountBs.toFixed(2)} Bs
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Restante:</span>
-                      <span className="font-semibold text-primary">
-                        ${(orderTotal.usd - amountUsd).toFixed(2)} USD /{' '}
-                        {(orderTotal.bs - amountBs).toFixed(2)} Bs
+                    <div className="flex items-center justify-between pt-2 border-t border-primary/10">
+                      <span className="text-xs font-bold text-primary/70 uppercase tracking-widest">Nuevo Saldo</span>
+                      <span className="font-black text-primary tabular-nums">
+                        ${Math.max(0, orderTotal.usd - amountUsd).toFixed(2)} /{' '}
+                        {Math.max(0, orderTotal.bs - amountBs).toFixed(2)} Bs
                       </span>
                     </div>
                   </div>
@@ -241,21 +245,21 @@ export default function PartialPaymentModal({
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-muted/20">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={onClose}
-                className="flex-1"
+                className="h-12 flex-1 font-semibold text-muted-foreground hover:text-foreground hover:bg-white transition-all px-6"
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={isLoading || amountBs <= 0 || amountUsd <= 0}
+                className="h-12 flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 px-8 transition-all"
+                disabled={isLoading || (amountBs <= 0 && amountUsd <= 0)}
               >
                 {isLoading ? (
                   <>
@@ -265,7 +269,7 @@ export default function PartialPaymentModal({
                 ) : (
                   <>
                     <DollarSign className="w-5 h-5 mr-2" />
-                    Registrar Pago Parcial
+                    Registrar Pago
                   </>
                 )}
               </Button>

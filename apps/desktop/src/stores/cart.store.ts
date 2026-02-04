@@ -165,8 +165,8 @@ const useCartStore = create<CartState>()(
         for (const id of CART_IDS) {
           merged[id] = carts[id] ?? { items: [] }
         }
-        const activeCartId = (typeof p.activeCartId === 'string' && CART_IDS.includes(p.activeCartId as CartId))
-          ? (p.activeCartId as CartId)
+        const activeCartId = CART_IDS.includes((p.activeCartId as CartId) ?? '')
+          ? (p.activeCartId as string)
           : 'cart-1'
 
         return {

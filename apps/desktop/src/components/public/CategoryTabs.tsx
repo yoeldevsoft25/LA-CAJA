@@ -1,5 +1,5 @@
-import { Button } from '@la-caja/ui-core'
-import { cn } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRef, useEffect, useState } from 'react'
 

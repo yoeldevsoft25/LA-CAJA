@@ -83,7 +83,9 @@ export class ProductsCacheService {
       public_image_url: product.public_image_url ?? null,
       public_category: product.public_category ?? null,
       ingredients: product.ingredients ?? undefined,
-      updated_at: new Date(product.updated_at).getTime(),
+      updated_at: !isNaN(new Date(product.updated_at).getTime())
+        ? new Date(product.updated_at).getTime()
+        : Date.now(),
       cached_at: Date.now(),
     };
   }
@@ -210,20 +212,31 @@ export class ProductsCacheService {
    * Precarga índice de barcodes en memoria para escaneo ultra rápido
    */
   async warmBarcodeIndex(storeId: string): Promise<void> {
-    if (this.barcodeIndexStoreId === storeId && this.barcodeIndex.size > 0) return;
+    // ✅ Sanitización robusta de storeId
+    if (!storeId || typeof storeId !== 'string' || storeId.trim() === '') {
+      console.debug('[ProductsCache] warmBarcodeIndex skipped: invalid storeId');
+      return;
+    }
+
+    const sanitizedStoreId = storeId.trim();
+    if (this.barcodeIndexStoreId === sanitizedStoreId && this.barcodeIndex.size > 0) return;
+
     try {
       // ✅ Fix: Remove "as unknown as string" casting which confuses Dexie if types don't match exactly at runtime
       // Ensure we pass a proper array for compound index
       const locals = await db.products
         .where('[store_id+is_active]')
-        .equals([storeId, 1 /* 1 = true for boolean index sometimes in Dexie/IndexedDB depending on adapter */])
-        .or('store_id').equals(storeId).and(p => p.is_active === true) // Fallback query if compound index fails
+        .equals([sanitizedStoreId, 1 /* 1 = true for boolean index sometimes in Dexie/IndexedDB depending on adapter */])
+        .or('store_id').equals(sanitizedStoreId).and(p => p.is_active === true) // Fallback query if compound index fails
         .toArray();
 
+      // Optimization: If the fallback approach is too slow, stick to simple filter if compound index issues persist
+      // But [store_id+is_active] should work if defined in database.ts stores()
+
       this.barcodeIndex.clear();
-      this.barcodeIndexStoreId = storeId;
+      this.barcodeIndexStoreId = sanitizedStoreId;
       for (const local of locals) {
-        if (local.barcode) {
+        if (local.barcode && typeof local.barcode === 'string') {
           const bar = local.barcode.trim();
           if (bar) {
             const normalized = normalizeBarcode(bar) ?? bar;
@@ -244,19 +257,26 @@ export class ProductsCacheService {
       }
     }
   }
-
   /**
    * Limpia productos antiguos del cache (más de 7 días sin actualizar)
    */
   async cleanupOldCache(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<void> {
     const cutoff = Date.now() - maxAge;
-    const oldProducts = await db.products
-      .where('cached_at')
-      .below(cutoff)
-      .toArray();
 
-    if (oldProducts.length > 0) {
-      await db.products.bulkDelete(oldProducts.map(p => p.id));
+    // Ensure cutoff is a valid number
+    if (isNaN(cutoff)) return;
+
+    try {
+      const oldProducts = await db.products
+        .where('cached_at')
+        .below(cutoff)
+        .toArray();
+
+      if (oldProducts.length > 0) {
+        await db.products.bulkDelete(oldProducts.map(p => p.id));
+      }
+    } catch (err) {
+      console.warn('cleanupOldCache failed', err);
     }
   }
 }

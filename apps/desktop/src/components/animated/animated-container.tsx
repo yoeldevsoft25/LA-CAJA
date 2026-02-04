@@ -1,6 +1,6 @@
 import { motion, type HTMLMotionProps, type Variants } from 'framer-motion'
 import { forwardRef, type ReactNode } from 'react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { motionVariants, transitions } from '@/design-system'
 
 // Filter out non-Variants types for the animation prop

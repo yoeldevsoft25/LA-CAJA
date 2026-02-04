@@ -7,9 +7,19 @@ import { BaseEvent } from '@la-caja/domain';
  */
 export interface LocalEvent extends BaseEvent {
   id?: number; // Auto-increment para Dexie
-  sync_status: 'pending' | 'synced' | 'failed' | 'conflict';
+  sync_status:
+    | 'pending'
+    | 'retrying'
+    | 'synced'
+    | 'failed'
+    | 'conflict'
+    | 'dead';
   sync_attempts: number;
   synced_at?: number;
+  acked_at?: number;
+  next_retry_at?: number;
+  last_error?: string | null;
+  last_error_code?: string | null;
 }
 
 export interface LocalProduct {
@@ -187,6 +197,62 @@ export class LaCajaDB extends Dexie {
       debts: 'id, store_id, customer_id, status, [store_id+customer_id], [store_id+status]',
       kv: 'key',
     });
+
+    // Versión 7: Outbox robusto
+    // - Unicidad fuerte por event_id
+    // - Estados de retry/dead
+    // - Índice por next_retry_at para scheduler
+    this.version(7)
+      .stores({
+        localEvents:
+          '++id, &event_id, [store_id+device_id+seq], seq, type, sync_status, created_at, [sync_status+created_at], [sync_status+next_retry_at], [store_id+device_id+sync_status]',
+        products:
+          'id, store_id, name, category, barcode, sku, is_active, [store_id+is_active], [store_id+category]',
+        customers: 'id, store_id, name, document_id, [store_id+document_id]',
+        sales: 'id, store_id, sold_at, customer_id, [store_id+sold_at]',
+        conflicts: 'id, event_id, status, created_at, [status+created_at]',
+        whatsappConfigs: 'id, store_id, [store_id+sync_status]',
+        debts: 'id, store_id, customer_id, status, [store_id+customer_id], [store_id+status]',
+        kv: 'key',
+      })
+      .upgrade(async (trans) => {
+        const localEventsTable = trans.table('localEvents') as Table<LocalEvent, number>;
+        const seen = new Map<string, LocalEvent & { id: number }>();
+        const duplicatesToDelete: number[] = [];
+
+        await localEventsTable.toCollection().each((evt: LocalEvent & { id?: number }) => {
+          if (!evt.id) return;
+          const current = evt as LocalEvent & { id: number };
+          const existing = seen.get(current.event_id);
+          if (!existing) {
+            seen.set(current.event_id, current);
+            return;
+          }
+
+          // Conservamos el evento más reciente por created_at
+          const existingCreated = Number(existing.created_at || 0);
+          const currentCreated = Number(current.created_at || 0);
+          if (currentCreated >= existingCreated) {
+            duplicatesToDelete.push(existing.id);
+            seen.set(current.event_id, current);
+          } else {
+            duplicatesToDelete.push(current.id);
+          }
+        });
+
+        if (duplicatesToDelete.length > 0) {
+          await localEventsTable.bulkDelete(duplicatesToDelete);
+        }
+
+        const now = Date.now();
+        await localEventsTable.toCollection().modify((evt: LocalEvent) => {
+          if (!evt.sync_status) evt.sync_status = 'pending';
+          if (!evt.sync_attempts) evt.sync_attempts = 0;
+          if (evt.next_retry_at == null) evt.next_retry_at = now;
+          if (evt.last_error_code === undefined) evt.last_error_code = null;
+          if (evt.last_error === undefined) evt.last_error = null;
+        });
+      });
   }
 
   /**
@@ -194,12 +260,26 @@ export class LaCajaDB extends Dexie {
    * Usa el índice compuesto [sync_status+created_at] para mejor performance
    */
   async getPendingEvents(limit: number = 50): Promise<LocalEvent[]> {
-    const events = await this.localEvents
-      .where('sync_status')
-      .equals('pending')
+    const now = Date.now();
+
+    const pending = await this.localEvents
+      .where('[sync_status+created_at]')
+      .between(['pending', Dexie.minKey], ['pending', Dexie.maxKey])
+      .limit(limit)
       .toArray();
-    return events
-      .sort((a, b) => (a.created_at as number) - (b.created_at as number))
+
+    if (pending.length >= limit) {
+      return pending.sort((a, b) => Number(a.created_at) - Number(b.created_at));
+    }
+
+    const retrying = await this.localEvents
+      .where('[sync_status+next_retry_at]')
+      .between(['retrying', Dexie.minKey], ['retrying', now])
+      .limit(limit - pending.length)
+      .toArray();
+
+    return [...pending, ...retrying]
+      .sort((a, b) => Number(a.created_at) - Number(b.created_at))
       .slice(0, limit);
   }
 
@@ -211,12 +291,11 @@ export class LaCajaDB extends Dexie {
     limit: number = 200
   ): Promise<LocalEvent[]> {
     const events = await this.localEvents
-      .where('sync_status')
-      .equals(status)
+      .where('[sync_status+created_at]')
+      .between([status, Dexie.minKey], [status, Dexie.maxKey])
+      .limit(limit)
       .toArray();
-    return events
-      .sort((a, b) => (a.created_at as number) - (b.created_at as number))
-      .slice(0, limit);
+    return events.sort((a, b) => Number(a.created_at) - Number(b.created_at));
   }
 
   /**
@@ -229,7 +308,9 @@ export class LaCajaDB extends Dexie {
       this.localEvents.update(evt.id!, {
         sync_status: 'pending',
         sync_attempts: 0,
+        next_retry_at: Date.now(),
         last_error: null,
+        last_error_code: null,
       })
     );
     await Promise.all(updates);

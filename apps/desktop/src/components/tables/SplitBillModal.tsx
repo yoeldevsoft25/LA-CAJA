@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { Users, Percent, List } from 'lucide-react'
 import { Order } from '@/services/orders.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -212,32 +212,36 @@ export default function SplitBillModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Dividir Cuenta</DialogTitle>
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
+          <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
+            Dividir Cuenta
+          </DialogTitle>
         </DialogHeader>
 
         <Tabs value={splitMode} onValueChange={(v) => setSplitMode(v as SplitMode)} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="items">
-              <List className="w-4 h-4 mr-2" />
-              Por Items
+          <TabsList className="grid w-full grid-cols-3 h-11 bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="items" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+              <List className="w-3.5 h-3.5 mr-1.5" />
+              Items
             </TabsTrigger>
-            <TabsTrigger value="diners">
-              <Users className="w-4 h-4 mr-2" />
-              Por Comensales
+            <TabsTrigger value="diners" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+              <Users className="w-3.5 h-3.5 mr-1.5" />
+              Diners
             </TabsTrigger>
-            <TabsTrigger value="percentage">
-              <Percent className="w-4 h-4 mr-2" />
-              Por Porcentaje
+            <TabsTrigger value="percentage" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+              <Percent className="w-3.5 h-3.5 mr-1.5" />
+              Pct.
             </TabsTrigger>
           </TabsList>
 
           <div className="flex-1 min-h-0 overflow-y-auto mt-4">
-            <TabsContent value="items" className="space-y-4 mt-0">
-              <div className="flex items-center gap-4">
-                <Label>Número de comensales:</Label>
+            <TabsContent value="items" className="space-y-4 mt-0 px-1">
+              <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-2xl border border-border/50">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground shrink-0">Comensales:</Label>
                 <Input
                   type="number"
+                  inputMode="numeric"
                   min="2"
                   max="10"
                   value={numDiners}
@@ -245,7 +249,7 @@ export default function SplitBillModal({
                     const num = parseInt(e.target.value) || 2
                     setNumDiners(Math.max(2, Math.min(10, num)))
                   }}
-                  className="w-24"
+                  className="h-10 w-20 text-center font-bold text-lg bg-white"
                 />
               </div>
 
@@ -257,17 +261,17 @@ export default function SplitBillModal({
                     const remaining = item.qty - totalAssigned
 
                     return (
-                      <Card key={item.id}>
+                      <Card key={item.id} className="border-none bg-muted/20 shadow-none rounded-2xl">
                         <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <p className="font-medium">{item.product?.name || 'Producto'}</p>
-                              <p className="text-sm text-muted-foreground">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1 min-w-0 pr-2">
+                              <p className="font-bold text-sm sm:text-base text-foreground truncate">{item.product?.name || 'Producto'}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                 Cantidad: {item.qty} | ${Number(item.unit_price_usd).toFixed(2)} c/u
                               </p>
                             </div>
-                            <Badge variant={remaining === 0 ? 'default' : 'secondary'}>
-                              {remaining} restante(s)
+                            <Badge variant={remaining === 0 ? 'default' : 'secondary'} className="font-bold text-[10px]">
+                              {remaining} libre
                             </Badge>
                           </div>
 
@@ -508,19 +512,27 @@ export default function SplitBillModal({
           </div>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSplit}
-            disabled={
-              splitMode === 'percentage' &&
-              Math.abs(Array.from(percentageSplits.values()).reduce((sum, p) => sum + p, 0) - 100) > 0.1
-            }
-          >
-            Dividir Cuenta
-          </Button>
+        <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-muted/20">
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              className="h-12 flex-1 font-semibold text-muted-foreground hover:text-foreground hover:bg-white transition-all px-6"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSplit}
+              className="h-12 flex-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 px-8 transition-all"
+              disabled={
+                splitMode === 'percentage' &&
+                Math.abs(Array.from(percentageSplits.values()).reduce((sum, p) => sum + p, 0) - 100) > 0.1
+              }
+            >
+              Confirmar División
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

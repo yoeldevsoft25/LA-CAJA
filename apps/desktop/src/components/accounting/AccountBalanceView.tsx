@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar } from '@/components/ui/calendar'
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { accountBalanceService, chartOfAccountsService } from '@/services/accounting.service'
 import { Calendar as CalendarIcon } from 'lucide-react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 export default function AccountBalanceView() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('')

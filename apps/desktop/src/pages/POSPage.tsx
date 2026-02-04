@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, useEffect, useState } from 'react'
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CatalogHeader } from '@/components/pos/catalog/CatalogHeader'
 import { ProductCatalog } from '@/components/pos/catalog/ProductCatalog'
 import { QuickActions } from '@/components/pos/catalog/QuickActions'
@@ -10,7 +10,7 @@ import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.serv
 import { printService } from '@/services/print.service'
 import { productSerialsService } from '@/services/product-serials.service'
 import { productsCacheService } from '@/services/products-cache.service'
-import { salesService, CreateSaleRequest, Sale } from '@/services/sales.service'
+import { salesService, CreateSaleRequest } from '@/services/sales.service'
 import { exchangeService } from '@/services/exchange.service'
 import { cashService } from '@/services/cash.service'
 import { paymentsService } from '@/services/payments.service'
@@ -19,6 +19,7 @@ import { priceListsService } from '@/services/price-lists.service'
 import { promotionsService } from '@/services/promotions.service'
 import { useCart, CartItem, CART_IDS } from '@/stores/cart.store'
 import { useAuth } from '@/stores/auth.store'
+import { usePOSStore } from '@/stores/pos.store'
 import { inventoryService } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
 import toast from '@/lib/toast'
@@ -33,7 +34,7 @@ import VariantSelector from '@/components/variants/VariantSelector'
 import WeightInputModal from '@/components/pos/WeightInputModal'
 import POSCart from '@/components/pos/cart/POSCart'
 import { SuccessOverlay } from '@/components/pos/SuccessOverlay'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
 import { useOrientation } from '@/hooks/use-orientation'
 
@@ -49,19 +50,11 @@ export default function POSPage() {
   const MAX_QTY_PER_PRODUCT = 999
 
   const queryClient = useQueryClient()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
+  // Usar store persistente para UI State
+  const { searchQuery, isCheckoutOpen: showCheckout, setSearchQuery, setIsCheckoutOpen: setShowCheckout } = usePOSStore()
 
-  // Debounce simple para evitar peticiones en cada tecla
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [searchQuery])
   const mobileSearchRef = useRef<HTMLDivElement | null>(null)
   const [mobileResultsTop, setMobileResultsTop] = useState<number | null>(null)
-  const [showCheckout, setShowCheckout] = useState(false)
   const [shouldPrint, setShouldPrint] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -269,9 +262,9 @@ export default function POSPage() {
   const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined)
   // Cargar desde IndexedDB al montar o cuando cambia la búsqueda
   useEffect(() => {
-    if (user?.store_id && (debouncedQuery.length >= 2 || debouncedQuery.length === 0)) {
+    if (user?.store_id && (searchQuery.length >= 2 || searchQuery.length === 0)) {
       productsCacheService.getProductsFromCache(user.store_id, {
-        search: debouncedQuery || undefined,
+        search: searchQuery || undefined,
         is_active: true,
         limit: 50,
       }).then(cached => {
@@ -285,7 +278,7 @@ export default function POSPage() {
         // Silenciar errores
       });
     }
-  }, [user?.store_id, debouncedQuery]);
+  }, [user?.store_id, searchQuery]);
 
   useEffect(() => {
     if (!isMobile || searchQuery.trim().length < 2) {
@@ -310,12 +303,12 @@ export default function POSPage() {
 
   // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading, isError: isProductsError } = useQuery({
-    queryKey: ['products', 'search', debouncedQuery, user?.store_id],
+    queryKey: ['products', 'search', searchQuery, user?.store_id],
     queryFn: () =>
       Promise.race([
         productsService.search(
           {
-            q: debouncedQuery || undefined,
+            q: searchQuery || undefined,
             is_active: true,
             limit: 50,
           },
@@ -325,7 +318,7 @@ export default function POSPage() {
           setTimeout(() => reject(new Error('timeout')), 8000)
         ),
       ]),
-    enabled: (debouncedQuery.length >= 2 || debouncedQuery.length === 0) && !!user?.store_id && isOnline,
+    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id && isOnline,
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: Infinity, // Nunca eliminar del cache
     retry: (failureCount, error: any) => {
@@ -335,7 +328,8 @@ export default function POSPage() {
       return false
     },
     retryDelay: 1200,
-    placeholderData: keepPreviousData,
+    initialData: !isOnline ? initialData : undefined,
+    placeholderData: !isOnline ? initialData : undefined,
   })
 
   const products = productsData?.products || []
@@ -351,13 +345,12 @@ export default function POSPage() {
       })
       .slice(0, 6)
   }, [products, searchQuery])
-  // Cargar estados de stock para TODOS los productos de la búsqueda (pre-warming cache)
-  const { data: stockStatuses } = useQuery({
-    queryKey: ['inventory', 'stock-status', 'pos', debouncedQuery, selectedWarehouseId],
+  const { data: lowStockStatuses } = useQuery({
+    queryKey: ['inventory', 'low-stock', 'pos', searchQuery, selectedWarehouseId],
     queryFn: () =>
       inventoryService.getStockStatus({
-        search: debouncedQuery || undefined,
-        low_stock_only: false, // Cargamos todo para evitar peticiones al hacer click
+        search: searchQuery || undefined,
+        low_stock_only: true,
         warehouse_id: selectedWarehouseId || undefined,
         limit: 50,
       }),
@@ -365,24 +358,10 @@ export default function POSPage() {
     staleTime: 1000 * 60, // 1 minuto
     gcTime: 1000 * 60 * 5,
     retry: 1,
-    placeholderData: keepPreviousData,
   })
-
   const lowStockIds = useMemo(() => {
-    return new Set((stockStatuses || []).filter(item => item.is_low_stock).map((item) => item.product_id))
-  }, [stockStatuses])
-
-  // Poblar cache individual de stock a partir del masivo para ahorrar peticiones al hacer click
-  useEffect(() => {
-    if (stockStatuses && stockStatuses.length > 0) {
-      stockStatuses.forEach(item => {
-        queryClient.setQueryData(['stock', item.product_id], {
-          product_id: item.product_id,
-          current_stock: item.current_stock
-        })
-      })
-    }
-  }, [stockStatuses, queryClient])
+    return new Set((lowStockStatuses || []).map((item) => item.product_id))
+  }, [lowStockStatuses])
   const { data: recentSales } = useQuery({
     queryKey: ['sales', 'recent-products', user?.store_id],
     queryFn: () =>
@@ -466,7 +445,16 @@ export default function POSPage() {
       }
     }
 
+    const syncScannerCache = async () => {
+      try {
+        await productsService.syncActiveProducts(user?.store_id);
+      } catch (e) {
+        console.warn('[POS] Background sync failed', e);
+      }
+    }
+
     void prefetchFrequentProducts()
+    void syncScannerCache()
   }, [fastCheckoutConfig?.enabled, isOnline, queryClient, recentSales, user?.store_id])
 
 
@@ -600,7 +588,7 @@ export default function POSPage() {
     // y usar el fallback local. Si queda en 'online', react-query la pausa
     // hasta que vuelva la conexión y el botón se queda en "Procesando...".
     networkMode: 'always',
-    onSuccess: (sale: Sale) => {
+    onSuccess: (sale) => {
       const isOnline = navigator.onLine
       const serialsToAssign = pendingSerials
       const shouldPrintNow = shouldPrint

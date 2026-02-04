@@ -9,10 +9,10 @@ import licensePaymentsService, {
   CreatePaymentRequestDto,
 } from '@/services/license-payments.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@la-caja/ui-core';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Input } from '@la-caja/ui-core';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -267,7 +267,7 @@ export default function LicensePage() {
           Mi Licencia
         </h1>
         <p className="text-muted-foreground mt-1">
-          Gestiona tu suscripción y planes de LA-CAJA
+          Gestiona tu suscripción y planes de Velox POS
         </p>
       </div>
 

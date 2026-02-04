@@ -6,13 +6,13 @@ import { z } from 'zod'
 import { Shift, ShiftSummary, CloseShiftRequest } from '@/services/shifts.service'
 import { printService } from '@/services/print.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 const closeShiftSchema = z.object({
   counted_bs: z

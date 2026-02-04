@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@la-caja/ui-core";
+import { cn } from "@/lib/utils";
 
 interface MeteorsProps {
     number?: number;

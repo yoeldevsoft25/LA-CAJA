@@ -1,11 +1,11 @@
 import { memo, useEffect, useMemo, useCallback } from 'react'
 import { AlertTriangle, Coins, HandCoins } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@la-caja/ui-core'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { calculateChangeInBs, formatCurrency } from '@/utils/checkout-utils'
 import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNearestDenominationUp, CashChangeRoundingMode } from '@/utils/vzla-denominations'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface CashPaymentSectionProps {
     mode: 'USD' | 'BS'

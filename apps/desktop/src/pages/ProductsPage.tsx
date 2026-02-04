@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList, Download, Copy, MoreHorizontal, AlertCircle } from 'lucide-react'
 import { productsService, Product, ProductSearchResponse } from '@/services/products.service'
@@ -18,8 +18,8 @@ const ProductSerialsModal = lazy(() => import('@/components/serials/ProductSeria
 const ImportCSVModal = lazy(() => import('@/components/products/ImportCSVModal'))
 const CleanDuplicatesModal = lazy(() => import('@/components/products/CleanDuplicatesModal'))
 import ProductCard from '@/components/products/ProductCard'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
 import { PullToRefreshIndicator } from '@/components/ui/pull-to-refresh-indicator'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,15 +68,15 @@ const getCategoryColor = (category: string): [string, string, string] => {
   const colorPalette: Array<[string, string, string]> = [
     ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
     ['bg-green-100', 'text-green-700', 'border-green-300'],
-    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
+    ['bg-purple-100', 'text-purple-700', 'border-purple-300'],
     ['bg-orange-100', 'text-orange-700', 'border-orange-300'],
     ['bg-pink-100', 'text-pink-700', 'border-pink-300'],
     ['bg-cyan-100', 'text-cyan-700', 'border-cyan-300'],
     ['bg-amber-100', 'text-amber-700', 'border-amber-300'],
-    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
+    ['bg-indigo-100', 'text-indigo-700', 'border-indigo-300'],
     ['bg-teal-100', 'text-teal-700', 'border-teal-300'],
     ['bg-rose-100', 'text-rose-700', 'border-rose-300'],
-    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
+    ['bg-violet-100', 'text-violet-700', 'border-violet-300'],
     ['bg-emerald-100', 'text-emerald-700', 'border-emerald-300'],
   ]
 
@@ -179,12 +179,16 @@ export default function ProductsPage() {
     gcTime: Infinity,
   })
 
-  const stockByProduct = (stockStatusData?.items || []).reduce<Record<string, StockStatus>>(
-    (acc, item) => {
-      acc[item.product_id] = item
-      return acc
-    },
-    {}
+  const stockByProduct = useMemo(
+    () =>
+      (stockStatusData?.items || []).reduce<Record<string, StockStatus>>(
+        (acc, item) => {
+          acc[item.product_id] = item
+          return acc
+        },
+        {}
+      ),
+    [stockStatusData?.items]
   )
 
   useEffect(() => {
@@ -231,6 +235,8 @@ export default function ProductsPage() {
     queryKey: ['warehouses'],
     queryFn: () => warehousesService.getAll(),
     enabled: !!user?.store_id,
+    staleTime: 1000 * 60 * 30, // 30 minutos
+    gcTime: Infinity,
   })
 
   const products = productsData?.products || []
@@ -249,7 +255,8 @@ export default function ProductsPage() {
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => productsService.deactivate(id, user?.store_id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['products', 'list'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'], exact: false })
       toast.success('Producto desactivado exitosamente')
     },
     onError: (error: any) => {
@@ -261,7 +268,8 @@ export default function ProductsPage() {
   const activateMutation = useMutation({
     mutationFn: (id: string) => productsService.activate(id, user?.store_id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['products', 'list'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'], exact: false })
       toast.success('Producto activado exitosamente')
     },
     onError: (error: any) => {
@@ -277,8 +285,8 @@ export default function ProductsPage() {
         price_bs: 0,
       }, user?.store_id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-      queryClient.invalidateQueries({ queryKey: ['inventory', 'status'] })
+      queryClient.invalidateQueries({ queryKey: ['products', 'list'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['inventory', 'status', user?.store_id], exact: false })
       toast.success('Precio actualizado exitosamente')
       setEditingPriceProductId(null)
       setEditingPriceValue('')
@@ -478,7 +486,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="h-full max-w-7xl mx-auto" data-pull-to-refresh>
+    <div className="h-full max-w-7xl mx-auto overflow-y-auto p-4 pb-20" data-pull-to-refresh>
       <PullToRefreshIndicator
         isPulling={pullToRefresh.isPulling}
         isRefreshing={pullToRefresh.isRefreshing}
@@ -573,7 +581,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filtros Flotantes */}
-      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/60 backdrop-blur-xl sticky top-0 z-20 transition-all duration-300">
+      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/95 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-5 h-5 z-10" />
@@ -632,7 +640,7 @@ export default function ProductsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-full sm:max-w-xs">
+            <div className="w-full sm:max-w-sm">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Catálogo público</Label>
               <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-white/60 px-3 py-2">
                 <span className="text-sm text-muted-foreground">
@@ -790,7 +798,7 @@ export default function ProductsPage() {
                       >
                         <td className="px-4 py-3 align-middle w-[45%] sm:w-[40%] pl-6">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-background shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-background shrink-0">
                               {initial}
                             </div>
                             <div className="min-w-0 max-w-full">

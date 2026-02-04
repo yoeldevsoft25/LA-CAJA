@@ -12,8 +12,8 @@ const BulkStockAdjustModal = lazy(() => import('@/components/inventory/BulkStock
 const MovementsModal = lazy(() => import('@/components/inventory/MovementsModal'))
 const PurchaseOrderFormModal = lazy(() => import('@/components/purchase-orders/PurchaseOrderFormModal'))
 
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -677,7 +677,7 @@ export default function InventoryPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleAdjustStock(item)}
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
+                              className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full"
                               title="Ajustar stock"
                             >
                               <TrendingDown className="w-4 h-4" />
@@ -739,44 +739,45 @@ export default function InventoryPage() {
       )}
 
       {/* Modales */}
-      <Suspense fallback={null}>
-        <StockReceivedModal
-          isOpen={isStockReceivedModalOpen}
-          onClose={handleCloseModals}
-          product={selectedProduct}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['inventory'] })
-            handleCloseModals()
-          }}
-        />
-      </Suspense>
+      <StockReceivedModal
+        isOpen={isStockReceivedModalOpen}
+        onClose={handleCloseModals}
+        product={selectedProduct}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['inventory'] })
+          handleCloseModals()
+        }}
+      />
 
-      <Suspense fallback={null}>
-        <StockAdjustModal
-          isOpen={isStockAdjustModalOpen}
-          onClose={handleCloseModals}
-          product={selectedProduct}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['inventory'] })
-            handleCloseModals()
-          }}
-        />
-      </Suspense>
+      <StockAdjustModal
+        isOpen={isStockAdjustModalOpen}
+        onClose={handleCloseModals}
+        product={selectedProduct}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['inventory'] })
+          handleCloseModals()
+        }}
+      />
 
-      <Suspense fallback={null}>
-        <BulkStockAdjustModal
-          isOpen={isBulkStockAdjustModalOpen}
-          onClose={() => setIsBulkStockAdjustModalOpen(false)}
-          stockItems={stockItems}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['inventory'] })
-            setIsBulkStockAdjustModalOpen(false)
-          }}
-        />
-      </Suspense>
+      <BulkStockAdjustModal
+        isOpen={isBulkStockAdjustModalOpen}
+        onClose={() => setIsBulkStockAdjustModalOpen(false)}
+        stockItems={stockItems}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['inventory'] })
+          setIsBulkStockAdjustModalOpen(false)
+        }}
+      />
 
       {isPurchaseOrderModalOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            </div>
+          </div>
+        }>
           <PurchaseOrderFormModal
             isOpen={isPurchaseOrderModalOpen}
             onClose={() => setIsPurchaseOrderModalOpen(false)}
@@ -801,14 +802,12 @@ export default function InventoryPage() {
         </Suspense>
       )}
 
-      <Suspense fallback={null}>
-        <MovementsModal
-          isOpen={isMovementsModalOpen}
-          onClose={handleCloseModals}
-          product={selectedProduct}
-          warehouseId={warehouseFilter !== 'all' ? warehouseFilter : undefined}
-        />
-      </Suspense>
+      <MovementsModal
+        isOpen={isMovementsModalOpen}
+        onClose={handleCloseModals}
+        product={selectedProduct}
+        warehouseId={warehouseFilter !== 'all' ? warehouseFilter : undefined}
+      />
 
       {/* Modal de confirmación para vaciar stock de un producto */}
       <Dialog open={isResetProductModalOpen} onOpenChange={(open) => !open && handleCloseModals()}>

@@ -9,8 +9,8 @@ import {
   PaymentMethod,
 } from '@/services/fast-checkout.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -105,8 +105,8 @@ export default function FastCheckoutConfigModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
+          <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             Configurar Modo Caja Rápida
           </DialogTitle>
@@ -126,12 +126,12 @@ export default function FastCheckoutConfigModal({
               </Alert>
 
               {/* Habilitar modo */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="enabled" className="text-base">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <Label htmlFor="enabled" className="text-base sm:text-lg font-semibold">
                     Habilitar Modo Caja Rápida
                   </Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground leading-snug">
                     Activa o desactiva el modo caja rápida
                   </p>
                 </div>
@@ -140,40 +140,43 @@ export default function FastCheckoutConfigModal({
                   checked={enabled}
                   onCheckedChange={(checked) => setValue('enabled', checked)}
                   disabled={isLoading}
+                  className="shrink-0"
                 />
               </div>
 
               {/* Límite de items */}
-              <div>
-                <Label htmlFor="max_items">
+              <div className="space-y-2">
+                <Label htmlFor="max_items" className="text-sm sm:text-base font-semibold ml-1">
                   Límite Máximo de Items <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="max_items"
-                  type="number"
-                  step="1"
-                  min="1"
-                  max="50"
-                  {...register('max_items', { valueAsNumber: true })}
-                  className="mt-2"
-                  placeholder="10"
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="max_items"
+                    type="number"
+                    step="1"
+                    min="1"
+                    max="50"
+                    {...register('max_items', { valueAsNumber: true })}
+                    className="h-12 text-base shadow-sm border-muted/40 focus:bg-white"
+                    placeholder="10"
+                    disabled={isLoading}
+                  />
+                </div>
                 {errors.max_items && (
-                  <p className="mt-1 text-sm text-destructive">{errors.max_items.message}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-destructive px-1">{errors.max_items.message}</p>
                 )}
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground px-1">
                   Número máximo de items permitidos en una venta rápida (1-50)
                 </p>
               </div>
 
               {/* Permitir descuentos */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="allow_discounts" className="text-base">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <Label htmlFor="allow_discounts" className="text-base sm:text-lg font-semibold">
                     Permitir Descuentos
                   </Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground leading-snug">
                     Si está activado, se permitirán descuentos en modo rápido
                   </p>
                 </div>
@@ -182,16 +185,17 @@ export default function FastCheckoutConfigModal({
                   checked={allowDiscounts}
                   onCheckedChange={(checked) => setValue('allow_discounts', checked)}
                   disabled={isLoading}
+                  className="shrink-0"
                 />
               </div>
 
               {/* Permitir selección de cliente */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="allow_customer_selection" className="text-base">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <Label htmlFor="allow_customer_selection" className="text-base sm:text-lg font-semibold">
                     Permitir Selección de Cliente
                   </Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground leading-snug">
                     Si está activado, se permitirá seleccionar cliente en modo rápido
                   </p>
                 </div>
@@ -200,12 +204,15 @@ export default function FastCheckoutConfigModal({
                   checked={allowCustomerSelection}
                   onCheckedChange={(checked) => setValue('allow_customer_selection', checked)}
                   disabled={isLoading}
+                  className="shrink-0"
                 />
               </div>
 
               {/* Método de pago por defecto */}
-              <div>
-                <Label htmlFor="default_payment_method">Método de Pago por Defecto</Label>
+              <div className="space-y-2">
+                <Label htmlFor="default_payment_method" className="text-sm sm:text-base font-semibold ml-1">
+                  Método de Pago por Defecto
+                </Label>
                 <Select
                   value={watch('default_payment_method') || 'none'}
                   onValueChange={(value) =>
@@ -213,7 +220,7 @@ export default function FastCheckoutConfigModal({
                   }
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="mt-2">
+                  <SelectTrigger className="h-12 border-muted/40 bg-white/60 focus:bg-white shadow-sm">
                     <SelectValue placeholder="Sin método por defecto" />
                   </SelectTrigger>
                   <SelectContent>
@@ -225,7 +232,7 @@ export default function FastCheckoutConfigModal({
                     <SelectItem value="OTHER">{paymentMethodLabels.OTHER}</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground px-1">
                   Método de pago que se seleccionará automáticamente en modo rápido
                 </p>
               </div>
@@ -234,19 +241,19 @@ export default function FastCheckoutConfigModal({
 
           {/* Footer */}
           <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1"
+                className="w-full sm:flex-1"
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={isLoading}
               >
                 {isLoading ? (

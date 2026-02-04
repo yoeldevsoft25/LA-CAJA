@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { publicMenuService } from '@/services/public-menu.service'
 import MenuViewer from '@/components/public/MenuViewer'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 /**

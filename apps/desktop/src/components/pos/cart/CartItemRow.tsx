@@ -1,5 +1,5 @@
 import { GripVertical, Minus, Plus, Scale, Trash2 } from 'lucide-react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { getCategoryIcon } from '@/components/pos/utils'
 import { CartItem } from '@/stores/cart.store'
 

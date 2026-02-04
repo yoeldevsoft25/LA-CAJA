@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Trash2, Search, Utensils } from 'lucide-react'
 import { Product, RecipeIngredient } from '@/services/products.service'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 

@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { chartOfAccountsService } from '@/services/accounting.service'
 import type { ChartOfAccountTree, AccountType } from '@/types/accounting.types'
 import { ChevronRight, ChevronDown, Plus, Edit, Trash2 } from 'lucide-react'
 import AccountFormModal from './AccountFormModal'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import toast from '@/lib/toast'
 
 const accountTypeLabels: Record<AccountType, string> = {
@@ -21,7 +21,7 @@ const accountTypeLabels: Record<AccountType, string> = {
 const accountTypeColors: Record<AccountType, string> = {
   asset: 'bg-blue-100 text-blue-800',
   liability: 'bg-red-100 text-red-800',
-  equity: 'bg-blue-100 text-blue-800',
+  equity: 'bg-purple-100 text-purple-800',
   revenue: 'bg-green-100 text-green-800',
   expense: 'bg-orange-100 text-orange-800',
 }

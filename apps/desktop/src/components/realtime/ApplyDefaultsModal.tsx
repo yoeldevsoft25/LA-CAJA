@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
+    DialogFooter,
 } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, CheckCircle2, AlertCircle, Info, Sparkles } from 'lucide-react'
@@ -126,12 +126,9 @@ export function ApplyDefaultsModal({
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-primary" />
-                        Configuración Inteligente de Analíticas
-                    </DialogTitle>
+                    <DialogTitle>Aplicar Configuración Recomendada</DialogTitle>
                     <DialogDescription>
-                        Aplica umbrales de alerta predefinidos basados en mejores prácticas del retail
+                        Esta acción restaurará los umbrales de detección a sus valores predeterminados seguros.
                     </DialogDescription>
                 </DialogHeader>
 

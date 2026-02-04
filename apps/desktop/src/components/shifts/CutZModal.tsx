@@ -1,7 +1,7 @@
 import { FileCheck, AlertCircle } from 'lucide-react'
 import { Shift } from '@/services/shifts.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface CutZModalProps {

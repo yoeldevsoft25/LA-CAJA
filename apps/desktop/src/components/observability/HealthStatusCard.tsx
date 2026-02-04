@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@la-caja/ui-core';
+import { cn } from '@/lib/utils';
 
 interface HealthStatusCardProps {
   title: string;

@@ -1,6 +1,6 @@
 import { motion, type HTMLMotionProps } from 'framer-motion'
 import { forwardRef, type ReactNode } from 'react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { transitions } from '@/design-system'
 
 interface AnimatedCardProps extends Omit<HTMLMotionProps<'div'>, 'children'> {

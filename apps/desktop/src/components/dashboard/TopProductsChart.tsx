@@ -61,14 +61,14 @@ function getColors(): string[] {
   const primary = getCSSVariableAsHSL('--primary') ?? 'hsl(221, 83%, 53%)'
   return [
     primary,
-    getCSSVariableAsHSL('--chart-2') ?? 'hsl(173, 80%, 40%)', // Turquesa
-    getCSSVariableAsHSL('--chart-3') ?? 'hsl(199, 89%, 48%)', // Azul claro
-    getCSSVariableAsHSL('--chart-4') ?? 'hsl(214, 94%, 55%)', // Azul intenso
-    getCSSVariableAsHSL('--chart-5') ?? 'hsl(38, 92%, 50%)',  // Naranja
-    'hsl(221, 83%, 53%)', // Azul principal
+    getCSSVariableAsHSL('--chart-2') ?? 'hsl(173, 80%, 40%)',
+    getCSSVariableAsHSL('--chart-3') ?? 'hsl(262, 83%, 58%)',
+    getCSSVariableAsHSL('--chart-4') ?? 'hsl(350, 89%, 60%)',
+    getCSSVariableAsHSL('--chart-5') ?? 'hsl(38, 92%, 50%)',
+    'hsl(221, 83%, 53%)', // Azul
     'hsl(173, 80%, 40%)', // Turquesa
-    'hsl(199, 89%, 48%)', // Azul cielo
-    'hsl(214, 94%, 55%)', // Azul real
+    'hsl(262, 83%, 58%)', // Púrpura
+    'hsl(350, 89%, 60%)', // Rojo
     'hsl(38, 92%, 50%)',  // Naranja
   ]
 }
@@ -117,11 +117,11 @@ const CustomTooltip = ({ active, payload, currency }: CustomTooltipProps) => {
 // Componente para mostrar el valor en la barra
 const CustomLabel = ({ x, y, width, value }: any) => {
   if (!value || width < 50) return null // No mostrar si la barra es muy pequeña
-
-  const formattedValue = value >= 1000
-    ? `${(value / 1000).toFixed(1)}k`
+  
+  const formattedValue = value >= 1000 
+    ? `${(value / 1000).toFixed(1)}k` 
     : value.toFixed(0)
-
+  
   return (
     <text
       x={x + width - 8}
@@ -145,7 +145,7 @@ export default function TopProductsChart({
 }: TopProductsChartProps) {
   const isMobile = useMobileDetection()
   const colors = useMemo(() => getColors(), [])
-
+  
   const chartData = useMemo(() => {
     const sortedData = [...data].sort((a, b) => {
       if (sortBy === 'quantity') {
@@ -155,19 +155,19 @@ export default function TopProductsChart({
       const revenueB = currency === 'BS' ? b.revenue_bs : b.revenue_usd
       return revenueB - revenueA
     })
-
-    const maxRevenue = sortedData.length > 0
+    
+    const maxRevenue = sortedData.length > 0 
       ? (currency === 'BS' ? sortedData[0].revenue_bs : sortedData[0].revenue_usd)
       : 1
-
+    
     return sortedData.slice(0, limit).map((item, index) => {
       const revenue = currency === 'BS' ? item.revenue_bs : item.revenue_usd
       return {
         name: isMobile && item.product_name.length > 15
           ? `${item.product_name.substring(0, 15)}...`
           : item.product_name.length > 25
-            ? `${item.product_name.substring(0, 25)}...`
-            : item.product_name,
+          ? `${item.product_name.substring(0, 25)}...`
+          : item.product_name,
         fullName: item.product_name,
         revenue,
         quantity: formatQuantity(
@@ -198,11 +198,11 @@ export default function TopProductsChart({
         <BarChart
           data={chartData}
           layout="vertical"
-          margin={{
-            top: 10,
-            right: isMobile ? 50 : 80,
-            left: isMobile ? 10 : 20,
-            bottom: 10
+          margin={{ 
+            top: 10, 
+            right: isMobile ? 50 : 80, 
+            left: isMobile ? 10 : 20, 
+            bottom: 10 
           }}
         >
           <defs>
@@ -224,8 +224,8 @@ export default function TopProductsChart({
             type="number"
             axisLine={false}
             tickLine={false}
-            tick={{
-              fill: 'hsl(var(--muted-foreground))',
+            tick={{ 
+              fill: 'hsl(var(--muted-foreground))', 
               fontSize: isMobile ? 10 : 12,
               fontWeight: 500,
             }}
@@ -241,8 +241,8 @@ export default function TopProductsChart({
             dataKey="name"
             axisLine={false}
             tickLine={false}
-            tick={{
-              fill: 'hsl(var(--foreground))',
+            tick={{ 
+              fill: 'hsl(var(--foreground))', 
               fontSize: isMobile ? 10 : 12,
               fontWeight: 500,
             }}

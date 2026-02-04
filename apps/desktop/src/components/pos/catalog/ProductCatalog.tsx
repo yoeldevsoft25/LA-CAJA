@@ -1,9 +1,9 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Scale, Search, WifiOff } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
 // Definición de tipos mínimos necesarios si no se importan de /services
@@ -32,7 +32,7 @@ interface ProductCatalogProps {
     exchangeRate: number
 }
 
-export const ProductCatalog = React.memo(function ProductCatalog({
+export function ProductCatalog({
     products,
     isLoading,
     isError,
@@ -183,18 +183,15 @@ export const ProductCatalog = React.memo(function ProductCatalog({
                                     onClick={() => onProductClick(product)}
                                     whileHover={{ scale: 1.01, translateY: -2 }}
                                     whileTap={{ scale: 0.98 }}
-                                    // Eliminamos initial/animate para evitar pop-in al re-renderizar
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
                                     transition={{
                                         type: "spring",
                                         stiffness: 400,
                                         damping: 25,
+                                        opacity: { duration: 0.3 }
                                     }}
-                                    className={cn(
-                                        "w-full h-[104px] text-left group relative backdrop-blur-md rounded-2xl border shadow-sm hover:shadow-lg overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 transition-all duration-300",
-                                        isLowStock
-                                            ? "bg-warning/10 border-warning/30 hover:border-warning/50 ring-warning/20 animate-pulse-subtle"
-                                            : "bg-gradient-to-br from-card/90 to-card/50 hover:from-card hover:to-card/80 border-white/10 hover:border-primary/20 ring-transparent hover:ring-primary/10"
-                                    )}
+                                    className="w-full h-[104px] text-left group relative bg-gradient-to-br from-card/90 to-card/50 hover:from-card hover:to-card/80 backdrop-blur-md rounded-2xl border border-white/10 hover:border-primary/20 shadow-sm hover:shadow-lg overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10"
                                 >
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-all duration-300" />
 
@@ -263,4 +260,4 @@ export const ProductCatalog = React.memo(function ProductCatalog({
             </ScrollArea>
         </div>
     )
-})
+}

@@ -8,7 +8,7 @@ import CashMovementsList from '@/components/payments/CashMovementsList'
 import CashMovementsSummary from '@/components/payments/CashMovementsSummary'
 import CashMovementModal from '@/components/payments/CashMovementModal'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 
 export default function PaymentsPage() {
   const queryClient = useQueryClient()

@@ -3,7 +3,7 @@ import { ArrowDownCircle, ArrowUpCircle, TrendingUp } from 'lucide-react'
 import { paymentsService } from '@/services/payments.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface CashMovementsSummaryProps {
   shiftId?: string | null

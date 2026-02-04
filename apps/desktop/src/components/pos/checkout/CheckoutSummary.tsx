@@ -2,7 +2,7 @@ import { memo, useMemo } from 'react'
 import { Receipt, TrendingUp, BadgeDollarSign } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, convertUsdToBs } from '@/utils/checkout-utils'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface CheckoutSummaryProps {
     subtotal: number

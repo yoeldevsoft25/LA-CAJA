@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 /**
  * Skip Links component for keyboard navigation accessibility

@@ -8,15 +8,15 @@ import { Debt, debtsService, calculateDebtTotals, PaymentMethod } from '@/servic
 import { exchangeService } from '@/services/exchange.service'
 import toast from '@/lib/toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth.store'
 import { useOnline } from '@/hooks/use-online'
 
@@ -26,7 +26,7 @@ const roundCurrency = (value: number) => Math.round(value * 100) / 100
 const paymentSchema = z.object({
   amount_usd: z.number().min(0.01, 'El monto debe ser mayor a 0'),
   amount_bs: z.number().min(0, 'El monto en Bs no puede ser negativo'),
-  method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER']),
+  method: z.enum(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER', 'ROLLOVER']),
   note: z.string().optional(),
   rollover_remaining: z.boolean().optional(),
 })
@@ -348,7 +348,7 @@ export default function AddPaymentModal({
                 </Label>
                 <RadioGroup
                   value={selectedMethod}
-                  onValueChange={(value) => setValue('method', value as any)}
+                  onValueChange={(value) => setValue('method', value as PaymentFormData['method'])}
                   className="grid grid-cols-2 gap-x-4 gap-y-3"
                 >
                   {paymentMethods.map((method) => (

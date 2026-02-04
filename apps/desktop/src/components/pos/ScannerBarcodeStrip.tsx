@@ -1,5 +1,5 @@
 import { Barcode } from 'lucide-react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 type ScannerStatus = 'idle' | 'scanning' | 'success' | 'error'
 

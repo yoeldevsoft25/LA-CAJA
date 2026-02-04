@@ -5,8 +5,8 @@ import { CalendarIcon, DollarSign, Loader2, Save } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-import { cn } from '@la-caja/ui-core'
-import { Button } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
@@ -15,7 +15,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@la-caja/ui-core'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'

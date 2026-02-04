@@ -90,4 +90,4 @@ export function UptimeTracker({ uptime, loading }: UptimeTrackerProps) {
   );
 }
 
-import { cn } from '@la-caja/ui-core';
+import { cn } from '@/lib/utils';

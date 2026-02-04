@@ -1,12 +1,12 @@
 import { Alert } from '@/services/observability.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@la-caja/ui-core';
+import { Button } from '@/components/ui/button';
 import { AlertTriangle, XCircle, Info, CheckCircle2 } from 'lucide-react';
 import { observabilityService } from '@/services/observability.service';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from '@/lib/toast';
-import { cn } from '@la-caja/ui-core';
+import { cn } from '@/lib/utils';
 
 interface AlertsPanelProps {
   alerts: Alert[];

@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import type { AxiosResponse } from 'axios'
 import { syncService } from './sync.service'
 import { exchangeService } from './exchange.service'
 import { BaseEvent, SaleCreatedPayload, SaleItem as DomainSaleItem, PricingCalculator, WeightUnit } from '@la-caja/domain'
@@ -773,13 +774,13 @@ export const salesService = {
             ? { params: { return: options.returnMode } }
             : {}),
         })
-        .then((res) => {
-        logger.debug('Respuesta HTTP recibida exitosamente')
-        return res
-      }).catch((err) => {
-        logger.error('Error en llamada HTTP', err)
-        throw err
-      })
+        .then((res: AxiosResponse<Sale>) => {
+          logger.debug('Respuesta HTTP recibida exitosamente')
+          return res
+        }).catch((err: unknown) => {
+          logger.error('Error en llamada HTTP', err)
+          throw err
+        })
 
       logger.info('Venta procesada exitosamente', { saleId: response.data?.id })
       return response.data

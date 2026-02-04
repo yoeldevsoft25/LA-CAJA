@@ -21,8 +21,8 @@ import {
 import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -37,7 +37,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TransferFormModal } from '@/components/transfers/TransferFormModal'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 export default function TransfersPage() {
   const { user } = useAuth()
@@ -380,8 +380,8 @@ export default function TransfersPage() {
       {/* Modal de enviar */}
       <Dialog open={isShipOpen} onOpenChange={setIsShipOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+          <DialogHeader className="pr-12">
+            <DialogTitle className="text-base sm:text-lg">Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
               Completa los datos de envío y logística
             </DialogDescription>
@@ -389,7 +389,7 @@ export default function TransfersPage() {
           {selectedTransfer && (
             <form onSubmit={handleShipSubmit} className="space-y-4">
               {/* Logistics Info */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="space-y-2">
                   <Label>Conductor</Label>
                   <Input name="driver_name" placeholder="Nombre del chofer" />
@@ -408,24 +408,27 @@ export default function TransfersPage() {
                 </div>
               </div>
 
-              <div className="max-h-[300px] overflow-y-auto space-y-4">
+              <div className="max-h-[300px] overflow-y-auto space-y-3">
                 {selectedTransfer.items.map((item, index) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{item.product?.name}</p>
-                      <p className="text-xs text-muted-foreground">Solicitado: {item.quantity}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">Enviado:</Label>
-                      <Input
-                        type="number"
-                        name={`shipped_${index}`}
-                        min="0"
-                        max={item.quantity}
-                        defaultValue={item.quantity}
-                        required
-                        className="w-20 text-right"
-                      />
+                  <div key={item.id} className="p-3 border rounded-lg space-y-2">
+                    {/* Mobile: Vertical layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.product?.name}</p>
+                        <p className="text-xs text-muted-foreground">Solicitado: {item.quantity}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Enviado:</Label>
+                        <Input
+                          type="number"
+                          name={`shipped_${index}`}
+                          min="0"
+                          max={item.quantity}
+                          defaultValue={item.quantity}
+                          required
+                          className="w-20 text-right"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -436,11 +439,11 @@ export default function TransfersPage() {
                 <Textarea name="note" placeholder="Observaciones sobre el despacho..." />
               </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsShipOpen(false)}>
+              <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsShipOpen(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={shipMutation.isPending}>
+                <Button type="submit" disabled={shipMutation.isPending} className="w-full sm:w-auto">
                   {shipMutation.isPending ? 'Enviando...' : 'Confirmar Envío'}
                 </Button>
               </DialogFooter>
@@ -452,32 +455,35 @@ export default function TransfersPage() {
       {/* Modal de recibir */}
       <Dialog open={isReceiveOpen} onOpenChange={setIsReceiveOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
+          <DialogHeader className="pr-12">
+            <DialogTitle className="text-base sm:text-lg">Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
               Verifica y confirma las cantidades recibidas
             </DialogDescription>
           </DialogHeader>
           {selectedTransfer && (
             <form onSubmit={handleReceiveSubmit} className="space-y-4">
-              <div className="max-h-[300px] overflow-y-auto space-y-4">
+              <div className="max-h-[300px] overflow-y-auto space-y-3">
                 {selectedTransfer.items.map((item, index) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{item.product?.name}</p>
-                      <p className="text-xs text-muted-foreground">Enviado: {item.quantity_shipped}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">Recibido:</Label>
-                      <Input
-                        type="number"
-                        name={`received_${index}`}
-                        min="0"
-                        max={item.quantity_shipped}
-                        defaultValue={item.quantity_shipped}
-                        required
-                        className="w-20 text-right"
-                      />
+                  <div key={item.id} className="p-3 border rounded-lg space-y-2">
+                    {/* Mobile: Vertical layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{item.product?.name}</p>
+                        <p className="text-xs text-muted-foreground">Enviado: {item.quantity_shipped}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Recibido:</Label>
+                        <Input
+                          type="number"
+                          name={`received_${index}`}
+                          min="0"
+                          max={item.quantity_shipped}
+                          defaultValue={item.quantity_shipped}
+                          required
+                          className="w-20 text-right"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -486,11 +492,11 @@ export default function TransfersPage() {
                 <Label>Notas de Recepción</Label>
                 <Textarea name="note" placeholder="Daños, faltantes o comentarios..." />
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsReceiveOpen(false)}>
+              <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsReceiveOpen(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={receiveMutation.isPending}>
+                <Button type="submit" disabled={receiveMutation.isPending} className="w-full sm:w-auto">
                   {receiveMutation.isPending ? 'Procesando...' : 'Confirmar Recepción'}
                 </Button>
               </DialogFooter>
@@ -502,16 +508,16 @@ export default function TransfersPage() {
       {/* Modal de detalles (Solo lectura) */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              Transferencia {selectedTransfer?.transfer_number}
+          <DialogHeader className="pr-12">
+            <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <span className="text-base sm:text-lg">Transferencia {selectedTransfer?.transfer_number}</span>
               {selectedTransfer && getStatusBadge(selectedTransfer.status)}
             </DialogTitle>
           </DialogHeader>
           {selectedTransfer && (
             <div className="space-y-6">
               {/* Header Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/20 rounded-lg text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 bg-muted/20 rounded-lg text-sm">
                 <div>
                   <span className="text-xs text-muted-foreground block">Origen</span>
                   <span className="font-medium">{selectedTransfer.from_warehouse?.name}</span>
@@ -532,23 +538,23 @@ export default function TransfersPage() {
 
               {/* Logistics Info if shipped */}
               {(selectedTransfer.status === 'in_transit' || selectedTransfer.status === 'completed') && (
-                <div className="border rounded-lg p-3 space-y-2">
+                <div className="border rounded-lg p-3 space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Truck className="w-4 h-4" />
                     Datos de Logística
                   </h4>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
                     <div>
-                      <span className="text-xs text-muted-foreground">Conductor:</span>
-                      <div>{selectedTransfer.driver_name || '-'}</div>
+                      <span className="text-xs text-muted-foreground block mb-1">Conductor:</span>
+                      <div className="font-medium">{selectedTransfer.driver_name || '-'}</div>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Placa:</span>
-                      <div>{selectedTransfer.vehicle_plate || '-'}</div>
+                      <span className="text-xs text-muted-foreground block mb-1">Placa:</span>
+                      <div className="font-medium">{selectedTransfer.vehicle_plate || '-'}</div>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground">Tracking:</span>
-                      <div>{selectedTransfer.tracking_number || '-'}</div>
+                      <span className="text-xs text-muted-foreground block mb-1">Tracking:</span>
+                      <div className="font-medium">{selectedTransfer.tracking_number || '-'}</div>
                     </div>
                   </div>
                 </div>
@@ -556,7 +562,8 @@ export default function TransfersPage() {
 
               {/* Items Table */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-muted px-4 py-2 text-xs font-medium grid grid-cols-12 gap-4">
+                {/* Header - Solo desktop */}
+                <div className="hidden sm:grid bg-muted px-4 py-2 text-xs font-medium grid-cols-12 gap-4">
                   <div className="col-span-6">Producto</div>
                   <div className="col-span-2 text-center">Solicitado</div>
                   <div className="col-span-2 text-center">Enviado</div>
@@ -564,16 +571,42 @@ export default function TransfersPage() {
                 </div>
                 <div className="divide-y max-h-[300px] overflow-y-auto">
                   {selectedTransfer.items.map(item => (
-                    <div key={item.id} className="p-3 grid grid-cols-12 gap-4 text-sm items-center">
-                      <div className="col-span-6 font-medium">
-                        {item.product?.name}
+                    <div key={item.id} className="p-3">
+                      {/* Mobile Layout - Vertical */}
+                      <div className="flex sm:hidden flex-col gap-2">
+                        <div className="font-medium text-sm">{item.product?.name}</div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="text-center">
+                            <div className="text-muted-foreground mb-1">Solicitado</div>
+                            <div className="font-bold">{item.quantity}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-muted-foreground mb-1">Enviado</div>
+                            <div className="font-bold text-blue-600">{item.quantity_shipped}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-muted-foreground mb-1">Recibido</div>
+                            <div className={cn("font-bold",
+                              item.quantity_received === item.quantity_shipped ? "text-green-600" : "text-amber-600"
+                            )}>
+                              {item.quantity_received}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="col-span-2 text-center">{item.quantity}</div>
-                      <div className="col-span-2 text-center text-muted-foreground">{item.quantity_shipped}</div>
-                      <div className={cn("col-span-2 text-center font-bold",
-                        item.quantity_received === item.quantity_shipped ? "text-green-600" : "text-amber-600"
-                      )}>
-                        {item.quantity_received}
+
+                      {/* Desktop Layout - Horizontal */}
+                      <div className="hidden sm:grid grid-cols-12 gap-4 text-sm items-center">
+                        <div className="col-span-6 font-medium">
+                          {item.product?.name}
+                        </div>
+                        <div className="col-span-2 text-center">{item.quantity}</div>
+                        <div className="col-span-2 text-center text-muted-foreground">{item.quantity_shipped}</div>
+                        <div className={cn("col-span-2 text-center font-bold",
+                          item.quantity_received === item.quantity_shipped ? "text-green-600" : "text-amber-600"
+                        )}>
+                          {item.quantity_received}
+                        </div>
                       </div>
                     </div>
                   ))}

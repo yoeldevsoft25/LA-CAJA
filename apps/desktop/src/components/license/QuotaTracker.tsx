@@ -2,7 +2,7 @@ import React from 'react'
 import { useLicenseStatus } from '@/hooks/use-license-status'
 import { Progress } from '@/components/ui/progress'
 import { AlertCircle, ChevronRight } from 'lucide-react'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 
 interface QuotaIndicatorProps {
     metric: string

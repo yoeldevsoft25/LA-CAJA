@@ -5,10 +5,8 @@ import {
   Plus,
   Edit,
   Trash2,
-  Coffee,
   Users,
   Clock,
-  DollarSign,
   QrCode,
   MoreVertical,
 } from 'lucide-react'
@@ -24,7 +22,7 @@ import { ordersService, Order } from '@/services/orders.service'
 import toast from '@/lib/toast'
 import TableModal from './TableModal'
 import TableQRCodeModal from './TableQRCodeModal'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -51,7 +49,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 const statusLabels: Record<TableStatus, string> = {
   available: 'Disponible',
@@ -253,16 +251,16 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
     <>
       <div className="space-y-4">
         {/* Filtros y acciones */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as TableStatus | 'all')}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[200px] h-11 bg-white/60 border-muted/40 font-medium">
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="all">Todas las mesas</SelectItem>
               <SelectItem value="available">Disponibles</SelectItem>
               <SelectItem value="occupied">Ocupadas</SelectItem>
               <SelectItem value="reserved">Reservadas</SelectItem>
@@ -270,7 +268,10 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
               <SelectItem value="out_of_service">Fuera de Servicio</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleAdd}>
+          <Button
+            onClick={handleAdd}
+            className="h-11 sm:h-12 px-6 font-bold shadow-md shadow-primary/20"
+          >
             <Plus className="w-5 h-5 mr-2" />
             Nueva Mesa
           </Button>
@@ -294,17 +295,17 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                   key={table.id}
                   onClick={() => onTableClick(table)}
                   className={cn(
-                    'relative p-3 sm:p-4 rounded-lg border-2 transition-all cursor-pointer hover:shadow-lg',
-                    'bg-card backdrop-blur-sm',
+                    'relative p-3 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer active:scale-[0.98] hover:shadow-xl',
+                    'bg-card shadow-sm group',
                     table.status === 'occupied'
                       ? isLongWait
-                        ? 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20'
-                        : 'border-primary/50 bg-primary/5'
+                        ? 'border-red-500 bg-red-50/80 dark:bg-red-950/20'
+                        : 'border-primary bg-primary/5'
                       : table.status === 'reserved'
-                        ? 'border-warning/50 bg-warning/5'
+                        ? 'border-amber-400 bg-amber-50/50'
                         : table.status === 'out_of_service'
-                          ? 'border-destructive/50 bg-destructive/5 opacity-60'
-                          : 'border-border bg-card hover:border-primary/50'
+                          ? 'border-muted bg-muted/20 opacity-60 grayscale'
+                          : 'border-border bg-white hover:border-primary/50'
                   )}
                 >
                   {/* Botones de acción - Menú desplegable */}
@@ -394,50 +395,42 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                     {order && (
                       <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
                         {/* Información de la orden */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Orden:</span>
-                            <span className="font-mono font-semibold text-foreground">
-                              {order.order_number}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase">Orden</span>
+                            <span className="text-xs font-black text-foreground tabular-nums">
+                              #{order.order_number}
                             </span>
                           </div>
-                          
-                          {/* Tiempo transcurrido */}
-                          {elapsedTime > 0 && (
-                            <div className={cn(
-                              'flex items-center gap-1.5 text-xs font-medium',
-                              getTimeColor(elapsedTime)
-                            )}>
-                              <Clock className={cn('w-3.5 h-3.5', getTimeColor(elapsedTime))} />
-                              <span>{formatTime(elapsedTime)}</span>
-                            </div>
-                          )}
 
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Coffee className="w-3.5 h-3.5" />
-                            <span>{order.items?.length || 0} items</span>
+                          <div className="flex items-center justify-between">
+                            {/* Tiempo transcurrido */}
+                            {elapsedTime > 0 ? (
+                              <div className={cn(
+                                'flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full bg-white/80 shadow-sm border border-border/50',
+                                getTimeColor(elapsedTime)
+                              )}>
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>{formatTime(elapsedTime)}</span>
+                              </div>
+                            ) : <div></div>}
+
+                            {totals && (
+                              <div className="text-right">
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase leading-none mb-0.5">Pendiente</p>
+                                <p className="text-xs sm:text-sm font-black text-primary">
+                                  ${totals.usd.toFixed(2)}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          
-                          {totals && (
-                            <div className="flex items-center gap-1 text-xs font-semibold text-primary">
-                              <DollarSign className="w-3.5 h-3.5" />
-                              <span>${totals.usd.toFixed(2)}</span>
-                            </div>
-                          )}
-                          
-                          {order.status === 'paused' && (
-                            <div className="flex items-center gap-1 text-xs text-warning">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>Pausada</span>
-                            </div>
-                          )}
                         </div>
 
                         {/* Barra de progreso de la orden */}
                         {order.items && order.items.length > 0 && (
                           <div className="pt-2 border-t border-border/30">
-                            <OrderProgressBar 
-                              progress={getOrderProgress(order)} 
+                            <OrderProgressBar
+                              progress={getOrderProgress(order)}
                               compact={true}
                               showLabels={false}
                             />
@@ -449,15 +442,15 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                     {!order && table.status === 'available' && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="w-full mt-2"
+                        variant="ghost"
+                        className="w-full mt-2 h-10 border border-dashed border-primary/30 text-primary hover:bg-primary/5 font-bold rounded-xl"
                         onClick={(e) => {
                           e.stopPropagation()
                           onCreateOrder(table.id)
                         }}
                       >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Nueva Orden
+                        <Plus className="w-4 h-4 mr-1.5" />
+                        Abrir Cuenta
                       </Button>
                     )}
                   </div>

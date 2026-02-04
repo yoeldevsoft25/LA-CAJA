@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { cn } from "@la-caja/ui-core";
+import { cn } from "@/lib/utils";
 
 const animationProps = {
     initial: { "--x": "100%", scale: 0.8 },

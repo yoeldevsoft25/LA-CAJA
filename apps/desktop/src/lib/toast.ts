@@ -77,8 +77,6 @@ toastFunction.warning = (message: string, options?: ToastOptions) => {
   return sonnerToast.warning(message, {
     duration,
     id: options?.id,
-    description: options?.description,
-    action: options?.action,
   })
 }
 
@@ -87,8 +85,6 @@ toastFunction.info = (message: string, options?: ToastOptions) => {
   return sonnerToast.info(message, {
     duration,
     id: options?.id,
-    description: options?.description,
-    action: options?.action,
   })
 }
 

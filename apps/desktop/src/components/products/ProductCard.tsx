@@ -2,7 +2,7 @@ import { Product } from '@/services/products.service'
 import { StockStatus } from '@/services/inventory.service'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   Copy,
 } from 'lucide-react'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
 
@@ -37,15 +37,15 @@ const getCategoryColor = (category: string): [string, string, string] => {
   const colorPalette: Array<[string, string, string]> = [
     ['bg-blue-100', 'text-blue-700', 'border-blue-300'], // Azul
     ['bg-green-100', 'text-green-700', 'border-green-300'], // Verde
-    ['bg-blue-100', 'text-blue-700', 'border-blue-300'], // Púrpura
+    ['bg-purple-100', 'text-purple-700', 'border-purple-300'], // Púrpura
     ['bg-orange-100', 'text-orange-700', 'border-orange-300'], // Naranja
     ['bg-pink-100', 'text-pink-700', 'border-pink-300'], // Rosa
     ['bg-cyan-100', 'text-cyan-700', 'border-cyan-300'], // Cian
     ['bg-amber-100', 'text-amber-700', 'border-amber-300'], // Ámbar
-    ['bg-blue-100', 'text-blue-700', 'border-blue-300'], // Índigo
+    ['bg-indigo-100', 'text-indigo-700', 'border-indigo-300'], // Índigo
     ['bg-teal-100', 'text-teal-700', 'border-teal-300'], // Verde azulado
     ['bg-rose-100', 'text-rose-700', 'border-rose-300'], // Rosa oscuro
-    ['bg-blue-100', 'text-blue-700', 'border-blue-300'], // Violeta
+    ['bg-violet-100', 'text-violet-700', 'border-violet-300'], // Violeta
     ['bg-emerald-100', 'text-emerald-700', 'border-emerald-300'], // Esmeralda
   ]
 

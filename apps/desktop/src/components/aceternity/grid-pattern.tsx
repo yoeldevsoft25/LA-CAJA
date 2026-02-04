@@ -1,4 +1,4 @@
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
 import { useId } from 'react'
 

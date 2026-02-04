@@ -1,6 +1,6 @@
 import React from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const isDev = import.meta.env.DEV

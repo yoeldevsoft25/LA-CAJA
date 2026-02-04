@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { WifiOff, RefreshCw, CheckCircle, Clock, ShoppingCart, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { useOnline } from '@/hooks/use-online'
-import { cn } from '@la-caja/ui-core'
-import { Button } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
 import { syncService } from '@/services/sync.service'
 

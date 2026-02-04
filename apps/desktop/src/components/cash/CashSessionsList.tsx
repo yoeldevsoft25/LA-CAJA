@@ -6,7 +6,7 @@ import { cashService, CashSession } from '@/services/cash.service'
 import { format } from 'date-fns'
 import CashSessionDetailModal from './CashSessionDetailModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {

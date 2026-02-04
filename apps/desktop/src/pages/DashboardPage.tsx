@@ -25,11 +25,11 @@ import PendingOrdersIndicator from '@/components/suppliers/PendingOrdersIndicato
 import { dashboardService } from '@/services/dashboard.service'
 import { setupService } from '@/services/setup.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@la-caja/ui-core'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -64,7 +64,7 @@ interface KPICardProps {
     value: number
     label: string
   }
-  color?: 'blue' | 'green' | 'red' | 'orange' | 'cyan'
+  color?: 'blue' | 'green' | 'red' | 'orange' | 'purple'
   icon?: React.ReactNode
   link?: string
 }
@@ -83,7 +83,7 @@ function KPICard({
     green: 'text-green-600',
     red: 'text-red-600',
     orange: 'text-orange-600',
-    cyan: 'text-cyan-600',
+    purple: 'text-purple-600',
   }
 
   const content = (
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                 title="Ticket Promedio"
                 value={formatCurrency(kpis.performance.avg_sale_amount_bs, 'BS')}
                 subtitle={formatCurrency(kpis.performance.avg_sale_amount_usd, 'USD')}
-                color="blue"
+                color="purple"
                 icon={<ReceiptText className="w-5 h-5" />}
               />
             </div>

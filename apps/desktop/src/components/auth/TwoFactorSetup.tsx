@@ -3,8 +3,8 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from '@/lib/toast'
 import { authService } from '@/services/auth.service'
 import { Shield, CheckCircle2, XCircle, Copy, Download, Loader2 } from 'lucide-react'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -95,7 +95,7 @@ export function TwoFactorSetup() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'la-caja-backup-codes.txt'
+    a.download = 'velox-pos-backup-codes.txt'
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Códigos de respaldo descargados')

@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface InvoiceSeries {
     id: string

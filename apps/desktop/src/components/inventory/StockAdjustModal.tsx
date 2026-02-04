@@ -19,14 +19,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 import { AlertTriangle } from 'lucide-react'
 
 // Umbral para considerar un ajuste como "grande" (más del 50% del stock o más de 100 unidades)
@@ -340,8 +340,7 @@ export default function StockAdjustModal({
     stockAdjustMutation.mutate({
       ...data,
       product_id: product.product_id,
-      warehouse_id: warehouseId || null,
-    } as any)
+    })
   }
 
   const handleConfirmLargeAdjustment = () => {

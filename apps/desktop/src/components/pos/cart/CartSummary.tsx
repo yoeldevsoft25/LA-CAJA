@@ -1,6 +1,6 @@
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { ShoppingCart, Tag } from 'lucide-react'
 
 interface CartSummaryProps {

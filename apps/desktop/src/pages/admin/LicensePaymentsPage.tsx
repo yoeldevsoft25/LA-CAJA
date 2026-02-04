@@ -7,8 +7,8 @@ import licensePaymentsService, {
 import { adminService } from '@/services/admin.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@la-caja/ui-core';
-import { Input } from '@la-caja/ui-core';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -34,7 +34,7 @@ import LicensePaymentDetailModal from '@/components/admin/LicensePaymentDetailMo
 import BlurFade from '@/components/magicui/blur-fade';
 import NumberTicker from '@/components/magicui/number-ticker';
 import ShineBorder from '@/components/magicui/shine-border';
-import { cn } from '@la-caja/ui-core';
+import { cn } from '@/lib/utils';
 
 function getStatusBadge(status: LicensePaymentStatus) {
   const variants: Record<

@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@la-caja/ui-core";
+import { cn } from "@/lib/utils";
 
 export default function RetroGrid({
     className,

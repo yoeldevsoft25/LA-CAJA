@@ -7,13 +7,13 @@ import { Zap, Search, Check } from 'lucide-react'
 import { QuickProduct, CreateQuickProductRequest } from '@/services/fast-checkout.service'
 import { productsService } from '@/services/products.service'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
-import { Input } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 const quickProductSchema = z.object({
   product_id: z.string().uuid('Selecciona un producto'),
@@ -119,8 +119,8 @@ export default function QuickProductModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
+        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
+          <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             {quickProduct ? 'Editar Producto Rápido' : 'Agregar Producto Rápido'}
           </DialogTitle>
@@ -140,10 +140,10 @@ export default function QuickProductModal({
               </Alert>
 
               {/* Búsqueda de producto */}
-              <div>
-                <Label htmlFor="product_search">Buscar Producto</Label>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <div className="space-y-2">
+                <Label htmlFor="product_search" className="text-sm sm:text-base font-semibold ml-1">Buscar Producto</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
                   <Input
                     id="product_search"
                     type="text"
@@ -155,7 +155,7 @@ export default function QuickProductModal({
                         setValue('product_id', '')
                       }
                     }}
-                    className="pl-10"
+                    className="pl-10 h-12 text-base shadow-sm border-muted/40 focus:bg-white"
                     placeholder="Escribe para buscar productos..."
                     disabled={isLoading}
                   />
@@ -218,50 +218,50 @@ export default function QuickProductModal({
               </div>
 
               {/* Tecla rápida */}
-              <div>
-                <Label htmlFor="quick_key">
+              <div className="space-y-2">
+                <Label htmlFor="quick_key" className="text-sm sm:text-base font-semibold ml-1">
                   Tecla Rápida <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="quick_key"
                   type="text"
                   {...register('quick_key')}
-                  className="mt-2 font-mono"
+                  className="h-12 text-base font-mono shadow-sm border-muted/40 focus:bg-white"
                   placeholder="Ej: 1, F1, A"
                   maxLength={10}
                   disabled={isLoading}
                 />
                 {errors.quick_key && (
-                  <p className="mt-1 text-sm text-destructive">{errors.quick_key.message}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-destructive px-1">{errors.quick_key.message}</p>
                 )}
                 {isKeyInUse && (
-                  <p className="mt-1 text-sm text-destructive">
+                  <p className="mt-1 text-xs sm:text-sm text-destructive px-1">
                     Esta tecla ya está en uso por otro producto
                   </p>
                 )}
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground px-1">
                   Máximo 10 caracteres. Ejemplos: '1', 'F1', 'A', 'CTRL+1'
                 </p>
               </div>
 
               {/* Posición */}
-              <div>
-                <Label htmlFor="position">Posición en Grilla</Label>
+              <div className="space-y-2">
+                <Label htmlFor="position" className="text-sm sm:text-base font-semibold ml-1">Posición en Grilla</Label>
                 <Input
                   id="position"
                   type="number"
                   step="1"
                   min="0"
                   {...register('position', { valueAsNumber: true })}
-                  className="mt-2"
+                  className="h-12 text-base shadow-sm border-muted/40 focus:bg-white"
                   placeholder="0"
                   disabled={isLoading}
                 />
                 {errors.position && (
-                  <p className="mt-1 text-sm text-destructive">{errors.position.message}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-destructive px-1">{errors.position.message}</p>
                 )}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Orden de aparición en la grilla de productos rápidos (0 = primero)
+                <p className="text-xs text-muted-foreground px-1">
+                  Orden de aparición en la grilla (0 = primero)
                 </p>
               </div>
             </div>
@@ -269,19 +269,19 @@ export default function QuickProductModal({
 
           {/* Footer */}
           <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1"
+                className="w-full sm:flex-1 h-12"
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-12"
                 disabled={isLoading || isKeyInUse || !selectedProductId}
               >
                 {isLoading ? (

@@ -9,7 +9,7 @@ import CutXModal from '@/components/shifts/CutXModal'
 import CutZModal from '@/components/shifts/CutZModal'
 import CurrentShiftCard from '@/components/shifts/CurrentShiftCard'
 import ShiftsList from '@/components/shifts/ShiftsList'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ShiftsPage() {

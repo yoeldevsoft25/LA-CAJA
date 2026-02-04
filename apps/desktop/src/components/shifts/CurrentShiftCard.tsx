@@ -1,12 +1,12 @@
 import { Clock, DollarSign, FileX, CheckCircle2, Calendar, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { Shift, ShiftSummary } from '@/services/shifts.service'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface CurrentShiftCardProps {
   shift: Shift | null
@@ -160,13 +160,13 @@ export default function CurrentShiftCard({
               </CardContent>
             </Card>
 
-            <Card className="bg-blue-50 border-blue-200">
+            <Card className="bg-purple-50 border-purple-200">
               <CardContent className="p-4">
                 <div className="flex items-center mb-2">
-                  <CheckCircle2 className="w-4 h-4 text-blue-600 mr-2" />
-                  <span className="text-sm font-medium text-blue-900">Ventas</span>
+                  <CheckCircle2 className="w-4 h-4 text-purple-600 mr-2" />
+                  <span className="text-sm font-medium text-purple-900">Ventas</span>
                 </div>
-                <p className="text-lg font-bold text-blue-900">
+                <p className="text-lg font-bold text-purple-900">
                   {shiftSummary?.sales_count || 0}
                 </p>
               </CardContent>

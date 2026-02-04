@@ -6,7 +6,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@la-caja/ui-core';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GitCompare, Smartphone, Server, Check, X } from 'lucide-react';

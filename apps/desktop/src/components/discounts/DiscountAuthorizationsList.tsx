@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 
 interface DiscountAuthorizationsListProps {
   saleId?: string | null

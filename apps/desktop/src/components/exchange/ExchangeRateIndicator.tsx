@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, TrendingUp, Clock, Wifi, WifiOff, ChevronDown, Settings } from 'lucide-react'
 import { exchangeService } from '@/services/exchange.service'
 import { useOnline } from '@/hooks/use-online'
-import { cn } from '@la-caja/ui-core'
-import { Button } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
   Popover,

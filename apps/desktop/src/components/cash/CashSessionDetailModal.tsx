@@ -3,11 +3,11 @@ import { Calendar, CheckCircle2, Lock, Unlock } from 'lucide-react'
 import { cashService, CashSession, CashSessionSummary } from '@/services/cash.service'
 import { format } from 'date-fns'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Button } from '@la-caja/ui-core'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@la-caja/ui-core'
+import { cn } from '@/lib/utils'
 
 interface CashSessionDetailModalProps {
   isOpen: boolean
