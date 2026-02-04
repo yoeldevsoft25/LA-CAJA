@@ -9,7 +9,7 @@
 #>
 param (
     [Parameter(Mandatory=$false)]
-    [string]$ConnectionString
+    [string]$ConnectionString = "postgresql://postgres.unycbbictuwzruxshacq:%40bC154356@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 )
 
 Write-Host "=== Migrador de Base de Datos (Cloud -> Local) ===" -ForegroundColor Cyan
