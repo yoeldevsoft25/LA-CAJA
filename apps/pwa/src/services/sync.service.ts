@@ -61,9 +61,9 @@ class SyncServiceClass {
   private syncIntervalId: ReturnType<typeof setInterval> | null = null;
   private readonly SYNC_INTERVAL_MS = 30000; // Sincronizar cada 30 segundos
   // Config: casi tiempo real, pero con batching pequeño para reducir requests
-  private readonly SYNC_BATCH_SIZE = 5;
+  private readonly SYNC_BATCH_SIZE = 100; // ✅ Increased to 100 (Max Capacity for Ryzen 7700X Server)
   private readonly SYNC_BATCH_TIMEOUT_MS = 150; // ms
-  private readonly SYNC_PRIORITIZE_CRITICAL = true; // ventas salen inmediato si hay red
+  private readonly SYNC_PRIORITIZE_CRITICAL = false; // Agrupar eventos crítica mejora rendimiento (evita 1 request por venta)
   private onlineListener: (() => void) | null = null;
   private offlineListener: (() => void) | null = null;
   private pendingSyncOnInit = false; // Bandera para sincronizar después de inicializar si hubo evento online
@@ -623,22 +623,16 @@ class SyncServiceClass {
     // Si está inicializado, agregar a la cola de sincronización
     if (this.isInitialized && this.syncQueue) {
       this.syncQueue.enqueue(event);
-      this.logger.debug('Evento encolado, intentando flush');
+      this.logger.debug('Evento encolado, esperando batching automático');
 
       // Si estamos offline, registrar background sync
       if (!navigator.onLine) {
         await this.registerBackgroundSync();
       }
 
-      this.syncQueue.flush().catch(() => {
-        // Silenciar, ya hay flush periódico
-        // Si falla y estamos offline, registrar background sync
-        if (!navigator.onLine) {
-          this.registerBackgroundSync().catch(() => {
-            // Silenciar errores de background sync
-          });
-        }
-      });
+      // ❌ REMOVED: this.syncQueue.flush()
+      // Rely on batchTimeout (150ms) or batchSize (50) to trigger flush.
+      // This ensures true batching for rapid-fire events (e.g. fast scanning or bulk offline sales).
     } else {
       // Si no está inicializado, intentar inicializar automáticamente si tenemos los datos necesarios
       if (event.store_id && event.device_id) {
