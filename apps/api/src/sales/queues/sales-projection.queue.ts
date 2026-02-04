@@ -21,7 +21,7 @@ export interface ProjectSaleEventJob {
  * para no bloquear la respuesta al cliente
  */
 @Processor('sales-projections', {
-  concurrency: 3, // ⚡ Safe limit for Supabase Free Tier + App Pool (Prevent timeouts)
+  concurrency: 15, // 🚀 UNLEASHED: Maximum performance for Ryzen 7700X (8C/16T)
   limiter: {
     max: 100,
     duration: 1000,

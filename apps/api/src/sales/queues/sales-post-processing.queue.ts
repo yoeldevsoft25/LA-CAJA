@@ -20,7 +20,7 @@ export interface PostProcessSaleJob {
  * que no son críticas para la respuesta inmediata al cliente
  */
 @Processor('sales-post-processing', {
-  concurrency: 2, // ⚡ Low concurrency for background tasks on Free Tier
+  concurrency: 10, // 🚀 UNLEASHED: High performance for background tasks on Local Server
   limiter: {
     max: 20, // Procesar hasta 20 jobs por segundo
     duration: 1000,

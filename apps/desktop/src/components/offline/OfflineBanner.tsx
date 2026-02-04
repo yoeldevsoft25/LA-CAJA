@@ -19,12 +19,13 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
   const { isOnline } = useOnline()
   const [isExpanded, setIsExpanded] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [isServerDown, setIsServerDown] = useState(false) // 🚀 Nuevo
   const [isSyncing, setIsSyncing] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
 
   // Detectar cambios de conectividad
   useEffect(() => {
-    if (!isOnline) {
+    if (!isOnline || isServerDown) {
       setShowBanner(true)
     } else {
       // Delay para mostrar mensaje de reconexión
@@ -33,28 +34,29 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
       }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [isOnline])
+  }, [isOnline, isServerDown])
 
-  // Obtener conteo de eventos pendientes
+  // Obtener conteo de eventos pendientes y estado del servidor
   useEffect(() => {
-    const updatePendingCount = () => {
+    const updateStats = () => {
       try {
         const status = syncService.getStatus()
         setPendingCount(status.pendingCount)
+        setIsServerDown(!status.isServerAvailable)
       } catch {
         setPendingCount(0)
       }
     }
 
-    updatePendingCount()
-    const interval = setInterval(updatePendingCount, 5000)
+    updateStats()
+    const interval = setInterval(updateStats, 5000)
     return () => clearInterval(interval)
   }, [])
 
   // Intentar sincronizar manualmente
   const handleSyncNow = async () => {
-    if (!isOnline) return
-    
+    if (!isOnline || isServerDown) return
+
     setIsSyncing(true)
     try {
       await syncService.syncNow()
@@ -65,6 +67,8 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
     }
   }
 
+  const isDisconnected = !isOnline || isServerDown;
+
   if (!showBanner && pendingCount === 0) return null
 
   return (
@@ -74,8 +78,8 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -100, opacity: 0 }}
         className={cn(
-          'fixed top-0 left-0 right-0 z-50 shadow-lg',
-          isOnline ? 'bg-green-600' : 'bg-amber-600',
+          'fixed top-0 left-0 right-0 z-50 shadow-lg transition-colors duration-500',
+          !isDisconnected ? 'bg-green-600' : (isOnline ? 'bg-red-600' : 'bg-amber-600'),
           className
         )}
       >
@@ -83,19 +87,26 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
         <div className="px-4 py-2">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {isOnline ? (
+              {!isOnline ? (
+                <>
+                  <WifiOff className="w-5 h-5 text-white animate-pulse" />
+                  <span className="text-white font-medium text-sm">
+                    Modo sin conexión (Sin Internet) - Tus ventas se guardarán localmente
+                  </span>
+                </>
+              ) : isServerDown ? (
+                <>
+                  <AlertCircle className="w-5 h-5 text-white animate-pulse" />
+                  <span className="text-white font-medium text-sm uppercase tracking-tight">
+                    ⚠️ Error: Servidor Local Fuera de Línea - Ventas Protegidas en este Equipo
+                  </span>
+                </>
+              ) : (
                 <>
                   <CheckCircle className="w-5 h-5 text-white" />
                   <span className="text-white font-medium text-sm">
                     Conexión restaurada
                     {isSyncing && ' - Sincronizando...'}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-5 h-5 text-white animate-pulse" />
-                  <span className="text-white font-medium text-sm">
-                    Modo sin conexión - Tus ventas se guardarán localmente
                   </span>
                 </>
               )}
