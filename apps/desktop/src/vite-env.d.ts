@@ -1,15 +1,15 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_API_URL: string;
-  readonly VITE_PRIMARY_API_URL: string;
-  readonly VITE_FALLBACK_API_URL: string;
-  readonly VITE_TERTIARY_API_URL: string;
-  // más variables de entorno...
-}
+declare const __PWA_BUILD_ID__: string
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
+declare module 'virtual:pwa-register' {
+  interface RegisterSWOptions {
+    immediate?: boolean
+    onNeedRefresh?: () => void
+    onOfflineReady?: () => void
+    onRegisteredSW?: (swUrl: string, registration: ServiceWorkerRegistration | undefined) => void
+    onRegisterError?: (error: unknown) => void
+  }
 
-declare const __PWA_BUILD_ID__: string;
+  export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => void
+}

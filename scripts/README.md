@@ -7,6 +7,9 @@ Este directorio contiene scripts de utilidad para desarrollo, build y testing.
 - `start-dev.sh` - Inicia el entorno de desarrollo completo
 - `start-dev-network.ps1` - Inicia servicios de red para desarrollo
 - `kill-node.ps1` - Mata procesos de Node.js
+- `windows/ferrari-healthcheck.ps1` - Healthcheck integral (API, Docker, Tailscale, WireGuard)
+- `windows/ferrari-self-heal.ps1` - Autocuracion de servicios criticos en Windows
+- `windows/register-ferrari-tasks.ps1` - Registra tareas programadas para monitoreo y autocuracion
 
 ## Scripts de Build
 
@@ -40,5 +43,7 @@ chmod +x *.sh
 ### Windows
 ```powershell
 .\build-desktop.ps1
-```
 
+# Ferrari local (ejecutar como administrador)
+.\windows\register-ferrari-tasks.ps1 -ProjectRoot "C:\ruta\LA-CAJA" -RunNow
+```
