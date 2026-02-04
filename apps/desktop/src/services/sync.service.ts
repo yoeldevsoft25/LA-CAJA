@@ -74,6 +74,9 @@ class SyncServiceClass {
   private circuitBreaker: CircuitBreaker;
   private cacheManager: CacheManager;
   private reconnectOrchestrator: ReconnectSyncOrchestrator | null = null;
+  private isRecoveryRunning = false;
+  private lastRecoveryTime = 0;
+  private readonly RECOVERY_COOLDOWN_MS = 8000;
 
   // ===== CALLBACKS PARA INVALIDAR CACHE Y NOTIFICAR =====
   private onSyncCompleteCallbacks: Array<(syncedCount: number) => void> = [];
@@ -101,7 +104,7 @@ class SyncServiceClass {
         // Callback de sincronización
         if (this.isInitialized) {
           this.logger.info('Orquestador disparó sincronización');
-          await this.fullSync();
+          await this.requestRecovery('orchestrator');
         } else {
           this.logger.debug('Orquestador disparó sync, pero no está inicializado. Marcando pendiente.');
           this.pendingSyncOnInit = true;
@@ -134,6 +137,71 @@ class SyncServiceClass {
       this.logger.warn('Conexión perdida');
       this.registerBackgroundSync().catch(() => { });
     });
+
+    window.addEventListener('online', () => {
+      if (this.isInitialized) {
+        void this.requestRecovery('online');
+      } else {
+        this.pendingSyncOnInit = true;
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && navigator.onLine && this.isInitialized) {
+        void this.requestRecovery('visibility');
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (navigator.onLine && this.isInitialized) {
+        void this.requestRecovery('focus');
+      }
+    });
+  }
+
+  private async requestRecovery(source: 'online' | 'visibility' | 'focus' | 'orchestrator'): Promise<void> {
+    if (!this.isInitialized || !this.syncQueue) {
+      this.pendingSyncOnInit = true;
+      return;
+    }
+
+    const now = Date.now();
+    const timeSinceLastRecovery = now - this.lastRecoveryTime;
+    if (timeSinceLastRecovery < this.RECOVERY_COOLDOWN_MS) {
+      this.logger.debug(
+        `Recovery skipped (cooldown), source=${source}, wait=${this.RECOVERY_COOLDOWN_MS - timeSinceLastRecovery}ms`
+      );
+      this.metrics.recordEvent('recovery_skipped_cooldown', {
+        source,
+        time_remaining: this.RECOVERY_COOLDOWN_MS - timeSinceLastRecovery,
+      });
+      return;
+    }
+
+    if (this.isRecoveryRunning) {
+      this.logger.debug(`Recovery skipped (already running), source=${source}`);
+      this.metrics.recordEvent('recovery_skipped_duplicate', { source });
+      return;
+    }
+
+    const stats = this.syncQueue.getStats();
+    const dbPending = await db.getPendingEvents(1).then((events) => events.length).catch(() => 0);
+    if (stats.pending === 0 && dbPending === 0) {
+      this.logger.debug(`Recovery skipped (nothing pending), source=${source}`);
+      return;
+    }
+
+    this.isRecoveryRunning = true;
+    this.lastRecoveryTime = now;
+    this.metrics.recordEvent('recovery_started', { source });
+
+    try {
+      await this.hardRecoverySync();
+    } catch (error) {
+      this.logger.error(`Recovery failed, source=${source}`, error);
+    } finally {
+      this.isRecoveryRunning = false;
+    }
   }
 
   /**
@@ -263,34 +331,16 @@ class SyncServiceClass {
         // Iniciar sincronización periódica
         this.startPeriodicSync();
 
-        // ✅ OFFLINE-FIRST: Iniciar watchdog de red (fallback por si el evento 'online' falla)
-        setInterval(() => {
-          if (navigator.onLine && this.syncQueue && this.syncQueue.getStats().pending > 0) {
-            this.logger.debug('Watchdog: Conexión detectada y hay eventos pendientes → Forzando sync');
-            this.syncQueue.flush().catch(() => { });
-          }
-        }, 5000); // Verificar cada 5 segundos
-
         this.isInitialized = true;
         this.logger.info('Servicio de sincronización inicializado correctamente');
 
         // Si había un evento online pendiente antes de inicializar, sincronizar ahora
         if ((this.pendingSyncOnInit || navigator.onLine)) {
-          await this.fullSync();
+          await this.hardRecoverySync();
           this.pendingSyncOnInit = false;
         }
 
-        // ✅ OFFLINE-FIRST: Guardar API_URL para Service Worker
-        if (api.defaults.baseURL) {
-          db.kv.put({ key: 'api_url', value: api.defaults.baseURL }).catch((err) => {
-            this.logger.warn('No se pudo guardar API_URL para SW', err);
-          });
-        }
-
-        // ✅ OFFLINE-FIRST: Guardar device_id para Service Worker
-        db.kv.put({ key: 'device_id', value: deviceId }).catch((err) => {
-          this.logger.warn('No se pudo guardar device_id para SW', err);
-        });
+        await this.persistSwContext(storeId, deviceId);
       } catch (err: any) {
         this.logger.error('Error initialize', err);
         throw err;
@@ -308,6 +358,80 @@ class SyncServiceClass {
       // pull logic placeholder
     } catch (err) {
       this.logger.error('Full Sync Error', err);
+    }
+  }
+
+  private async persistSwContext(storeId: string, deviceId: string): Promise<void> {
+    try {
+      if (api.defaults.baseURL) {
+        await db.kv.put({ key: 'api_url', value: api.defaults.baseURL });
+      }
+      await db.kv.put({ key: 'device_id', value: deviceId });
+      await db.kv.put({ key: 'store_id', value: storeId });
+
+      const authHeader = api.defaults.headers.common['Authorization'];
+      if (authHeader && typeof authHeader === 'string') {
+        const token = authHeader.replace('Bearer ', '');
+        await db.kv.put({ key: 'auth_token', value: token });
+      } else {
+        this.logger.warn('No se encontró auth token en headers de API');
+      }
+    } catch (error) {
+      this.logger.warn('Error persistiendo contexto SW', error);
+    }
+  }
+
+  private async hardRecoverySync(): Promise<void> {
+    if (!this.isInitialized || !this.syncQueue || !navigator.onLine) return;
+
+    const startedAt = Date.now();
+    const pendingEvents = await db.getPendingEvents(1000);
+    const queuePending = this.syncQueue.getStats().pending;
+
+    this.logger.info(`Hard recovery: db_pending=${pendingEvents.length}, queue_pending=${queuePending}`);
+
+    if (pendingEvents.length > queuePending) {
+      const baseEvents = pendingEvents.map((event) => this.localEventToBaseEvent(event));
+      this.syncQueue.enqueueBatch(baseEvents);
+    }
+
+    await this.syncQueue.flush();
+    await this.pullFromServer();
+    await this.reconcileQueueState();
+
+    this.metrics.recordEvent('hard_recovery_completed', {
+      duration_ms: Date.now() - startedAt,
+      queue_depth_after: this.syncQueue.getStats().pending,
+    });
+  }
+
+  private async reconcileQueueState(): Promise<void> {
+    if (!this.syncQueue) return;
+
+    const memoryPending = this.syncQueue.getStats().pending;
+    const dbPending = await db.getPendingEvents(1000);
+
+    if (dbPending.length === 0 && memoryPending > 0) {
+      this.syncQueue.clear();
+      this.metrics.recordEvent('queue_reconciled', {
+        action: 'cleared',
+        memory_before: memoryPending,
+        db: 0,
+      });
+      return;
+    }
+
+    if (dbPending.length !== memoryPending) {
+      this.syncQueue.clear();
+      if (dbPending.length > 0) {
+        this.syncQueue.enqueueBatch(dbPending.map((event) => this.localEventToBaseEvent(event)));
+      }
+      this.metrics.recordEvent('queue_reconciled', {
+        action: 'rebuilt',
+        memory_before: memoryPending,
+        db: dbPending.length,
+        memory_after: this.syncQueue.getStats().pending,
+      });
     }
   }
 
