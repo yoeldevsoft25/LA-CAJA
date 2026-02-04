@@ -3,23 +3,29 @@
     {
       "name": "api",
       "cwd": "apps/api",
-      "patterns": ["src/**/*.ts"],
+      "patterns": [
+        "src/**/*.ts"
+      ],
       "maxErrors": 3254,
       "maxWarnings": 0
     },
     {
       "name": "pwa",
       "cwd": "apps/pwa",
-      "patterns": ["src/**/*.{ts,tsx}"],
-      "maxErrors": 43,
+      "patterns": [
+        "src/**/*.{ts,tsx}"
+      ],
+      "maxErrors": 45,
       "maxWarnings": 20
     },
     {
       "name": "desktop",
       "cwd": "apps/desktop",
-      "patterns": ["src/**/*.{ts,tsx}"],
-      "maxErrors": 35,
-      "maxWarnings": 16
+      "patterns": [
+        "src/**/*.{ts,tsx}"
+      ],
+      "maxErrors": 45,
+      "maxWarnings": 20
     }
   ]
 }

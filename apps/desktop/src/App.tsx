@@ -339,7 +339,13 @@ function AppRoutes() {
         <Route
           path="/"
           element={
-            isAuthenticated ? <Navigate to={defaultRoute} replace /> : <LoginPage />
+            isAuthenticated ? (
+              <Navigate to={defaultRoute} replace />
+            ) : (window as any).__TAURI__ || (window as any).TAURI ? (
+              <Navigate to="/login" replace />
+            ) : (
+              <LandingPageEnhanced />
+            )
           }
         />
         <Route path="/landing" element={<LandingPageEnhanced />} />
