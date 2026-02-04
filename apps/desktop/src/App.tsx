@@ -138,6 +138,33 @@ function App() {
     }
   }, [user?.store_id])
 
+  // Inicializar SQLite y Migración de Datos (Solo Desktop)
+  useEffect(() => {
+    if ((window as any).__TAURI__) { // Simple check for Tauri environment
+      const initSqlite = async () => {
+        try {
+          console.log('[App] 🚀 Initializing SQLite...');
+          const { sqliteService } = await import('./services/sqlite.service');
+          await sqliteService.initialize();
+
+          const { dataMigrationService } = await import('./services/data-migration.service');
+          const migrated = localStorage.getItem('sqlite_migration_v1_completed');
+
+          if (!migrated) {
+            console.log('[App] 📦 Starting Data Migration (Dexie -> SQLite)...');
+            await dataMigrationService.migrateDexieToSqlite();
+            console.log('[App] ✅ Data Migration Completed');
+          } else {
+            console.log('[App] ✅ SQLite already migrated');
+          }
+        } catch (err) {
+          console.error('[App] ❌ Failed to initialize SQLite', err);
+        }
+      };
+      initSqlite();
+    }
+  }, []);
+
   // Escuchar eventos de sincronización para invalidar cache y notificar usuario
   useEffect(() => {
     if (!isAuthenticated) return;

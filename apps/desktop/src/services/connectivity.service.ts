@@ -10,8 +10,10 @@ class ConnectivityService {
     private isOnline: boolean = navigator.onLine;
     private listeners: ConnectivityListener[] = [];
     private checkInterval: NodeJS.Timeout | null = null;
-    private readonly CHECK_INTERVAL_MS = 10000; // Check every 10 seconds
-    private readonly CHECK_TIMEOUT_MS = 5000; // Timeout for health check
+    private readonly ONLINE_INTERVAL_MS = 30000;   // Check every 30s when online
+    private readonly OFFLINE_INTERVAL_MS = 5000;   // Check every 5s when offline (to detect recovery faster)
+    private readonly CHECK_TIMEOUT_MS = 5000;
+    private currentIntervalMs: number = this.ONLINE_INTERVAL_MS;
 
     private constructor() {
         this.setupWindowListeners();
@@ -54,10 +56,22 @@ class ConnectivityService {
     }
 
     private startActiveCheck() {
-        if (this.checkInterval) clearInterval(this.checkInterval);
-        this.checkInterval = setInterval(() => this.checkConnectivity(), this.CHECK_INTERVAL_MS);
-        // Initial check
-        this.checkConnectivity();
+        this.scheduleNextCheck();
+    }
+
+    private scheduleNextCheck() {
+        if (this.checkInterval) clearTimeout(this.checkInterval);
+
+        // Adaptive interval: if offline, check more frequently to recover.
+        // If online, check less frequently to save resources.
+        // Override: if navigator.onLine is false, allow frequent checks but they will fast-fail anyway
+        // unless operating system reports online.
+
+        this.currentIntervalMs = this.isOnline ? this.ONLINE_INTERVAL_MS : this.OFFLINE_INTERVAL_MS;
+
+        this.checkInterval = setTimeout(() => {
+            this.checkConnectivity().then(() => this.scheduleNextCheck());
+        }, this.currentIntervalMs);
     }
 
     public async checkConnectivity(): Promise<boolean> {
@@ -72,11 +86,17 @@ class ConnectivityService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), this.CHECK_TIMEOUT_MS);
 
-            // Use fetch directly to avoid interceptors potentially messing with it
-            // Assuming api.defaults.baseURL is set. If not, fallback or use relative.
-            const baseURL = api.defaults.baseURL || '';
-            // Ensure no double slash if baseURL ends with /
-            const url = `${baseURL.replace(/\/$/, '')}/health`;
+            // Improved URL Resolution
+            let baseURL = api.defaults.baseURL;
+
+            // Fallbacks if api.defaults.baseURL is not set
+            if (!baseURL) {
+                baseURL = import.meta.env.VITE_PRIMARY_API_URL ||
+                    import.meta.env.VITE_API_URL ||
+                    'http://localhost:3000';
+            }
+
+            const url = `${baseURL?.replace(/\/$/, '')}/health`;
 
             const response = await fetch(url, {
                 method: 'HEAD',
@@ -102,6 +122,10 @@ class ConnectivityService {
         if (this.isOnline !== newStatus) {
             logger.info(`Connectivity changed: ${this.isOnline} -> ${newStatus}`);
             this.isOnline = newStatus;
+
+            // Re-schedule check with new interval immediately
+            this.scheduleNextCheck();
+
             this.notifyListeners();
 
             // Dispatch global event for other components unaware of this service

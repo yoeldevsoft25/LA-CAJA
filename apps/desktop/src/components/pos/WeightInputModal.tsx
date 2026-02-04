@@ -70,7 +70,9 @@ export default function WeightInputModal({
   )
 
   const sanitize = useCallback((raw: string) => {
-    const s = String(raw).replace(/[^0-9.]/g, '')
+    // Accept both decimal separators: "1,25" and "1.25".
+    const normalized = String(raw).replace(/,/g, '.')
+    const s = normalized.replace(/[^0-9.]/g, '')
     const parts = s.split('.')
     return parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : s
   }, [])

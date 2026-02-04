@@ -1,4 +1,5 @@
 import { db, LocalProduct } from '@/db/database';
+import { productRepository, customerRepository } from '@/db/repositories';
 import {
     BaseEvent,
     ProductCreatedPayload,
@@ -132,12 +133,12 @@ export const projectionManager = {
         };
 
         // Dexie put: crea o reemplaza
-        await db.products.put(product);
+        await productRepository.save(product);
     },
 
     async applyProductUpdated(event: BaseEvent) {
         const payload = event.payload as ProductUpdatedPayload;
-        const existing = await db.products.get(payload.product_id);
+        const existing = await productRepository.findById(payload.product_id);
 
         if (!existing) {
             // Si el producto no existe localmente, en teoría deberíamos pedirlo al servidor.
@@ -154,31 +155,31 @@ export const projectionManager = {
             cached_at: Date.now()
         };
 
-        await db.products.put(updated);
+        await productRepository.save(updated);
     },
 
     async applyProductDeactivated(event: BaseEvent) {
         const payload = event.payload as ProductDeactivatedPayload;
-        const existing = await db.products.get(payload.product_id);
+        const existing = await productRepository.findById(payload.product_id);
 
         if (existing) {
             existing.is_active = payload.is_active; // false
             existing.updated_at = event.created_at;
             existing.cached_at = Date.now();
-            await db.products.put(existing);
+            await productRepository.save(existing);
         }
     },
 
     async applyPriceChanged(event: BaseEvent) {
         const payload = event.payload as PriceChangedPayload;
-        const existing = await db.products.get(payload.product_id);
+        const existing = await productRepository.findById(payload.product_id);
 
         if (existing) {
             existing.price_bs = Number(payload.price_bs);
             existing.price_usd = Number(payload.price_usd);
             existing.updated_at = event.created_at; // O payload.effective_at
             existing.cached_at = Date.now();
-            await db.products.put(existing);
+            await productRepository.save(existing);
         }
     },
 
@@ -191,7 +192,7 @@ export const projectionManager = {
                 unit: string | null;
             }>;
         };
-        const existing = await db.products.get(payload.product_id);
+        const existing = await productRepository.findById(payload.product_id);
 
         if (!existing) return;
 
@@ -206,12 +207,12 @@ export const projectionManager = {
             cached_at: Date.now()
         };
 
-        await db.products.put(updated);
+        await productRepository.save(updated);
     },
 
     async applyCustomerCreated(event: BaseEvent) {
         const payload = event.payload as CustomerCreatedPayload;
-        await db.customers.put({
+        await customerRepository.save({
             id: payload.customer_id,
             store_id: event.store_id,
             name: payload.name,
@@ -225,7 +226,7 @@ export const projectionManager = {
 
     async applyCustomerUpdated(event: BaseEvent) {
         const payload = event.payload as CustomerUpdatedPayload;
-        const existing = await db.customers.get(payload.customer_id);
+        const existing = await customerRepository.findById(payload.customer_id);
         if (existing) {
             const updated = {
                 ...existing,
@@ -233,7 +234,7 @@ export const projectionManager = {
                 updated_at: event.created_at,
                 cached_at: Date.now()
             };
-            await db.customers.put(updated);
+            await customerRepository.save(updated);
         }
     },
 

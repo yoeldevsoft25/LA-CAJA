@@ -18,6 +18,7 @@ import {
 import { ReconnectSyncOrchestrator } from '@la-caja/sync';
 import { api } from '@/lib/api';
 import { db, LocalEvent } from '@/db/database';
+import { eventRepository } from '@/db/repositories';
 import { createLogger } from '@/lib/logger';
 import { connectivityService } from '@/services/connectivity.service';
 import { projectionManager } from './projection.manager';
@@ -217,7 +218,9 @@ class SyncServiceClass {
 
     // Check if there's anything to sync
     const stats = this.syncQueue?.getStats();
-    const dbPending = await db.getPendingEvents(1).then(e => e.length).catch(() => 0);
+    // const dbPending = await db.getPendingEvents(1).then(e => e.length).catch(() => 0); 
+    // Optimization: Use countPending from repo
+    const dbPending = await eventRepository.countPending();
     if (stats?.pending === 0 && dbPending === 0) {
       this.logger.debug(`Recovery skipped (nothing pending), source=${source}`);
       return;
@@ -468,8 +471,8 @@ class SyncServiceClass {
     this.logger.info('🚀 Iniciando Hard Recovery Sync');
 
     try {
-      // 1. Recargar pendientes desde IndexedDB (por si hay eventos que no están en cola)
-      const pendingEvents = await db.getPendingEvents(1000);
+      // 1. Recargar pendientes desde Repository (por si hay eventos que no están en cola)
+      const pendingEvents = await eventRepository.getPending(1000);
       const queueDepthBefore = this.syncQueue.getStats().pending;
 
       this.logger.info(`📊 Pendientes en IndexedDB: ${pendingEvents.length}, en cola: ${queueDepthBefore}`);
@@ -560,8 +563,8 @@ class SyncServiceClass {
 
     const memoryPending = this.syncQueue.getStats().pending;
     try {
-      // Use getPendingEvents which is optimized with index
-      const dbPendingEvents = await db.getPendingEvents(1000);
+      // Use getPendingEvents from repo
+      const dbPendingEvents = await eventRepository.getPending(1000);
       const dbPendingCount = dbPendingEvents.length;
 
       this.logger.debug(`[Reconcile] memory=${memoryPending}, db=${dbPendingCount}`);
@@ -720,7 +723,7 @@ class SyncServiceClass {
     }
 
     // Guardar todos en la base de datos
-    await db.localEvents.bulkPut(
+    await eventRepository.addBatch(
       events.map((event) => this.eventToLocalEvent(event))
     );
 
@@ -752,7 +755,7 @@ class SyncServiceClass {
    * Fuerza la sincronización y resetea contadores de error
    */
   async forceSync(): Promise<void> {
-    await db.resetFailedEventsToPending();
+    await eventRepository.resetFailedToPending();
     await this.syncNow();
   }
 
@@ -1205,41 +1208,23 @@ class SyncServiceClass {
    */
   private async saveEventToDB(event: BaseEvent): Promise<void> {
     const localEvent = this.eventToLocalEvent(event);
-    const existing = await db.localEvents.where('event_id').equals(localEvent.event_id).first();
-    if (existing) {
-      // Idempotencia local: no duplicar el mismo event_id en el outbox
-      return;
+    // Idempotency check handled by repository constraint (event_id UNIQUE) usually...
+    // But repository.add might throw if exists. 
+    // Checking existence first is safer for SQLite if we define UNIQUE constraint.
+    // Our Sqlite table has event_id UNIQUE.
+    try {
+      await eventRepository.add(localEvent);
+    } catch (e) {
+      // Ignore unique constraint violation
+      this.logger.debug('Event already exists (ignored)', { event_id: event.event_id });
     }
-    await db.localEvents.add(localEvent);
   }
 
   /**
    * Marca eventos como sincronizados en la base de datos
    */
   private async markEventsAsSynced(eventIds: string[]): Promise<void> {
-    const updates = eventIds.map((eventId) => ({
-      event_id: eventId,
-      sync_status: 'synced' as const,
-      synced_at: Date.now(),
-      acked_at: Date.now(),
-      next_retry_at: 0,
-      last_error: null as string | null,
-      last_error_code: null as string | null,
-    }));
-
-    for (const update of updates) {
-      const event = await db.localEvents.where('event_id').equals(update.event_id).first();
-      if (event) {
-        await db.localEvents.update(event.id!, {
-          sync_status: update.sync_status,
-          synced_at: update.synced_at,
-          acked_at: update.acked_at,
-          next_retry_at: update.next_retry_at,
-          last_error: update.last_error,
-          last_error_code: update.last_error_code,
-        });
-      }
-    }
+    await eventRepository.markAsSynced(eventIds);
   }
 
   /**
@@ -1262,17 +1247,11 @@ class SyncServiceClass {
       error?.message?.includes('HTTP 403') ||
       error?.message?.includes('HTTP 404');
 
-    const event = await db.localEvents.where('event_id').equals(eventId).first();
+    const event = await eventRepository.findByEventId(eventId);
     if (event) {
       const attempts = (event.sync_attempts || 0) + 1;
-      const nextRetryAt = Date.now() + this.computeRetryDelay(attempts);
-      await db.localEvents.update(event.id!, {
-        sync_status: isValidationError ? 'dead' : 'retrying',
-        sync_attempts: attempts,
-        next_retry_at: isValidationError ? 0 : nextRetryAt,
-        last_error: error.message || null,
-        last_error_code: error.name || null,
-      });
+      const nextRetryAt = isValidationError ? 0 : Date.now() + this.computeRetryDelay(attempts);
+      await eventRepository.markAsFailed(eventId, error.message || 'Unknown error', nextRetryAt, isValidationError);
     }
   }
 
@@ -1329,10 +1308,7 @@ class SyncServiceClass {
       // Usar índice compuesto [sync_status+created_at] si existe, o filtrar manualmente
       // Dexie: db.localEvents.where('sync_status').equals('synced').and(evt => evt.created_at < cutoff).delete()
       // Versión optimizada con índice:
-      const deleteCount = await db.localEvents
-        .where('[sync_status+created_at]')
-        .between(['synced', 0], ['synced', cutoff])
-        .delete();
+      const deleteCount = await eventRepository.pruneSynced(SEVEN_DAYS_MS);
 
       if (deleteCount > 0) {
         this.logger.info(`[Prune] Eliminados ${deleteCount} eventos sincronizados antiguos`);

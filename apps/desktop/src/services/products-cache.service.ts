@@ -4,6 +4,7 @@
  */
 
 import { db, LocalProduct } from '@/db/database';
+import { productRepository } from '@/db/repositories';
 import { Product } from './products.service';
 import { normalizeBarcode } from '@la-caja/domain';
 
@@ -137,7 +138,11 @@ export class ProductsCacheService {
    */
   async cacheProducts(products: Product[], storeId: string): Promise<void> {
     const localProducts = products.map(p => this.toLocalProduct(p, storeId));
-    await db.cacheProducts(localProducts);
+    // Replace direct db call with repository or keep if custom method not exists
+    // db.cacheProducts is custom method on LaCajaDB class in database.ts? 
+    // Yes lines 393: async cacheProducts(products: LocalProduct[]): Promise<void>
+    // We should use repository saveAll
+    await productRepository.saveAll(localProducts);
     if (this.barcodeIndexStoreId === storeId) {
       for (const local of localProducts) {
         if (local.barcode) {
@@ -152,7 +157,7 @@ export class ProductsCacheService {
    */
   async cacheProduct(product: Product, storeId: string): Promise<void> {
     const localProduct = this.toLocalProduct(product, storeId);
-    await db.cacheProduct(localProduct);
+    await productRepository.save(localProduct);
     if (this.barcodeIndexStoreId === storeId && localProduct.barcode) {
       this.barcodeIndex.set(localProduct.barcode, localProduct);
     }
@@ -169,7 +174,9 @@ export class ProductsCacheService {
     product_type?: 'sale_item' | 'ingredient' | 'prepared';
     limit?: number;
   }): Promise<Product[]> {
-    const localProducts = await db.getProducts(storeId, options);
+    // db.getProducts is custom method in database.ts line 341. 
+    // It maps to repository.search but repository requires storeId in options object.
+    const localProducts = await productRepository.search({ ...options, storeId });
     return localProducts.map(local => this.toProduct(local));
   }
 
@@ -177,7 +184,7 @@ export class ProductsCacheService {
    * Obtiene un producto por ID del cache local
    */
   async getProductByIdFromCache(id: string): Promise<Product | null> {
-    const local = await db.getProductById(id);
+    const local = await productRepository.findById(id);
     return local ? this.toProduct(local) : null;
   }
 
@@ -195,7 +202,7 @@ export class ProductsCacheService {
         if (cached) return this.toProduct(cached);
       }
 
-      const matches = await db.products.where('barcode').equals(candidate).toArray();
+      const matches = await productRepository.findByBarcode(candidate);
       const local = matches.find((p) => p.store_id === storeId && p.is_active);
       if (local) {
         if (this.barcodeIndexStoreId === storeId) {
@@ -224,11 +231,8 @@ export class ProductsCacheService {
     try {
       // ✅ Fix: Remove "as unknown as string" casting which confuses Dexie if types don't match exactly at runtime
       // Ensure we pass a proper array for compound index
-      const locals = await db.products
-        .where('[store_id+is_active]')
-        .equals([sanitizedStoreId, 1 /* 1 = true for boolean index sometimes in Dexie/IndexedDB depending on adapter */])
-        .or('store_id').equals(sanitizedStoreId).and(p => p.is_active === true) // Fallback query if compound index fails
-        .toArray();
+      // Use repository findByStoreId
+      const locals = await productRepository.findByStoreId(sanitizedStoreId, true);
 
       // Optimization: If the fallback approach is too slow, stick to simple filter if compound index issues persist
       // But [store_id+is_active] should work if defined in database.ts stores()
@@ -272,8 +276,15 @@ export class ProductsCacheService {
         .below(cutoff)
         .toArray();
 
+      // NOTE: We don't have bulkDelete in repository yet, using delete for one by one or extending repository.
+      // Or we can leave direct db access for cleanup maintenance task for now.
+      // But better to add delete method to repository.
+      // I added delete(id) but not bulkDelete.
+      // I will leave it as is or loop. The loop is fine for cleanup.
       if (oldProducts.length > 0) {
-        await db.products.bulkDelete(oldProducts.map(p => p.id));
+        for (const p of oldProducts) {
+          await productRepository.delete(p.id);
+        }
       }
     } catch (err) {
       console.warn('cleanupOldCache failed', err);

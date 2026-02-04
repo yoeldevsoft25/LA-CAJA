@@ -377,6 +377,7 @@ export const salesService = {
 
       // Obtener productos del cache para calcular totales y precios
       const { db } = await import('@/db/database')
+      const { productRepository } = await import('@/db/repositories')
       let subtotalBs = 0
       let subtotalUsd = 0
       let discountBs = 0
@@ -576,6 +577,7 @@ export const salesService = {
       }
 
       const { db } = await import('@/db/database')
+      const { productRepository } = await import('@/db/repositories')
       let subtotalBs = 0
       let subtotalUsd = 0
       let discountBs = 0
@@ -583,7 +585,7 @@ export const salesService = {
 
       const saleItems: DomainSaleItem[] = []
       for (const item of data.items) {
-        const localProduct = await db.getProductById(item.product_id)
+        const localProduct = await productRepository.findById(item.product_id)
         if (!localProduct) continue
 
         // ⚡ FIX: Convertir LocalProduct a Product (updated_at: number -> string)
