@@ -240,6 +240,49 @@ function App() {
     }
   }, [isOnline, wasOffline])
 
+  // Evita que macOS/Windows suspenda la pantalla durante operación offline en caja.
+  useEffect(() => {
+    if (!(window as any).__TAURI__) return
+    if (!isAuthenticated || isOnline) return
+
+    let released = false
+    let wakeLock: any = null
+    const nav = navigator as Navigator & {
+      wakeLock?: {
+        request: (type: 'screen') => Promise<any>
+      }
+    }
+
+    const requestWakeLock = async () => {
+      if (!nav.wakeLock || document.visibilityState !== 'visible') return
+      try {
+        wakeLock = await nav.wakeLock.request('screen')
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.debug('[WakeLock] No se pudo adquirir screen wake lock', error)
+        }
+      }
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !released && !wakeLock) {
+        void requestWakeLock()
+      }
+    }
+
+    void requestWakeLock()
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      released = true
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      if (wakeLock && typeof wakeLock.release === 'function') {
+        void wakeLock.release().catch(() => {})
+      }
+      wakeLock = null
+    }
+  }, [isAuthenticated, isOnline])
+
   useEffect(() => {
     // Suscribirse a push notifications (solo si el navegador lo soporta y estamos en web)
     if (!isAuthenticated || !isSupported || !('serviceWorker' in navigator) || !navigator.serviceWorker) {

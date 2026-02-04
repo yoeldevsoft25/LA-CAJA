@@ -456,7 +456,7 @@ export default function CheckoutModal({
   )
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose() }}>
       <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
         <DialogHeader className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-start justify-between gap-3">
@@ -479,6 +479,7 @@ export default function CheckoutModal({
               variant="ghost"
               size="icon"
               onClick={onClose}
+              disabled={isLoading}
               className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
               aria-label="Cerrar checkout"
             >

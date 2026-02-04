@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { db } from '@/db/database'
 
 export interface CashSession {
   id: string
@@ -79,19 +80,114 @@ export interface CashSessionsResponse {
   total: number
 }
 
+const STORE_ID_KEY = 'store_id'
+const CASH_CURRENT_SESSION_PREFIX = 'cash:current-session'
+const CASH_CURRENT_SESSION_LAST_KEY = `${CASH_CURRENT_SESSION_PREFIX}:last`
+
+type CachedCashSessionValue = {
+  store_id: string | null
+  session: CashSession | null
+  cached_at: number
+}
+
+function getStoreCacheKey(storeId: string): string {
+  return `${CASH_CURRENT_SESSION_PREFIX}:${storeId}`
+}
+
+async function getCurrentStoreIdFromKV(): Promise<string | null> {
+  try {
+    const kv = await db.kv.get(STORE_ID_KEY)
+    return typeof kv?.value === 'string' && kv.value.trim().length > 0 ? kv.value : null
+  } catch {
+    return null
+  }
+}
+
+async function saveCurrentSessionCache(session: CashSession | null): Promise<void> {
+  const storeId = session?.store_id || await getCurrentStoreIdFromKV()
+  const payload: CachedCashSessionValue = {
+    store_id: storeId,
+    session,
+    cached_at: Date.now(),
+  }
+
+  if (storeId) {
+    await db.kv.put({
+      key: getStoreCacheKey(storeId),
+      value: payload,
+    })
+  }
+
+  await db.kv.put({
+    key: CASH_CURRENT_SESSION_LAST_KEY,
+    value: payload,
+  })
+}
+
+async function getCurrentSessionFromCache(): Promise<CashSession | null> {
+  const storeId = await getCurrentStoreIdFromKV()
+
+  if (storeId) {
+    const byStore = await db.kv.get(getStoreCacheKey(storeId))
+    const value = byStore?.value as CachedCashSessionValue | undefined
+    if (value && value.store_id === storeId) {
+      return value.session
+    }
+  }
+
+  const last = await db.kv.get(CASH_CURRENT_SESSION_LAST_KEY)
+  const fallback = last?.value as CachedCashSessionValue | undefined
+  return fallback?.session ?? null
+}
+
+function isTransientNetworkError(error: any): boolean {
+  if (!error) return false
+  const code = typeof error?.code === 'string' ? error.code : ''
+  if (code === 'ERR_NETWORK' || code === 'ERR_INTERNET_DISCONNECTED' || code === 'ECONNABORTED') {
+    return true
+  }
+
+  if (!error?.response) return true
+
+  const status = Number(error.response?.status || 0)
+  return status >= 500
+}
+
 export const cashService = {
   async openSession(data: OpenCashSessionRequest): Promise<CashSession> {
     const response = await api.post<CashSession>('/cash/sessions/open', data)
+    try {
+      await saveCurrentSessionCache(response.data)
+    } catch {
+      // Ignore cache errors: opening cash on server already succeeded.
+    }
     return response.data
   },
 
   async getCurrentSession(): Promise<CashSession | null> {
-    const response = await api.get<CashSession | null>('/cash/sessions/current')
-    return response.data
+    try {
+      const response = await api.get<CashSession | null>('/cash/sessions/current')
+      try {
+        await saveCurrentSessionCache(response.data)
+      } catch {
+        // Ignore cache write failures.
+      }
+      return response.data
+    } catch (error) {
+      if (isTransientNetworkError(error)) {
+        return getCurrentSessionFromCache()
+      }
+      throw error
+    }
   },
 
   async closeSession(sessionId: string, data: CloseCashSessionRequest): Promise<CashSession> {
     const response = await api.post<CashSession>(`/cash/sessions/${sessionId}/close`, data)
+    try {
+      await saveCurrentSessionCache(null)
+    } catch {
+      // Ignore cache errors: closing cash on server already succeeded.
+    }
     return response.data
   },
 
