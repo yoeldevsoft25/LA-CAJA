@@ -487,10 +487,15 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       for (const item of dto.items) {
         const product = productMap.get(item.product_id);
         if (product) {
-          const price = product.price_usd || 0;
-          const qty = item.is_weight_product
-            ? Number(item.weight_value || 0)
-            : item.qty;
+          const isWeightProduct = Boolean(
+            item.is_weight_product || product.is_weight_product,
+          );
+          const qty = isWeightProduct
+            ? Number(item.weight_value ?? item.qty ?? 0)
+            : Number(item.qty ?? 0);
+          const price = isWeightProduct
+            ? Number(item.price_per_weight_usd ?? product.price_per_weight_usd ?? 0)
+            : Number(product.price_usd ?? 0);
           const discountUsd = item.discount_usd || 0;
           totalUsd += price * qty - discountUsd;
         }
