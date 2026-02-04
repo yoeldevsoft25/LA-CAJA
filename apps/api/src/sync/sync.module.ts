@@ -13,10 +13,13 @@ import { DiscountsModule } from '../discounts/discounts.module';
 import { LicensesModule } from '../licenses/licenses.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { QueuesModule } from '../queues/queues.module';
+import { FederationSyncService, FederationSyncProcessor } from './federation-sync.service';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Event, Product, CashSession]),
+    BullModule.registerQueue({ name: 'federation-sync' }),
     ProjectionsModule,
     DiscountsModule,
     QueuesModule,
@@ -29,7 +32,9 @@ import { QueuesModule } from '../queues/queues.module';
     VectorClockService,
     CRDTService,
     ConflictResolutionService,
+    FederationSyncService,
+    FederationSyncProcessor,
   ],
-  exports: [SyncService],
+  exports: [SyncService, FederationSyncService],
 })
 export class SyncModule { }

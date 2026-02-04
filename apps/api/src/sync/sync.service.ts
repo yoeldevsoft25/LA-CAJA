@@ -22,6 +22,7 @@ import * as crypto from 'crypto';
 import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { UsageService } from '../licenses/usage.service';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
+import { FederationSyncService } from './federation-sync.service';
 
 interface SyncEventActor {
   user_id: string;
@@ -127,6 +128,7 @@ export class SyncService {
     @InjectQueue('sales-projections')
     private salesProjectionQueue: Queue,
     private metricsService: SyncMetricsService,
+    private federationSyncService: FederationSyncService,
   ) { }
 
   async push(
@@ -344,6 +346,14 @@ export class SyncService {
     // 7. Guardar todos los eventos nuevos en batch
     if (eventsToSave.length > 0) {
       await this.eventRepository.save(eventsToSave);
+
+      // 🌐 FEDERATION RELAY: Forward events to remote server
+      // Avoid infinite loops by not relaying events that came from federation
+      if (authenticatedUserId !== 'system-federation') {
+        for (const event of eventsToSave) {
+          await this.federationSyncService.queueRelay(event);
+        }
+      }
 
       // 8. Encolar proyecciones de forma asíncrona (no bloquear respuesta)
       // ⚡ OPTIMIZACIÓN 2025: Batch processing para mejor performance

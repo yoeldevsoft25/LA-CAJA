@@ -17,14 +17,15 @@ import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
 import { ResolveConflictDto } from './dto/resolve-conflict.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { FederationAuthGuard } from './guards/federation-auth.guard';
 
 @Controller('sync')
-@UseGuards(JwtAuthGuard)
+@UseGuards(FederationAuthGuard, JwtAuthGuard)
 export class SyncController {
   constructor(
     private readonly syncService: SyncService,
     private readonly conflictResolutionService: ConflictResolutionService,
-  ) {}
+  ) { }
 
   @Post('push')
   @HttpCode(HttpStatus.OK)
@@ -34,7 +35,7 @@ export class SyncController {
   ): Promise<PushSyncResponseDto> {
     // Validar que el store_id del request coincida con el del token
     const storeId = req.user.store_id;
-    if (dto.store_id !== storeId) {
+    if (req.user.sub !== 'system-federation' && dto.store_id !== storeId) {
       throw new BadRequestException('store_id no autorizado');
     }
     return this.syncService.push(dto, req.user.sub);

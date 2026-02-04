@@ -41,6 +41,18 @@ import { BullModule } from '@nestjs/bullmq';
           removeOnFail: false,
         },
       },
+      {
+        name: 'federation-sync',
+        defaultJobOptions: {
+          attempts: 10,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
     ),
   ],
   exports: [BullModule],
