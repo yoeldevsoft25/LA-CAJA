@@ -20,7 +20,7 @@ export interface PostProcessSaleJob {
  * que no son críticas para la respuesta inmediata al cliente
  */
 @Processor('sales-post-processing', {
-  concurrency: 50, // ☢️ 50 Background workers
+  concurrency: 32, // 🛡️ 32 Background workers
   limiter: {
     max: 500, // 500 jobs/seg
     duration: 1000,

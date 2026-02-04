@@ -21,7 +21,7 @@ export interface ProjectSaleEventJob {
  * para no bloquear la respuesta al cliente
  */
 @Processor('sales-projections', {
-  concurrency: 100, // ☢️ TOTAL OVERLOAD: 100 Parallel Workers for Ryzen 7700X
+  concurrency: 64, // 🛡️ STABLE PEAK: 64 Parallel Workers for Ryzen 7700X
   limiter: {
     max: 1000,
     duration: 1000,
