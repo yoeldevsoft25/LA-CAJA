@@ -30,15 +30,20 @@ export { SaleReturnItem } from './sale-return-item.entity';
 export { InvoiceSeries } from './invoice-series.entity';
 
 // Cash & Sessions entities
-export { CashSession, CashSessionStatus } from './cash-session.entity';
-export { Shift, ShiftStatus } from './shift.entity';
-export { ShiftCut, CutType } from './shift-cut.entity';
+export { CashSession } from './cash-session.entity';
+export type { CashSessionStatus } from './cash-session.entity';
+export { Shift } from './shift.entity';
+export type { ShiftStatus } from './shift.entity';
+export { ShiftCut } from './shift-cut.entity';
+export type { CutType } from './shift-cut.entity';
 export { PaymentMethodConfig } from './payment-method-config.entity';
-export { CashMovement, CashMovementType } from './cash-movement.entity';
+export { CashMovement } from './cash-movement.entity';
+export type { CashMovementType } from './cash-movement.entity';
 
 // Customer & Debt entities
 export { Customer } from './customer.entity';
-export { Debt, DebtStatus } from './debt.entity';
+export { Debt } from './debt.entity';
+export type { DebtStatus } from './debt.entity';
 export { DebtPayment } from './debt-payment.entity';
 
 // Order entities
@@ -85,15 +90,13 @@ export { WhatsAppConfig } from './whatsapp-config.entity';
 export { WhatsAppMessageQueue } from './whatsapp-message-queue.entity';
 
 // Exchange entities
-export { ExchangeRate, ExchangeRateType } from './exchange-rate.entity';
+export { ExchangeRate } from './exchange-rate.entity';
+export type { ExchangeRateType } from './exchange-rate.entity';
 export { StoreRateConfig } from './store-rate-config.entity';
-export {
-  SalePayment,
-  PaymentMethod,
-  PaymentStatus,
-} from './sale-payment.entity';
-export {
-  SaleChange,
+export { SalePayment } from './sale-payment.entity';
+export type { PaymentMethod, PaymentStatus } from './sale-payment.entity';
+export { SaleChange } from './sale-change.entity';
+export type {
   ChangeMethod,
   ExcessAction,
   ChangeBreakdown,
@@ -129,10 +132,8 @@ export { AccountingAccountMapping } from './accounting-account-mapping.entity';
 export { AccountBalance } from './account-balance.entity';
 export { AccountingExport } from './accounting-export.entity';
 export { AccountingERPSync } from './accounting-erp-sync.entity';
-export {
-  AccountingPeriod,
-  AccountingPeriodStatus,
-} from './accounting-period.entity';
+export { AccountingPeriod } from './accounting-period.entity';
+export type { AccountingPeriodStatus } from './accounting-period.entity';
 
 // License payment entities
 export {

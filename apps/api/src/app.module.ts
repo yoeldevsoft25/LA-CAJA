@@ -231,7 +231,8 @@ import { BullModule } from '@nestjs/bullmq';
           url.hostname.includes('aws') ||
           url.hostname.includes('azure') ||
           url.hostname.includes('gcp') ||
-          configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'false';
+          (configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'false' &&
+            !['localhost', '127.0.0.1', 'postgres'].includes(url.hostname));
 
         // Configuración SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
         // En produccion, SIEMPRE rechazar certificados no autorizados
@@ -310,11 +311,12 @@ import { BullModule } from '@nestjs/bullmq';
           // SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
           // NOTA: Supabase pooler requiere SSL siempre, incluso en desarrollo
           ssl:
-            isCloudDatabase || isProduction
+            (isCloudDatabase || isProduction) &&
+              !['localhost', '127.0.0.1', 'postgres'].includes(url.hostname)
               ? {
-                  rejectUnauthorized: sslRejectUnauthorized,
-                  ...(sslCa ? { ca: sslCa } : {}),
-                }
+                rejectUnauthorized: sslRejectUnauthorized,
+                ...(sslCa ? { ca: sslCa } : {}),
+              }
               : false,
         };
       },
@@ -402,4 +404,4 @@ import { BullModule } from '@nestjs/bullmq';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

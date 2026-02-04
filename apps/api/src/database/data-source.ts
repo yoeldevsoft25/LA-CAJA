@@ -3,8 +3,8 @@ import { ALL_ENTITIES } from './entities/index';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load .env from root (../../../../.env)
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+// Load .env from apps/api/ (../../.env)
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const isLocal = process.env.DB_HOST === 'localhost' || process.env.DB_HOST === '127.0.0.1';
 const sslRejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true';

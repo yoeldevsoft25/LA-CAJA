@@ -9,7 +9,7 @@
 #>
 param (
     [Parameter(Mandatory=$false)]
-    [string]$ConnectionString = "postgresql://postgres.unycbbictuwzruxshacq:%40bC154356@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
+    [string]$ConnectionString = "postgresql://postgres.unycbbictuwzruxshacq:%40bC154356@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
 )
 
 Write-Host "=== Migrador de Base de Datos (Cloud -> Local) ===" -ForegroundColor Cyan
@@ -49,7 +49,7 @@ try {
     # pero para simplicidad en windows usaremos la variable de entorno dentro del comando docker
     
     # Truco: Pasar la URL completa a psql
-    docker run --rm postgres:15-alpine psql "$ConnectionString" -c "SELECT 1;" | Out-Null
+    docker run --rm postgres:17-alpine psql "$ConnectionString" -c "SELECT 1;" | Out-Null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Conexión exitosa." -ForegroundColor Green
     } else {
@@ -82,7 +82,7 @@ Write-Host "Descargando e importando..." -ForegroundColor Gray
 # El problema de PS es que puede corromper encoding binario.
 # USANDO CMD /C para garantizar el pipe binario crudo que pg_dump custom format necesita.
 
-$dumpCmd = "docker run --rm -i postgres:15-alpine pg_dump ""$ConnectionString"" --no-owner --no-acl --format=custom"
+$dumpCmd = "docker run --rm -i postgres:17-alpine pg_dump ""$ConnectionString"" --no-owner --no-acl --format=custom"
 $restoreCmd = "docker exec -i la-caja-db pg_restore -U postgres -d la_caja --no-owner --no-acl --clean --if-exists"
 
 cmd /c "$dumpCmd | $restoreCmd"
