@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { syncService, SyncStatus } from '@/services/sync.service'
+import { CircuitState } from '@la-caja/offline-core'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, AlertCircle } from 'lucide-react'
 
@@ -9,6 +10,8 @@ export function SyncStatusBadge() {
         pendingCount: 0,
         lastSyncAt: null,
         lastError: null,
+        isServerAvailable: true,
+        serverStatus: CircuitState.CLOSED,
     })
     const [isOnline, setIsOnline] = useState(navigator.onLine)
 

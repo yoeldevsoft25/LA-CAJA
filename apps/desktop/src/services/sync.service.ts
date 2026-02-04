@@ -1094,7 +1094,7 @@ class SyncServiceClass {
         this.logger.info(`[Prune] Eliminados ${deleteCount} eventos sincronizados antiguos`);
       }
     } catch (error) {
-      this.logger.warn('Error durante pruning de eventos', error);
+      this.logger.warn('Error durante pruning de eventos', { error });
     }
   }
 
