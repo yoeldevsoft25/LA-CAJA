@@ -13,6 +13,7 @@ import {
   VectorClockManager,
   CircuitBreaker,
   CacheManager,
+  CircuitState,
 } from '@la-caja/offline-core';
 import { ReconnectSyncOrchestrator } from '@la-caja/sync';
 import { api } from '@/lib/api';
@@ -50,6 +51,8 @@ export interface SyncStatus {
   pendingCount: number;
   lastSyncAt: number | null;
   lastError: string | null;
+  isServerAvailable: boolean;
+  serverStatus: CircuitState;
 }
 
 class SyncServiceClass {
@@ -733,6 +736,8 @@ class SyncServiceClass {
       pendingCount: stats.pending,
       lastSyncAt: metrics.lastSyncAt || null,
       lastError: metrics.lastError || null,
+      isServerAvailable: this.circuitBreaker.getState() !== CircuitState.OPEN,
+      serverStatus: this.circuitBreaker.getState(),
     };
   }
 
