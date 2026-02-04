@@ -21,7 +21,7 @@ export interface ProjectSaleEventJob {
  * para no bloquear la respuesta al cliente
  */
 @Processor('sales-projections', {
-  concurrency: 15, // 🚀 UNLEASHED: Maximum performance for Ryzen 7700X (8C/16T)
+  concurrency: 40, // 🚀 GOD MODE: Extreme performance for Ryzen 7700X (8C/16T)
   limiter: {
     max: 100,
     duration: 1000,

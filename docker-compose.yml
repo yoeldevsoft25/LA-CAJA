@@ -35,25 +35,26 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     # ⚡ OPTIMIZACIÓN RYZEN 7700X + 32GB RAM ⚡
-    # shared_buffers: 4GB (Memoria dedicada a cache de tablas)
-    # effective_cache_size: 12GB (Estimación de cache del sistema de archivos)
-    # maintenance_work_mem: 1GB (Para índices y vacuums rápidos)
-    # work_mem: 32MB (Memoria por operación de ordenamiento/hash)
-    # max_connections: 100 (Suficiente para local, permite concurrencia alta)
+    # shared_buffers: 8GB (25% de 32GB, ideal para DB de alta concurrencia)
+    # effective_cache_size: 20GB (Uso agresivo de RAM para cache de disco)
+    # maintenance_work_mem: 2GB (Para reconstrucción de índices a velocidad rayo)
+    # work_mem: 128MB (Para reportes complejos sin usar disco)
+    # max_connections: 200 (Para soportar ráfagas de sincronización masivas)
     command: >
       postgres
-      -c shared_buffers=4GB
-      -c effective_cache_size=12GB
-      -c maintenance_work_mem=1GB
+      -c shared_buffers=8GB
+      -c effective_cache_size=20GB
+      -c maintenance_work_mem=2GB
+      -p 5432
       -c checkpoint_completion_target=0.9
       -c wal_buffers=16MB
       -c default_statistics_target=100
       -c random_page_cost=1.1
       -c effective_io_concurrency=200
-      -c work_mem=32MB
+      -c work_mem=128MB
       -c min_wal_size=1GB
-      -c max_wal_size=4GB
-      -c max_connections=100
+      -c max_wal_size=8GB
+      -c max_connections=200
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -62,7 +63,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G # Reservamos hasta 8GB para la BD (de tus 32GB totales)
+          memory: 16G # Reservamos hasta la mitad de tu memoria física para la BD rápida
 
 volumes:
   redis-data:

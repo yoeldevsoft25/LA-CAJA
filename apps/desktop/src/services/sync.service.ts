@@ -64,7 +64,7 @@ class SyncServiceClass {
   private syncIntervalId: ReturnType<typeof setInterval> | null = null;
   private readonly SYNC_INTERVAL_MS = 30000; // Sincronizar cada 30 segundos
   // Config: casi tiempo real, pero con batching pequeño para reducir requests
-  private readonly SYNC_BATCH_SIZE = 100; // ✅ Increased to 100 (Max Capacity for Ryzen 7700X Server)
+  private readonly SYNC_BATCH_SIZE = 500; // 🚀 ULTRA CAPACITY: Pushing 500 events at once to Ryzen 7700X
   private readonly SYNC_BATCH_TIMEOUT_MS = 150; // ms
   private readonly SYNC_PRIORITIZE_CRITICAL = false; // Agrupar eventos crítica mejora rendimiento (evita 1 request por venta)
   private onlineListener: (() => void) | null = null;

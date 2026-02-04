@@ -20,9 +20,9 @@ export interface PostProcessSaleJob {
  * que no son críticas para la respuesta inmediata al cliente
  */
 @Processor('sales-post-processing', {
-  concurrency: 10, // 🚀 UNLEASHED: High performance for background tasks on Local Server
+  concurrency: 20, // 🚀 GOD MODE: High background throughput
   limiter: {
-    max: 20, // Procesar hasta 20 jobs por segundo
+    max: 100, // Procesar hasta 100 jobs por segundo (Ryzen Power)
     duration: 1000,
   },
 })
