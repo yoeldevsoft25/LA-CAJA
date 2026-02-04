@@ -1066,77 +1066,100 @@ class SyncServiceClass {
           this.logger.debug('Error en pull periódico', err);
         });
       }
+
+      // 3. PRUNE: Limpiar eventos viejos (cada ciclo, operación barata en IndexedDB)
+      await this.pruneSyncedEvents();
     }, this.SYNC_INTERVAL_MS);
   }
 
   /**
+   * Elimina eventos sincronizados hace más de 7 días para mantener DB liviana
+   */
+  private async pruneSyncedEvents(): Promise<void> {
+    try {
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const cutoff = Date.now() - SEVEN_DAYS_MS;
+
+      const deleteCount = await db.localEvents
+        .where('[sync_status+created_at]')
+        .between(['synced', 0], ['synced', cutoff])
+        .delete();
+
+      if (deleteCount > 0) {
+        this.logger.info(`[Prune] Eliminados ${deleteCount} eventos sincronizados antiguos`);
+      }
+    } catch (error) {
+      this.logger.warn('Error durante pruning de eventos', error);
+    }
+
+  /**
    * Obtiene eventos nuevos del servidor y los aplica localmente
    */
-  async pullFromServer(): Promise<void> {
-    if (!this.storeId || !this.deviceId || !navigator.onLine) return;
+  async pullFromServer(): Promise < void> {
+      if(!this.storeId || !this.deviceId || !navigator.onLine) return;
 
-    // Obtener último checkpoint (timestamp de recepción del último evento pull)
-    // Usamos KV store para persistir este cursor
-    const kvKey = 'last_pull_checkpoint';
-    const lastCheckpointItem = await db.kv.get(kvKey);
-    const lastCheckpoint = lastCheckpointItem?.value || 0;
+      // Obtener último checkpoint (timestamp de recepción del último evento pull)
+      // Usamos KV store para persistir este cursor
+      const kvKey = 'last_pull_checkpoint';
+      const lastCheckpointItem = await db.kv.get(kvKey);
+      const lastCheckpoint = lastCheckpointItem?.value || 0;
 
-    try {
-      this.logger.debug('Iniciando Pull Sync', { lastCheckpoint });
+      try {
+        this.logger.debug('Iniciando Pull Sync', { lastCheckpoint });
 
-      const response = await api.get<{ events: BaseEvent[]; last_server_time: number }>('/sync/pull', {
-        params: {
-          last_checkpoint: lastCheckpoint,
-          device_id: this.deviceId // Para excluir eventos propios
-        }
-      });
+        const response = await api.get<{ events: BaseEvent[]; last_server_time: number }>('/sync/pull', {
+          params: {
+            last_checkpoint: lastCheckpoint,
+            device_id: this.deviceId // Para excluir eventos propios
+          }
+        });
 
-      const events = response.data?.events ?? [];
-      const last_server_time = response.data?.last_server_time ?? lastCheckpoint;
+        const events = response.data?.events ?? [];
+        const last_server_time = response.data?.last_server_time ?? lastCheckpoint;
 
-      if (events.length > 0) {
-        this.logger.info(`Recibidos ${events.length} eventos nuevos del servidor`);
+        if(events.length > 0) {
+      this.logger.info(`Recibidos ${events.length} eventos nuevos del servidor`);
 
-        // Aplicar eventos a la DB local
-        await projectionManager.applyEvents(events);
+      // Aplicar eventos a la DB local
+      await projectionManager.applyEvents(events);
 
-        // Actualizar checkpoint solo si procesamos con éxito
-        // Usamos last_server_time que nos devuelve el servidor para ser precisos
-        await db.kv.put({ key: kvKey, value: last_server_time });
+      // Actualizar checkpoint solo si procesamos con éxito
+      // Usamos last_server_time que nos devuelve el servidor para ser precisos
+      await db.kv.put({ key: kvKey, value: last_server_time });
 
-        // Notificar cambios (invalidar caches)
-        // Esto refrescará las UI que dependen de useQuery
-        await this.invalidateCriticalCaches();
-      }
-
-    } catch (error) {
-      this.logger.error('Error en pullFromServer', error);
-      // No lanzamos error para no detener el intervalo
+      // Notificar cambios (invalidar caches)
+      // Esto refrescará las UI que dependen de useQuery
+      await this.invalidateCriticalCaches();
     }
+
+  } catch(error) {
+    this.logger.error('Error en pullFromServer', error);
+    // No lanzamos error para no detener el intervalo
   }
+}
 
   /**
    * Convierte BaseEvent a LocalEvent
    */
   private eventToLocalEvent(event: BaseEvent): LocalEvent {
-    return {
-      ...event,
-      sync_status: 'pending',
-      sync_attempts: 0,
-    };
-  }
+  return {
+    ...event,
+    sync_status: 'pending',
+    sync_attempts: 0,
+  };
+}
 
   /**
    * Convierte LocalEvent a BaseEvent
    */
   private localEventToBaseEvent(localEvent: LocalEvent): BaseEvent {
-    const { id, sync_status, sync_attempts, synced_at, ...baseEvent } = localEvent;
-    void id;
-    void sync_status;
-    void sync_attempts;
-    void synced_at;
-    return baseEvent;
-  }
+  const { id, sync_status, sync_attempts, synced_at, ...baseEvent } = localEvent;
+  void id;
+  void sync_status;
+  void sync_attempts;
+  void synced_at;
+  return baseEvent;
+}
 }
 
 // Exportar instancia singleton

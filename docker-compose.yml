@@ -20,7 +20,50 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2.5G # Un poco más que el maxmemory de redis.conf para overhead
+          memory: 2.5G
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: la-caja-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-la_caja}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # ⚡ OPTIMIZACIÓN RYZEN 7700X + 32GB RAM ⚡
+    # shared_buffers: 4GB (Memoria dedicada a cache de tablas)
+    # effective_cache_size: 12GB (Estimación de cache del sistema de archivos)
+    # maintenance_work_mem: 1GB (Para índices y vacuums rápidos)
+    # work_mem: 32MB (Memoria por operación de ordenamiento/hash)
+    # max_connections: 100 (Suficiente para local, permite concurrencia alta)
+    command: >
+      postgres
+      -c shared_buffers=4GB
+      -c effective_cache_size=12GB
+      -c maintenance_work_mem=1GB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=32MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_connections=100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 8G # Reservamos hasta 8GB para la BD (de tus 32GB totales)
 
 volumes:
   redis-data:
+  postgres-data:
