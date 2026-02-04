@@ -20,9 +20,9 @@ export interface PostProcessSaleJob {
  * que no son críticas para la respuesta inmediata al cliente
  */
 @Processor('sales-post-processing', {
-  concurrency: 20, // 🚀 GOD MODE: High background throughput
+  concurrency: 50, // ☢️ 50 Background workers
   limiter: {
-    max: 100, // Procesar hasta 100 jobs por segundo (Ryzen Power)
+    max: 500, // 500 jobs/seg
     duration: 1000,
   },
 })

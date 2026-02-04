@@ -21,9 +21,9 @@ export interface ProjectSaleEventJob {
  * para no bloquear la respuesta al cliente
  */
 @Processor('sales-projections', {
-  concurrency: 40, // 🚀 GOD MODE: Extreme performance for Ryzen 7700X (8C/16T)
+  concurrency: 100, // ☢️ TOTAL OVERLOAD: 100 Parallel Workers for Ryzen 7700X
   limiter: {
-    max: 100,
+    max: 1000,
     duration: 1000,
   },
 })
