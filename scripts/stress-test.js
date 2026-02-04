@@ -18,12 +18,12 @@ const redisOptions = {
 async function run() {
     const queue = new Queue('sales-projections', { connection: redisOptions });
 
-    const TOTAL_EVENTS = 20000;
-    const BATCH_SIZE = 1000;
+    const TOTAL_EVENTS = 500000; // ☢️ 500,000 Ventas (Medio Millón)
+    const BATCH_SIZE = 2000;
 
-    console.log('\x1b[35m%s\x1b[0m', '🔥 LA-CAJA GOD MODE BENCHMARK 🔥');
-    console.log(`Inyectando ${TOTAL_EVENTS} eventos de venta para probar concurrencia...`);
-    console.log(`Configuración actual: 40 Workers paralelos en Ryzen 7700X.`);
+    console.log('\x1b[31m%s\x1b[0m', '☢️  LA-CAJA NUCLEAR LIMIT TEST - 500,000 EVENTS ☢️');
+    console.log(`Poniendo a prueba el Ryzen 7700X con medio millón de transacciones...`);
+    console.log(`Configuración: 40 Workers paralelos | 8GB DB RAM | 24GB Docker Limit`);
 
     const startTime = Date.now();
 
@@ -35,14 +35,19 @@ async function run() {
                     event_id: uuidv4(),
                     type: 'SaleCreated',
                     payload: {
-                        items: [{ product_id: 'BENCHMARK-ITEM', quantity: 1, price: 99.99 }],
-                        total: 99.99,
-                        cash_session_id: uuidv4()
+                        items: [
+                            { product_id: 'P1', quantity: 1, price: 10.5 },
+                            { product_id: 'P2', quantity: 2, price: 20.0 },
+                            { product_id: 'P3', quantity: 5, price: 5.99 }
+                        ],
+                        total: 80.45,
+                        cash_session_id: uuidv4(),
+                        customer_id: uuidv4()
                     },
                     actor: { user_id: uuidv4() },
                     store_id: uuidv4(),
                     device_id: uuidv4(),
-                    vector_clock: { 'benchmark-node': i }
+                    vector_clock: { 'nuclear-node': i }
                 }
             },
             opts: {
