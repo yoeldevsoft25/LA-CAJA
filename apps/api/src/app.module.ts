@@ -4,7 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DbRepairService } from './database/repair-db.service';
@@ -82,12 +83,28 @@ import {
   resolveDbConnection,
 } from './database/db-connection.config';
 
+const ENV_FILE_CANDIDATES = [
+  resolve(process.cwd(), 'apps/api/.env.local'),
+  resolve(process.cwd(), 'apps/api/.env'),
+  resolve(process.cwd(), '.env.local'),
+  resolve(process.cwd(), '.env'),
+].filter((candidate, index, arr) => arr.indexOf(candidate) === index);
+
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === 'production';
+const ENV_FILE_PATHS = IS_PRODUCTION_RUNTIME
+  ? []
+  : ENV_FILE_CANDIDATES.filter((candidate) => existsSync(candidate));
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
-      ignoreEnvFile: false, // Intentar leer .env si existe
+      // Robust path resolution for workspace runs on Windows/Mac/Linux.
+      // If launched from repo root, prefer apps/api/.env.
+      // If launched from apps/api, .env is still discovered.
+      envFilePath: ENV_FILE_PATHS.length > 0 ? ENV_FILE_PATHS : undefined,
+      // In production (Render), rely on process.env only.
+      ignoreEnvFile: IS_PRODUCTION_RUNTIME,
       // En producción (Render), las variables vienen de process.env automáticamente
     }),
     RedisCacheModule,

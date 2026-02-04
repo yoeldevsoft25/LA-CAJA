@@ -26,6 +26,10 @@ build/
 /apps/desktop/node_modules
 /apps/desktop/dist
 /apps/desktop/.env
+# Desktop - Tauri/Rust
+/apps/desktop/src-tauri/target/
+/apps/desktop/src-tauri/gen/
+/apps/desktop/src-tauri/build_log*.txt
 
 # API / Packages
 /apps/api/node_modules
@@ -39,4 +43,3 @@ build/
 .pnp.*
 .cache
 .env.local
-

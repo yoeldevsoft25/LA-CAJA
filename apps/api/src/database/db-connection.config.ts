@@ -67,11 +67,11 @@ export function resolveDbConnection(getEnv: GetEnvValue): ResolvedDbConnection {
   }
 
   const parsedUrl = databaseUrl ? parseUrlOrThrow(databaseUrl) : undefined;
-  const urlHost = parsedUrl?.hostname ?? '';
+  // Prefer DATABASE_URL whenever available to avoid accidental process-level
+  // env overrides (common on Windows sessions). Use field config only when:
+  // 1) explicitly forced, or 2) DATABASE_URL is not defined.
   const useFieldConfig =
-    forceFieldConfig ||
-    (!databaseUrl && hasFieldConfig) ||
-    (hasFieldConfig && isLocalDbHost(urlHost));
+    forceFieldConfig || (!databaseUrl && hasFieldConfig);
 
   const host =
     (useFieldConfig ? dbHost : undefined) ||
