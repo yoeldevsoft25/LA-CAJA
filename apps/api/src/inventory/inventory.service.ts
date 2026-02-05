@@ -123,6 +123,37 @@ export class InventoryService {
     private dataSource: DataSource,
   ) {}
 
+  private buildServerEvent(
+    manager: EntityManager,
+    params: {
+      storeId: string;
+      userId: string;
+      role: string;
+      type: string;
+      seq: number;
+      createdAt: Date;
+      payload: Record<string, unknown>;
+    },
+  ): Event {
+    const normalizedRole = params.role || 'owner';
+    return manager.create(Event, {
+      event_id: randomUUID(),
+      store_id: params.storeId,
+      device_id: this.serverDeviceId,
+      seq: params.seq,
+      type: params.type,
+      version: 1,
+      created_at: params.createdAt,
+      actor_user_id: params.userId,
+      actor_role: normalizedRole,
+      payload: params.payload,
+      vector_clock: { [this.serverDeviceId]: params.seq },
+      causal_dependencies: [],
+      delta_payload: null,
+      full_payload_hash: null,
+    });
+  }
+
   async stockReceived(
     storeId: string,
     dto: StockReceivedDto,
@@ -751,62 +782,87 @@ export class InventoryService {
       throw new ForbiddenException('Solo un owner puede vaciar el stock');
     }
 
-    // Verificar que el producto existe
-    const product = await this.productRepository.findOne({
-      where: { id: productId, store_id: storeId },
-    });
+    const result = await this.dataSource.transaction(async (manager) => {
+      // Verificar que el producto existe
+      const product = await manager.findOne(Product, {
+        where: { id: productId, store_id: storeId },
+      });
 
-    if (!product) {
-      throw new NotFoundException('Producto no encontrado');
-    }
+      if (!product) {
+        throw new NotFoundException('Producto no encontrado');
+      }
 
-    // Obtener stock actual
-    const currentStock = await this.getCurrentStock(storeId, productId);
+      // Obtener stock actual
+      const currentStock = await this.getCurrentStock(storeId, productId, manager);
 
-    // Si ya está en 0, no hacer nada
-    if (currentStock === 0) {
-      return null;
-    }
+      // Si ya está en 0, no hacer nada
+      if (currentStock === 0) {
+        return { movement: null, event: null };
+      }
 
-    // Determinar bodega por defecto
-    let warehouseId: string | null = null;
-    const defaultWarehouse =
-      await this.warehousesService.getDefaultOrFirst(storeId);
-    warehouseId = defaultWarehouse.id;
+      const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(
+        storeId,
+        manager,
+      );
+      const warehouseId = defaultWarehouse.id;
+      const happenedAt = new Date();
 
-    // Crear movimiento de ajuste para llevar a 0
-    const movement = this.movementRepository.create({
-      id: randomUUID(),
-      store_id: storeId,
-      product_id: productId,
-      movement_type: 'adjust',
-      qty_delta: -currentStock, // Restar todo el stock actual
-      unit_cost_bs: 0,
-      unit_cost_usd: 0,
-      warehouse_id: warehouseId,
-      note: note || 'Stock vaciado manualmente por owner',
-      ref: { reason: 'reset', previous_stock: currentStock },
-      happened_at: new Date(),
-      approved: true,
-      requested_by: userId,
-      approved_by: userId,
-      approved_at: new Date(),
-    });
+      // Crear movimiento de ajuste para llevar a 0
+      const movement = manager.create(InventoryMovement, {
+        id: randomUUID(),
+        store_id: storeId,
+        product_id: productId,
+        movement_type: 'adjust',
+        qty_delta: -currentStock, // Restar todo el stock actual
+        unit_cost_bs: 0,
+        unit_cost_usd: 0,
+        warehouse_id: warehouseId,
+        note: note || 'Stock vaciado manualmente por owner',
+        ref: { reason: 'reset', previous_stock: currentStock },
+        happened_at: happenedAt,
+        approved: true,
+        requested_by: userId,
+        approved_by: userId,
+        approved_at: happenedAt,
+      });
 
-    const savedMovement = await this.movementRepository.save(movement);
+      const savedMovement = await manager.save(InventoryMovement, movement);
 
-    // Actualizar stock de la bodega si se especificó
-    if (warehouseId) {
       await this.warehousesService.updateStock(
         warehouseId,
         productId,
         null,
         -currentStock,
         storeId,
+        manager,
       );
+
+      const event = this.buildServerEvent(manager, {
+        storeId,
+        userId,
+        role,
+        type: 'StockAdjusted',
+        seq: Date.now(),
+        createdAt: happenedAt,
+        payload: {
+          movement_id: savedMovement.id,
+          product_id: savedMovement.product_id,
+          variant_id: savedMovement.variant_id,
+          warehouse_id: savedMovement.warehouse_id,
+          qty_delta: Number(savedMovement.qty_delta),
+          note: savedMovement.note,
+        },
+      });
+
+      const savedEvent = await manager.save(Event, event);
+      return { movement: savedMovement, event: savedEvent };
+    });
+
+    if (result.event) {
+      await this.federationSyncService.queueRelay(result.event);
     }
 
-    return savedMovement;
+    return result.movement;
   }
 
   /**
@@ -833,47 +889,76 @@ export class InventoryService {
       return { reset_count: 0, movements: [] };
     }
 
-    // Determinar bodega por defecto
-    let warehouseId: string | null = null;
-    const defaultWarehouse =
-      await this.warehousesService.getDefaultOrFirst(storeId);
-    warehouseId = defaultWarehouse.id;
-
-    const movements: InventoryMovement[] = [];
-
-    // Crear movimiento de ajuste para cada producto
-    for (const product of productsWithStock) {
-      const movement = this.movementRepository.create({
-        id: randomUUID(),
-        store_id: storeId,
-        product_id: product.product_id,
-        movement_type: 'adjust',
-        qty_delta: -product.current_stock,
-        unit_cost_bs: 0,
-        unit_cost_usd: 0,
-        warehouse_id: warehouseId,
-        note: note || 'Stock vaciado en reset masivo por owner',
-        ref: { reason: 'reset_all', previous_stock: product.current_stock },
-        happened_at: new Date(),
-        approved: true,
-        requested_by: userId,
-        approved_by: userId,
-        approved_at: new Date(),
-      });
-
-      const savedMovement = await this.movementRepository.save(movement);
-      movements.push(savedMovement);
-
-      // Actualizar stock de la bodega
-      if (warehouseId) {
-        await this.warehousesService.updateStock(
-          warehouseId,
-          product.product_id,
-          null,
-          -product.current_stock,
+    const { movements, events } = await this.dataSource.transaction(
+      async (manager) => {
+        const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(
           storeId,
+          manager,
         );
-      }
+        const warehouseId = defaultWarehouse.id;
+        const movementList: InventoryMovement[] = [];
+        const eventList: Event[] = [];
+        let nextSeq = Date.now();
+
+        // Crear movimiento de ajuste para cada producto
+        for (const product of productsWithStock) {
+          const happenedAt = new Date();
+          const movement = manager.create(InventoryMovement, {
+            id: randomUUID(),
+            store_id: storeId,
+            product_id: product.product_id,
+            movement_type: 'adjust',
+            qty_delta: -product.current_stock,
+            unit_cost_bs: 0,
+            unit_cost_usd: 0,
+            warehouse_id: warehouseId,
+            note: note || 'Stock vaciado en reset masivo por owner',
+            ref: { reason: 'reset_all', previous_stock: product.current_stock },
+            happened_at: happenedAt,
+            approved: true,
+            requested_by: userId,
+            approved_by: userId,
+            approved_at: happenedAt,
+          });
+
+          const savedMovement = await manager.save(InventoryMovement, movement);
+          movementList.push(savedMovement);
+
+          await this.warehousesService.updateStock(
+            warehouseId,
+            product.product_id,
+            null,
+            -product.current_stock,
+            storeId,
+            manager,
+          );
+
+          const event = this.buildServerEvent(manager, {
+            storeId,
+            userId,
+            role,
+            type: 'StockAdjusted',
+            seq: nextSeq++,
+            createdAt: happenedAt,
+            payload: {
+              movement_id: savedMovement.id,
+              product_id: savedMovement.product_id,
+              variant_id: savedMovement.variant_id,
+              warehouse_id: savedMovement.warehouse_id,
+              qty_delta: Number(savedMovement.qty_delta),
+              note: savedMovement.note,
+            },
+          });
+          const savedEvent = await manager.save(Event, event);
+          eventList.push(savedEvent);
+        }
+
+        return { movements: movementList, events: eventList };
+      },
+    );
+
+    if (events.length > 0) {
+      await Promise.all(events.map((event) => this.federationSyncService.queueRelay(event)));
     }
 
     return { reset_count: movements.length, movements };
@@ -979,10 +1064,12 @@ export class InventoryService {
     }
 
     const adjustments: InventoryMovement[] = [];
+    const relayEvents: Event[] = [];
     const defaultWarehouse =
       await this.warehousesService.getDefaultOrFirst(storeId);
 
     await this.dataSource.transaction(async (manager) => {
+      let nextSeq = Date.now();
       for (const item of dto.items) {
         // Validar fecha
         const countedAt = new Date(item.counted_at);
@@ -1063,9 +1150,35 @@ export class InventoryService {
             storeId,
             manager,
           );
+
+          const event = this.buildServerEvent(manager, {
+            storeId,
+            userId,
+            role,
+            type: 'StockAdjusted',
+            seq: nextSeq++,
+            createdAt: saved.happened_at,
+            payload: {
+              movement_id: saved.id,
+              product_id: saved.product_id,
+              variant_id: saved.variant_id,
+              warehouse_id: saved.warehouse_id,
+              qty_delta: Number(saved.qty_delta),
+              note: saved.note,
+            },
+          });
+
+          const savedEvent = await manager.save(Event, event);
+          relayEvents.push(savedEvent);
         }
       }
     });
+
+    if (relayEvents.length > 0) {
+      await Promise.all(
+        relayEvents.map((event) => this.federationSyncService.queueRelay(event)),
+      );
+    }
 
     this.logger.log(
       `Live Inventory Reconcile: Procesados ${dto.items.length} items, Generados ${adjustments.length} ajustes.`,

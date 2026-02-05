@@ -20,6 +20,7 @@ import {
   FederationReplayInventoryResult,
   FederationIdsResult,
   FederationAutoReconcileResult,
+  InventoryStockReconcileResult,
 } from './federation-sync.service';
 import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
@@ -200,6 +201,19 @@ export class SyncController {
     @Body('store_id') storeId: string,
   ): Promise<FederationAutoReconcileResult[]> {
     return this.federationSyncService.runAutoReconcile(storeId);
+  }
+
+  @Post('federation/reconcile-inventory-stock')
+  @HttpCode(HttpStatus.OK)
+  async reconcileInventoryStock(
+    @Body('store_id') storeIdFromBody: string,
+    @Request() req: any,
+  ): Promise<InventoryStockReconcileResult> {
+    const storeId = storeIdFromBody || req.user?.store_id;
+    if (!storeId) {
+      throw new BadRequestException('store_id es requerido');
+    }
+    return this.federationSyncService.reconcileInventoryStock(storeId);
   }
 
   @Post('resolve-conflict')

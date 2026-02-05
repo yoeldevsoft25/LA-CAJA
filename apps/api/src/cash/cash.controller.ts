@@ -25,7 +25,8 @@ export class CashController {
   async openSession(@Body() dto: OpenCashSessionDto, @Request() req: any) {
     const storeId = req.user.store_id;
     const userId = req.user.sub; // ID del usuario autenticado
-    return this.cashService.openSession(storeId, userId, dto);
+    const userRole = req.user.role;
+    return this.cashService.openSession(storeId, userId, dto, userRole);
   }
 
   @Get('sessions/current')

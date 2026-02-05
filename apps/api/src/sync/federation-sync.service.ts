@@ -76,9 +76,20 @@ export interface FederationAutoReconcileResult {
         localMissingCount: number;
         replayedToRemote: number;
         replayedToLocal: number;
+        localStockHealed: number;
+        remoteStockHealed: number;
     };
     skipped?: boolean;
     reason?: string;
+}
+
+export interface InventoryStockReconcileResult {
+    ok: boolean;
+    message: string;
+    patchedNullWarehouse: number;
+    updatedRows: number;
+    insertedRows: number;
+    zeroedRows: number;
 }
 
 @Injectable()
@@ -484,7 +495,14 @@ export class FederationSyncService implements OnModuleInit {
                 {
                     storeId: storeId || 'all',
                     sales: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
-                    inventory: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                    inventory: {
+                        remoteMissingCount: 0,
+                        localMissingCount: 0,
+                        replayedToRemote: 0,
+                        replayedToLocal: 0,
+                        localStockHealed: 0,
+                        remoteStockHealed: 0,
+                    },
                     skipped: true,
                     reason: 'auto-reconcile already in flight',
                 },
@@ -496,7 +514,14 @@ export class FederationSyncService implements OnModuleInit {
                 {
                     storeId: storeId || 'all',
                     sales: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
-                    inventory: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                    inventory: {
+                        remoteMissingCount: 0,
+                        localMissingCount: 0,
+                        replayedToRemote: 0,
+                        replayedToLocal: 0,
+                        localStockHealed: 0,
+                        remoteStockHealed: 0,
+                    },
                     skipped: true,
                     reason: 'federation not configured',
                 },
@@ -518,7 +543,14 @@ export class FederationSyncService implements OnModuleInit {
                     results.push({
                         storeId: currentStoreId,
                         sales: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
-                        inventory: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                        inventory: {
+                            remoteMissingCount: 0,
+                            localMissingCount: 0,
+                            replayedToRemote: 0,
+                            replayedToLocal: 0,
+                            localStockHealed: 0,
+                            remoteStockHealed: 0,
+                        },
                         skipped: true,
                         reason,
                     });
@@ -544,6 +576,14 @@ export class FederationSyncService implements OnModuleInit {
         const fromDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
         const dateFrom = fromDate.toISOString().slice(0, 10);
         const dateTo = now.toISOString().slice(0, 10);
+
+        // Paso 1: Autocorrección local/remota de snapshot de inventario antes de comparar IDs.
+        const localPreHeal = await this.reconcileInventoryStock(storeId);
+        const remotePreHeal = await this.postRemoteStockReconcile(storeId).catch((error) => {
+            const msg = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`Remote pre-heal failed for ${storeId}: ${msg}`);
+            return null;
+        });
 
         const [localSales, localInventory] = await Promise.all([
             this.getSalesIds(storeId, dateFrom, dateTo),
@@ -587,6 +627,18 @@ export class FederationSyncService implements OnModuleInit {
             });
         }
 
+        // Paso 2: Re-ejecutar autocorrección luego de replicar eventos.
+        const localPostHeal = await this.reconcileInventoryStock(storeId);
+        const remotePostHeal = await this.postRemoteStockReconcile(storeId).catch((error) => {
+            const msg = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`Remote post-heal failed for ${storeId}: ${msg}`);
+            return null;
+        });
+
+        const localStockHealed = this.sumHealedRows(localPreHeal) + this.sumHealedRows(localPostHeal);
+        const remoteStockHealed =
+            this.sumHealedRows(remotePreHeal) + this.sumHealedRows(remotePostHeal);
+
         const result: FederationAutoReconcileResult = {
             storeId,
             sales: {
@@ -600,11 +652,13 @@ export class FederationSyncService implements OnModuleInit {
                 localMissingCount: invMissingInLocal.length,
                 replayedToRemote: Number((invToRemoteResult as { queued: number }).queued || 0),
                 replayedToLocal: replayInvToLocal.length,
+                localStockHealed,
+                remoteStockHealed,
             },
         };
 
         this.logger.log(
-            `🧭 Reconcile store ${storeId}: sales(remote=${result.sales.remoteMissingCount}, local=${result.sales.localMissingCount}), inventory(remote=${result.inventory.remoteMissingCount}, local=${result.inventory.localMissingCount})`,
+            `🧭 Reconcile store ${storeId}: sales(remote=${result.sales.remoteMissingCount}, local=${result.sales.localMissingCount}), inventory(remote=${result.inventory.remoteMissingCount}, local=${result.inventory.localMissingCount}, healedLocal=${localStockHealed}, healedRemote=${remoteStockHealed})`,
         );
         return result;
     }
@@ -646,6 +700,198 @@ export class FederationSyncService implements OnModuleInit {
                 'Content-Type': 'application/json',
             },
             timeout: 15000,
+        });
+    }
+
+    private async postRemoteStockReconcile(
+        storeId: string,
+    ): Promise<InventoryStockReconcileResult | null> {
+        const response = await axios.post(
+            `${this.remoteUrl}/sync/federation/reconcile-inventory-stock`,
+            { store_id: storeId },
+            {
+                headers: {
+                    Authorization: `Bearer ${this.adminKey}`,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 15000,
+            },
+        );
+
+        return response.data as InventoryStockReconcileResult;
+    }
+
+    private sumHealedRows(result: InventoryStockReconcileResult | null): number {
+        if (!result) return 0;
+        return (
+            Number(result.patchedNullWarehouse || 0) +
+            Number(result.updatedRows || 0) +
+            Number(result.insertedRows || 0) +
+            Number(result.zeroedRows || 0)
+        );
+    }
+
+    async reconcileInventoryStock(storeId: string): Promise<InventoryStockReconcileResult> {
+        const defaultWarehouseRows = await this.dataSource.query(
+            `
+            SELECT id
+            FROM warehouses
+            WHERE store_id = $1
+              AND is_active = true
+            ORDER BY is_default DESC, name ASC
+            LIMIT 1
+            `,
+            [storeId],
+        );
+
+        if (!defaultWarehouseRows[0]?.id) {
+            return {
+                ok: false,
+                message: `No active warehouse found for store ${storeId}`,
+                patchedNullWarehouse: 0,
+                updatedRows: 0,
+                insertedRows: 0,
+                zeroedRows: 0,
+            };
+        }
+
+        const defaultWarehouseId = defaultWarehouseRows[0].id as string;
+
+        return this.dataSource.transaction(async (manager) => {
+            const patchedNull = await manager.query(
+                `
+                WITH patched AS (
+                  UPDATE inventory_movements
+                  SET warehouse_id = $1
+                  WHERE store_id = $2
+                    AND warehouse_id IS NULL
+                  RETURNING 1
+                )
+                SELECT COUNT(*)::int AS count FROM patched
+                `,
+                [defaultWarehouseId, storeId],
+            );
+            const patchedNullWarehouse = Number(patchedNull?.[0]?.count || 0);
+
+            const updatedRowsResult = await manager.query(
+                `
+                WITH expected AS (
+                  SELECT
+                    im.warehouse_id,
+                    im.product_id,
+                    im.variant_id,
+                    SUM(im.qty_delta)::numeric AS expected_stock
+                  FROM inventory_movements im
+                  INNER JOIN warehouses w ON w.id = im.warehouse_id
+                  WHERE im.warehouse_id IS NOT NULL
+                    AND w.store_id = $1
+                    AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
+                  GROUP BY im.warehouse_id, im.product_id, im.variant_id
+                ),
+                patched AS (
+                  UPDATE warehouse_stock ws
+                  SET stock = GREATEST(0, expected.expected_stock), updated_at = NOW()
+                  FROM expected
+                  WHERE ws.warehouse_id = expected.warehouse_id
+                    AND ws.product_id = expected.product_id
+                    AND (
+                      (expected.variant_id IS NULL AND ws.variant_id IS NULL)
+                      OR (expected.variant_id IS NOT NULL AND ws.variant_id = expected.variant_id)
+                    )
+                    AND ws.stock IS DISTINCT FROM GREATEST(0, expected.expected_stock)
+                  RETURNING 1
+                )
+                SELECT COUNT(*)::int AS count FROM patched
+                `,
+                [storeId],
+            );
+            const updatedRows = Number(updatedRowsResult?.[0]?.count || 0);
+
+            const insertedRowsResult = await manager.query(
+                `
+                WITH expected AS (
+                  SELECT
+                    im.warehouse_id,
+                    im.product_id,
+                    im.variant_id,
+                    SUM(im.qty_delta)::numeric AS expected_stock
+                  FROM inventory_movements im
+                  INNER JOIN warehouses w ON w.id = im.warehouse_id
+                  WHERE im.warehouse_id IS NOT NULL
+                    AND w.store_id = $1
+                    AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
+                  GROUP BY im.warehouse_id, im.product_id, im.variant_id
+                ),
+                inserted AS (
+                  INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+                  SELECT gen_random_uuid(), expected.warehouse_id, expected.product_id, expected.variant_id, GREATEST(0, expected.expected_stock), 0, NOW()
+                  FROM expected
+                  WHERE expected.expected_stock > 0
+                    AND NOT EXISTS (
+                      SELECT 1 FROM warehouse_stock ws
+                      WHERE ws.warehouse_id = expected.warehouse_id
+                        AND ws.product_id = expected.product_id
+                        AND (
+                          (expected.variant_id IS NULL AND ws.variant_id IS NULL)
+                          OR (expected.variant_id IS NOT NULL AND ws.variant_id = expected.variant_id)
+                        )
+                    )
+                  RETURNING 1
+                )
+                SELECT COUNT(*)::int AS count FROM inserted
+                `,
+                [storeId],
+            );
+            const insertedRows = Number(insertedRowsResult?.[0]?.count || 0);
+
+            const zeroedRowsResult = await manager.query(
+                `
+                WITH expected AS (
+                  SELECT
+                    im.warehouse_id,
+                    im.product_id,
+                    im.variant_id
+                  FROM inventory_movements im
+                  INNER JOIN warehouses w ON w.id = im.warehouse_id
+                  WHERE im.warehouse_id IS NOT NULL
+                    AND w.store_id = $1
+                    AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
+                  GROUP BY im.warehouse_id, im.product_id, im.variant_id
+                ),
+                zeroed AS (
+                  UPDATE warehouse_stock ws
+                  SET stock = 0, updated_at = NOW()
+                  FROM warehouses w
+                  WHERE ws.warehouse_id = w.id
+                    AND w.store_id = $1
+                    AND ws.stock <> 0
+                    AND NOT EXISTS (
+                      SELECT 1
+                      FROM expected
+                      WHERE expected.warehouse_id = ws.warehouse_id
+                        AND expected.product_id = ws.product_id
+                        AND (
+                          (expected.variant_id IS NULL AND ws.variant_id IS NULL)
+                          OR (expected.variant_id IS NOT NULL AND ws.variant_id = expected.variant_id)
+                        )
+                    )
+                  RETURNING 1
+                )
+                SELECT COUNT(*)::int AS count FROM zeroed
+                `,
+                [storeId],
+            );
+            const zeroedRows = Number(zeroedRowsResult?.[0]?.count || 0);
+
+            const result: InventoryStockReconcileResult = {
+                ok: true,
+                message: `inventory stock reconciled for ${storeId}`,
+                patchedNullWarehouse,
+                updatedRows,
+                insertedRows,
+                zeroedRows,
+            };
+            return result;
         });
     }
 }

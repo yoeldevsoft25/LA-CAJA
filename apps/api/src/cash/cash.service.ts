@@ -6,22 +6,25 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, IsNull, Brackets } from 'typeorm';
+import { Repository, DataSource, EntityManager, IsNull, Brackets } from 'typeorm';
 import { CashSession } from '../database/entities/cash-session.entity';
 import { Sale } from '../database/entities/sale.entity';
 import {
   CashMovement,
   CashMovementType,
 } from '../database/entities/cash-movement.entity';
+import { Event } from '../database/entities/event.entity';
 import { OpenCashSessionDto } from './dto/open-cash-session.dto';
 import { CloseCashSessionDto } from './dto/close-cash-session.dto';
 import { AccountingService } from '../accounting/accounting.service';
 import { randomUUID } from 'crypto';
 import { SecurityAuditService } from '../security/security-audit.service';
+import { FederationSyncService } from '../sync/federation-sync.service';
 
 @Injectable()
 export class CashService {
   private readonly logger = new Logger(CashService.name);
+  private readonly serverDeviceId = '00000000-0000-0000-0000-000000000001';
 
   constructor(
     @InjectRepository(CashSession)
@@ -30,40 +33,100 @@ export class CashService {
     private saleRepository: Repository<Sale>,
     @InjectRepository(CashMovement)
     private cashMovementRepository: Repository<CashMovement>,
+    @InjectRepository(Event)
+    private eventRepository: Repository<Event>,
     private dataSource: DataSource,
     private accountingService: AccountingService,
     private securityAuditService: SecurityAuditService,
+    private federationSyncService: FederationSyncService,
   ) {}
+
+  private buildServerEvent(
+    manager: EntityManager,
+    params: {
+      storeId: string;
+      userId: string;
+      role: string;
+      type: string;
+      createdAt: Date;
+      seq: number;
+      payload: Record<string, unknown>;
+    },
+  ): Event {
+    return manager.create(Event, {
+      event_id: randomUUID(),
+      store_id: params.storeId,
+      device_id: this.serverDeviceId,
+      seq: params.seq,
+      type: params.type,
+      version: 1,
+      created_at: params.createdAt,
+      actor_user_id: params.userId,
+      actor_role: params.role || 'owner',
+      payload: params.payload,
+      vector_clock: { [this.serverDeviceId]: params.seq },
+      causal_dependencies: [],
+      delta_payload: null,
+      full_payload_hash: null,
+    });
+  }
 
   async openSession(
     storeId: string,
     userId: string,
     dto: OpenCashSessionDto,
+    role = 'cashier',
   ): Promise<CashSession> {
-    // Verificar si hay una sesión abierta
-    const openSession = await this.cashSessionRepository.findOne({
-      where: {
-        store_id: storeId,
-        opened_by: userId,
-        closed_at: IsNull(), // Sesión abierta si closed_at es null
+    const { session, event } = await this.dataSource.transaction(
+      async (manager) => {
+        // Verificar si hay una sesión abierta
+        const openSession = await manager.findOne(CashSession, {
+          where: {
+            store_id: storeId,
+            opened_by: userId,
+            closed_at: IsNull(), // Sesión abierta si closed_at es null
+          },
+        });
+
+        if (openSession) {
+          throw new BadRequestException('Ya tienes una sesión de caja abierta');
+        }
+
+        const openedAt = new Date();
+        const session = manager.create(CashSession, {
+          id: randomUUID(),
+          store_id: storeId,
+          opened_by: userId,
+          opened_at: openedAt,
+          opening_amount_bs: dto.cash_bs,
+          opening_amount_usd: dto.cash_usd,
+          note: dto.note || null,
+        });
+
+        const savedSession = await manager.save(CashSession, session);
+        const event = this.buildServerEvent(manager, {
+          storeId,
+          userId,
+          role,
+          type: 'CashSessionOpened',
+          createdAt: openedAt,
+          seq: Date.now(),
+          payload: {
+            session_id: savedSession.id,
+            opened_at: savedSession.opened_at?.toISOString(),
+            opening_amount_bs: Number(savedSession.opening_amount_bs || 0),
+            opening_amount_usd: Number(savedSession.opening_amount_usd || 0),
+            note: savedSession.note || null,
+          },
+        });
+
+        const savedEvent = await manager.save(Event, event);
+        return { session: savedSession, event: savedEvent };
       },
-    });
+    );
 
-    if (openSession) {
-      throw new BadRequestException('Ya tienes una sesión de caja abierta');
-    }
-
-    const session = this.cashSessionRepository.create({
-      id: randomUUID(),
-      store_id: storeId,
-      opened_by: userId,
-      opened_at: new Date(),
-      opening_amount_bs: dto.cash_bs,
-      opening_amount_usd: dto.cash_usd,
-      note: dto.note || null,
-    });
-
-    return this.cashSessionRepository.save(session);
+    await this.federationSyncService.queueRelay(event);
+    return session;
   }
 
   async getCurrentSession(
@@ -314,33 +377,58 @@ export class CashService {
     };
     session.note = dto.note || session.note;
 
-    await this.cashSessionRepository.save(session);
+    const { verifySession, closeEvent } = await this.dataSource.transaction(
+      async (manager) => {
+        await manager.save(CashSession, session);
 
-    // 10. Verificación final: Re-leer la sesión y validar que se guardó correctamente
-    const verifySession = await this.cashSessionRepository.findOne({
-      where: { id: sessionId, store_id: storeId },
-    });
+        // 10. Verificación final: Re-leer la sesión y validar que se guardó correctamente
+        const persisted = await manager.findOne(CashSession, {
+          where: { id: sessionId, store_id: storeId },
+        });
 
-    if (!verifySession || verifySession.closed_at === null) {
-      throw new BadRequestException(
-        'Error al cerrar la sesión. Por favor, intente nuevamente o contacte al administrador.',
-      );
-    }
+        if (!persisted || persisted.closed_at === null) {
+          throw new BadRequestException(
+            'Error al cerrar la sesión. Por favor, intente nuevamente o contacte al administrador.',
+          );
+        }
 
-    // 11. Validar que los valores guardados coinciden con los enviados
-    const savedCountedBs =
-      Math.round(Number(verifySession.counted?.cash_bs || 0) * 100) / 100;
-    const savedCountedUsd =
-      Math.round(Number(verifySession.counted?.cash_usd || 0) * 100) / 100;
+        // 11. Validar que los valores guardados coinciden con los enviados
+        const savedCountedBs =
+          Math.round(Number(persisted.counted?.cash_bs || 0) * 100) / 100;
+        const savedCountedUsd =
+          Math.round(Number(persisted.counted?.cash_usd || 0) * 100) / 100;
 
-    if (
-      Math.abs(savedCountedBs - countedBs) > 0.01 ||
-      Math.abs(savedCountedUsd - countedUsd) > 0.01
-    ) {
-      throw new BadRequestException(
-        'Error de integridad: Los valores guardados no coinciden. Por favor, contacte al administrador.',
-      );
-    }
+        if (
+          Math.abs(savedCountedBs - countedBs) > 0.01 ||
+          Math.abs(savedCountedUsd - countedUsd) > 0.01
+        ) {
+          throw new BadRequestException(
+            'Error de integridad: Los valores guardados no coinciden. Por favor, contacte al administrador.',
+          );
+        }
+
+        const event = this.buildServerEvent(manager, {
+          storeId,
+          userId,
+          role: effectiveRole,
+          type: 'CashSessionClosed',
+          createdAt: persisted.closed_at || closedAt,
+          seq: Date.now(),
+          payload: {
+            session_id: persisted.id,
+            closed_at: persisted.closed_at?.toISOString(),
+            expected: persisted.expected || null,
+            counted: persisted.counted || null,
+            note: persisted.note || null,
+          },
+        });
+
+        const savedEvent = await manager.save(Event, event);
+        return { verifySession: persisted, closeEvent: savedEvent };
+      },
+    );
+
+    await this.federationSyncService.queueRelay(closeEvent);
 
     await this.securityAuditService.log({
       event_type: 'cash_session_closed',
