@@ -722,4 +722,5 @@ flowchart TD
 - Indice: `docs/README.md`
 - Mapa de sistema: `docs/architecture/VELOX_SYSTEM_MAP.md`
 - Arquitectura offline: `docs/architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md`
+- Matriz de trazabilidad (README vs codigo): `docs/architecture/VELOX_TRACEABILITY_MATRIX.md`
 - Roadmap: `docs/roadmap/roadmap la caja.md`
