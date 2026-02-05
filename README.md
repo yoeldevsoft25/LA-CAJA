@@ -425,6 +425,130 @@ LA-CAJA/
 └── .github/workflows/
 ```
 
+## Inmersión Profunda: El Cerebro Velox
+
+Esta sección detalla los mecanismos internos que garantizan la consistencia y disponibilidad del sistema ("The Velox Brain").
+
+### 1. Motor de Sincronización (Sync Engine Internals)
+
+El motor utiliza un sistema de **doble persistencia** (IndexedDB + Memoria) con un mecanismo de "Hard Recovery" para garantizar que ningún evento se pierda, incluso si la aplicación se cierra inesperadamente o el navegador decide eliminar la memoria de la pestaña.
+
+```mermaid
+flowchart TD
+    subgraph Input["Input Event"]
+        NewEvent[New Event]
+    end
+
+    subgraph Atomic["Atomic Sequence"]
+        Seq[Allocate Seq + Vector Clock]
+    end
+
+    subgraph Persistence["Persistence Layer"]
+        IDB[(IndexedDB)]
+    end
+
+    subgraph Memory["Memory Queue"]
+        Queue[Sync Queue]
+        Batch[Batch Buffer]
+    end
+
+    subgraph Network["Network Layer"]
+        Flush[Flush Batch]
+        API[Backend API]
+    end
+
+    subgraph Recovery["Hard Recovery Loop"]
+        Online[Connectivity / Focus] -->|Trigger| Lock{Mutex Lock}
+        Lock -->|Acquired| Scan[Scan IndexedDB]
+        Scan -->|Reconcile| Rebuild[Rebuild Memory Queue]
+        Rebuild -->|Force| Flush
+    end
+
+    NewEvent --> Atomic
+    Atomic -->|1. Persist First| IDB
+    IDB -->|2. Enqueue| Queue
+    Queue -->|3. Buffer| Batch
+    Batch -->|Time/Size Limit| Flush
+    Flush -->|HTTP POST| API
+
+    API -->|200 OK| Ack[Mark Synced in IDB]
+    API -->|Error| Retry[Retry Strategy (Exp. Backoff)]
+    Retry --> Batch
+```
+
+### 2. Resolución de Conflictos (CRDTs Decision Flow)
+
+Cuando el servidor recibe eventos concurrentes (detectados vía Vector Clocks), el `ConflictResolutionService` decide automáticamente la estrategia de convergencia basada en el tipo de dato.
+
+```mermaid
+flowchart TD
+    Start[Evento Entrante B] --> Detect{¿Misma Entidad?}
+    Detect -->|No| NoConflict[Sin Conflicto]
+    Detect -->|Si| VC[Comparar Vector Clocks]
+
+    VC -->|A < B| Apply[Aplicar B (Nuevo)]
+    VC -->|A > B| Ignore[Ignorar B (Obsoleto)]
+    VC -->|Concurrent A || B| Strategy{Estrategia?}
+
+    subgraph Strategies["Estrategias CRDT"]
+        LWW[LWW (Last-Write-Wins)]
+        AWSet[AWSet (Add-Wins Set)]
+        MVR[MVR (Multi-Value Register)]
+    end
+
+    Strategy -->|Simple Fields| LWW
+    Strategy -->|Lists/Inv| AWSet
+    Strategy -->|Critical $| MVR
+
+    LWW --> TieBr{Tie Breaker}
+    TieBr -->|Max Timestamp| WinnerLWW[Ganador LWW]
+    TieBr -->|Device ID| WinnerLWW
+
+    AWSet --> Union[Union Adds - Removes]
+    Union --> ResultAW[Lista Convergente]
+
+    MVR --> Manual[Conflicto Manual]
+     Manual --> Human{Revisión Humana}
+```
+
+### 3. Queue Consistency & Anti-Storm
+
+Para evitar "tormentas" de sincronización y estados inconsistentes ("fantasmas"), el sistema implementa un monitor de consistencia que reconcilia la verdad del disco con la memoria.
+
+```mermaid
+flowchart LR
+    subgraph Truth["Source of Truth (Disk)"]
+        DB_Events[IndexedDB Events]
+    end
+
+    subgraph State["AppState (Memory)"]
+        Mem_Queue[Memory Queue]
+    end
+
+    subgraph Watchdog["Consistency Watchdog"]
+        Check{Count Mismatch?}
+        Reconcile[Reconcile Logic]
+    end
+
+    subgraph AntiStorm["Anti-Storm"]
+        Debounce[Debounce 500ms]
+        Cooldown[Cooldown 8s]
+        Mutex[Global Mutex]
+    end
+
+    DB_Events -.->|Load on Init| Mem_Queue
+    
+    Trigger[Event/Timer] --> AntiStorm
+    AntiStorm --> Watchdog
+
+    Watchdog --> Check
+    Check -->|DB != Mem| Reconcile
+    Reconcile -->|Fix| Mem_Queue
+    
+    Reconcile -->|Phantom Pending| Clear[Clear Phantom]
+    Reconcile -->|Missing InMemory| Load[Load from DB]
+```
+
 ## Desarrollo
 ```bash
 npm install
