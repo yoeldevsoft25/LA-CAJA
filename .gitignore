@@ -5,11 +5,8 @@ dist
 .DS_Store
 
 # Root artifacts / sensitive
-android.keystore
-*.keystore
-app-release-*.apk
-app-release-*.aab
-app-release-*.idsig
+config/keys/
+config/certs/
 app/           # bubblewrap generated project
 
 # Build artifacts
