@@ -501,14 +501,14 @@ flowchart TD
     Strategy -->|Crítico $| MVR
 
     LWW --> TieBr{Desempate}
-    TieBr -->|Max Timestamp| WinnerLWW[Ganador LWW]
-    TieBr -->|Device ID| WinnerLWW
+    TieBr -->|"Max Timestamp"| WinnerLWW["Ganador LWW"]
+    TieBr -->|"Device ID"| WinnerLWW
 
-    AWSet --> Union[Unión Agrega - Remueve]
-    Union --> ResultAW[Lista Convergente]
+    AWSet --> Union["Unión Agrega - Remueve"]
+    Union --> ResultAW["Lista Convergente"]
 
-    MVR --> Manual[Conflicto Manual]
-     Manual --> Human{Revisión Humana}
+    MVR --> Manual["Conflicto Manual"]
+    Manual --> Human{"Revisión Humana"}
 ```
 
 ### 3. Consistencia de Cola y Anti-Tormenta (Queue Consistency)
@@ -518,35 +518,35 @@ Evita "tormentas" de sincronización y estados inconsistentes ("fantasmas").
 ```mermaid
 flowchart LR
     subgraph Truth["Fuente de Verdad (Disco)"]
-        DB_Events[Eventos IndexedDB]
+        DB_Events["Eventos IndexedDB"]
     end
 
     subgraph State["Estado App (Memoria)"]
-        Mem_Queue[Cola en Memoria]
+        Mem_Queue["Cola en Memoria"]
     end
 
     subgraph Watchdog["Vigilante de Consistencia"]
-        Check{¿Diferencia Conteo?}
-        Reconcile[Lógica Reconciliación]
+        Check{"¿Diferencia Conteo?"}
+        Reconcile["Lógica Reconciliación"]
     end
 
     subgraph AntiStorm["Anti-Tormenta"]
-        Debounce[Debounce 500ms]
-        Cooldown[Enfriamiento 8s]
-        Mutex[Mutex Global]
+        Debounce["Debounce 500ms"]
+        Cooldown["Enfriamiento 8s"]
+        Mutex["Mutex Global"]
     end
 
-    DB_Events -.->|Carga al Inicio| Mem_Queue
+    DB_Events -.->|"Carga al Inicio"| Mem_Queue
     
-    Trigger[Evento/Timer] --> AntiStorm
+    Trigger["Evento/Timer"] --> AntiStorm
     AntiStorm --> Watchdog
 
     Watchdog --> Check
-    Check -->|DB != Mem| Reconcile
+    Check -->|"DB != Mem"| Reconcile
     Reconcile -->|Corregir| Mem_Queue
     
-    Reconcile -->|Pendiente Fantasma| Clear[Limpiar Fantasma]
-    Reconcile -->|Falta en Memoria| Load[Cargar de DB]
+    Reconcile -->|"Pendiente Fantasma"| Clear["Limpiar Fantasma"]
+    Reconcile -->|"Falta en Memoria"| Load["Cargar de DB"]
 ```
 
 ### 4. Federación Multi-Nodo (Smart Auto-Heal)
@@ -556,37 +556,37 @@ Sincronización robusta entre nodo local y central, capaz de autoreparar brechas
 ```mermaid
 flowchart TD
     subgraph Trigger["Disparador"]
-        Cron[Cron / Smart Heal] -->|Detecta Brecha| AutoHeal
+        Cron["Cron / Smart Heal"] -->|"Detecta Brecha"| AutoHeal
     end
 
     subgraph Reconcile["Lógica de Auto-Reconciliación"]
-        AutoHeal[Run Auto-Reconcile]
-        FetchRemote[Obtener IDs Remotos]
-        FetchLocal[Obtener IDs Locales]
-        Diff{Calcular Diff}
+        AutoHeal["Run Auto-Reconcile"]
+        FetchRemote["Obtener IDs Remotos"]
+        FetchLocal["Obtener IDs Locales"]
+        Diff{"Calcular Diff"}
     end
 
     subgraph Actions["Acciones de Reparación"]
-        ReplayRemote[Replay a Remoto]
-        ReplayLocal[Replay a Local]
-        HealStock[Corregir Stock]
+        ReplayRemote["Replay a Remoto"]
+        ReplayLocal["Replay a Local"]
+        HealStock["Corregir Stock"]
     end
 
     subgraph Queue["Cola de Federación"]
-        JobRelay[Job: relay-event]
-        Worker[Federation Processor]
+        JobRelay["Job: relay-event"]
+        Worker["Federation Processor"]
     end
 
     AutoHeal --> FetchRemote & FetchLocal
     FetchRemote & FetchLocal --> Diff
     
-    Diff -->|Falta en Remoto| ReplayRemote
-    Diff -->|Falta en Local| ReplayLocal
+    Diff -->|"Falta en Remoto"| ReplayRemote
+    Diff -->|"Falta en Local"| ReplayLocal
     
     ReplayRemote -->|Encolar| JobRelay
-    JobRelay --> Worker -->|HTTP POST| CentralAPI["API Central"]
+    JobRelay --> Worker -->|"HTTP POST"| CentralAPI["API Central"]
     
-    Diff -->|Inconsistencia Stock| HealStock
+    Diff -->|"Inconsistencia Stock"| HealStock
 ```
 
 ### 5. Procesamiento Asíncrono (Backend Pipeline)
@@ -596,35 +596,35 @@ Pipeline de procesamiento de eventos de ventas para mantener la respuesta al cli
 ```mermaid
 flowchart TD
     subgraph Ingress["Ingreso API"]
-        EventCreated[Evento SaleCreated]
+        EventCreated["Evento SaleCreated"]
     end
 
     subgraph Q1["Cola: sales-projections"]
-        WorkerProj[Worker Proyecciones]
-        Completeness{¿Venta Completa?}
-        Project[Proyectar a Read Model]
+        WorkerProj["Worker Proyecciones"]
+        Completeness{"¿Venta Completa?"}
+        Project["Proyectar a Read Model"]
     end
 
     subgraph Q2["Cola: sales-post-processing"]
-        WorkerPost[Worker Post-Proceso]
-        Fiscal[Facturación Fiscal]
-        Accounting[Asiento Contable]
+        WorkerPost["Worker Post-Proceso"]
+        Fiscal["Facturación Fiscal"]
+        Accounting["Asiento Contable"]
     end
 
-    EventCreated -->|1. Encolar| Q1
+    EventCreated -->|"1. Encolar"| Q1
     
     Q1 --> WorkerProj
     WorkerProj --> Completeness
     
     Completeness -->|Si| Project
-    Completeness -->|No| Retry[Reintentar luego]
+    Completeness -->|No| Retry["Reintentar luego"]
     
     Project -->|Exito| Q2
     
     Q2 --> WorkerPost
     WorkerPost -->|Opcional| Fiscal
     Fiscal -->|Emitida| Accounting
-    WorkerPost -->|Sin Fiscal| Accounting
+    WorkerPost -->|"Sin Fiscal"| Accounting
 ```
 
 ## Desarrollo
@@ -645,40 +645,40 @@ Modelo de abstracción para manejar impresión nativa (Desktop) y web (PWA).
 ```mermaid
 flowchart TD
     subgraph App["Velox Client"]
-        PrintService[PrintService]
-        PeriService[PeripheralsService]
+        PrintService["PrintService"]
+        PeriService["PeripheralsService"]
     end
 
     subgraph Config["Configuración"]
-        DB_Config[IndexedDB: Configs]
-        Default[Default: Browser API]
+        DB_Config["IndexedDB: Configs"]
+        Default["Default: Browser API"]
     end
 
     subgraph Drivers["Drivers / Puentes"]
-        Browser[Navegador (Window.print)]
-        Serial[Web Serial API]
-        Bridge[Tauri Rust Bridge]
-        Net[Network / ESC-POS]
+        Browser["Navegador (Window.print)"]
+        Serial["Web Serial API"]
+        Bridge["Tauri Rust Bridge"]
+        Net["Network / ESC-POS"]
     end
 
     subgraph Hardware["Hardware Físico"]
-        Thermal[Impresora Térmica]
-        Scanner[Lector Barcode]
-        Scale[Balanza]
+        Thermal["Impresora Térmica"]
+        Scanner["Lector Barcode"]
+        Scale["Balanza"]
     end
 
-    PeriService -->|1. Cargar Config| DB_Config
-    PrintService -->|2. Resolver Driver| PeriService
+    PeriService -->|"1. Cargar Config"| DB_Config
+    PrintService -->|"2. Resolver Driver"| PeriService
     
     PeriService -->|Default| Browser
-    PeriService -->|USB Direct| Serial
+    PeriService -->|"USB Direct"| Serial
     PeriService -->|Nativo| Bridge
     PeriService -->|LAN| Net
 
-    Browser -.->|OS Dialog| Thermal
-    Serial -->|Raw Bytes| Thermal
-    Bridge -->|Rust SerialPort| Scanner & Scale
-    Net -->|TCP/IP| Thermal
+    Browser -.->|"OS Dialog"| Thermal
+    Serial -->|"Raw Bytes"| Thermal
+    Bridge -->|"Rust SerialPort"| Scanner & Scale
+    Net -->|"TCP/IP"| Thermal
 ```
 
 #### 6.2. Autenticación Offline (Credenciales Distribuidas)
@@ -687,24 +687,24 @@ Mecanismo de "Replica de Credenciales" para permitir login sin internet.
 ```mermaid
 flowchart TD
     subgraph Online["Fase Online (Sync)"]
-        Login[Login Exitoso]
-        SyncCreds[Sincronizar Hash PIN]
-        SaveCreds[Guardar en IDB Seguro]
+        Login["Login Exitoso"]
+        SyncCreds["Sincronizar Hash PIN"]
+        SaveCreds["Guardar en IDB Seguro"]
     end
 
     subgraph Offline["Fase Offline (Login)"]
-        Input[Input PIN]
-        Hash[Hashing Local (Argon2/SHA)]
-        Compare{¿Coincide Hash?}
-        Session[Crear Sesión Local]
+        Input["Input PIN"]
+        Hash["Hashing Local (Argon2/SHA)"]
+        Compare{"¿Coincide Hash?"}
+        Session["Crear Sesión Local"]
     end
 
     subgraph Security["Seguridad"]
-        Salt[Salt Específico Dispositivo]
-        TTL[Expiración Token Offline]
+        Salt["Salt Específico Dispositivo"]
+        TTL["Expiración Token Offline"]
     end
 
-    Login -->|Token + Hash| SyncCreds
+    Login -->|"Token + Hash"| SyncCreds
     SyncCreds -->|Encriptado| SaveCreds
     
     Input --> Hash
@@ -712,7 +712,7 @@ flowchart TD
     Hash --> Compare
     
     Compare -->|Si| Session
-    Compare -->|No| Error[PIN Inválido]
+    Compare -->|No| Error["PIN Inválido"]
     
     Session -->|Validar| TTL
 ```
