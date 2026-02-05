@@ -318,7 +318,7 @@ export default function POSPage() {
           setTimeout(() => reject(new Error('timeout')), 8000)
         ),
       ]),
-    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id && isOnline,
+    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id,
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: Infinity, // Nunca eliminar del cache
     retry: (failureCount, error: any) => {

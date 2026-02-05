@@ -2,7 +2,6 @@ import {
     Injectable,
     CanActivate,
     ExecutionContext,
-    UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -19,7 +18,8 @@ export class FederationAuthGuard implements CanActivate {
         const authHeader = request.headers.authorization;
 
         if (!authHeader || !this.adminSecret) {
-            return false; // Leave it for the next guard (JwtAuthGuard)
+            // Nothing to do here; let JwtAuthGuard validate normal JWT auth.
+            return true;
         }
 
         const token = authHeader.replace('Bearer ', '');
@@ -34,10 +34,13 @@ export class FederationAuthGuard implements CanActivate {
                 store_id: bodyStoreId, // Use the store_id provided in the body for validation
                 role: 'admin',
             };
+            request.isFederationAuthenticated = true;
 
             return true;
         }
 
-        return false;
+        // Invalid federation token: continue and let JwtAuthGuard decide.
+        // This avoids returning 403 before JWT auth has a chance to run.
+        return true;
     }
 }

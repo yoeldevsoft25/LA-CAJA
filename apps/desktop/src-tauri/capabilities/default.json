@@ -12,6 +12,7 @@
         "core:path:default",
         "dialog:default",
         "process:default",
-        "sql:default"
+        "sql:default",
+        "allow-tailscale"
     ]
 }

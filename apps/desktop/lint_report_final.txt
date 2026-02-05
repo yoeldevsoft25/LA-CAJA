@@ -1,0 +1,139 @@
+
+> @la-caja/desktop@1.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/debts/CustomerDebtCard.tsx
+   63:9  warning  The 'debtsArray' logical expression could make the dependencies of useMemo Hook (at line 64) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'debtsArray' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  130:7  error    'creditHealth' is never reassigned. Use 'const' instead                                                                                                                                                                                     prefer-const
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/inventory/StockReceivedModal.tsx
+  138:9   warning  The 'products' logical expression could make the dependencies of useEffect Hook (at line 216) change on every render. To fix this, wrap the initialization of 'products' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  358:15  error    'updated' is never reassigned. Use 'const' instead                                                                                                                                                  prefer-const
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/layout/MainLayout.tsx
+  212:9  warning  The 'userFeatures' conditional could make the dependencies of useMemo Hook (at line 232) change on every render. To fix this, wrap the initialization of 'userFeatures' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  285:6  warning  React Hook useEffect has a missing dependency: 'userFeatures'. Either include it or remove the dependency array                                                                                    react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/layout/ProtectedRoute.tsx
+  25:24  error  '_allowLicenseBlocked' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/magicui/particles.tsx
+  53:8  warning  React Hook useEffect has missing dependencies: 'animate' and 'initCanvas'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  57:8  warning  React Hook useEffect has a missing dependency: 'initCanvas'. Either include it or remove the dependency array                  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/pos/CheckoutModal.backup.tsx
+  508:9  warning  The 'handleConfirm' function makes the dependencies of useEffect Hook (at line 719) change on every render. To fix this, wrap the definition of 'handleConfirm' in its own useCallback() Hook  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/pos/CheckoutModal.tsx
+  125:6  warning  React Hook useEffect has a missing dependency: 'actions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/products/ProductFormModal.tsx
+  581:6  warning  React Hook useEffect has missing dependencies: 'product.ingredients', 'product.store_id', and 'product?.weight_unit'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/public/OrderCart.tsx
+  32:12  error  '_tableId' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/realtime/ApplyDefaultsModal.tsx
+  40:8  warning  React Hook useEffect has a missing dependency: 'isLoadingPreview'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/tables/FloorPlanView.tsx
+   66:18  error    '_onCreateOrder' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  226:6   warning  React Hook useEffect has a missing dependency: 'updateTableMutation'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  383:17  error    'tableShadow' is never reassigned. Use 'const' instead                                                                  prefer-const
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/tables/OrderItemModal.tsx
+   76:16  error    Unexpected empty object pattern                                                                                                                                                                         no-empty-pattern
+   99:9   warning  The 'allProducts' logical expression could make the dependencies of useMemo Hook (at line 107) change on every render. To fix this, wrap the initialization of 'allProducts' in its own useMemo() Hook  react-hooks/exhaustive-deps
+   99:9   warning  The 'allProducts' logical expression could make the dependencies of useMemo Hook (at line 117) change on every render. To fix this, wrap the initialization of 'allProducts' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  205:39  error    'id' is defined but never used                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  205:43  error    'product_name' is defined but never used                                                                                                                                                                @typescript-eslint/no-unused-vars
+  205:57  error    'variant_name' is defined but never used                                                                                                                                                                @typescript-eslint/no-unused-vars
+  205:71  error    'unit_price_usd' is defined but never used                                                                                                                                                              @typescript-eslint/no-unused-vars
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/ui/form.tsx
+  166:5  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/ui/keyboard-shortcuts-help.tsx
+  125:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/ui/rif-input.tsx
+  46:8  warning  React Hook useEffect has a missing dependency: 'internalValue'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/ui/sidebar.tsx
+  770:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/components/ui/swipeable-item.tsx
+  34:10  error  '_swipeDirection' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/hooks/pos/usePOSCartActions.ts
+  160:13  error    'p' is never reassigned. Use 'const' instead                                                                       prefer-const
+  231:8   warning  React Hook useCallback has an unnecessary dependency: 'storeId'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/hooks/pos/usePOSHotkeys.ts
+  71:25  error  Empty block statement  no-empty
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/hooks/use-activity-tracker.ts
+  109:6  warning  React Hook useEffect has missing dependencies: 'INACTIVITY_TIMEOUT_MS' and 'WARNING_BEFORE_TIMEOUT_MS'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/hooks/use-barcode-scanner.ts
+  156:27  error  Unnecessary escape character: \.  no-useless-escape
+  156:29  error  Unnecessary escape character: \/  no-useless-escape
+  156:31  error  Unnecessary escape character: \+  no-useless-escape
+  156:33  error  Unnecessary escape character: \=  no-useless-escape
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/hooks/use-pull-to-refresh.ts
+  128:35  error  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/pages/InventoryCountPage.tsx
+  103:38  error  'deleted' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/pages/POSPage.tsx
+  130:5  warning  React Hook useCallback has a missing dependency: 'setShowCheckout'. Either include it or remove the dependency array                                                                              react-hooks/exhaustive-deps
+  335:9  warning  The 'products' logical expression could make the dependencies of useMemo Hook (at line 347) change on every render. To fix this, wrap the initialization of 'products' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  524:6  warning  React Hook useMemo has an unnecessary dependency: 'bcvRateData'. Either exclude it or remove the dependency array                                                                                 react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/pages/SalesPage.tsx
+  129:9  error  Unexpected lexical declaration in case block  no-case-declarations
+  135:9  error  Unexpected lexical declaration in case block  no-case-declarations
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/pages/VerifyEmailPage.tsx
+  50:6  warning  React Hook useEffect has a missing dependency: 'verifyMutation'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/pages/WhatsAppConfigPage.tsx
+  136:5  error  'qrInterval' is never reassigned. Use 'const' instead      prefer-const
+  138:5  error  'statusInterval' is never reassigned. Use 'const' instead  prefer-const
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/services/debts.service.ts
+  248:13  error  'store_id' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  248:23  error  'user_id' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  277:13  error  'store_id' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  277:23  error  'user_id' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  294:13  error  'store_id' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  294:23  error  'user_id' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  353:13  error  'store_id' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  353:23  error  'user_id' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/services/products.service.ts
+  620:9  error  'current' is never reassigned. Use 'const' instead  prefer-const
+  684:9  error  'current' is never reassigned. Use 'const' instead  prefer-const
+
+/Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop/src/sw.ts
+   87:1   error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  177:25  error  'id' is assigned a value but never used                                                                              @typescript-eslint/no-unused-vars
+  177:29  error  'sync_status' is assigned a value but never used                                                                     @typescript-eslint/no-unused-vars
+  177:42  error  'sync_attempts' is assigned a value but never used                                                                   @typescript-eslint/no-unused-vars
+  177:57  error  'synced_at' is assigned a value but never used                                                                       @typescript-eslint/no-unused-vars
+  177:78  error  '_' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+  177:92  error  '__' is assigned a value but never used                                                                              @typescript-eslint/no-unused-vars
+
+✖ 64 problems (44 errors, 20 warnings)
+  6 errors and 0 warnings potentially fixable with the `--fix` option.
+
+npm error Lifecycle script `lint` failed with error:
+npm error code 1
+npm error path /Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop
+npm error workspace @la-caja/desktop@1.0.0
+npm error location /Users/yoeldev/Documents/GitHub/LA-CAJA/apps/desktop
+npm error command failed
+npm error command sh -c eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0

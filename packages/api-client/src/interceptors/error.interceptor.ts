@@ -7,16 +7,25 @@ let isRedirecting = false;
 
 // Variable para evitar múltiples refresh simultáneos
 let isRefreshing = false;
-let refreshSubscribers: Array<(token: string) => void> = [];
+type RefreshSubscriber = {
+    onSuccess: (token: string) => void;
+    onError: (error: Error) => void;
+};
+let refreshSubscribers: RefreshSubscriber[] = [];
 
 // Función para suscribirse a la resolución del refresh
-function subscribeTokenRefresh(cb: (token: string) => void) {
-    refreshSubscribers.push(cb);
+function subscribeTokenRefresh(onSuccess: (token: string) => void, onError: (error: Error) => void) {
+    refreshSubscribers.push({ onSuccess, onError });
 }
 
 // Función para notificar a todos los suscriptores
 function onRefreshed(token: string) {
-    refreshSubscribers.forEach(cb => cb(token));
+    refreshSubscribers.forEach((subscriber) => subscriber.onSuccess(token));
+    refreshSubscribers = [];
+}
+
+function onRefreshFailed(error: Error) {
+    refreshSubscribers.forEach((subscriber) => subscriber.onError(error));
     refreshSubscribers = [];
 }
 
@@ -61,15 +70,7 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
 
             if (!refreshToken) {
                 if (config.logger) {
-                    config.logger.warn('401 pero no hay refresh_token - ejecutando logout');
-                }
-                if (!isRedirecting) {
-                    isRedirecting = true;
-                    localStorage.removeItem('auth_token');
-                    config.onLogout();
-                    setTimeout(() => {
-                        isRedirecting = false;
-                    }, 1000);
+                    config.logger.warn('401 pero no hay refresh_token - manteniendo sesión para operación offline');
                 }
                 return Promise.reject(error);
             }
@@ -79,11 +80,11 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
                 if (config.logger) {
                     config.logger.debug('Esperando refresh en progreso');
                 }
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     subscribeTokenRefresh((token: string) => {
                         originalRequest.headers.Authorization = `Bearer ${token}`;
                         resolve(api(originalRequest));
-                    });
+                    }, reject);
                 });
             }
 
@@ -93,16 +94,71 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
             }
 
             try {
-                // Hacer el refresh sin pasar por el interceptor (para evitar bucle)
-                const response = await axios.post(
-                    `${originalRequest.baseURL}/auth/refresh`,
-                    { refresh_token: refreshToken }
-                );
+                const candidateBases = Array.from(new Set(
+                    [
+                        originalRequest.baseURL,
+                        api.defaults.baseURL,
+                        ...failoverUrls,
+                    ].filter((value): value is string => Boolean(value))
+                ));
 
-                const { access_token, refresh_token: newRefreshToken } = response.data;
+                let refreshResponse:
+                    | { access_token: string; refresh_token: string }
+                    | null = null;
+                let selectedBaseUrl: string | null = null;
+                let sawInfraFailure = false;
+                let sawAuthFailure = false;
+                let lastRefreshError: Error | null = null;
+
+                for (const baseUrl of candidateBases) {
+                    try {
+                        // Hacer el refresh sin pasar por el interceptor (para evitar bucle)
+                        const response = await axios.post<{ access_token: string; refresh_token: string }>(
+                            `${baseUrl}/auth/refresh`,
+                            { refresh_token: refreshToken }
+                        );
+
+                        refreshResponse = response.data;
+                        selectedBaseUrl = baseUrl;
+                        break;
+                    } catch (candidateError) {
+                        const candidateAxiosError = candidateError as AxiosError;
+                        const status = candidateAxiosError.response?.status;
+                        const asError =
+                            candidateError instanceof Error
+                                ? candidateError
+                                : new Error(String(candidateError));
+                        lastRefreshError = asError;
+
+                        if (status === 400 || status === 401 || status === 403) {
+                            sawAuthFailure = true;
+                        } else {
+                            sawInfraFailure = true;
+                        }
+                    }
+                }
+
+                if (!refreshResponse) {
+                    throw Object.assign(
+                        lastRefreshError ?? new Error('No se pudo renovar token en ningún endpoint'),
+                        {
+                            _refreshFailureKind:
+                                sawAuthFailure && !sawInfraFailure
+                                    ? 'auth'
+                                    : 'infra',
+                        }
+                    );
+                }
+
+                const { access_token, refresh_token: newRefreshToken } = refreshResponse;
 
                 if (config.logger) {
                     config.logger.info('Token renovado exitosamente');
+                }
+
+                if (selectedBaseUrl) {
+                    api.defaults.baseURL = selectedBaseUrl;
+                    originalRequest.baseURL = selectedBaseUrl;
                 }
 
                 // Actualizar tokens en localStorage
@@ -119,13 +175,25 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
                 isRefreshing = false;
                 return api(originalRequest);
             } catch (refreshError) {
+                const refreshErr =
+                    refreshError instanceof Error
+                        ? refreshError
+                        : new Error(String(refreshError));
+
                 if (config.logger) {
-                    config.logger.error('Error al renovar token', refreshError);
+                    config.logger.error('Error al renovar token', refreshErr);
                 }
                 isRefreshing = false;
+                onRefreshFailed(refreshErr);
 
-                // Si falla el refresh, cerrar sesión
-                if (!isRedirecting) {
+                const refreshFailureKind =
+                    (refreshErr as Error & { _refreshFailureKind?: 'auth' | 'infra' })
+                        ._refreshFailureKind;
+                const shouldForceLogout = refreshFailureKind === 'auth';
+
+                // Solo cerrar sesión cuando el refresh fue rechazado por autenticación
+                // en todos los endpoints (token realmente inválido/revocado).
+                if (shouldForceLogout && !isRedirecting) {
                     isRedirecting = true;
                     localStorage.removeItem('auth_token');
                     localStorage.removeItem('refresh_token');
@@ -133,6 +201,10 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
                     setTimeout(() => {
                         isRedirecting = false;
                     }, 1000);
+                } else if (config.logger) {
+                    config.logger.warn(
+                        'No se pudo renovar token por caída o error temporal del servidor; se mantiene la sesión'
+                    );
                 }
 
                 return Promise.reject(error);

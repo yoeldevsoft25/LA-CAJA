@@ -2,11 +2,16 @@ import { api } from '@/lib/api'
 import type { AxiosResponse } from 'axios'
 import { syncService } from './sync.service'
 import { exchangeService } from './exchange.service'
+import { connectivityService } from './connectivity.service'
 import { BaseEvent, SaleCreatedPayload, SaleItem as DomainSaleItem, PricingCalculator, WeightUnit } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
 import type { Product } from './products.service'
 
 const logger = createLogger('SalesService')
+
+function isApplicationOnline(): boolean {
+  return navigator.onLine && connectivityService.online
+}
 
 // Función auxiliar para generar UUIDs
 function randomUUID(): string {
@@ -331,7 +336,7 @@ export const salesService = {
     options?: { returnMode?: 'full' | 'minimal' },
   ): Promise<Sale> {
     // Verificar estado de conexión PRIMERO
-    const isOnline = navigator.onLine
+    const isOnline = isApplicationOnline()
 
     logger.debug('Iniciando creación de venta', {
       isOnline,
@@ -556,7 +561,7 @@ export const salesService = {
     logger.info('Modo ONLINE - intentando llamada HTTP')
 
     // Verificar nuevamente antes de intentar (puede haber cambiado)
-    if (!navigator.onLine) {
+    if (!isApplicationOnline()) {
       // Si se perdió la conexión mientras procesábamos, guardar offline
       logger.warn('Conexión perdida durante el proceso, guardando offline')
       // Reutilizar la lógica offline (código duplicado pero necesario)
@@ -795,13 +800,15 @@ export const salesService = {
         axiosError.code === 'ERR_NETWORK' ||
         axiosError.code === 'ERR_INTERNET_DISCONNECTED' ||
         axiosError.isOffline ||
-        !navigator.onLine
+        !isApplicationOnline()
 
       logger.debug('Error capturado en catch', {
         code: axiosError.code,
         isOffline: axiosError.isOffline,
         message: axiosError.message,
         navigatorOnLine: navigator.onLine,
+        connectivityOnline: connectivityService.online,
+        appOnline: isApplicationOnline(),
         isNetworkError,
         hasStoreId: !!data.store_id,
         hasUserId: !!data.user_id,

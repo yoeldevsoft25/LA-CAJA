@@ -2,6 +2,8 @@
 
 use tauri::Window;
 
+mod sidecar;
+
 #[tauri::command]
 fn minimize_window(window: Window) -> Result<(), String> {
     window.minimize().map_err(|e| e.to_string())
@@ -69,6 +71,15 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = sidecar::start_tailscale(&handle).await {
+                    eprintln!("Error starting Tailscale sidecar: {}", e);
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             minimize_window,
             maximize_window,
