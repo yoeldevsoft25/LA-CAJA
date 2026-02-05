@@ -477,3 +477,15 @@ Velox ya tiene una base muy superior a muchos POS del mercado.
 Lo que falta para Linea A no es "mas features sueltas": es **arquitectura disciplinada + calidad operacional + velocidad de ejecucion**.
 
 Si ejecutamos este plan de 10 sprints con rigor, Velox pasa de "producto prometedor" a **plataforma dominante**.
+
+---
+
+## Bitacora tecnica (2026-02-05)
+
+- Se agrego endpoint de observabilidad de federacion: `GET /sync/federation/status` (cola, probe remoto y ultimo error de relay).
+- Se agrego bridge de ventas online (`/sales`) para emitir `SaleCreated` y encolar relay de federacion, evitando que solo sincronice el flujo `/sync/push`.
+- Se corrigio CORS para clientes desktop Tauri (`http://tauri.localhost` y `https://tauri.localhost`) y se elimino throw en callback de CORS para evitar respuestas 500 en preflight.
+- Se agrego endpoint de recuperacion historica de ventas por ID:
+  - `POST /sync/federation/replay-sales`
+  - body: `{ "sale_ids": ["uuid1", "uuid2"] }`
+  - Funcion: vuelve a encolar `SaleCreated` existentes para relay federado y cerrar desfases historicos entre local y render.

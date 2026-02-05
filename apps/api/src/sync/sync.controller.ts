@@ -13,7 +13,12 @@ import {
 } from '@nestjs/common';
 import { SyncService } from './sync.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
-import { FederationSyncService, FederationStatus } from './federation-sync.service';
+import {
+  FederationSyncService,
+  FederationStatus,
+  FederationReplayResult,
+  FederationReplayInventoryResult,
+} from './federation-sync.service';
 import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
 import { ResolveConflictDto } from './dto/resolve-conflict.dto';
@@ -94,6 +99,43 @@ export class SyncController {
   @Get('federation/status')
   async getFederationStatus(): Promise<FederationStatus> {
     return this.federationSyncService.getFederationStatus();
+  }
+
+  @Post('federation/replay-sales')
+  @HttpCode(HttpStatus.OK)
+  async replaySales(
+    @Body('sale_ids') saleIds: string[],
+    @Request() req: any,
+  ): Promise<FederationReplayResult> {
+    const storeId = req.user.store_id;
+    if (!Array.isArray(saleIds) || saleIds.length === 0) {
+      throw new BadRequestException('sale_ids es requerido');
+    }
+    return this.federationSyncService.replaySalesByIds(storeId, saleIds);
+  }
+
+  @Post('federation/replay-inventory')
+  @HttpCode(HttpStatus.OK)
+  async replayInventory(
+    @Body('movement_ids') movementIds: string[],
+    @Body('product_ids') productIds: string[],
+    @Request() req: any,
+  ): Promise<FederationReplayInventoryResult> {
+    const storeId = req.user.store_id;
+    const safeMovementIds = Array.isArray(movementIds) ? movementIds : [];
+    const safeProductIds = Array.isArray(productIds) ? productIds : [];
+
+    if (safeMovementIds.length === 0 && safeProductIds.length === 0) {
+      throw new BadRequestException(
+        'movement_ids o product_ids es requerido',
+      );
+    }
+
+    return this.federationSyncService.replayInventoryByFilter(
+      storeId,
+      safeMovementIds,
+      safeProductIds,
+    );
   }
 
   @Post('resolve-conflict')

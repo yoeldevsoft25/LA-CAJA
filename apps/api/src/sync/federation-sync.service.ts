@@ -42,6 +42,21 @@ export interface FederationStatus {
     } | null;
 }
 
+export interface FederationReplayResult {
+    requested: number;
+    found: number;
+    queued: number;
+    missingSaleIds: string[];
+}
+
+export interface FederationReplayInventoryResult {
+    requestedMovementIds: number;
+    requestedProductIds: number;
+    found: number;
+    queued: number;
+    missingMovementIds: string[];
+}
+
 @Injectable()
 export class FederationSyncService implements OnModuleInit {
     private readonly logger = new Logger(FederationSyncService.name);
@@ -150,6 +165,136 @@ export class FederationSyncService implements OnModuleInit {
             },
             remoteProbe,
             lastRelayError: this.lastRelayError,
+        };
+    }
+
+    async replaySalesByIds(storeId: string, saleIds: string[]): Promise<FederationReplayResult> {
+        const uniqueSaleIds = Array.from(
+            new Set(saleIds.map((id) => id?.trim()).filter(Boolean)),
+        );
+
+        if (!this.remoteUrl || uniqueSaleIds.length === 0) {
+            return {
+                requested: uniqueSaleIds.length,
+                found: 0,
+                queued: 0,
+                missingSaleIds: uniqueSaleIds,
+            };
+        }
+
+        const rows = await this.dataSource.query(
+            `
+            SELECT event_id, payload->>'sale_id' AS sale_id
+            FROM events
+            WHERE store_id = $1
+              AND type = 'SaleCreated'
+              AND payload->>'sale_id' = ANY($2)
+            `,
+            [storeId, uniqueSaleIds],
+        );
+
+        const foundSaleIds = new Set<string>(rows.map((row: { sale_id: string }) => row.sale_id));
+        const missingSaleIds = uniqueSaleIds.filter((saleId) => !foundSaleIds.has(saleId));
+
+        let queued = 0;
+        for (const row of rows as Array<{ event_id: string }>) {
+            const event = await this.eventRepository.findOne({
+                where: { event_id: row.event_id },
+            });
+            if (!event) continue;
+            await this.queueRelay(event);
+            queued += 1;
+        }
+
+        this.logger.log(
+            `🔁 Federation replay queued ${queued}/${uniqueSaleIds.length} SaleCreated events`,
+        );
+
+        return {
+            requested: uniqueSaleIds.length,
+            found: rows.length,
+            queued,
+            missingSaleIds,
+        };
+    }
+
+    async replayInventoryByFilter(
+        storeId: string,
+        movementIds: string[],
+        productIds: string[],
+    ): Promise<FederationReplayInventoryResult> {
+        const uniqueMovementIds = Array.from(
+            new Set(movementIds.map((id) => id?.trim()).filter(Boolean)),
+        );
+        const uniqueProductIds = Array.from(
+            new Set(productIds.map((id) => id?.trim()).filter(Boolean)),
+        );
+
+        if (!this.remoteUrl || (uniqueMovementIds.length === 0 && uniqueProductIds.length === 0)) {
+            return {
+                requestedMovementIds: uniqueMovementIds.length,
+                requestedProductIds: uniqueProductIds.length,
+                found: 0,
+                queued: 0,
+                missingMovementIds: uniqueMovementIds,
+            };
+        }
+
+        let query = `
+            SELECT event_id, payload->>'movement_id' AS movement_id, payload->>'product_id' AS product_id
+            FROM events
+            WHERE store_id = $1
+              AND type IN ('StockReceived', 'StockAdjusted')
+        `;
+        const params: unknown[] = [storeId];
+        const filters: string[] = [];
+
+        if (uniqueMovementIds.length > 0) {
+            params.push(uniqueMovementIds);
+            filters.push(`payload->>'movement_id' = ANY($${params.length})`);
+        }
+        if (uniqueProductIds.length > 0) {
+            params.push(uniqueProductIds);
+            filters.push(`payload->>'product_id' = ANY($${params.length})`);
+        }
+
+        if (filters.length > 0) {
+            query += ` AND (${filters.join(' OR ')})`;
+        }
+
+        query += ' ORDER BY created_at ASC';
+
+        const rows = await this.dataSource.query(query, params);
+        const foundMovementIds = new Set<string>(
+            rows
+                .map((row: { movement_id: string | null }) => row.movement_id)
+                .filter(Boolean),
+        );
+
+        const missingMovementIds = uniqueMovementIds.filter(
+            (movementId) => !foundMovementIds.has(movementId),
+        );
+
+        let queued = 0;
+        for (const row of rows as Array<{ event_id: string }>) {
+            const event = await this.eventRepository.findOne({
+                where: { event_id: row.event_id },
+            });
+            if (!event) continue;
+            await this.queueRelay(event);
+            queued += 1;
+        }
+
+        this.logger.log(
+            `🔁 Federation inventory replay queued ${queued} events (found=${rows.length})`,
+        );
+
+        return {
+            requestedMovementIds: uniqueMovementIds.length,
+            requestedProductIds: uniqueProductIds.length,
+            found: rows.length,
+            queued,
+            missingMovementIds,
         };
     }
 }
