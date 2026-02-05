@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>Velox POS</string>
 	<key>CFBundleExecutable</key>
-	<string>Velox POS</string>
+	<string>la-caja-desktop</string>
 	<key>CFBundleIconFile</key>
 	<string>icon.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -21,7 +21,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>20260201.125015</string>
+	<string>1.0.0</string>
 	<key>CSResourcesFileMapped</key>
 	<true/>
 	<key>LSMinimumSystemVersion</key>
