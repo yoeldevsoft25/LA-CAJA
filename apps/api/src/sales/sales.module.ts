@@ -28,6 +28,7 @@ import { WarehousesModule } from '../warehouses/warehouses.module';
 import { FiscalInvoicesModule } from '../fiscal-invoices/fiscal-invoices.module';
 import { AccountingModule } from '../accounting/accounting.module';
 import { ConfigModule as SystemConfigModule } from '../config/config.module';
+import { StockEscrow } from '../database/entities/stock-escrow.entity';
 import { forwardRef } from '@nestjs/common';
 import { SecurityModule } from '../security/security.module';
 import { ProjectionsModule } from '../projections/projections.module';
@@ -65,6 +66,7 @@ import { ReturnSaleHandler } from './application/commands/return-sale/return-sal
       DebtPayment,
       CashSession,
       Event,
+      StockEscrow,
     ]),
     PaymentsModule,
     DiscountsModule,
@@ -104,4 +106,4 @@ import { ReturnSaleHandler } from './application/commands/return-sale/return-sal
   ],
   exports: [SalesService],
 })
-export class SalesModule {}
+export class SalesModule { }
