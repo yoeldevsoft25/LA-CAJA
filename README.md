@@ -9,38 +9,93 @@ ERP + POS offline-first con sincronizacion por eventos. Diseñado para vender si
 - **Proyecciones asincronas**: BullMQ procesa ventas, inventario y reportes.
 - **Federacion**: replica entre servidor central y nodos locales.
 
-## Arquitectura (alto nivel)
+## Arquitectura operacional (cerebro Velox POS)
 
 ```mermaid
 flowchart LR
-  subgraph Clients
+  subgraph Clients[Clientes]
     PWA[PWA]
     Desktop[Desktop Tauri]
     Android[Android/TWA]
   end
 
-  subgraph Local
-    IDB[IndexedDB/Dexie]
-    SQLite[SQLite]
+  subgraph LocalCore[Offline Core (Device)]
+    LocalDB[IndexedDB / SQLite]
+    LocalQ[Local Event Queue]
+    VC[Vector Clocks]
+    BG[Background Sync]
   end
 
-  subgraph Backend
-    API[NestJS API]
+  subgraph SyncClient[Sync Engine (Client)]
+    Push[Push Events]
+    Pull[Pull Changes]
+    Reconcile[Reconcile + Merge]
+  end
+
+  subgraph API[Backend API (NestJS)]
+    Auth[Auth + License]
+    Sync[Sync Ingress]
+    Federation[Federation Relay]
+    Realtime[WebSockets]
+  end
+
+  subgraph EventCore[Event Core]
     EventStore[Event Store]
-    Queues[BullMQ/Redis]
-    Projections[Read Models]
+    CRDT[CRDT + Conflict Resolver]
+  end
+
+  subgraph Queues[BullMQ/Redis]
+    QProj[sales-projections]
+    QPost[sales-post-processing]
+    QNotif[notifications]
+    QFed[federation-sync]
+  end
+
+  subgraph Projections[Read Models]
+    SalesRM[Sales]
+    InvRM[Inventory]
+    CashRM[Cash/Payments]
+    CustRM[Customers/Debts]
+    ReportsRM[Reports/Analytics]
+  end
+
+  subgraph Data[Datastore]
     DB[(PostgreSQL/Supabase)]
   end
 
-  PWA --> IDB
-  Desktop --> SQLite
-  Android --> IDB
+  subgraph Ops[Observabilidad]
+    Metrics[Metrics]
+    Logs[Logs]
+  end
 
-  PWA -->|sync| API
-  Desktop -->|sync| API
-  Android -->|sync| API
+  subgraph Integrations[Integraciones]
+    Email[Email]
+    WhatsApp[WhatsApp]
+    Fiscal[Fiscal/Invoice]
+  end
 
-  API --> EventStore --> Queues --> Projections --> DB
+  PWA --> LocalDB
+  Desktop --> LocalDB
+  Android --> LocalDB
+  LocalDB --> LocalQ --> VC --> BG
+  BG --> SyncClient
+  SyncClient --> Push --> Sync
+  Sync --> Pull --> SyncClient
+  Reconcile --> LocalDB
+
+  Sync --> EventStore --> CRDT --> EventStore
+  EventStore --> Queues
+  Queues --> Projections --> DB
+
+  Sync --> Federation --> QFed
+  Sync --> Realtime --> Clients
+
+  QPost --> Fiscal
+  QNotif --> Email
+  QNotif --> WhatsApp
+
+  API --> Metrics
+  API --> Logs
 ```
 
 ## Componentes principales
@@ -88,4 +143,3 @@ npm run dev:desktop
 - Mapa de sistema: `docs/architecture/VELOX_SYSTEM_MAP.md`
 - Arquitectura offline: `docs/architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md`
 - Roadmap: `docs/roadmap/roadmap la caja.md`
-
