@@ -431,54 +431,54 @@ Esta sección detalla los mecanismos internos que garantizan la consistencia y d
 
 ### 1. Motor de Sincronización (Sync Engine Internals)
 
-El motor utiliza un sistema de **doble persistencia** (IndexedDB + Memoria) con un mecanismo de "Hard Recovery" para garantizar que ningún evento se pierda, incluso si la aplicación se cierra inesperadamente o el navegador decide eliminar la memoria de la pestaña.
+El motor utiliza un sistema de **doble persistencia** (IndexedDB + Memoria) con un mecanismo de "Hard Recovery" para garantizar que ningún evento se pierda.
 
 ```mermaid
 flowchart TD
-    subgraph Input["Input Event"]
-        NewEvent[New Event]
+    subgraph Input["Entrada de Evento"]
+        NewEvent[Nuevo Evento]
     end
 
-    subgraph Atomic["Atomic Sequence"]
-        Seq[Allocate Seq + Vector Clock]
+    subgraph Atomic["Secuencia Atómica"]
+        Seq[Asignar Seq + Vector Clock]
     end
 
-    subgraph Persistence["Persistence Layer"]
+    subgraph Persistence["Capa de Persistencia"]
         IDB[(IndexedDB)]
     end
 
-    subgraph Memory["Memory Queue"]
-        Queue[Sync Queue]
+    subgraph Memory["Cola en Memoria"]
+        Queue[Cola de Sync]
         Batch[Batch Buffer]
     end
 
-    subgraph Network["Network Layer"]
-        Flush[Flush Batch]
+    subgraph Network["Capa de Red"]
+        Flush[Enviar Batch]
         API[Backend API]
     end
 
-    subgraph Recovery["Hard Recovery Loop"]
-        Online[Connectivity / Focus] -->|Trigger| Lock{Mutex Lock}
-        Lock -->|Acquired| Scan[Scan IndexedDB]
-        Scan -->|Reconcile| Rebuild[Rebuild Memory Queue]
-        Rebuild -->|Force| Flush
+    subgraph Recovery["Ciclo de Hard Recovery"]
+        Online[Conexión / Foco] -->|Disparar| Lock{Mutex Lock}
+        Lock -->|Adquirido| Scan[Escanear IndexedDB]
+        Scan -->|Reconciliar| Rebuild[Reconstruir Cola Memoria]
+        Rebuild -->|Forzar| Flush
     end
 
     NewEvent --> Atomic
-    Atomic -->|1. Persist First| IDB
-    IDB -->|2. Enqueue| Queue
+    Atomic -->|1. Persistir Primero| IDB
+    IDB -->|2. Encolar| Queue
     Queue -->|3. Buffer| Batch
-    Batch -->|Time/Size Limit| Flush
+    Batch -->|Limite Tiempo/Tamaño| Flush
     Flush -->|HTTP POST| API
 
-    API -->|200 OK| Ack[Mark Synced in IDB]
-    API -->|Error| Retry["Retry Strategy (Exp. Backoff)"]
+    API -->|200 OK| Ack[Marcar Sincronizado en IDB]
+    API -->|Error| Retry["Estrategia Retry (Exp. Backoff)"]
     Retry --> Batch
 ```
 
-### 2. Resolución de Conflictos (CRDTs Decision Flow)
+### 2. Resolución de Conflictos (Flujo de Decisión CRDT)
 
-Cuando el servidor recibe eventos concurrentes (detectados vía Vector Clocks), el `ConflictResolutionService` decide automáticamente la estrategia de convergencia basada en el tipo de dato.
+Cuando el servidor recibe eventos concurrentes, decide automáticamente la estrategia de convergencia.
 
 ```mermaid
 flowchart TD
@@ -488,65 +488,143 @@ flowchart TD
 
     VC -->|"A < B"| Apply["Aplicar B (Nuevo)"]
     VC -->|"A > B"| Ignore["Ignorar B (Obsoleto)"]
-    VC -->|"Concurrent A || B"| Strategy{"Estrategia?"}
+    VC -->|"Concurrente A || B"| Strategy{"Estrategia?"}
 
     subgraph Strategies["Estrategias CRDT"]
-        LWW[LWW (Last-Write-Wins)]
-        AWSet[AWSet (Add-Wins Set)]
-        MVR[MVR (Multi-Value Register)]
+        LWW[LWW (Ultima-Escritura-Gana)]
+        AWSet[AWSet (Set Agrega-Gana)]
+        MVR[MVR (Registro Multi-Valor)]
     end
 
-    Strategy -->|Simple Fields| LWW
-    Strategy -->|Lists/Inv| AWSet
-    Strategy -->|Critical $| MVR
+    Strategy -->|Campos Simples| LWW
+    Strategy -->|Listas/Inv| AWSet
+    Strategy -->|Crítico $| MVR
 
-    LWW --> TieBr{Tie Breaker}
+    LWW --> TieBr{Desempate}
     TieBr -->|Max Timestamp| WinnerLWW[Ganador LWW]
     TieBr -->|Device ID| WinnerLWW
 
-    AWSet --> Union[Union Adds - Removes]
+    AWSet --> Union[Unión Agrega - Remueve]
     Union --> ResultAW[Lista Convergente]
 
     MVR --> Manual[Conflicto Manual]
      Manual --> Human{Revisión Humana}
 ```
 
-### 3. Queue Consistency & Anti-Storm
+### 3. Consistencia de Cola y Anti-Tormenta (Queue Consistency)
 
-Para evitar "tormentas" de sincronización y estados inconsistentes ("fantasmas"), el sistema implementa un monitor de consistencia que reconcilia la verdad del disco con la memoria.
+Evita "tormentas" de sincronización y estados inconsistentes ("fantasmas").
 
 ```mermaid
 flowchart LR
-    subgraph Truth["Source of Truth (Disk)"]
-        DB_Events[IndexedDB Events]
+    subgraph Truth["Fuente de Verdad (Disco)"]
+        DB_Events[Eventos IndexedDB]
     end
 
-    subgraph State["AppState (Memory)"]
-        Mem_Queue[Memory Queue]
+    subgraph State["Estado App (Memoria)"]
+        Mem_Queue[Cola en Memoria]
     end
 
-    subgraph Watchdog["Consistency Watchdog"]
-        Check{Count Mismatch?}
-        Reconcile[Reconcile Logic]
+    subgraph Watchdog["Vigilante de Consistencia"]
+        Check{¿Diferencia Conteo?}
+        Reconcile[Lógica Reconciliación]
     end
 
-    subgraph AntiStorm["Anti-Storm"]
+    subgraph AntiStorm["Anti-Tormenta"]
         Debounce[Debounce 500ms]
-        Cooldown[Cooldown 8s]
-        Mutex[Global Mutex]
+        Cooldown[Enfriamiento 8s]
+        Mutex[Mutex Global]
     end
 
-    DB_Events -.->|Load on Init| Mem_Queue
+    DB_Events -.->|Carga al Inicio| Mem_Queue
     
-    Trigger[Event/Timer] --> AntiStorm
+    Trigger[Evento/Timer] --> AntiStorm
     AntiStorm --> Watchdog
 
     Watchdog --> Check
     Check -->|DB != Mem| Reconcile
-    Reconcile -->|Fix| Mem_Queue
+    Reconcile -->|Corregir| Mem_Queue
     
-    Reconcile -->|Phantom Pending| Clear[Clear Phantom]
-    Reconcile -->|Missing InMemory| Load[Load from DB]
+    Reconcile -->|Pendiente Fantasma| Clear[Limpiar Fantasma]
+    Reconcile -->|Falta en Memoria| Load[Cargar de DB]
+```
+
+### 4. Federación Multi-Nodo (Smart Auto-Heal)
+
+Sincronización robusta entre nodo local y central, capaz de autoreparar brechas de datos.
+
+```mermaid
+flowchart TD
+    subgraph Trigger["Disparador"]
+        Cron[Cron / Smart Heal] -->|Detecta Brecha| AutoHeal
+    end
+
+    subgraph Reconcile["Lógica de Auto-Reconciliación"]
+        AutoHeal[Run Auto-Reconcile]
+        FetchRemote[Obtener IDs Remotos]
+        FetchLocal[Obtener IDs Locales]
+        Diff{Calcular Diff}
+    end
+
+    subgraph Actions["Acciones de Reparación"]
+        ReplayRemote[Replay a Remoto]
+        ReplayLocal[Replay a Local]
+        HealStock[Corregir Stock]
+    end
+
+    subgraph Queue["Cola de Federación"]
+        JobRelay[Job: relay-event]
+        Worker[Federation Processor]
+    end
+
+    AutoHeal --> FetchRemote & FetchLocal
+    FetchRemote & FetchLocal --> Diff
+    
+    Diff -->|Falta en Remoto| ReplayRemote
+    Diff -->|Falta en Local| ReplayLocal
+    
+    ReplayRemote -->|Encolar| JobRelay
+    JobRelay --> Worker -->|HTTP POST| CentralAPI["API Central"]
+    
+    Diff -->|Inconsistencia Stock| HealStock
+```
+
+### 5. Procesamiento Asíncrono (Backend Pipeline)
+
+Pipeline de procesamiento de eventos de ventas para mantener la respuesta al cliente por debajo de 50ms.
+
+```mermaid
+flowchart TD
+    subgraph Ingress["Ingreso API"]
+        EventCreated[Evento SaleCreated]
+    end
+
+    subgraph Q1["Cola: sales-projections"]
+        WorkerProj[Worker Proyecciones]
+        Completeness{¿Venta Completa?}
+        Project[Proyectar a Read Model]
+    end
+
+    subgraph Q2["Cola: sales-post-processing"]
+        WorkerPost[Worker Post-Proceso]
+        Fiscal[Facturación Fiscal]
+        Accounting[Asiento Contable]
+    end
+
+    EventCreated -->|1. Encolar| Q1
+    
+    Q1 --> WorkerProj
+    WorkerProj --> Completeness
+    
+    Completeness -->|Si| Project
+    Completeness -->|No| Retry[Reintentar luego]
+    
+    Project -->|Exito| Q2
+    
+    Q2 --> WorkerPost
+    WorkerPost -->|Opcional| Fiscal
+    Fiscal -->|Emitida| Accounting
+    WorkerPost -->|Sin Fiscal| Accounting
 ```
 
 ## Desarrollo
