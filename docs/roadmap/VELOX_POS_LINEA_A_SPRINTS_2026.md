@@ -390,6 +390,30 @@ Canales
 - ADR: `docs/architecture/adr/ADR-007-crdt-escrow-convergence.md`
 - Plan E2E: `docs/roadmap/SPRINT_6_1_CRDT_ESCROW_EXECUTION.md`
 
+### Sprint 6.2 - CRDT MAX (Convergencia y Compaction)
+**Objetivo:** llevar la sincronizacion a nivel industrial con CRDTs formales, deltas compactados y verificacion automatica de convergencia.
+
+**Entregables:**
+- **Contratos CRDT por entidad:** merge/applyDelta formales para caja, inventario, precios, metadata y logs.
+- **Delta-CRDTs reales:** sync de deltas + `full_payload_hash` + validacion de integridad.
+- **Compaction & GC:** snapshots CRDT por tienda y pruning de eventos ya absorbidos.
+- **Causal digest sync:** envio de resumen causal en lugar de eventos completos.
+- **Verificacion automatica:** job que recalcula estado y compara hash/snapshot.
+- **Drift alerts:** alertas de desviacion y panel de estado convergente.
+
+**DoD/KPIs:**
+- Convergencia 100% en chaos test (>= 10k eventos, reordenados y con reintentos).
+- Reduccion de payload >= 70% vs sync de entidades completas.
+- Compaction reduce historial de eventos >= 90% sin perder estado.
+- Drift detectado y corregido en < 1 ciclo de reconciliacion.
+
+**Referencias de ejecucion (E2E):**
+- ADR: `docs/architecture/adr/ADR-008-crdt-max-compaction.md`
+- Plan E2E: `docs/roadmap/SPRINT_6_2_CRDT_MAX_EXECUTION.md`
+- Tasks: `docs/roadmap/SPRINT_6_2_CRDT_MAX_TASKS.md`
+- Checklist: `docs/roadmap/SPRINT_6_2_CRDT_MAX_CHECKLIST.md`
+- Diagrama: `docs/architecture/DIAGRAMA_CRDT_MAX.md`
+
 ## Sprint 7 - Performance comercial
 **Objetivo:** convertir velocidad en ventaja competitiva visible.
 
