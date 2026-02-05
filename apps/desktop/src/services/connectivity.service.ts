@@ -2,6 +2,9 @@ import { createLogger } from '@/lib/logger';
 import { api } from '@/lib/api';
 
 const logger = createLogger('ConnectivityService');
+const PRIMARY_API_URL = import.meta.env.VITE_PRIMARY_API_URL as string | undefined;
+const FALLBACK_API_URL = import.meta.env.VITE_FALLBACK_API_URL as string | undefined;
+const TERTIARY_API_URL = import.meta.env.VITE_TERTIARY_API_URL as string | undefined;
 
 type ConnectivityListener = (isOnline: boolean) => void;
 
@@ -86,27 +89,43 @@ class ConnectivityService {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), this.CHECK_TIMEOUT_MS);
 
-            // Improved URL Resolution
-            let baseURL = api.defaults.baseURL;
+            // Probe active base first, then configured failovers (never hardcode localhost:3000).
+            const candidates = [
+                api.defaults.baseURL,
+                PRIMARY_API_URL,
+                FALLBACK_API_URL,
+                TERTIARY_API_URL,
+                import.meta.env.VITE_API_URL as string | undefined,
+            ]
+                .filter((v): v is string => Boolean(v))
+                .map((v) => v.replace(/\/$/, ''));
 
-            // Fallbacks if api.defaults.baseURL is not set
-            if (!baseURL) {
-                baseURL = import.meta.env.VITE_PRIMARY_API_URL ||
-                    import.meta.env.VITE_API_URL ||
-                    'http://localhost:3000';
+            const uniqueCandidates = [...new Set(candidates)];
+            if (uniqueCandidates.length === 0) {
+                logger.warn('No API base candidates configured for connectivity checks');
+                this.setOnlineStatus(false);
+                return false;
             }
 
-            const url = `${baseURL?.replace(/\/$/, '')}/health`;
-
-            const response = await fetch(url, {
-                method: 'HEAD',
-                signal: controller.signal,
-                cache: 'no-store'
-            });
+            let isReachable = false;
+            for (const base of uniqueCandidates) {
+                const url = `${base}/health`;
+                try {
+                    const response = await fetch(url, {
+                        method: 'HEAD',
+                        signal: controller.signal,
+                        cache: 'no-store'
+                    });
+                    if (response.ok) {
+                        isReachable = true;
+                        break;
+                    }
+                } catch {
+                    // try next candidate
+                }
+            }
 
             clearTimeout(timeoutId);
-
-            const isReachable = response.ok;
             this.setOnlineStatus(isReachable);
             return isReachable;
 

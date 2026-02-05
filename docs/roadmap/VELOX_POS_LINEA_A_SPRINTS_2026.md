@@ -497,3 +497,7 @@ Si ejecutamos este plan de 10 sprints con rigor, Velox pasa de "producto promete
     - `GET /sync/federation/sales-ids`
     - `GET /sync/federation/inventory-movement-ids`
     - `POST /sync/federation/replay-inventory`
+- Desktop (Tauri) reforzado para tunel interno Tailscale/WireGuard:
+  - `apps/desktop/src/lib/api.ts` prioriza URLs de failover configuradas tambien en modo dev (evita caer por defecto a `http://localhost:3000` cuando hay `VITE_PRIMARY_API_URL`).
+  - `apps/desktop/src/services/connectivity.service.ts` elimina fallback hardcodeado y hace probes sobre la cadena real de endpoints (primary/fallback/tertiary).
+  - `apps/desktop/src-tauri/src/sidecar.rs` ahora carga variables desde entorno y `apps/desktop/.env` (`../.env`) para iniciar sidecar de forma consistente en Win/Mac.

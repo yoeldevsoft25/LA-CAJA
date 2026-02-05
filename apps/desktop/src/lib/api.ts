@@ -18,8 +18,9 @@ function getApiUrl(): string {
     return import.meta.env.VITE_API_URL;
   }
 
-  // 1.1 Si hay failover definido, usar el último guardado o el primero
-  if (import.meta.env.PROD && FAILOVER_API_URLS.length > 0) {
+  // 1.1 Si hay failover definido, usar el último guardado o el primero.
+  // Esto aplica también en desarrollo (Tauri dev) para evitar fallback a localhost:3000.
+  if (FAILOVER_API_URLS.length > 0) {
     const storedBase = localStorage.getItem('velox_api_base');
     if (
       storedBase &&

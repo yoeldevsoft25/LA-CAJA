@@ -2,13 +2,15 @@ use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tauri::{AppHandle, Manager};
 use std::env;
-use dotenv::dotenv;
-use std::path::PathBuf;
+use dotenv::{dotenv, from_path};
 
 pub async fn start_tailscale(app: &AppHandle) -> Result<(), String> {
     dotenv().ok();
+    // Tauri suele ejecutar desde src-tauri; cargar tambien ../.env (apps/desktop/.env).
+    from_path("../.env").ok();
     
-    let auth_key = env::var("TAILSCALE_AUTH_KEY").map_err(|_| "TAILSCALE_AUTH_KEY not found in .env")?;
+    let auth_key = env::var("TAILSCALE_AUTH_KEY")
+        .map_err(|_| "TAILSCALE_AUTH_KEY not found (set env var or apps/desktop/.env)".to_string())?;
     
     // Directorios para estado y socket aislados
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
