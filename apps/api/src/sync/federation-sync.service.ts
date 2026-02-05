@@ -111,6 +111,22 @@ export class FederationSyncService implements OnModuleInit {
         } else {
             this.logger.log('🌐 Federation Sync DISABLED (REMOTE_SYNC_URL not set)');
         }
+
+        // Optional bootstrap reconcile to self-heal gaps after restarts/outages.
+        const bootstrapEnabled = this.configService
+            .get<string>('FEDERATION_BOOTSTRAP_RECONCILE_ENABLED')
+            ?.toLowerCase();
+        if (bootstrapEnabled !== 'false') {
+            const delayMs = Number(
+                this.configService.get<string>('FEDERATION_BOOTSTRAP_RECONCILE_DELAY_MS') || 20000,
+            );
+            setTimeout(() => {
+                this.runAutoReconcile().catch((error) => {
+                    const msg = error instanceof Error ? error.message : String(error);
+                    this.logger.warn(`Bootstrap auto-reconcile failed: ${msg}`);
+                });
+            }, Math.max(0, delayMs));
+        }
     }
 
     @Cron(CronExpression.EVERY_10_MINUTES)
@@ -118,6 +134,60 @@ export class FederationSyncService implements OnModuleInit {
         const enabled = this.configService.get<string>('FEDERATION_AUTO_RECONCILE_ENABLED');
         if (enabled?.toLowerCase() === 'false') return;
         await this.runAutoReconcile();
+    }
+
+    @Cron(CronExpression.EVERY_5_MINUTES)
+    async retryFailedRelayJobsCron() {
+        const enabled = this.configService.get<string>('FEDERATION_RETRY_FAILED_ENABLED');
+        if (enabled?.toLowerCase() === 'false') return;
+
+        const maxJobs = Number(
+            this.configService.get<string>('FEDERATION_RETRY_FAILED_MAX_JOBS') || 200,
+        );
+        if (maxJobs <= 0) return;
+
+        const failedJobs = await this.syncQueue.getFailed(0, maxJobs - 1);
+        if (failedJobs.length === 0) return;
+
+        let retried = 0;
+        for (const job of failedJobs) {
+            try {
+                await job.retry();
+                retried += 1;
+            } catch {
+                // If retry is not possible for a specific job, continue.
+            }
+        }
+
+        if (retried > 0) {
+            this.logger.log(`♻️ Retried ${retried} failed federation relay jobs`);
+        }
+    }
+
+    @Cron(CronExpression.EVERY_MINUTE)
+    async smartAutoHealCron() {
+        const enabled = this.configService.get<string>('FEDERATION_SMART_AUTO_HEAL_ENABLED');
+        if (enabled?.toLowerCase() === 'false') return;
+        if (this.autoReconcileInFlight) return;
+
+        const waitingThreshold = Number(
+            this.configService.get<string>('FEDERATION_HEAL_WAITING_THRESHOLD') || 100,
+        );
+        const failedThreshold = Number(
+            this.configService.get<string>('FEDERATION_HEAL_FAILED_THRESHOLD') || 1,
+        );
+
+        const [waiting, failed] = await Promise.all([
+            this.syncQueue.getWaitingCount(),
+            this.syncQueue.getFailedCount(),
+        ]);
+
+        if (failed >= failedThreshold || waiting >= waitingThreshold) {
+            this.logger.warn(
+                `🛠️ Smart auto-heal triggered (waiting=${waiting}, failed=${failed})`,
+            );
+            await this.runAutoReconcile();
+        }
     }
 
     /**
