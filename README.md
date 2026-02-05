@@ -13,65 +13,65 @@ ERP + POS offline-first con sincronizacion por eventos. Diseñado para vender si
 
 ```mermaid
 flowchart LR
-  subgraph Clients[Clientes]
+  subgraph Clients["Clientes"]
     PWA[PWA]
     Desktop[Desktop Tauri]
     Android[Android/TWA]
   end
 
-  subgraph LocalCore[Offline Core (Device)]
-    LocalDB[IndexedDB / SQLite]
+  subgraph LocalCore["Offline Core - Device"]
+    LocalDB["IndexedDB - SQLite"]
     LocalQ[Local Event Queue]
     VC[Vector Clocks]
     BG[Background Sync]
   end
 
-  subgraph SyncClient[Sync Engine (Client)]
+  subgraph SyncClient["Sync Engine - Client"]
     Push[Push Events]
     Pull[Pull Changes]
     Reconcile[Reconcile + Merge]
   end
 
-  subgraph API[Backend API (NestJS)]
+  subgraph API["Backend API - NestJS"]
     Auth[Auth + License]
     Sync[Sync Ingress]
     Federation[Federation Relay]
     Realtime[WebSockets]
   end
 
-  subgraph EventCore[Event Core]
+  subgraph EventCore["Event Core"]
     EventStore[Event Store]
     CRDT[CRDT + Conflict Resolver]
   end
 
-  subgraph Queues[BullMQ/Redis]
+  subgraph Queues["BullMQ - Redis"]
     QProj[sales-projections]
     QPost[sales-post-processing]
     QNotif[notifications]
     QFed[federation-sync]
   end
 
-  subgraph Projections[Read Models]
+  subgraph Projections["Read Models"]
     SalesRM[Sales]
     InvRM[Inventory]
-    CashRM[Cash/Payments]
-    CustRM[Customers/Debts]
-    ReportsRM[Reports/Analytics]
+    CashRM[Cash Payments]
+    CustRM[Customers Debts]
+    ReportsRM[Reports Analytics]
   end
 
-  subgraph Data[Datastore]
-    DB[(PostgreSQL/Supabase)]
+  subgraph Data["Datastore"]
+    DB[(PostgreSQL Supabase)]
   end
 
-  subgraph Ops[Observabilidad]
+  subgraph Ops["Observabilidad"]
     Metrics[Metrics]
     Logs[Logs]
   end
 
-  subgraph Integrations[Integraciones]
+  subgraph Integrations["Integraciones"]
     Email[Email]
     WhatsApp[WhatsApp]
-    Fiscal[Fiscal/Invoice]
+    Fiscal[Fiscal Invoice]
   end
 
   PWA --> LocalDB
