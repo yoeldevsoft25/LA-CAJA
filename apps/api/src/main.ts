@@ -109,7 +109,7 @@ async function bootstrap() {
   const isTauriOrigin = (value: string): boolean => {
     return (
       value === 'tauri://localhost' ||
-      /^https:\/\/tauri\.localhost(?::\d+)?$/i.test(value)
+      /^https?:\/\/tauri\.localhost(?::\d+)?$/i.test(value)
     );
   };
 
@@ -138,7 +138,8 @@ async function bootstrap() {
         callback(null, true);
       } else {
         logger.warn(`CORS bloqueado para origen: ${origin} (Normalizado: ${normalizedOrigin})`);
-        callback(new Error('No permitido por CORS'));
+        // Bloquear sin lanzar excepción evita respuestas 500 por preflight/health checks.
+        callback(null, false);
       }
     },
     credentials: true,
