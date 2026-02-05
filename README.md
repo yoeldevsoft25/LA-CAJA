@@ -472,7 +472,7 @@ flowchart TD
     Flush -->|HTTP POST| API
 
     API -->|200 OK| Ack[Mark Synced in IDB]
-    API -->|Error| Retry[Retry Strategy (Exp. Backoff)]
+    API -->|Error| Retry["Retry Strategy (Exp. Backoff)"]
     Retry --> Batch
 ```
 
@@ -482,13 +482,13 @@ Cuando el servidor recibe eventos concurrentes (detectados vía Vector Clocks), 
 
 ```mermaid
 flowchart TD
-    Start[Evento Entrante B] --> Detect{¿Misma Entidad?}
+    Start["Evento Entrante B"] --> Detect{¿Misma Entidad?}
     Detect -->|No| NoConflict[Sin Conflicto]
     Detect -->|Si| VC[Comparar Vector Clocks]
 
-    VC -->|A < B| Apply[Aplicar B (Nuevo)]
-    VC -->|A > B| Ignore[Ignorar B (Obsoleto)]
-    VC -->|Concurrent A || B| Strategy{Estrategia?}
+    VC -->|"A < B"| Apply["Aplicar B (Nuevo)"]
+    VC -->|"A > B"| Ignore["Ignorar B (Obsoleto)"]
+    VC -->|"Concurrent A || B"| Strategy{"Estrategia?"}
 
     subgraph Strategies["Estrategias CRDT"]
         LWW[LWW (Last-Write-Wins)]
