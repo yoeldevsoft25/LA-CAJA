@@ -87,4 +87,11 @@ CREATE INDEX IF NOT EXISTS "IDX_stock_escrow_store_product"
 ALTER TABLE inventory_movements
   ADD COLUMN IF NOT EXISTS from_escrow BOOLEAN NOT NULL DEFAULT false;
 
+-- 6) cash_sessions PN-counters (ledger)
+ALTER TABLE cash_sessions
+  ADD COLUMN IF NOT EXISTS ledger_p_bs NUMERIC(18,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS ledger_n_bs NUMERIC(18,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS ledger_p_usd NUMERIC(18,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS ledger_n_usd NUMERIC(18,2) NOT NULL DEFAULT 0;
+
 COMMIT;
