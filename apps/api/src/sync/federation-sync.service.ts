@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Queue, Job } from 'bullmq';
@@ -6,9 +7,8 @@ import { Repository, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Event } from '../database/entities/event.entity';
-import axios from 'axios';
 import { InventoryEscrowService } from '../inventory/escrow/inventory-escrow.service';
-import { Inject, forwardRef } from '@nestjs/common';
+import axios from 'axios';
 
 export interface FederationRelayJob {
     eventId: string;
@@ -113,11 +113,14 @@ export class FederationSyncService implements OnModuleInit {
         private syncQueue: Queue,
         private configService: ConfigService,
         private dataSource: DataSource,
-        @Inject(forwardRef(() => InventoryEscrowService))
-        private inventoryEscrowService: InventoryEscrowService,
+        private moduleRef: ModuleRef,
     ) {
         this.remoteUrl = this.configService.get<string>('REMOTE_SYNC_URL');
         this.adminKey = this.configService.get<string>('ADMIN_SECRET');
+    }
+
+    private get inventoryEscrowService(): InventoryEscrowService {
+        return this.moduleRef.get(InventoryEscrowService, { strict: false });
     }
 
     async onModuleInit() {

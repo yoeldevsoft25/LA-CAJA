@@ -1,4 +1,5 @@
 import { Injectable, Logger, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Event } from '../../database/entities/event.entity';
@@ -21,10 +22,13 @@ export class InventoryEscrowService {
         private productRepository: Repository<Product>,
         @InjectRepository(StockEscrow)
         private stockEscrowRepository: Repository<StockEscrow>,
-        @Inject(forwardRef(() => FederationSyncService))
-        private federationSyncService: FederationSyncService,
         private dataSource: DataSource,
+        private moduleRef: ModuleRef,
     ) { }
+
+    private get federationSyncService(): FederationSyncService {
+        return this.moduleRef.get(FederationSyncService, { strict: false });
+    }
 
     async grantQuota(
         storeId: string,
