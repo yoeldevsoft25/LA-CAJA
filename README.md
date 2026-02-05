@@ -326,6 +326,73 @@ flowchart LR
   Federation --> QFed --> FedWorker --> Remote
 ```
 
+## Subflujo: seguridad y licencias
+
+```mermaid
+flowchart LR
+  subgraph Client["Cliente"]
+    Login["Login"]
+    Token["JWT"]
+  end
+
+  subgraph API["Backend API"]
+    Auth["Auth Service"]
+    License["License Service"]
+    Policy["Policy Gate"]
+  end
+
+  subgraph Data["Data"]
+    Users["Users"]
+    Stores["Stores"]
+    Plans["License Plans"]
+    Usage["License Usage"]
+  end
+
+  Login --> Auth --> Token
+  Token --> Policy --> License
+  Auth --> Users
+  Auth --> Stores
+  License --> Plans
+  License --> Usage
+```
+
+## Subflujo: datos y proyecciones
+
+```mermaid
+flowchart LR
+  subgraph Events["Events"]
+    EventStore["Event Store"]
+  end
+
+  subgraph Queues["BullMQ"]
+    QProj["sales-projections"]
+  end
+
+  subgraph Projections["Read Models"]
+    SalesRM["Sales"]
+    InvRM["Inventory"]
+    CashRM["Cash Payments"]
+    DebtRM["Debts"]
+    ReportsRM["Reports Analytics"]
+  end
+
+  subgraph DB["PostgreSQL Supabase"]
+    Data[(Data)]
+  end
+
+  EventStore --> QProj --> SalesRM --> Data
+  SalesRM --> InvRM --> Data
+  SalesRM --> CashRM --> Data
+  SalesRM --> DebtRM --> Data
+  Data --> ReportsRM
+```
+
+## Leyenda (rapida)
+- **Event Store**: fuente de verdad operativa.
+- **Queues**: procesamiento asincrono y backpressure.
+- **Read Models**: vistas optimizadas para UI y reportes.
+- **Federation**: replica y autoreconcile entre nodos.
+
 ## Componentes principales
 - **API**: `apps/api` (NestJS + Fastify)
 - **PWA**: `apps/pwa` (React + Vite + Dexie)
