@@ -4,8 +4,13 @@ import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { NetworkFirst, CacheFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
+import { clientsClaim } from 'workbox-core'
 
 declare let self: ServiceWorkerGlobalScope
+
+// Activar nueva version del SW sin esperar al siguiente hard refresh.
+self.skipWaiting()
+clientsClaim()
 
 // Precachear assets generados por Vite
 precacheAndRoute(self.__WB_MANIFEST)
@@ -114,6 +119,27 @@ async function updateCatalogs() {
 // Importamos db desde database (Vite lo bundlizará)
 import { db } from '@/db/database'
 
+function sanitizeEventForPush(event: any) {
+    const payload = { ...(event?.payload || {}) }
+    delete payload.store_id
+    delete payload.device_id
+
+    return {
+        event_id: event.event_id,
+        seq: event.seq,
+        type: event.type,
+        version: event.version,
+        created_at: event.created_at,
+        actor: event.actor,
+        payload,
+        // Optional fields accepted by backend DTO
+        ...(event.vector_clock ? { vector_clock: event.vector_clock } : {}),
+        ...(event.causal_dependencies ? { causal_dependencies: event.causal_dependencies } : {}),
+        ...(event.delta_payload ? { delta_payload: event.delta_payload } : {}),
+        ...(event.full_payload_hash ? { full_payload_hash: event.full_payload_hash } : {}),
+    }
+}
+
 async function syncEvents() {
     const startTime = Date.now();
     console.log('[SW] 🚀 Iniciando sincronización de fondo...')
@@ -172,11 +198,8 @@ async function syncEvents() {
             store_id: storeId,
             device_id: deviceId,
             client_version: 'pwa-sw-1.0.0',
-            events: pendingEvents.map(e => {
-                // Remover campos de sincronización Y campos que van en el DTO principal
-                const { id, sync_status, sync_attempts, synced_at, store_id: _, device_id: __, ...rest } = e
-                return rest
-            })
+            // Canonicalizar a esquema del backend (forbidNonWhitelisted=true)
+            events: pendingEvents.map((e) => sanitizeEventForPush(e))
         }
 
         // 4. Enviar a API con telemetría
