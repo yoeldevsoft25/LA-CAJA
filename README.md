@@ -262,7 +262,7 @@ flowchart TD
 
   subgraph Projections["Read Models"]
     SalesRM["Sales Projection"]
-    CashRM["Cash/Payments Projection"]
+    CashRM["Cash Payments Projection"]
     DebtRM["Debts Projection"]
   end
 
