@@ -10,17 +10,20 @@ import { DataSource, Repository, EntityManager } from 'typeorm';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { Product } from '../database/entities/product.entity';
 import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
+import { Event } from '../database/entities/event.entity';
 import { StockReceivedDto } from './dto/stock-received.dto';
 import { StockAdjustedDto } from './dto/stock-adjusted.dto';
 import { ReconcileStockDto } from './dto/reconcile-stock.dto';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { AccountingService } from '../accounting/accounting.service';
+import { FederationSyncService } from '../sync/federation-sync.service';
 import { randomUUID } from 'crypto';
 import { GetStockStatusDto } from './dto/get-stock-status.dto';
 
 @Injectable()
 export class InventoryService {
   private readonly logger = new Logger(InventoryService.name);
+  private readonly serverDeviceId = '00000000-0000-0000-0000-000000000001';
 
   private readonly weightUnitToKg: Record<'kg' | 'g' | 'lb' | 'oz', number> = {
     kg: 1,
@@ -112,8 +115,11 @@ export class InventoryService {
     private productRepository: Repository<Product>,
     @InjectRepository(WarehouseStock)
     private warehouseStockRepository: Repository<WarehouseStock>,
+    @InjectRepository(Event)
+    private eventRepository: Repository<Event>,
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
+    private federationSyncService: FederationSyncService,
     private dataSource: DataSource,
   ) {}
 
@@ -123,7 +129,7 @@ export class InventoryService {
     userId: string,
     role: string,
   ): Promise<InventoryMovement> {
-    return this.dataSource.transaction(async (manager) => {
+    const { movement, event } = await this.dataSource.transaction(async (manager) => {
       // Verificar que el producto existe y pertenece a la tienda
       const product = await manager.findOne(Product, {
         where: { id: dto.product_id, store_id: storeId },
@@ -263,16 +269,51 @@ export class InventoryService {
         approved_at: role === 'owner' ? new Date() : null,
       });
 
-      return manager.save(InventoryMovement, movement);
+      const savedMovement = await manager.save(InventoryMovement, movement);
+
+      const eventSeq = Date.now();
+      const stockEvent = manager.create(Event, {
+        event_id: randomUUID(),
+        store_id: storeId,
+        device_id: this.serverDeviceId,
+        seq: eventSeq,
+        type: 'StockReceived',
+        version: 1,
+        created_at: savedMovement.happened_at,
+        actor_user_id: userId,
+        actor_role: role || 'owner',
+        payload: {
+          movement_id: savedMovement.id,
+          product_id: savedMovement.product_id,
+          variant_id: savedMovement.variant_id,
+          warehouse_id: savedMovement.warehouse_id,
+          qty: Number(savedMovement.qty_delta),
+          unit_cost_bs: Number(savedMovement.unit_cost_bs || 0),
+          unit_cost_usd: Number(savedMovement.unit_cost_usd || 0),
+          note: savedMovement.note,
+          ref: savedMovement.ref || null,
+        },
+        vector_clock: { [this.serverDeviceId]: eventSeq },
+        causal_dependencies: [],
+        delta_payload: null,
+        full_payload_hash: null,
+      });
+
+      const savedEvent = await manager.save(Event, stockEvent);
+      return { movement: savedMovement, event: savedEvent };
     });
+
+    await this.federationSyncService.queueRelay(event);
+    return movement;
   }
 
   async stockAdjusted(
     storeId: string,
     dto: StockAdjustedDto,
     userId: string,
+    role = 'owner',
   ): Promise<InventoryMovement> {
-    const savedMovement = await this.dataSource.transaction(async (manager) => {
+    const { movement, event } = await this.dataSource.transaction(async (manager) => {
       // Verificar que el producto existe
       const product = await manager.findOne(Product, {
         where: { id: dto.product_id, store_id: storeId },
@@ -350,15 +391,43 @@ export class InventoryService {
           manager,
         );
       }
-      return saved;
+      const eventSeq = Date.now();
+      const stockEvent = manager.create(Event, {
+        event_id: randomUUID(),
+        store_id: storeId,
+        device_id: this.serverDeviceId,
+        seq: eventSeq,
+        type: 'StockAdjusted',
+        version: 1,
+        created_at: saved.happened_at,
+        actor_user_id: userId,
+        actor_role: role || 'owner',
+        payload: {
+          movement_id: saved.id,
+          product_id: saved.product_id,
+          variant_id: saved.variant_id,
+          warehouse_id: saved.warehouse_id,
+          qty_delta: Number(saved.qty_delta),
+          note: saved.note,
+        },
+        vector_clock: { [this.serverDeviceId]: eventSeq },
+        causal_dependencies: [],
+        delta_payload: null,
+        full_payload_hash: null,
+      });
+
+      const savedEvent = await manager.save(Event, stockEvent);
+      return { movement: saved, event: savedEvent };
     });
+
+    await this.federationSyncService.queueRelay(event);
 
     // Generar asiento contable automático (después de guardar el movimiento)
     setImmediate(async () => {
       try {
         // Recargar el movimiento con relaciones si es necesario
         const movementWithRelations = await this.movementRepository.findOne({
-          where: { id: savedMovement.id },
+          where: { id: movement.id },
           relations: ['product'],
         });
         if (movementWithRelations) {
@@ -370,13 +439,13 @@ export class InventoryService {
       } catch (error) {
         // Log error pero no fallar el ajuste de inventario
         this.logger.error(
-          `Error generando asiento contable para ajuste ${savedMovement.id}`,
+          `Error generando asiento contable para ajuste ${movement.id}`,
           error instanceof Error ? error.stack : String(error),
         );
       }
     });
 
-    return savedMovement;
+    return movement;
   }
 
   async getCurrentStock(
