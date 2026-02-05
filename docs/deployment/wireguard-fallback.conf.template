@@ -1,0 +1,20 @@
+[Interface]
+# Private Key of THIS Windows Machine (Generate with `wg genkey`)
+PrivateKey = <INSERT_PRIVATE_KEY_HERE>
+# Unique IP in the Fallback Subnet (192.168.200.x or 10.200.0.x)
+Address = 10.200.0.2/24
+# Port to listen on (Open this port in UDP on Router/Firewall if NAT traversal fails)
+ListenPort = 51820
+DNS = 1.1.1.1
+
+[Peer]
+# The Remote Ops Server / Cloud Relay
+PublicKey = <INSERT_PEER_PUBLIC_KEY_HERE>
+# External Endpoint of the Peer
+Endpoint = ops.la-caja.com:51820
+# AllowedIPs: IMPORTANT - Only route traffic destined for the maintenance subnet to avoid conflicts
+# Do NOT use 0.0.0.0/0
+AllowedIPs = 10.200.0.0/24
+
+# Keepalive to maintain NAT mapping
+PersistentKeepalive = 25

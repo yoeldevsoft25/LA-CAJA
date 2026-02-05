@@ -1,0 +1,76 @@
+// Tailscale ACL - Zero Trust Policy for LA-CAJA
+// Apply this via the Tailscale Admin Console: https://login.tailscale.com/admin/acls
+{
+    // Groups are useful for managing access by team structure
+    "groups": {
+        "group:admins": [
+            "your-email@example.com"
+        ],
+        "group:operators": []
+    },
+    // Tag Owners allow machines to be tagged
+    "tagOwners": {
+        "tag:la-caja-server": [
+            "group:admins"
+        ],
+        "tag:backup-server": [
+            "group:admins"
+        ]
+    },
+    // Access Control Lists
+    "acls": [
+        // 1. Admins have full access to everything (Use carefully)
+        {
+            "action": "accept",
+            "src": [
+                "group:admins"
+            ],
+            "dst": [
+                "*:*"
+            ]
+        },
+        // 2. Operators can access the Web UI and API on the Server
+        {
+            "action": "accept",
+            "src": [
+                "group:operators"
+            ],
+            "dst": [
+                "tag:la-caja-server:3000",
+                "tag:la-caja-server:80"
+            ]
+        },
+        // 3. Servers can talk to themselves (if needed for cluster) or other tagged nodes
+        // Restricting DB (5432) and Redis (6379) to ONLY be accessible if explicitly needed
+        // In a single-node setup, localhost access doesn't go through Tailscale ACLs
+        // 4. Default Deny is implicit in Tailscale ACLs. 
+        // If it's not listed above, it's blocked.
+    ],
+    // Enable Funnel for the server
+    "nodeAttrs": [
+        {
+            "target": [
+                "tag:la-caja-server"
+            ],
+            "attr": [
+                "funnel"
+            ]
+        }
+    ],
+    // SSH Access (Tailscale SSH)
+    "ssh": [
+        {
+            "action": "check",
+            "src": [
+                "group:admins"
+            ],
+            "dst": [
+                "tag:la-caja-server"
+            ],
+            "users": [
+                "root",
+                "Administrator"
+            ]
+        }
+    ]
+}
