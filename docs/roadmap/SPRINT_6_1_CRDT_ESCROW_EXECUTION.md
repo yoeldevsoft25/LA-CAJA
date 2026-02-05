@@ -111,6 +111,9 @@
 - Reduccion de uso de red >= 40% (delta vs entidad completa).
 - Oversell = 0 con escrow activo.
 
+## 6.1) Checklist tecnico (tareas por PR)
+Ver `docs/roadmap/SPRINT_6_1_CRDT_ESCROW_TASKS.md`.
+
 ---
 
 ## 7) Plan de rollout
@@ -124,4 +127,3 @@
 - **Escrow insuficiente**: fallback a transferencia online o bloqueo controlado.
 - **Dedupe incompleto**: backfill de request_id y validacion en colas.
 - **UX de cuota**: capacitar a tiendas y mostrar estado claro.
-
