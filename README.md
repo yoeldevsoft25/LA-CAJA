@@ -1,84 +1,91 @@
-# LA CAJA - Sistema POS Offline-First
+# Velox POS (La Caja)
 
-Sistema de punto de venta diseñado para funcionar completamente offline, con sincronización de eventos y arquitectura basada en eventos.
+ERP + POS offline-first con sincronizacion por eventos. Diseñado para vender siempre: sin internet, con reconcilio automatico y proyecciones en background.
 
-## Arquitectura
+## Lo esencial
+- **Offline-first real**: ventas, stock y caja funcionan sin red.
+- **Sync por eventos**: cola local + vector clocks + reconciliacion.
+- **Multicanal**: PWA, Desktop (Tauri) y Android/TWA.
+- **Proyecciones asincronas**: BullMQ procesa ventas, inventario y reportes.
+- **Federacion**: replica entre servidor central y nodos locales.
 
-- **Offline-First**: Todo funciona sin internet
-- **Event Log**: Todos los cambios se guardan como eventos localmente
-- **Event Ingestion**: Sincronización de eventos al servidor
-- **Proyecciones**: Read models optimizados para consultas
+## Arquitectura (alto nivel)
 
-## Stack Tecnológico
+```mermaid
+flowchart LR
+  subgraph Clients
+    PWA[PWA]
+    Desktop[Desktop Tauri]
+    Android[Android/TWA]
+  end
 
-### Backend
-- NestJS + Fastify
-- PostgreSQL (Supabase o dedicado)
-- Event Store + Read Models
+  subgraph Local
+    IDB[IndexedDB/Dexie]
+    SQLite[SQLite]
+  end
 
-### Frontend
-- **PWA**: React + Vite + IndexedDB (Dexie)
-- **Desktop**: Tauri + React + SQLite
+  subgraph Backend
+    API[NestJS API]
+    EventStore[Event Store]
+    Queues[BullMQ/Redis]
+    Projections[Read Models]
+    DB[(PostgreSQL/Supabase)]
+  end
 
-### Packages
-- `packages/domain`: Reglas de negocio puras
-- `packages/application`: Casos de uso (orquestación)
-- `packages/sync`: Cola, estados, conflict rules
+  PWA --> IDB
+  Desktop --> SQLite
+  Android --> IDB
 
-## Estructura del Proyecto
+  PWA -->|sync| API
+  Desktop -->|sync| API
+  Android -->|sync| API
 
+  API --> EventStore --> Queues --> Projections --> DB
 ```
-la-caja/
+
+## Componentes principales
+- **API**: `apps/api` (NestJS + Fastify)
+- **PWA**: `apps/pwa` (React + Vite + Dexie)
+- **Desktop**: `apps/desktop` (Tauri + React + SQLite)
+- **Shared**: `packages/domain`, `packages/sync`, `packages/offline-core`, `packages/api-client`, `packages/ui-core`, `packages/app-core`
+
+## Flujo operativo (resumen)
+1. El cliente crea eventos locales (ventas, stock, caja).
+2. Se encolan y sincronizan cuando hay conectividad.
+3. El API ingiere eventos y los guarda en el Event Store.
+4. BullMQ proyecta a read models y genera reportes/side-effects.
+5. La federacion replica entre nodos (local <-> central).
+
+## Estructura del repo
+```
+LA-CAJA/
 ├── apps/
-│   ├── api/          # NestJS Backend
-│   ├── pwa/          # PWA Frontend
-│   └── desktop/      # Tauri Desktop App
+│   ├── api/          # Backend NestJS
+│   ├── pwa/          # PWA offline-first
+│   └── desktop/      # Desktop Tauri
 ├── packages/
-│   ├── domain/       # Reglas de negocio
-│   ├── application/  # Casos de uso
-│   └── sync/         # Motor de sincronización
-├── docs/             # Documentación organizada
-│   ├── deployment/   # Guías de despliegue
-│   ├── development/  # Setup y desarrollo
-│   ├── fixes/        # Soluciones a problemas
-│   ├── architecture/ # Arquitectura del sistema
-│   └── roadmap/      # Roadmaps y sprints
-├── scripts/          # Scripts de utilidad
-├── config/           # Archivos de configuración
-└── assets/           # Assets compartidos
+│   ├── domain/       # Dominio y eventos
+│   ├── sync/         # Motor de sync
+│   ├── offline-core/ # Queue + storage + vector clocks
+│   ├── api-client/   # Cliente HTTP tipado
+│   ├── ui-core/      # UI shared
+│   └── app-core/     # Stores y hooks base
+├── docs/
+├── scripts/
+└── .github/workflows/
 ```
 
 ## Desarrollo
-
 ```bash
-# Instalar dependencias
 npm install
-
-# Desarrollo
-npm run dev:api      # Backend API
-npm run dev:pwa      # PWA Frontend
-npm run dev:desktop  # Desktop App
-
-# Build
-npm run build
+npm run dev:api
+npm run dev:pwa
+npm run dev:desktop
 ```
 
-## Documentación
-
-Toda la documentación está organizada en el directorio [`docs/`](./docs/). Ver el [índice de documentación](./docs/README.md) para una guía completa.
-
-### Guías Rápidas
-- 📖 [Instalación](./docs/development/INSTALL.md)
-- 🚀 [Despliegue](./docs/deployment/DEPLOY.md)
-- 🧭 [Mapa del Sistema (Velox POS)](./docs/architecture/VELOX_SYSTEM_MAP.md)
-- 🏗️ [Arquitectura Offline-First](./docs/architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md)
-- 🗺️ [Roadmap](./docs/roadmap/roadmap%20la%20caja.md)
-
-## Scripts
-
-Scripts de utilidad disponibles en [`scripts/`](./scripts/):
-- `start-dev.sh` - Iniciar entorno de desarrollo
-- `build-desktop.ps1` - Build de la app desktop
-- `test-api.ps1` - Tests de la API
-
+## Documentacion
+- Indice: `docs/README.md`
+- Mapa de sistema: `docs/architecture/VELOX_SYSTEM_MAP.md`
+- Arquitectura offline: `docs/architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md`
+- Roadmap: `docs/roadmap/roadmap la caja.md`
 
