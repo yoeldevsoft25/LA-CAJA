@@ -632,6 +632,13 @@ class SyncServiceClass {
       event.vector_clock = vectorClock;
     }
 
+    // Optimistic UI/Read Model update
+    try {
+      await projectionManager.applyEvent(event);
+    } catch (err) {
+      this.logger.error('Error in optimistic projection', err);
+    }
+
     // Siempre guardar en base de datos local primero (incluso si no está inicializado)
     await this.saveEventToDB(event);
     this.logger.debug('Evento guardado/encolado', {

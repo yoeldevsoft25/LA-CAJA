@@ -1,7 +1,7 @@
 # ADR-007: Convergencia automatica CRDT + Escrow (Caja e Inventario)
 
 ## Estado
-Propuesta (Sprint 6.1)
+Aprobado (Sprint 6.1)
 
 ## Contexto
 Velox POS opera offline-first con sincronizacion por eventos. La convergencia actual reduce conflictos, pero en dominios criticos (caja e inventario) aun existen brechas: MVR en datos sensibles y falta de garantias formales cuando hay concurrencia offline.

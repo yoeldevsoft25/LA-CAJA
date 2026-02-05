@@ -13,6 +13,7 @@ import { SyncModule } from './sync/sync.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { InventoryEscrowModule } from './inventory/escrow/inventory-escrow.module';
 import { SalesModule } from './sales/sales.module';
 import { CashModule } from './cash/cash.module';
 import { ShiftsModule } from './shifts/shifts.module';
@@ -343,6 +344,7 @@ const ENV_FILE_PATHS = IS_PRODUCTION_RUNTIME
     AuthModule,
     ProductsModule,
     InventoryModule,
+    InventoryEscrowModule,
     SalesModule,
     CashModule,
     ShiftsModule,

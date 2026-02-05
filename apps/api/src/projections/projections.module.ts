@@ -9,6 +9,8 @@ import { CashSession } from '../database/entities/cash-session.entity';
 import { Customer } from '../database/entities/customer.entity';
 import { Debt } from '../database/entities/debt.entity';
 import { DebtPayment } from '../database/entities/debt-payment.entity';
+import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
+import { StockEscrow } from '../database/entities/stock-escrow.entity';
 import { WhatsAppModule } from '../whatsapp/whatsapp.module';
 import { FiscalInvoicesModule } from '../fiscal-invoices/fiscal-invoices.module';
 import { WarehousesModule } from '../warehouses/warehouses.module';
@@ -26,6 +28,8 @@ import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
       Customer,
       Debt,
       DebtPayment,
+      CashLedgerEntry,
+      StockEscrow,
     ]),
     WhatsAppModule,
     FiscalInvoicesModule,

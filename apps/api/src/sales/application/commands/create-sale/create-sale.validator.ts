@@ -2,22 +2,25 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In, EntityManager } from 'typeorm';
+import { Repository, DataSource, In, EntityManager, IsNull, MoreThan } from 'typeorm';
 import { CreateSaleDto } from '../../../dto/create-sale.dto';
 import { CashSession } from '../../../../database/entities/cash-session.entity';
 import { Product } from '../../../../database/entities/product.entity';
 import { ProductVariant } from '../../../../database/entities/product-variant.entity';
 import { ProductLot } from '../../../../database/entities/product-lot.entity';
 import { ProductSerial } from '../../../../database/entities/product-serial.entity';
+import { StockEscrow } from '../../../../database/entities/stock-escrow.entity';
 import { Customer } from '../../../../database/entities/customer.entity';
 import { ConfigValidationService } from '../../../../config/config-validation.service';
 import { FastCheckoutRulesService } from '../../../../fast-checkout/fast-checkout-rules.service';
-import { IsNull } from 'typeorm';
 
 @Injectable()
 export class CreateSaleValidator {
+  private readonly logger = new Logger(CreateSaleValidator.name);
+
   constructor(
     private readonly configValidationService: ConfigValidationService,
     private readonly fastCheckoutRulesService: FastCheckoutRulesService,
@@ -26,9 +29,11 @@ export class CreateSaleValidator {
     private readonly dataSource: DataSource,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(StockEscrow)
+    private readonly stockEscrowRepository: Repository<StockEscrow>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
-  ) {}
+  ) { }
 
   async validateSaleRequest(
     storeId: string,
@@ -148,29 +153,36 @@ export class CreateSaleValidator {
     dto: CreateSaleDto,
     warehouseId: string | null,
   ): Promise<void> {
+    if (dto.skip_stock_validation) {
+      this.logger.warn(
+        `Saltando validación de stock para venta ${dto.request_id || 'unnamed'} por petición del cliente`,
+      );
+      return;
+    }
+
     const productIds = dto.items.map((item) => item.product_id);
     const variantIds = dto.items
       .map((item) => item.variant_id)
       .filter((id): id is string => !!id);
 
-    const [stockRecords, products, variants, allLots] = await Promise.all([
+    const [stockRecords, products, variants, allLots, escrows] = await Promise.all([
       warehouseId
         ? this.dataSource.query(
-            `SELECT product_id, variant_id, stock, reserved
+          `SELECT product_id, variant_id, stock, reserved
              FROM warehouse_stock
              WHERE warehouse_id = $1
                AND product_id = ANY($2::uuid[])`,
-            [warehouseId, productIds],
-          )
+          [warehouseId, productIds],
+        )
         : this.dataSource.query(
-            `SELECT ws.product_id, ws.variant_id, COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as stock, 0 as reserved
+          `SELECT ws.product_id, ws.variant_id, COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as stock, 0 as reserved
              FROM warehouse_stock ws
              INNER JOIN warehouses w ON ws.warehouse_id = w.id
              WHERE w.store_id = $1
                AND ws.product_id = ANY($2::uuid[])
              GROUP BY ws.product_id, ws.variant_id`,
-            [storeId, productIds],
-          ),
+          [storeId, productIds],
+        ),
       this.productRepository.find({
         where: {
           id: In(productIds),
@@ -180,12 +192,22 @@ export class CreateSaleValidator {
       }),
       variantIds.length > 0
         ? this.dataSource.getRepository(ProductVariant).find({
-            where: { id: In(variantIds) },
-          })
+          where: { id: In(variantIds) },
+        })
         : Promise.resolve([]),
       this.dataSource.getRepository(ProductLot).find({
         where: { product_id: In(productIds) },
       }),
+      dto.device_id
+        ? this.stockEscrowRepository.find({
+          where: {
+            store_id: storeId,
+            device_id: dto.device_id,
+            product_id: In(productIds),
+            expires_at: MoreThan(new Date()),
+          },
+        })
+        : Promise.resolve([] as StockEscrow[]),
     ]);
 
     const productsWithSerials = products
@@ -194,8 +216,8 @@ export class CreateSaleValidator {
     const allSerials =
       productsWithSerials.length > 0
         ? await this.dataSource.getRepository(ProductSerial).find({
-            where: { product_id: In(productsWithSerials) },
-          })
+          where: { product_id: In(productsWithSerials) },
+        })
         : [];
 
     const stockMap = new Map<string, number>();
@@ -204,6 +226,14 @@ export class CreateSaleValidator {
       const availableStock =
         Number(record.stock || 0) - Number(record.reserved || 0);
       stockMap.set(key, Math.max(0, availableStock));
+    }
+
+    // ⚡ POINT 5: Añadir stock reservado en escrows para este dispositivo
+    // (Solo cuenta si el escrow no ha expirado y pertenece a este dispositivo)
+    for (const escrow of escrows) {
+      const key = `${escrow.product_id}:${escrow.variant_id || 'null'}`;
+      const current = stockMap.get(key) || 0;
+      stockMap.set(key, current + Number(escrow.qty_granted || 0));
     }
 
     const productMap = new Map<string, Product>();
@@ -409,25 +439,25 @@ export class CreateSaleValidator {
     const result =
       variantId === null
         ? await manager.query(
-            `SELECT stock, reserved
+          `SELECT stock, reserved
            FROM warehouse_stock
            WHERE warehouse_id = $1
              AND product_id = $2
              AND variant_id IS NULL
            FOR UPDATE
            LIMIT 1`,
-            [warehouseId, productId],
-          )
+          [warehouseId, productId],
+        )
         : await manager.query(
-            `SELECT stock, reserved
+          `SELECT stock, reserved
            FROM warehouse_stock
            WHERE warehouse_id = $1
              AND product_id = $2
              AND variant_id = $3
            FOR UPDATE
            LIMIT 1`,
-            [warehouseId, productId, variantId],
-          );
+          [warehouseId, productId, variantId],
+        );
 
     if (!result || result.length === 0) {
       if (requestedQty > 0) {
@@ -453,25 +483,25 @@ export class CreateSaleValidator {
     const result =
       variantId === null
         ? await manager.query(
-            `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
+          `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
            FROM warehouse_stock ws
            INNER JOIN warehouses w ON ws.warehouse_id = w.id
            WHERE w.store_id = $1
              AND ws.product_id = $2
              AND ws.variant_id IS NULL
            FOR UPDATE OF ws`,
-            [storeId, productId],
-          )
+          [storeId, productId],
+        )
         : await manager.query(
-            `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
+          `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
            FROM warehouse_stock ws
            INNER JOIN warehouses w ON ws.warehouse_id = w.id
            WHERE w.store_id = $1
              AND ws.product_id = $2
              AND ws.variant_id = $3
            FOR UPDATE OF ws`,
-            [storeId, productId, variantId],
-          );
+          [storeId, productId, variantId],
+        );
 
     const totalAvailable = Number(result[0]?.total_available || 0);
     return Math.max(0, totalAvailable);

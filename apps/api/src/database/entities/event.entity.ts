@@ -57,4 +57,7 @@ export class Event {
 
   @Column({ type: 'text', nullable: true })
   projection_error: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  request_id: string | null;
 }

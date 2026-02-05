@@ -22,7 +22,7 @@ export interface BaseEvent {
   created_at: number;
   actor: EventActor;
   payload: Record<string, any>;
-  
+
   // ===== OFFLINE-FIRST FIELDS =====
   /** Vector clock del dispositivo: {device_id: seq, ...} */
   vector_clock?: Record<string, number>;
@@ -125,6 +125,33 @@ export interface StockAdjustedPayload {
   note?: string;
 }
 
+export interface StockDeltaAppliedPayload {
+  movement_id: string;
+  product_id: string;
+  warehouse_id: string;
+  qty_delta: number;
+  reason: string;
+  ref?: Record<string, any>;
+  request_id: string;
+}
+
+export interface StockQuotaGrantedPayload {
+  quota_id: string;
+  product_id: string;
+  device_id: string;
+  qty_granted: number;
+  expires_at?: number;
+  request_id: string;
+}
+
+export interface StockQuotaTransferredPayload {
+  from_device_id: string;
+  to_device_id: string;
+  product_id: string;
+  qty: number;
+  request_id: string;
+}
+
 // Cash Events
 export interface CashSessionOpenedPayload {
   cash_session_id: string;
@@ -132,6 +159,7 @@ export interface CashSessionOpenedPayload {
   opening_amount_bs: number;
   opening_amount_usd: number;
   note?: string;
+  lamport_clock?: number;
 }
 
 export interface CashSessionClosedPayload {
@@ -152,6 +180,19 @@ export interface CashSessionClosedPayload {
     other_bs: number;
   };
   note?: string;
+  lamport_clock?: number;
+}
+
+export interface CashLedgerEntryCreatedPayload {
+  entry_id: string;
+  request_id: string;
+  entry_type: 'sale' | 'expense' | 'adjustment' | 'transfer' | 'initial_balance' | 'income';
+  amount_bs: number;
+  amount_usd: number;
+  currency: Currency;
+  cash_session_id: string;
+  sold_at: number;
+  metadata?: Record<string, any>;
 }
 
 // Sale Events
@@ -172,6 +213,7 @@ export interface SaleItem {
 
 export interface SaleCreatedPayload {
   sale_id: string;
+  request_id: string;
   cash_session_id: string;
   sold_at: number;
   exchange_rate: number;

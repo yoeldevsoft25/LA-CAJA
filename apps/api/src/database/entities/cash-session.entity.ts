@@ -36,6 +36,18 @@ export class CashSession {
   @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
   opening_amount_usd: number;
 
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  ledger_p_bs: number;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  ledger_n_bs: number;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  ledger_p_usd: number;
+
+  @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
+  ledger_n_usd: number;
+
   @Column({ type: 'jsonb', nullable: true })
   expected: {
     cash_bs: number;

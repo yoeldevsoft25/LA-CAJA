@@ -62,6 +62,10 @@ class EventDto {
   @IsString()
   @IsOptional()
   full_payload_hash?: string;
+
+  @IsString()
+  @IsOptional()
+  request_id?: string;
 }
 
 export class PushSyncDto {

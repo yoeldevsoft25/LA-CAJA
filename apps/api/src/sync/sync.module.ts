@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SyncController } from './sync.controller';
 import { SyncService } from './sync.service';
@@ -15,6 +15,7 @@ import { ObservabilityModule } from '../observability/observability.module';
 import { QueuesModule } from '../queues/queues.module';
 import { FederationSyncService, FederationSyncProcessor } from './federation-sync.service';
 import { BullModule } from '@nestjs/bullmq';
+import { InventoryEscrowModule } from '../inventory/escrow/inventory-escrow.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { BullModule } from '@nestjs/bullmq';
     QueuesModule,
     LicensesModule,
     ObservabilityModule,
+    forwardRef(() => InventoryEscrowModule),
   ],
   controllers: [SyncController],
   providers: [

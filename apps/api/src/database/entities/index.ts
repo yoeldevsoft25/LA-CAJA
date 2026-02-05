@@ -21,6 +21,8 @@ export { QuickProduct } from './quick-product.entity';
 export { RecipeIngredient } from './recipe-ingredient.entity';
 export { ProductModifier } from './product-modifier.entity';
 export { ProductModifierOption } from './product-modifier-option.entity';
+export { CashLedgerEntry } from './cash-ledger-entry.entity';
+export { StockEscrow } from './stock-escrow.entity';
 
 // Sales entities
 export { Sale } from './sale.entity';
@@ -259,6 +261,8 @@ import { LicenseUsage } from './license-usage.entity';
 import { RecipeIngredient } from './recipe-ingredient.entity';
 import { ProductModifier } from './product-modifier.entity';
 import { ProductModifierOption } from './product-modifier-option.entity';
+import { CashLedgerEntry } from './cash-ledger-entry.entity';
+import { StockEscrow } from './stock-escrow.entity';
 
 /**
  * Array con todas las entidades de TypeORM para configuración centralizada
@@ -364,4 +368,6 @@ export const ALL_ENTITIES = [
   RecipeIngredient,
   ProductModifier,
   ProductModifierOption,
+  CashLedgerEntry,
+  StockEscrow,
 ];

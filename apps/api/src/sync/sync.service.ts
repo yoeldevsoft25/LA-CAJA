@@ -239,21 +239,29 @@ export class SyncService {
 
         // 2c. Dedupe por event_id (idempotencia)
         if (existingEventIds.has(event.event_id)) {
-          const dedupeClock =
-            event.vector_clock ||
-            this.vectorClockService.fromEvent(dto.device_id, event.seq);
-          serverVectorClock = this.vectorClockService.merge(
-            serverVectorClock,
-            dedupeClock,
-          );
-          accepted.push({
-            event_id: event.event_id,
-            seq: event.seq,
+          this.updateServerVectorClock(serverVectorClock, event, dto.device_id);
+          accepted.push({ event_id: event.event_id, seq: event.seq });
+          lastProcessedSeq = Math.max(lastProcessedSeq, event.seq);
+          continue;
+        }
+
+        // 2d. Dedupe por request_id físico (idempotencia robusta)
+        const payload = event.payload as any;
+        const requestId = event.request_id || payload?.request_id;
+
+        if (requestId) {
+          const existingRequest = await this.eventRepository.findOne({
+            where: { request_id: requestId },
+            select: ['event_id'],
           });
-          if (event.seq > lastProcessedSeq) {
-            lastProcessedSeq = event.seq;
+
+          if (existingRequest) {
+            this.updateServerVectorClock(serverVectorClock, event, dto.device_id);
+            accepted.push({ event_id: event.event_id, seq: event.seq });
+            lastProcessedSeq = Math.max(lastProcessedSeq, event.seq);
+            this.logger.warn(`Dedupe por request_id físico: ${requestId} (evento ${event.event_id})`);
+            continue;
           }
-          continue; // Evento ya existe, no se reprocesa
         }
 
         // 3. Procesar vector clock
@@ -484,6 +492,15 @@ export class SyncService {
       last_processed_seq: lastProcessedSeq,
       server_vector_clock: serverVectorClock,
     };
+  }
+
+  private updateServerVectorClock(
+    serverVectorClock: Record<string, number>,
+    event: any,
+    deviceId: string
+  ) {
+    const clock = event.vector_clock || this.vectorClockService.fromEvent(deviceId, event.seq);
+    Object.assign(serverVectorClock, this.vectorClockService.merge(serverVectorClock, clock));
   }
 
   private async validateSaleCreatedEvent(

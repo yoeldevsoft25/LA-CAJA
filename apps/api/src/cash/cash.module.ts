@@ -9,10 +9,11 @@ import { Event } from '../database/entities/event.entity';
 import { AccountingModule } from '../accounting/accounting.module';
 import { SecurityModule } from '../security/security.module';
 import { SyncModule } from '../sync/sync.module';
+import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CashSession, Sale, CashMovement, Event]),
+    TypeOrmModule.forFeature([CashSession, Sale, CashMovement, Event, CashLedgerEntry]),
     AccountingModule,
     SecurityModule,
     SyncModule,
@@ -21,4 +22,4 @@ import { SyncModule } from '../sync/sync.module';
   providers: [CashService],
   exports: [CashService],
 })
-export class CashModule {}
+export class CashModule { }

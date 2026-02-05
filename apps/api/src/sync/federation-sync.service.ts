@@ -7,6 +7,8 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Event } from '../database/entities/event.entity';
 import axios from 'axios';
+import { InventoryEscrowService } from '../inventory/escrow/inventory-escrow.service';
+import { Inject, forwardRef } from '@nestjs/common';
 
 export interface FederationRelayJob {
     eventId: string;
@@ -25,17 +27,17 @@ export interface FederationStatus {
         failed: number;
     };
     remoteProbe:
-        | {
-            ok: boolean;
-            latencyMs: number;
-            statusCode: number;
-          }
-        | {
-            ok: false;
-            latencyMs: number;
-            error: string;
-          }
-        | null;
+    | {
+        ok: boolean;
+        latencyMs: number;
+        statusCode: number;
+    }
+    | {
+        ok: false;
+        latencyMs: number;
+        error: string;
+    }
+    | null;
     lastRelayError: {
         eventId: string;
         message: string;
@@ -111,6 +113,8 @@ export class FederationSyncService implements OnModuleInit {
         private syncQueue: Queue,
         private configService: ConfigService,
         private dataSource: DataSource,
+        @Inject(forwardRef(() => InventoryEscrowService))
+        private inventoryEscrowService: InventoryEscrowService,
     ) {
         this.remoteUrl = this.configService.get<string>('REMOTE_SYNC_URL');
         this.adminKey = this.configService.get<string>('ADMIN_SECRET');
@@ -145,6 +149,18 @@ export class FederationSyncService implements OnModuleInit {
         const enabled = this.configService.get<string>('FEDERATION_AUTO_RECONCILE_ENABLED');
         if (enabled?.toLowerCase() === 'false') return;
         await this.runAutoReconcile();
+    }
+
+    @Cron(CronExpression.EVERY_30_MINUTES)
+    async autoReclaimEscrowCron() {
+        const storeIds = await this.getKnownStoreIds();
+        for (const storeId of storeIds) {
+            try {
+                await this.inventoryEscrowService.reclaimExpiredQuotas(storeId);
+            } catch (error) {
+                this.logger.error(`Failed to reclaim escrow for store ${storeId}: ${error.message}`);
+            }
+        }
     }
 
     @Cron(CronExpression.EVERY_5_MINUTES)
@@ -207,22 +223,32 @@ export class FederationSyncService implements OnModuleInit {
     async queueRelay(event: Event) {
         if (!this.remoteUrl) return;
 
-        await this.syncQueue.add(
-            'relay-event',
-            {
-                eventId: event.event_id,
-                storeId: event.store_id,
-                deviceId: event.device_id,
-            },
-            {
-                attempts: 10,
-                backoff: {
-                    type: 'exponential',
-                    delay: 5000,
+        try {
+            // Utilizar event_id como jobId para asegurar idempotencia en BullMQ.
+            // Si el job ya existe, Bull lo ignorará, logrando "exactly-once" per device.
+            const jobId = `relay-${event.event_id}`;
+
+            await this.syncQueue.add(
+                'relay-event',
+                {
+                    eventId: event.event_id,
+                    storeId: event.store_id,
+                    deviceId: event.device_id,
                 },
-                removeOnComplete: true,
-            },
-        );
+                {
+                    jobId,
+                    attempts: 10,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 5000,
+                    },
+                    removeOnComplete: true,
+                },
+            );
+            this.logger.debug(`Evento ${event.event_id} encolado para relay (JobId: ${jobId})`);
+        } catch (error) {
+            this.logger.error(`Error encolando relay para evento ${event.event_id}:`, error);
+        }
     }
 
     registerRelayError(eventId: string, message: string) {
@@ -786,6 +812,7 @@ export class FederationSyncService implements OnModuleInit {
                   WHERE im.warehouse_id IS NOT NULL
                     AND w.store_id = $1
                     AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
+                    AND (im.from_escrow IS NULL OR im.from_escrow = false)
                   GROUP BY im.warehouse_id, im.product_id, im.variant_id
                 ),
                 patched AS (
@@ -820,6 +847,7 @@ export class FederationSyncService implements OnModuleInit {
                   WHERE im.warehouse_id IS NOT NULL
                     AND w.store_id = $1
                     AND im.movement_type IN ('received', 'adjust', 'sold', 'sale', 'transfer_in', 'transfer_out')
+                    AND (im.from_escrow IS NULL OR im.from_escrow = false)
                   GROUP BY im.warehouse_id, im.product_id, im.variant_id
                 ),
                 inserted AS (

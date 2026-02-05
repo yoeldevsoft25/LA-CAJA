@@ -13,12 +13,13 @@ import {
 import { CashService } from './cash.service';
 import { OpenCashSessionDto } from './dto/open-cash-session.dto';
 import { CloseCashSessionDto } from './dto/close-cash-session.dto';
+import { RegisterCashMovementDto } from './dto/register-cash-movement.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('cash')
 @UseGuards(JwtAuthGuard)
 export class CashController {
-  constructor(private readonly cashService: CashService) {}
+  constructor(private readonly cashService: CashService) { }
 
   @Post('sessions/open')
   @HttpCode(HttpStatus.CREATED)
@@ -52,6 +53,16 @@ export class CashController {
       dto,
       userRole,
     );
+  }
+
+  @Post('movements')
+  async registerMovement(
+    @Body() dto: RegisterCashMovementDto,
+    @Request() req: any,
+  ) {
+    const storeId = req.user.store_id;
+    const userId = req.user.sub;
+    return this.cashService.registerMovement(storeId, userId, dto);
   }
 
   @Get('sessions/:id/summary')

@@ -74,11 +74,11 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
     // 2. Prefetch clientes (usado en ventas y deudas)
     updateProgress('Cacheando clientes...')
     const customersData = await customersService.search('') // Obtener todos los clientes
-    
+
     // Establecer en múltiples queryKeys para que todos los componentes lo encuentren
     queryClient.setQueryData(['customers', ''], customersData) // Para CustomersPage
     queryClient.setQueryData(['customers'], customersData) // Para DebtsPage
-    
+
     // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
       queryKey: ['customers', ''],
@@ -102,10 +102,10 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
     // NOTA: No enviar store_id - el backend usará el del JWT del usuario
     updateProgress('Cacheando ventas recientes...')
     const salesData = await salesService.list({ limit: 50 })
-    
+
     // Establecer en la queryKey que usa el prefetch
     queryClient.setQueryData(['sales', 'list', storeId, { limit: 50 }], salesData)
-    
+
     // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
       queryKey: ['sales', 'list', storeId, { limit: 50 }],
@@ -117,10 +117,10 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
     // 6. Prefetch deudas activas
     updateProgress('Cacheando deudas...')
     const debtsData = await debtsService.findAll() // Obtener todas las deudas
-    
+
     // Establecer en la queryKey que usa DebtsPage
     queryClient.setQueryData(['debts', undefined], debtsData) // Para DebtsPage cuando statusFilter es 'all'
-    
+
     // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
       queryKey: ['debts', undefined],
@@ -129,14 +129,21 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
       gcTime: Infinity,
     })
 
-    // 7. Prefetch estado de inventario (productos con stock bajo)
-    updateProgress('Cacheando inventario...')
-    const stockStatusData = await inventoryService.getLowStock()
-    
-    // Establecer en la queryKey del prefetch
+    // 7. Prefetch estado de inventario (Stock y Escrows)
+    updateProgress('Cacheando inventario y cuotas...')
+    const stockStatusData = await inventoryService.getStockStatus({ limit: 500 })
+
+    // Establecer en la queryKey del prefetch (vía legacy endpoint si se usa)
     queryClient.setQueryData(['inventory', 'status', storeId], stockStatusData)
-    
-    // También prefetch para mantener consistencia
+
+    // ✅ OFFLINE-FIRST: Cachear en IndexedDB para validación local
+    await Promise.all([
+      inventoryService.cacheStock(stockStatusData).catch(err => logger.error('Error cacheando stock', err)),
+      inventoryService.getEscrowStatus(storeId)
+        .then(escrows => inventoryService.cacheEscrows(escrows))
+        .catch(err => logger.error('Error cacheando escrows', err))
+    ]);
+
     await queryClient.prefetchQuery({
       queryKey: ['inventory', 'status', storeId],
       queryFn: () => Promise.resolve(stockStatusData),
@@ -147,13 +154,13 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
     // 8. Prefetch sesiones de caja recientes
     updateProgress('Cacheando sesiones de caja...')
     const sessionsData = await cashService.listSessions({ limit: 20 })
-    
+
     // Establecer en la queryKey del prefetch
     queryClient.setQueryData(['cash', 'sessions', storeId], sessionsData)
-    
+
     // También establecer en la queryKey que usa CashSessionsList (primera página)
     queryClient.setQueryData(['cash', 'sessions', 1], sessionsData)
-    
+
     // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
       queryKey: ['cash', 'sessions', storeId],
@@ -172,7 +179,7 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
           reportsService.getTopProducts(10, { start_date: today, end_date: today }).catch(() => null),
           reportsService.getDebtSummary().catch(() => null),
         ])
-        
+
         // Establecer en las queryKeys que usa ReportsPage
         if (salesReport) {
           queryClient.setQueryData(['reports', 'sales-by-day', today, today], salesReport)

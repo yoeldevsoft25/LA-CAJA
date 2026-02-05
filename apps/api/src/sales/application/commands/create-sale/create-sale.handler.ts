@@ -452,7 +452,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     private salesPostProcessingQueue: Queue,
     @InjectQueue('federation-sync')
     private federationSyncQueue: Queue,
-  ) {}
+  ) { }
 
   async execute(command: CreateSaleCommand): Promise<Sale> {
     const { storeId, dto, userId, userRole, returnMode } = command;
@@ -526,8 +526,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       debt?: DetailedDebt | null;
       items?: SaleItem[];
       fiscal_invoice?:
-        | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
-        | null;
+      | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
+      | null;
     };
 
     const result = await this.transactionWithRetry<SaleResponse>(
@@ -594,8 +594,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         const [allSerials, allLots] = await Promise.all([
           productsWithSerials.length > 0
             ? manager.find(ProductSerial, {
-                where: { product_id: In(productsWithSerials) },
-              })
+              where: { product_id: In(productsWithSerials) },
+            })
             : Promise.resolve([]),
           manager.find(ProductLot, {
             where: { product_id: In(productIds) },
@@ -769,20 +769,20 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
 
             const currentStock = warehouseId
               ? await this.validator.validateAndLockStock(
-                  manager,
-                  storeId,
-                  warehouseId,
-                  product.id,
-                  variant?.id || null,
-                  requestedQty,
-                )
+                manager,
+                storeId,
+                warehouseId,
+                product.id,
+                variant?.id || null,
+                requestedQty,
+              )
               : await this.validator.validateAndLockTotalStock(
-                  manager,
-                  storeId,
-                  product.id,
-                  variant?.id || null,
-                  requestedQty,
-                );
+                manager,
+                storeId,
+                product.id,
+                variant?.id || null,
+                requestedQty,
+              );
 
             if (currentStock < requestedQty) {
               const variantInfo = variant
@@ -1063,7 +1063,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         const splitSummary =
           dto.payment_method === 'SPLIT'
             ? dto.split ||
-              this.buildSplitSummary(dto.split_payments, dto.exchange_rate)
+            this.buildSplitSummary(dto.split_payments, dto.exchange_rate)
             : dto.split;
 
         // Validar método de pago según configuración de topes
@@ -1332,15 +1332,15 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           minimalSale.items = items;
           minimalSale.debt = debt
             ? {
-                id: debt.id,
-                status: debt.status,
-                amount_bs: Number(debt.amount_bs || 0),
-                amount_usd: Number(debt.amount_usd || 0),
-                total_paid_bs: 0,
-                total_paid_usd: 0,
-                remaining_bs: Number(debt.amount_bs || 0),
-                remaining_usd: Number(debt.amount_usd || 0),
-              }
+              id: debt.id,
+              status: debt.status,
+              amount_bs: Number(debt.amount_bs || 0),
+              amount_usd: Number(debt.amount_usd || 0),
+              total_paid_bs: 0,
+              total_paid_usd: 0,
+              remaining_bs: Number(debt.amount_bs || 0),
+              remaining_usd: Number(debt.amount_usd || 0),
+            }
             : null;
           minimalSale.fiscal_invoice = null;
           return minimalSale;
@@ -1387,8 +1387,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         type SaleWithDetailedDebt = Sale & {
           debt?: DetailedDebt | null;
           fiscal_invoice?:
-            | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
-            | null;
+          | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
+          | null;
         };
 
         const saleWithDetailedDebt = savedSaleWithItems as SaleWithDetailedDebt;
@@ -1527,12 +1527,12 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
                 : Number(item.weight_value),
             price_per_weight_bs:
               item.price_per_weight_bs === null ||
-              item.price_per_weight_bs === undefined
+                item.price_per_weight_bs === undefined
                 ? null
                 : Number(item.price_per_weight_bs),
             price_per_weight_usd:
               item.price_per_weight_usd === null ||
-              item.price_per_weight_usd === undefined
+                item.price_per_weight_usd === undefined
                 ? null
                 : Number(item.price_per_weight_usd),
           })),
@@ -1547,8 +1547,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           payment: saleWithDetailedDebt.payment,
           customer: saleWithDetailedDebt.customer_id
             ? {
-                customer_id: saleWithDetailedDebt.customer_id,
-              }
+              customer_id: saleWithDetailedDebt.customer_id,
+            }
             : undefined,
           note: saleWithDetailedDebt.note || undefined,
         },
@@ -1567,6 +1567,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           deviceId: saleEvent.device_id,
         },
         {
+          jobId: `relay-${saleEvent.event_id}`,
           attempts: 10,
           backoff: {
             type: 'exponential',
@@ -1575,6 +1576,57 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           removeOnComplete: true,
         },
       );
+
+      // --- NEW: Emit CashLedgerEntryCreated for Immutable Ledger ---
+      const ledgerEventId = randomUUID();
+      const ledgerEvent = this.eventRepository.create({
+        event_id: ledgerEventId,
+        store_id: storeId,
+        device_id: serverDeviceId,
+        seq: eventSeq + 1,
+        type: 'CashLedgerEntryCreated',
+        version: 1,
+        created_at: new Date(saleWithDetailedDebt.sold_at),
+        actor_user_id: userId || null,
+        actor_role: effectiveUserRole || 'cashier',
+        request_id: dto.request_id || randomUUID(),
+        payload: {
+          entry_id: saleWithDetailedDebt.id,
+          request_id: dto.request_id || randomUUID(),
+          entry_type: 'sale',
+          amount_bs: Number(saleWithDetailedDebt.totals?.total_bs || 0),
+          amount_usd: Number(saleWithDetailedDebt.totals?.total_usd || 0),
+          currency: saleWithDetailedDebt.currency,
+          cash_session_id: saleWithDetailedDebt.cash_session_id,
+          sold_at: new Date(saleWithDetailedDebt.sold_at).toISOString(),
+          metadata: {
+            sale_id: saleWithDetailedDebt.id,
+            total_bs: saleWithDetailedDebt.totals?.total_bs,
+            total_usd: saleWithDetailedDebt.totals?.total_usd,
+          },
+        },
+        vector_clock: { [serverDeviceId]: eventSeq + 1 },
+      });
+
+      await this.eventRepository.save(ledgerEvent);
+      await this.federationSyncQueue.add(
+        'relay-event',
+        {
+          eventId: ledgerEvent.event_id,
+          storeId: ledgerEvent.store_id,
+          deviceId: ledgerEvent.device_id,
+        },
+        {
+          jobId: `relay-${ledgerEvent.event_id}`,
+          attempts: 10,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+          removeOnComplete: true,
+        }
+      );
+
     } catch (error) {
       this.logger.error(
         `[SALE_CREATE] Error creando/encolando evento de federación para venta ${saleWithDetailedDebt.id}`,

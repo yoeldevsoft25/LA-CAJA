@@ -121,7 +121,7 @@ export class InventoryService {
     private accountingService: AccountingService,
     private federationSyncService: FederationSyncService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   private buildServerEvent(
     manager: EntityManager,
@@ -303,32 +303,27 @@ export class InventoryService {
       const savedMovement = await manager.save(InventoryMovement, movement);
 
       const eventSeq = Date.now();
-      const stockEvent = manager.create(Event, {
-        event_id: randomUUID(),
-        store_id: storeId,
-        device_id: this.serverDeviceId,
+      const stockEvent = this.buildServerEvent(manager, {
+        storeId,
+        userId,
+        role: role || 'owner',
+        type: 'StockDeltaApplied',
         seq: eventSeq,
-        type: 'StockReceived',
-        version: 1,
-        created_at: savedMovement.happened_at,
-        actor_user_id: userId,
-        actor_role: role || 'owner',
+        createdAt: savedMovement.happened_at,
         payload: {
           movement_id: savedMovement.id,
           product_id: savedMovement.product_id,
           variant_id: savedMovement.variant_id,
           warehouse_id: savedMovement.warehouse_id,
-          qty: Number(savedMovement.qty_delta),
+          qty_delta: Number(savedMovement.qty_delta),
           unit_cost_bs: Number(savedMovement.unit_cost_bs || 0),
           unit_cost_usd: Number(savedMovement.unit_cost_usd || 0),
-          note: savedMovement.note,
+          reason: 'received',
           ref: savedMovement.ref || null,
+          request_id: randomUUID(), // TODO: Pass from DTO if available
         },
-        vector_clock: { [this.serverDeviceId]: eventSeq },
-        causal_dependencies: [],
-        delta_payload: null,
-        full_payload_hash: null,
       });
+      stockEvent.request_id = (stockEvent.payload as any).request_id;
 
       const savedEvent = await manager.save(Event, stockEvent);
       return { movement: savedMovement, event: savedEvent };
@@ -423,29 +418,25 @@ export class InventoryService {
         );
       }
       const eventSeq = Date.now();
-      const stockEvent = manager.create(Event, {
-        event_id: randomUUID(),
-        store_id: storeId,
-        device_id: this.serverDeviceId,
+      const stockEvent = this.buildServerEvent(manager, {
+        storeId,
+        userId,
+        role: role || 'owner',
+        type: 'StockDeltaApplied',
         seq: eventSeq,
-        type: 'StockAdjusted',
-        version: 1,
-        created_at: saved.happened_at,
-        actor_user_id: userId,
-        actor_role: role || 'owner',
+        createdAt: saved.happened_at,
         payload: {
           movement_id: saved.id,
           product_id: saved.product_id,
           variant_id: saved.variant_id,
           warehouse_id: saved.warehouse_id,
           qty_delta: Number(saved.qty_delta),
+          reason: dto.reason || 'adjust',
           note: saved.note,
+          request_id: randomUUID(), // TODO: Pass from DTO if available
         },
-        vector_clock: { [this.serverDeviceId]: eventSeq },
-        causal_dependencies: [],
-        delta_payload: null,
-        full_payload_hash: null,
       });
+      stockEvent.request_id = (stockEvent.payload as any).request_id;
 
       const savedEvent = await manager.save(Event, stockEvent);
       return { movement: saved, event: savedEvent };

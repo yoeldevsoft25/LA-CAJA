@@ -2,7 +2,7 @@ import { api } from '@/lib/api'
 import { Customer, customersService } from './customers.service'
 import { syncService } from './sync.service'
 import { db } from '@/db/database'
-import { BaseEvent } from '@la-caja/domain'
+import { BaseEvent, CashLedgerEntryCreatedPayload } from '@la-caja/domain'
 
 export type DebtStatus = 'open' | 'partial' | 'paid'
 
@@ -84,6 +84,8 @@ export interface CreateDebtPaymentDto {
   // Meta data para offline
   store_id?: string
   user_id?: string
+  currency?: 'BS' | 'USD' | 'MIXED'
+  request_id?: string
 }
 
 export interface DebtWithCalculations extends Debt {
@@ -192,11 +194,12 @@ export const debtsService = {
     if (!navigator.onLine) {
       if (!data.store_id || !data.user_id) throw new Error('Offline payment requires store_id and user_id')
 
-      // 1. Crear evento
+      // 1. Crear eventos
       const paymentId = randomUUID()
+      const requestId = data.request_id || randomUUID()
       const now = Date.now()
 
-      const event: BaseEvent = {
+      const debtEvent: BaseEvent = {
         event_id: randomUUID(),
         store_id: data.store_id,
         device_id: localStorage.getItem('device_id') || 'unknown',
@@ -204,7 +207,7 @@ export const debtsService = {
         type: 'DebtPaymentAdded',
         version: 1,
         created_at: now,
-        actor: { user_id: data.user_id, role: 'cashier' }, // Asumimos cashier si no viene
+        actor: { user_id: data.user_id, role: 'cashier' },
         payload: {
           payment_id: paymentId,
           debt_id: debtId,
@@ -212,12 +215,40 @@ export const debtsService = {
           amount_usd: data.amount_usd,
           method: data.method,
           note: data.note,
-          paid_at: now
+          paid_at: now,
+          request_id: requestId,
         }
       }
 
+      const ledgerEvent: BaseEvent = {
+        event_id: randomUUID(),
+        store_id: data.store_id,
+        device_id: localStorage.getItem('device_id') || 'unknown',
+        seq: 0,
+        type: 'CashLedgerEntryCreated',
+        version: 1,
+        created_at: now,
+        actor: { user_id: data.user_id, role: 'cashier' },
+        payload: {
+          entry_id: paymentId,
+          request_id: requestId,
+          entry_type: 'income', // Cobro de deuda es un ingreso
+          amount_bs: data.amount_bs,
+          amount_usd: data.amount_usd,
+          currency: data.currency || (data.amount_usd > 0 && data.amount_bs > 0 ? 'MIXED' : data.amount_usd > 0 ? 'USD' : 'BS'),
+          cash_session_id: '', // Se determinará en proyección por el backend o el estado actual
+          sold_at: now,
+          metadata: {
+            debt_id: debtId,
+            payment_id: paymentId,
+            method: data.method,
+          },
+        } as CashLedgerEntryCreatedPayload
+      }
+
       // 2. Encolar y aplicar optimista
-      await syncService.enqueueEvent(event)
+      await syncService.enqueueEvent(debtEvent)
+      await syncService.enqueueEvent(ledgerEvent)
 
       // 3. Proyectar localmente (optimistic update)
       // Ya que enqueueEvent guarda en DB, projectionManager lo podria tomar si escuchase cambios,
@@ -225,7 +256,7 @@ export const debtsService = {
       // SyncService llama a saveEventToDB pero NO llama a ProjectionManager automáticamente para eventos propios (aun).
       // Deberíamos llamar manualmente a la proyección para updatear la UI inmediata.
       const { projectionManager } = await import('./projection.manager')
-      await projectionManager.applyDebtPaymentAdded(event)
+      await projectionManager.applyDebtPaymentAdded(debtEvent)
 
       // 4. Retornar Mock
       const debt = await this.findOne(debtId) // Ahora traerá el actualizado de Dexie

@@ -1,4 +1,29 @@
 import { api } from '@/lib/api'
+import { syncService } from './sync.service'
+import { BaseEvent, StockDeltaAppliedPayload } from '@la-caja/domain'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('InventoryService')
+
+function randomUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+function getDeviceId(): string {
+  let deviceId = localStorage.getItem('device_id')
+  if (!deviceId) {
+    deviceId = randomUUID()
+    localStorage.setItem('device_id', deviceId)
+  }
+  return deviceId
+}
 
 export interface StockStatus {
   product_id: string
@@ -56,14 +81,16 @@ export interface StockReceivedRequest {
     supplier?: string
     invoice?: string
   }
+  request_id?: string
 }
 
 export interface StockAdjustedRequest {
   product_id: string
   qty_delta: number
-  reason: 'loss' | 'damage' | 'count' | 'other'
+  reason: string
   note?: string
   warehouse_id?: string | null
+  request_id?: string
 }
 
 export interface ProductStock {
@@ -84,6 +111,17 @@ export interface MovementsParams {
   include_pending?: boolean
   start_date?: string
   end_date?: string
+}
+
+export interface EscrowStatus {
+  id: string;
+  store_id: string;
+  product_id: string;
+  variant_id: string | null;
+  device_id: string;
+  qty_granted: number;
+  expires_at: string | null;
+  last_updated_at: string;
 }
 
 export const inventoryService = {
@@ -128,7 +166,64 @@ export const inventoryService = {
    * Recibir stock (entrada de mercancía)
    */
   async stockReceived(data: StockReceivedRequest): Promise<InventoryMovement> {
-    const response = await api.post<InventoryMovement>('/inventory/stock/received', data)
+    const requestId = data.request_id || randomUUID()
+    const isOnline = navigator.onLine
+
+    if (!isOnline) {
+      logger.info('Modo OFFLINE - Encolando recepción de stock')
+      const movementId = randomUUID()
+      const now = Date.now()
+
+      const payload: StockDeltaAppliedPayload = {
+        movement_id: movementId,
+        product_id: data.product_id,
+        warehouse_id: data.warehouse_id || '',
+        qty_delta: data.qty,
+        reason: 'received',
+        request_id: requestId,
+        ref: {
+          ...data.ref,
+          unit_cost_bs: data.unit_cost_bs,
+          unit_cost_usd: data.unit_cost_usd,
+          note: data.note,
+        },
+      }
+
+      const event: BaseEvent = {
+        event_id: randomUUID(),
+        store_id: localStorage.getItem('store_id') || '',
+        device_id: getDeviceId(),
+        seq: 0, // syncService asocia secuencia
+        type: 'StockDeltaApplied',
+        version: 1,
+        created_at: now,
+        actor: {
+          user_id: localStorage.getItem('user_id') || 'system',
+          role: (localStorage.getItem('user_role') as any) || 'cashier',
+        },
+        payload,
+      }
+
+      await syncService.enqueueEvent(event)
+
+      return {
+        id: movementId,
+        store_id: event.store_id,
+        product_id: data.product_id,
+        movement_type: 'received',
+        qty_delta: data.qty,
+        unit_cost_bs: data.unit_cost_bs,
+        unit_cost_usd: data.unit_cost_usd,
+        note: data.note || null,
+        ref: data.ref || null,
+        happened_at: new Date(now).toISOString(),
+      }
+    }
+
+    const response = await api.post<InventoryMovement>('/inventory/stock/received', {
+      ...data,
+      request_id: requestId,
+    })
     return response.data
   },
 
@@ -136,7 +231,62 @@ export const inventoryService = {
    * Ajustar stock (corrección manual)
    */
   async stockAdjusted(data: StockAdjustedRequest): Promise<InventoryMovement> {
-    const response = await api.post<InventoryMovement>('/inventory/stock/adjust', data)
+    const requestId = data.request_id || randomUUID()
+    const isOnline = navigator.onLine
+
+    if (!isOnline) {
+      logger.info('Modo OFFLINE - Encolando ajuste de stock')
+      const movementId = randomUUID()
+      const now = Date.now()
+
+      const payload: StockDeltaAppliedPayload = {
+        movement_id: movementId,
+        product_id: data.product_id,
+        warehouse_id: data.warehouse_id || '',
+        qty_delta: data.qty_delta,
+        reason: `adjust:${data.reason}`,
+        request_id: requestId,
+        ref: {
+          note: data.note,
+          original_reason: data.reason,
+        },
+      }
+
+      const event: BaseEvent = {
+        event_id: randomUUID(),
+        store_id: localStorage.getItem('store_id') || '',
+        device_id: getDeviceId(),
+        seq: 0,
+        type: 'StockDeltaApplied',
+        version: 1,
+        created_at: now,
+        actor: {
+          user_id: localStorage.getItem('user_id') || 'system',
+          role: (localStorage.getItem('user_role') as any) || 'cashier',
+        },
+        payload,
+      }
+
+      await syncService.enqueueEvent(event)
+
+      return {
+        id: movementId,
+        store_id: event.store_id,
+        product_id: data.product_id,
+        movement_type: 'adjust',
+        qty_delta: data.qty_delta,
+        unit_cost_bs: 0,
+        unit_cost_usd: 0,
+        note: data.note || null,
+        ref: null,
+        happened_at: new Date(now).toISOString(),
+      }
+    }
+
+    const response = await api.post<InventoryMovement>('/inventory/stock/adjust', {
+      ...data,
+      request_id: requestId,
+    })
     return response.data
   },
 
@@ -216,4 +366,52 @@ export const inventoryService = {
     const response = await api.post('/inventory/stock/reconcile-physical', { items })
     return response.data
   },
+
+  /**
+   * Obtener status de escrows para la tienda
+   */
+  async getEscrowStatus(storeId: string): Promise<EscrowStatus[]> {
+    const response = await api.get<EscrowStatus[]>(`/inventory/escrow/status/${storeId}`)
+    return response.data
+  },
+
+  /**
+   * Cachear stock en IndexedDB
+   */
+  async cacheStock(status: StockStatus[]): Promise<void> {
+    const { db } = await import('@/db/database');
+    const storeId = localStorage.getItem('store_id') || '';
+    const now = Date.now();
+
+    const localStocks = status.map(s => ({
+      id: `${s.product_id}:null`, // TODO: Soporte para variantes si se agrega a StockStatus
+      store_id: storeId,
+      product_id: s.product_id,
+      variant_id: null,
+      stock: s.current_stock,
+      updated_at: now
+    }));
+
+    await db.localStock.bulkPut(localStocks);
+  },
+
+  /**
+   * Cachear escrows en IndexedDB
+   */
+  async cacheEscrows(escrows: EscrowStatus[]): Promise<void> {
+    const { db } = await import('@/db/database');
+    const now = Date.now();
+
+    const localEscrows = escrows.map(e => ({
+      id: `${e.product_id}:${e.variant_id || 'null'}`,
+      store_id: e.store_id,
+      product_id: e.product_id,
+      variant_id: e.variant_id,
+      qty_granted: Number(e.qty_granted),
+      expires_at: e.expires_at ? new Date(e.expires_at).getTime() : null,
+      updated_at: now
+    }));
+
+    await db.localEscrow.bulkPut(localEscrows);
+  }
 }

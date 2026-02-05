@@ -2,7 +2,14 @@ import { api } from '@/lib/api'
 import type { AxiosResponse } from 'axios'
 import { syncService } from './sync.service'
 import { exchangeService } from './exchange.service'
-import { BaseEvent, SaleCreatedPayload, SaleItem as DomainSaleItem, PricingCalculator, WeightUnit } from '@la-caja/domain'
+import {
+  BaseEvent,
+  SaleCreatedPayload,
+  SaleItem as DomainSaleItem,
+  PricingCalculator,
+  WeightUnit,
+  CashLedgerEntryCreatedPayload,
+} from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
 import type { Product } from './products.service'
 
@@ -93,10 +100,13 @@ export interface CreateSaleRequest {
   promotion_id?: string | null // ID de la promoción a aplicar
   warehouse_id?: string | null // ID de la bodega de donde se vende (opcional, usa bodega por defecto)
   generate_fiscal_invoice?: boolean // Si se debe generar factura fiscal
+  request_id?: string // Idempotencia
+  device_id?: string
   // Para modo offline
   store_id?: string
   user_id?: string
   user_role?: 'owner' | 'cashier'
+  skip_stock_validation?: boolean // NUEVO: Para forzar venta incluso sin stock (opcional)
 }
 
 export interface SaleItem {
@@ -206,6 +216,43 @@ function resolveOfflineItemPricing(
     weight_value: null,
     price_per_weight_bs: null,
     price_per_weight_usd: null,
+  }
+}
+
+/**
+ * Valida el stock localmente antes de una venta offline
+ * Combina warehouse stock + escrow quota
+ */
+async function validateOfflineStock(
+  items: CartItemDto[],
+): Promise<void> {
+  const { db } = await import('@/db/database');
+  const now = Date.now();
+
+  for (const item of items) {
+    const id = `${item.product_id}:${item.variant_id || 'null'}`;
+    const [localStock, localEscrow] = await Promise.all([
+      db.localStock.get(id),
+      db.localEscrow.get(id)
+    ]);
+
+    const stock = localStock?.stock || 0;
+
+    // Escrow solo cuenta si no ha expirado
+    let escrow = 0;
+    if (localEscrow && (localEscrow.expires_at === null || localEscrow.expires_at > now)) {
+      escrow = localEscrow.qty_granted || 0;
+    }
+
+    const available = stock + escrow;
+    const requested = item.qty;
+
+    if (requested > available) {
+      const product = await db.products.get(item.product_id);
+      throw new Error(
+        `Stock insuficiente para "${product?.name || item.product_id}". Disponible: ${available.toFixed(2)}, Requerido: ${requested.toFixed(2)}`
+      );
+    }
   }
 }
 
@@ -330,6 +377,14 @@ export const salesService = {
     data: CreateSaleRequest,
     options?: { returnMode?: 'full' | 'minimal' },
   ): Promise<Sale> {
+    // ⚡ IDEMPOTENCIA: Generar o usar request_id proveído
+    const requestId = data.request_id || randomUUID()
+    data.request_id = requestId
+
+    // ⚡ DEVICE ID: Asegurar que se envía el ID del dispositivo
+    const deviceId = data.device_id || getDeviceId()
+    data.device_id = deviceId
+
     // Verificar estado de conexión PRIMERO
     const isOnline = navigator.onLine
 
@@ -345,6 +400,11 @@ export const salesService = {
     if (!isOnline) {
       if (!data.store_id || !data.user_id) {
         throw new Error('Se requiere store_id y user_id para guardar ventas offline')
+      }
+
+      // ⚡ POINT 5: Validación de stock offline (strict)
+      if (!data.skip_stock_validation) {
+        await validateOfflineStock(data.items);
       }
 
       // ⚠️ VALIDACIÓN CRÍTICA: Ventas FIAO requieren cliente
@@ -449,13 +509,14 @@ export const salesService = {
           }
           : undefined,
         note: data.note || undefined,
+        request_id: requestId, // Idempotencia en payload
       }
 
-      // Obtener el siguiente seq (obtener el último evento por seq, sin importar estado)
+      // 1. Evento SaleCreated (Mantiene compatibilidad y proyecciones de stock/ventas)
       const allEvents = await db.localEvents.orderBy('seq').reverse().limit(1).toArray()
       const nextSeq = allEvents.length > 0 ? allEvents[0].seq + 1 : 1
 
-      const event: BaseEvent = {
+      const saleEvent: BaseEvent = {
         event_id: randomUUID(),
         store_id: data.store_id,
         device_id: deviceId,
@@ -470,24 +531,59 @@ export const salesService = {
         payload,
       }
 
-      // Guardar evento localmente - CRÍTICO: debe funcionar incluso si syncService falla
+      // 2. Evento CashLedgerEntryCreated (Nuevo: Ledger inmutable)
+      // Solo si NO es FIAO (el ledger solo registra flujo de caja real)
+      let ledgerEvent: BaseEvent | null = null
+      if (data.payment_method !== 'FIAO') {
+        const ledgerPayload: CashLedgerEntryCreatedPayload = {
+          entry_id: saleId,
+          request_id: requestId,
+          entry_type: 'sale',
+          amount_bs: totals.total_bs,
+          amount_usd: totals.total_usd,
+          currency: data.currency,
+          cash_session_id: data.cash_session_id || '',
+          sold_at: now,
+          metadata: {
+            sale_id: saleId,
+            payment_method: data.payment_method,
+          },
+        }
+
+        ledgerEvent = {
+          event_id: randomUUID(),
+          store_id: data.store_id,
+          device_id: deviceId,
+          seq: nextSeq + 1,
+          type: 'CashLedgerEntryCreated',
+          version: 1,
+          created_at: now,
+          actor: {
+            user_id: data.user_id,
+            role: data.user_role || 'cashier',
+          },
+          payload: ledgerPayload,
+        }
+      }
+
+      // Guardar eventos localmente
       try {
-        await syncService.enqueueEvent(event)
-        logger.info('Venta guardada localmente para sincronización', { saleId })
+        await syncService.enqueueEvent(saleEvent)
+        if (ledgerEvent) {
+          await syncService.enqueueEvent(ledgerEvent)
+        }
+        logger.info('Eventos de venta guardados localmente para sincronización', { saleId })
       } catch (error: unknown) {
-        logger.error('Error guardando venta en syncService', error)
-        // Intentar guardar directamente en IndexedDB como fallback
+        logger.error('Error guardando eventos en syncService', error)
+        // Intentar guardar directamente como fallback
         try {
-          const { db } = await import('@/db/database')
-          await db.localEvents.add({
-            ...event,
-            sync_status: 'pending',
-            sync_attempts: 0,
-          })
-          logger.info('Venta guardada directamente en IndexedDB como fallback', { saleId })
+          await db.localEvents.bulkAdd([
+            { ...saleEvent, sync_status: 'pending', sync_attempts: 0 },
+            ...(ledgerEvent ? [{ ...ledgerEvent, sync_status: 'pending', sync_attempts: 0 }] : []),
+          ] as any)
+          logger.info('Eventos guardados directamente en IndexedDB como fallback', { saleId })
         } catch (dbError) {
           logger.error('Error guardando en IndexedDB', dbError)
-          // Aún así continuar - la venta se procesó localmente
         }
       }
 
@@ -649,6 +745,7 @@ export const salesService = {
           }
           : undefined,
         note: data.note || undefined,
+        request_id: requestId,
       }
 
       const allEvents = await db.localEvents.orderBy('seq').reverse().limit(1).toArray()
@@ -907,6 +1004,7 @@ export const salesService = {
             }
             : undefined,
           note: data.note || undefined,
+          request_id: requestId,
         }
 
         // Obtener el siguiente seq

@@ -8,12 +8,12 @@ import { BaseEvent } from '@la-caja/domain';
 export interface LocalEvent extends BaseEvent {
   id?: number; // Auto-increment para Dexie
   sync_status:
-    | 'pending'
-    | 'retrying'
-    | 'synced'
-    | 'failed'
-    | 'conflict'
-    | 'dead';
+  | 'pending'
+  | 'retrying'
+  | 'synced'
+  | 'failed'
+  | 'conflict'
+  | 'dead';
   sync_attempts: number;
   synced_at?: number;
   acked_at?: number;
@@ -129,6 +129,25 @@ export interface LocalDebt {
   note?: string;
 }
 
+export interface LocalStock {
+  id: string; // product_id:variant_id
+  store_id: string;
+  product_id: string;
+  variant_id: string | null;
+  stock: number;
+  updated_at: number;
+}
+
+export interface LocalEscrow {
+  id: string; // product_id:variant_id
+  store_id: string;
+  product_id: string;
+  variant_id: string | null;
+  qty_granted: number;
+  expires_at: number | null;
+  updated_at: number;
+}
+
 export class LaCajaDB extends Dexie {
   localEvents!: Table<LocalEvent, number>;
   products!: Table<LocalProduct, string>;
@@ -138,6 +157,8 @@ export class LaCajaDB extends Dexie {
   whatsappConfigs!: Table<LocalWhatsAppConfig, string>;
   debts!: Table<LocalDebt, string>;
   kv!: Table<{ key: string; value: any }, string>;
+  localStock!: Table<LocalStock, string>;
+  localEscrow!: Table<LocalEscrow, string>;
 
   constructor() {
     super('LaCajaDB');
@@ -253,6 +274,22 @@ export class LaCajaDB extends Dexie {
           if (evt.last_error === undefined) evt.last_error = null;
         });
       });
+
+    // Versión 8: Tablas de stock local para validación offline
+    this.version(8).stores({
+      localEvents:
+        '++id, &event_id, [store_id+device_id+seq], seq, type, sync_status, created_at, [sync_status+created_at], [sync_status+next_retry_at], [store_id+device_id+sync_status]',
+      products:
+        'id, store_id, name, category, barcode, sku, is_active, [store_id+is_active], [store_id+category]',
+      customers: 'id, store_id, name, document_id, [store_id+document_id]',
+      sales: 'id, store_id, sold_at, customer_id, [store_id+sold_at]',
+      conflicts: 'id, event_id, status, created_at, [status+created_at]',
+      whatsappConfigs: 'id, store_id, [store_id+sync_status]',
+      debts: 'id, store_id, customer_id, status, [store_id+customer_id], [store_id+status]',
+      kv: 'key',
+      localStock: 'id, store_id, product_id, variant_id',
+      localEscrow: 'id, store_id, product_id, variant_id',
+    });
   }
 
   /**

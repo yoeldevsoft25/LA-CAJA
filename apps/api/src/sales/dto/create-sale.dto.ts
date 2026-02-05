@@ -191,4 +191,17 @@ export class CreateSaleDto {
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
   generate_fiscal_invoice?: boolean; // Si true, genera factura fiscal para esta venta
+
+  @IsUUID()
+  @IsOptional()
+  request_id?: string; // ID de petición del cliente para idempotencia
+
+  @IsString()
+  @IsOptional()
+  device_id?: string; // ID del dispositivo que originó la venta
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  skip_stock_validation?: boolean; // Si true, permite la venta incluso sin stock (auditado)
 }

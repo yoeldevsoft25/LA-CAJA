@@ -186,3 +186,57 @@ export interface DebtPaymentRecordedPayload {
   paid_at?: string | Date; // ISO string
   note?: string | null;
 }
+
+export interface CashLedgerEntryCreatedPayload {
+  entry_id: string;
+  request_id: string;
+  entry_type: 'sale' | 'expense' | 'adjustment' | 'transfer' | 'initial_balance' | 'income';
+  amount_bs: number | string;
+  amount_usd: number | string;
+  currency: 'BS' | 'USD' | 'MIXED';
+  cash_session_id: string;
+  sold_at: number | string | Date;
+  metadata?: Record<string, any>;
+}
+
+export interface StockDeltaAppliedPayload {
+  movement_id: string;
+  product_id: string;
+  warehouse_id?: string;
+  qty_delta: number | string;
+  reason: string;
+  ref?: Record<string, any>;
+  request_id: string;
+  unit_cost_bs?: number | string;
+  unit_cost_usd?: number | string;
+  variant_id?: string | null;
+  from_escrow?: boolean;
+}
+
+export interface StockQuotaGrantedPayload {
+  quota_id: string;
+  product_id: string;
+  device_id: string;
+  qty_granted: number | string;
+  expires_at?: number | string | Date;
+  request_id: string;
+  variant_id?: string | null;
+}
+
+export interface StockQuotaTransferredPayload {
+  from_device_id: string;
+  to_device_id: string;
+  product_id: string;
+  qty: number | string;
+  request_id: string;
+  variant_id?: string | null;
+}
+
+export interface StockQuotaReclaimedPayload {
+  product_id: string;
+  device_id: string;
+  qty_reclaimed: number | string;
+  request_id: string;
+  variant_id?: string | null;
+  reason?: string;
+}

@@ -83,6 +83,9 @@ export class InventoryMovement {
   @Index()
   warehouse_id: string | null;
 
+  @Column({ type: 'boolean', default: false })
+  from_escrow: boolean;
+
   @Column({ type: 'timestamptz' })
   happened_at: Date;
 }

@@ -90,7 +90,16 @@ export const projectionManager = {
                 await this.applyDebtPaymentAdded(event);
                 break;
 
-            // TODO: Implementar más proyecciones (Inventario, etc.)
+            // INVENTARIO Y ESCROW
+            case 'StockDeltaApplied':
+                await this.applyStockDeltaApplied(event);
+                break;
+            case 'StockQuotaGranted':
+                await this.applyStockQuotaGranted(event);
+                break;
+            case 'StockQuotaReclaimed':
+                await this.applyStockQuotaReclaimed(event);
+                break;
         }
     },
 
@@ -303,5 +312,70 @@ export const projectionManager = {
 
             await db.debts.put(updated);
         }
+    },
+
+    // --- INVENTARIO Y ESCROW ---
+
+    async applyStockDeltaApplied(event: BaseEvent) {
+        const payload = event.payload as any; // StockDeltaAppliedPayload
+        const productId = payload.product_id;
+        const variantId = payload.variant_id ?? null;
+        const qtyDelta = Number(payload.qty_delta);
+        const id = `${productId}:${variantId || 'null'}`;
+
+        await db.transaction('rw', db.localStock, async () => {
+            const existing = await db.localStock.get(id);
+            if (existing) {
+                existing.stock = (existing.stock || 0) + qtyDelta;
+                existing.updated_at = event.created_at;
+                await db.localStock.put(existing);
+            } else {
+                await db.localStock.put({
+                    id,
+                    store_id: event.store_id,
+                    product_id: productId,
+                    variant_id: variantId,
+                    stock: qtyDelta,
+                    updated_at: event.created_at
+                });
+            }
+        });
+    },
+
+    async applyStockQuotaGranted(event: BaseEvent) {
+        const payload = event.payload as any; // StockQuotaGrantedPayload
+        const productId = payload.product_id;
+        const variantId = payload.variant_id ?? null;
+        const qtyGranted = Number(payload.qty_granted);
+        const id = `${productId}:${variantId || 'null'}`;
+
+        await db.transaction('rw', db.localEscrow, async () => {
+            const existing = await db.localEscrow.get(id);
+            if (existing) {
+                existing.qty_granted = (existing.qty_granted || 0) + qtyGranted;
+                existing.expires_at = payload.expires_at || existing.expires_at;
+                existing.updated_at = event.created_at;
+                await db.localEscrow.put(existing);
+            } else {
+                await db.localEscrow.put({
+                    id,
+                    store_id: event.store_id,
+                    product_id: productId,
+                    variant_id: variantId,
+                    qty_granted: qtyGranted,
+                    expires_at: payload.expires_at || null,
+                    updated_at: event.created_at
+                });
+            }
+        });
+    },
+
+    async applyStockQuotaReclaimed(event: BaseEvent) {
+        const payload = event.payload as any; // StockQuotaReclaimedPayload
+        const productId = payload.product_id;
+        const variantId = payload.variant_id ?? null;
+        const id = `${productId}:${variantId || 'null'}`;
+
+        await db.localEscrow.delete(id);
     }
 };

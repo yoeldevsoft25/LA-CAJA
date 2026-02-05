@@ -13,6 +13,7 @@ import {
   CashMovement,
   CashMovementType,
 } from '../database/entities/cash-movement.entity';
+import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
 import { Event } from '../database/entities/event.entity';
 import { OpenCashSessionDto } from './dto/open-cash-session.dto';
 import { CloseCashSessionDto } from './dto/close-cash-session.dto';
@@ -20,6 +21,10 @@ import { AccountingService } from '../accounting/accounting.service';
 import { randomUUID } from 'crypto';
 import { SecurityAuditService } from '../security/security-audit.service';
 import { FederationSyncService } from '../sync/federation-sync.service';
+import {
+  RegisterCashMovementDto,
+  CashMovementTypeDto,
+} from './dto/register-cash-movement.dto';
 
 @Injectable()
 export class CashService {
@@ -35,11 +40,13 @@ export class CashService {
     private cashMovementRepository: Repository<CashMovement>,
     @InjectRepository(Event)
     private eventRepository: Repository<Event>,
+    @InjectRepository(CashLedgerEntry)
+    private cashLedgerRepository: Repository<CashLedgerEntry>,
     private dataSource: DataSource,
     private accountingService: AccountingService,
     private securityAuditService: SecurityAuditService,
     private federationSyncService: FederationSyncService,
-  ) {}
+  ) { }
 
   private buildServerEvent(
     manager: EntityManager,
@@ -428,6 +435,9 @@ export class CashService {
       },
     );
 
+    // 12. Validación automática Ledger vs Balance (PN-Counter)
+    const validation = await this.validateSessionLedgerIntegrity(verifySession);
+
     await this.federationSyncService.queueRelay(closeEvent);
 
     await this.securityAuditService.log({
@@ -443,6 +453,7 @@ export class CashService {
         counted_usd: countedUsd,
         difference_bs: differenceBs,
         difference_usd: differenceUsd,
+        ledger_validation: validation,
       },
     });
 
@@ -467,6 +478,63 @@ export class CashService {
     });
 
     return verifySession;
+  }
+
+  /**
+   * Valida la integridad de la sesión comparando los contadores PN (derivados del ledger)
+   * con la suma física de las entradas del ledger y el balance calculado legado.
+   */
+  private async validateSessionLedgerIntegrity(
+    session: CashSession,
+  ): Promise<{
+    ledgerOk: boolean;
+    legacyOk: boolean;
+    discrepancy: Record<string, any>;
+  }> {
+    const sessionId = session.id;
+
+    // 1. Suma física del ledger
+    const ledgerSum = await this.cashLedgerRepository
+      .createQueryBuilder('entry')
+      .select('SUM(amount_bs)', 'total_bs')
+      .addSelect('SUM(amount_usd)', 'total_usd')
+      .where('entry.cash_session_id = :sessionId', { sessionId })
+      .getRawOne();
+
+    const actualLedgerBs = Number(ledgerSum?.total_bs || 0);
+    const actualLedgerUsd = Number(ledgerSum?.total_usd || 0);
+
+    // 2. Balance derivado de los contadores PN (CRDT)
+    const pnBalanceBs = Number(session.ledger_p_bs) - Number(session.ledger_n_bs);
+    const pnBalanceUsd = Number(session.ledger_p_usd) - Number(session.ledger_n_usd);
+
+    // 3. Verificación CRDT vs Ledger Físico
+    const ledgerOk =
+      Math.abs(pnBalanceBs - actualLedgerBs) < 0.01 &&
+      Math.abs(pnBalanceUsd - actualLedgerUsd) < 0.01;
+
+    // 4. Verificación vs Legado (expected en sesión si ya está calculado)
+    const legacyOk = session.expected ?
+      (Math.abs(pnBalanceBs - Number(session.expected.cash_bs)) < 0.01 &&
+        Math.abs(pnBalanceUsd - Number(session.expected.cash_usd)) < 0.01) : true;
+
+    const result = {
+      ledgerOk,
+      legacyOk,
+      discrepancy: {
+        pn: { bs: pnBalanceBs, usd: pnBalanceUsd },
+        physical: { bs: actualLedgerBs, usd: actualLedgerUsd },
+        legacy: session.expected,
+      },
+    };
+
+    if (!ledgerOk) {
+      this.logger.error(
+        `🚨 Discrepancia detectada en sesión ${sessionId}: PN-Counter (${pnBalanceBs} Bs) vs Ledger Físico (${actualLedgerBs} Bs)`,
+      );
+    }
+
+    return result;
   }
 
   async getSessionSummary(sessionId: string, storeId: string): Promise<any> {
@@ -687,5 +755,85 @@ export class CashService {
     const sessions = await query.getMany();
 
     return { sessions, total };
+  }
+
+  async registerMovement(
+    storeId: string,
+    userId: string,
+    dto: RegisterCashMovementDto,
+  ): Promise<CashMovement> {
+    const { movement, event } = await this.dataSource.transaction(
+      async (manager) => {
+        // 1. Validar sesión abierta
+        const session = await manager.findOne(CashSession, {
+          where: {
+            store_id: storeId,
+            opened_by: userId,
+            closed_at: IsNull(),
+          },
+        });
+
+        if (!session) {
+          throw new BadRequestException(
+            'Debes tener una sesión de caja abierta para registrar movimientos',
+          );
+        }
+
+        // 2. Crear movimiento (Legacy Table)
+        const movementId = randomUUID();
+        const movement = manager.create(CashMovement, {
+          id: movementId,
+          store_id: storeId,
+          cash_session_id: session.id,
+          shift_id: null,
+          movement_type:
+            dto.type === CashMovementTypeDto.INCOME
+              ? CashMovementType.ENTRY
+              : CashMovementType.EXIT,
+          amount_bs: dto.currency === 'BS' ? dto.amount : 0,
+          amount_usd: dto.currency === 'USD' ? dto.amount : 0,
+          reason: dto.reason,
+          note: dto.reference || null,
+          created_by: userId,
+          created_at: new Date(),
+        });
+
+        await manager.save(CashMovement, movement);
+
+        // 3. Emitir evento CashLedgerEntryCreated (Immutable Ledger)
+        const eventSeq = Date.now();
+        const ledgerEvent = this.buildServerEvent(manager, {
+          storeId,
+          userId,
+          role: 'cashier', // Default role
+          type: 'CashLedgerEntryCreated',
+          createdAt: movement.created_at,
+          seq: eventSeq,
+          payload: {
+            entry_id: movementId, // Same ID for consistency
+            request_id: dto.request_id || randomUUID(),
+            entry_type: dto.type,
+            amount_bs: movement.amount_bs,
+            amount_usd: movement.amount_usd,
+            currency: dto.currency,
+            cash_session_id: session.id,
+            sold_at: movement.created_at.toISOString(),
+            metadata: {
+              reason: dto.reason,
+              reference: dto.reference,
+              category: dto.category,
+            },
+          },
+        });
+
+        const savedEvent = await manager.save(Event, ledgerEvent);
+        return { movement, event: savedEvent };
+      },
+    );
+
+    // 4. Propagar evento
+    await this.federationSyncService.queueRelay(event);
+
+    return movement;
   }
 }

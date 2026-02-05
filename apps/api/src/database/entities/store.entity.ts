@@ -31,4 +31,11 @@ export class Store {
 
   @Column({ type: 'text', nullable: true })
   kitchen_public_pin_hash: string | null;
+
+  @Column({ type: 'jsonb', default: {} })
+  settings: {
+    use_ledger?: boolean;
+    use_escrow?: boolean;
+    [key: string]: any;
+  };
 }
