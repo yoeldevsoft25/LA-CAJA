@@ -1,234 +1,102 @@
-param(
-    [string]$ApiBaseUrl = "http://localhost:3000",
-    [string[]]$RequiredContainers = @("la-caja-db", "la-caja-redis"),
-    [string]$WireGuardTunnelName = "LA-CAJA-FALLBACK",
-    [switch]$JsonOnly
-)
+<#
+.SYNOPSIS
+    Ferrari Healthcheck - System Vitality Monitor for Windows
+.DESCRIPTION
+    Checks the status of critical components (Docker, Network, Tailscale) and logs results.
+    Part of the LA-CAJA High Availability "Ferrari" Plan.
+.NOTES
+    File Name      : ferrari-healthcheck.ps1
+    Author         : Antigravity Agent
+    Prerequisite   : Run as Administrator recommended for full access
+#>
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+# Configuration
+$LogPath = "C:\ProgramData\LaCaja\logs"
+$LogFile = "$LogPath\ferrari_health.log"
+$MaxLogSizeMB = 10
 
-function Test-CommandAvailable {
-    param([Parameter(Mandatory = $true)][string]$Name)
-    return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
+# Ensure Log Directory Exists
+if (-not (Test-Path -Path $LogPath)) {
+    New-Item -ItemType Directory -Path $LogPath -Force | Out-Null
 }
 
-function Test-HttpEndpoint {
-    param(
-        [Parameter(Mandatory = $true)][string]$Url,
-        [int]$TimeoutSec = 8
+# Logger Function
+function Write-Log {
+    param (
+        [string]$Message,
+        [string]$Level = "INFO"
     )
-
-    try {
-        $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -TimeoutSec $TimeoutSec
-        return @{
-            ok = ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300)
-            statusCode = [int]$response.StatusCode
-            error = $null
-        }
-    }
-    catch {
-        $statusCode = 0
-        if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
-            $statusCode = [int]$_.Exception.Response.StatusCode
-        }
-
-        return @{
-            ok = $false
-            statusCode = $statusCode
-            error = $_.Exception.Message
-        }
+    $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $LogEntry = "[$Timestamp] [$Level] $Message"
+    Add-Content -Path $LogFile -Value $LogEntry
+    if ($Level -eq "ERROR") {
+        Write-Host $LogEntry -ForegroundColor Red
+    } else {
+        Write-Host $LogEntry -ForegroundColor Green
     }
 }
 
-function Get-DockerStatus {
-    param([string[]]$ContainerNames)
-
-    $containers = @{}
-    foreach ($name in $ContainerNames) {
-        $containers[$name] = @{
-            exists = $false
-            running = $false
-            state = "missing"
-        }
-    }
-
-    if (-not (Test-CommandAvailable -Name "docker")) {
-        return @{
-            available = $false
-            error = "docker command not found"
-            containers = $containers
-        }
-    }
-
-    try {
-        $raw = docker ps -a --format "{{.Names}}|{{.State}}" 2>$null
-        foreach ($line in $raw) {
-            if ([string]::IsNullOrWhiteSpace($line)) {
-                continue
-            }
-
-            $parts = $line -split "\|", 2
-            if ($parts.Count -ne 2) {
-                continue
-            }
-
-            $name = $parts[0].Trim()
-            $state = $parts[1].Trim().ToLowerInvariant()
-
-            if ($containers.ContainsKey($name)) {
-                $containers[$name] = @{
-                    exists = $true
-                    running = ($state -eq "running")
-                    state = $state
-                }
-            }
-        }
-
-        return @{
-            available = $true
-            error = $null
-            containers = $containers
-        }
-    }
-    catch {
-        return @{
-            available = $false
-            error = $_.Exception.Message
-            containers = $containers
-        }
+# Rotate Log if too big
+if (Test-Path $LogFile) {
+    $LogSize = (Get-Item $LogFile).Length / 1MB
+    if ($LogSize -gt $MaxLogSizeMB) {
+        Move-Item -Path $LogFile -Destination "$LogFile.old" -Force
+        Write-Log "Log rotated due to size limit." "INFO"
     }
 }
 
-function Get-TailscaleStatus {
-    if (-not (Test-CommandAvailable -Name "tailscale")) {
-        return @{
-            available = $false
-            ok = $false
-            backendState = "not-installed"
-            selfOnline = $false
-            peerCount = 0
-            error = "tailscale command not found"
-        }
-    }
+Write-Log "Starting Ferrari Healthcheck..." "INFO"
 
-    try {
-        $statusJson = tailscale status --json 2>$null | Out-String
-        $status = $statusJson | ConvertFrom-Json
+$GlobalStatus = "OK"
 
-        $backendState = [string]$status.BackendState
-        $selfOnline = [bool]$status.Self.Online
-        $peerCount = 0
-
-        if ($status.Peer) {
-            $peerCount = @($status.Peer.PSObject.Properties).Count
-        }
-
-        $ok = ($backendState -eq "Running") -and $selfOnline
-
-        return @{
-            available = $true
-            ok = $ok
-            backendState = $backendState
-            selfOnline = $selfOnline
-            peerCount = $peerCount
-            error = $null
-        }
-    }
-    catch {
-        return @{
-            available = $true
-            ok = $false
-            backendState = "unknown"
-            selfOnline = $false
-            peerCount = 0
-            error = $_.Exception.Message
-        }
+# 1. Check Internet Connectivity
+$PingTargets = @("8.8.8.8", "1.1.1.1")
+$InternetStatus = $false
+foreach ($Target in $PingTargets) {
+    if (Test-Connection -ComputerName $Target -Count 1 -Quiet) {
+        $InternetStatus = $true
+        break
     }
 }
 
-function Get-WireGuardStatus {
-    param([Parameter(Mandatory = $true)][string]$TunnelName)
+if ($InternetStatus) {
+    Write-Log "Internet Connectivity: ONLINE" "INFO"
+} else {
+    Write-Log "Internet Connectivity: OFFLINE" "ERROR"
+    $GlobalStatus = "DEGRADED"
+}
 
-    $serviceName = "WireGuardTunnel`$$TunnelName"
-    $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-
-    if (-not $service) {
-        return @{
-            installed = $false
-            running = $false
-            serviceName = $serviceName
-            status = "missing"
-        }
-    }
-
-    return @{
-        installed = $true
-        running = ($service.Status -eq "Running")
-        serviceName = $serviceName
-        status = [string]$service.Status
+# 2. Check Docker Containers
+$CriticalContainers = @("la-caja-db", "la-caja-redis")
+foreach ($Container in $CriticalContainers) {
+    $State = docker inspect -f '{{.State.Running}}' $Container 2>$null
+    if ($State -eq 'true') {
+        Write-Log "Container ${Container}: RUNNING" "INFO"
+    } else {
+        Write-Log "Container ${Container}: STOPPED/MISSING" "ERROR"
+        $GlobalStatus = "CRITICAL"
     }
 }
 
-$healthUrl = "$ApiBaseUrl/health"
-$detailedUrl = "$ApiBaseUrl/health/detailed"
-
-$apiHealth = Test-HttpEndpoint -Url $healthUrl
-$apiDetailed = Test-HttpEndpoint -Url $detailedUrl
-$docker = Get-DockerStatus -ContainerNames $RequiredContainers
-$tailscale = Get-TailscaleStatus
-$wireguard = Get-WireGuardStatus -TunnelName $WireGuardTunnelName
-
-$criticalIssues = @()
-
-if (-not $apiHealth.ok) {
-    $criticalIssues += "api-health"
-}
-
-foreach ($containerName in $RequiredContainers) {
-    $entry = $docker.containers[$containerName]
-    if (-not $entry.running) {
-        $criticalIssues += "container-$containerName"
+# 3. Check Tailscale Status (If installed)
+if (Get-Command tailscale -ErrorAction SilentlyContinue) {
+    $TsStatus = tailscale status --json | ConvertFrom-Json
+    if ($TsStatus.BackendState -eq "Running") {
+        Write-Log "Tailscale: RUNNING" "INFO"
+    } else {
+        Write-Log "Tailscale: STOPPED/ERROR ($($TsStatus.BackendState))" "ERROR"
+        $GlobalStatus = "DEGRADED"
     }
+} else {
+    Write-Log "Tailscale command not found (Skipping check)" "WARN"
 }
 
-if (-not $tailscale.ok) {
-    $criticalIssues += "tailscale"
+# Final Status Output to File (for other scripts to consume)
+$StatusObj = [PSCustomObject]@{
+    Timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    Status = $GlobalStatus
+    Internet = $InternetStatus
 }
+$StatusObj | ConvertTo-Json | Set-Content -Path "$LogPath\ferrari_status.json"
 
-$overall = if ($criticalIssues.Count -eq 0) { "healthy" } else { "degraded" }
-
-$result = [ordered]@{
-    timestamp = (Get-Date).ToString("o")
-    overall = $overall
-    criticalIssues = $criticalIssues
-    api = @{
-        baseUrl = $ApiBaseUrl
-        health = $apiHealth
-        detailed = $apiDetailed
-    }
-    docker = $docker
-    tailscale = $tailscale
-    wireguard = $wireguard
-}
-
-$json = $result | ConvertTo-Json -Depth 8
-
-if ($JsonOnly) {
-    Write-Output $json
-}
-else {
-    Write-Host ""
-    Write-Host "LA-CAJA Ferrari Healthcheck" -ForegroundColor Cyan
-    Write-Host "Overall: $overall" -ForegroundColor $(if ($overall -eq "healthy") { "Green" } else { "Yellow" })
-    if ($criticalIssues.Count -gt 0) {
-        Write-Host ("Issues: " + ($criticalIssues -join ", ")) -ForegroundColor Yellow
-    }
-    Write-Host $json
-}
-
-if ($overall -eq "healthy") {
-    exit 0
-}
-
-exit 2
+Write-Log "Healthcheck Finished. Global Status: $GlobalStatus" "INFO"

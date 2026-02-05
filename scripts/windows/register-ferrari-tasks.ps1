@@ -1,94 +1,50 @@
-param(
-    [string]$ProjectRoot = "",
-    [string]$TaskPrefix = "LA-CAJA-FERRARI",
-    [int]$HealthIntervalMinutes = 1,
-    [int]$HealIntervalMinutes = 2,
-    [string]$ApiBaseUrl = "http://localhost:3000",
-    [string]$ApiStartCommand = "npm --prefix apps/api run start:prod",
-    [string]$WireGuardTunnelName = "LA-CAJA-FALLBACK",
-    [switch]$EnableWireGuardFallback,
-    [switch]$RunNow
-)
+<#
+.SYNOPSIS
+    Register Ferrari Tasks - Windows Task Scheduler Integration
+.DESCRIPTION
+    Registers the Healthcheck and Self-Heal scripts to run automatically.
+    Healthcheck: Every 5 minutes.
+    Self-Heal: Every 5 minutes (offset by 1 min).
+.NOTES
+    File Name      : register-ferrari-tasks.ps1
+    Author         : Antigravity Agent
+    Requires       : Run as Administrator
+#>
 
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
+$ScriptPath = "C:\Users\Yoel Dev\Documents\GitHub\LA-CAJA\scripts\windows"
+$HealthCheckScript = "$ScriptPath\ferrari-healthcheck.ps1"
+$SelfHealScript = "$ScriptPath\ferrari-self-heal.ps1"
+$User = "SYSTEM" # Run as SYSTEM for highest privileges and no interactive login requirement
 
-if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
-    $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-}
-
-$healthScript = Join-Path $PSScriptRoot "ferrari-healthcheck.ps1"
-$selfHealScript = Join-Path $PSScriptRoot "ferrari-self-heal.ps1"
-
-if (-not (Test-Path $healthScript)) {
-    throw "Health script not found: $healthScript"
-}
-
-if (-not (Test-Path $selfHealScript)) {
-    throw "Self-heal script not found: $selfHealScript"
-}
-
-$healthTaskName = "$TaskPrefix-HEALTHCHECK"
-$selfHealTaskName = "$TaskPrefix-SELFHEAL"
-
-$taskUser = "$env:USERDOMAIN\$env:USERNAME"
-$repeatHealth = New-TimeSpan -Minutes ([Math]::Max($HealthIntervalMinutes, 1))
-$repeatHeal = New-TimeSpan -Minutes ([Math]::Max($HealIntervalMinutes, 1))
-$repeatDuration = New-TimeSpan -Days 3650
-
-$settings = New-ScheduledTaskSettingsSet `
-    -StartWhenAvailable `
-    -AllowStartIfOnBatteries `
-    -DontStopIfGoingOnBatteries `
-    -MultipleInstances IgnoreNew `
-    -ExecutionTimeLimit (New-TimeSpan -Minutes 20)
-
-$principal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType InteractiveToken -RunLevel Highest
-
-$healthArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$healthScript`" -ApiBaseUrl `"$ApiBaseUrl`" -WireGuardTunnelName `"$WireGuardTunnelName`""
-$healthAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $healthArgs
-$healthTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
-    -RepetitionInterval $repeatHealth `
-    -RepetitionDuration $repeatDuration
-
-$healArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$selfHealScript`" -ProjectRoot `"$ProjectRoot`" -ApiBaseUrl `"$ApiBaseUrl`" -ApiStartCommand `"$ApiStartCommand`" -WireGuardTunnelName `"$WireGuardTunnelName`""
-if ($EnableWireGuardFallback) {
-    $healArgs += " -EnableWireGuardFallback"
-}
-$healAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $healArgs
-$healTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
-    -RepetitionInterval $repeatHeal `
-    -RepetitionDuration $repeatDuration
-
-foreach ($taskName in @($healthTaskName, $selfHealTaskName)) {
-    $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-    if ($existing) {
-        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+# Helper to Create Task
+function Register-MyTask {
+    param (
+        [string]$Name,
+        [string]$Script,
+        [string]$IntervalMinutes,
+        [string]$Description
+    )
+    
+    $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$Script`""
+    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)
+    # Set to run indefinitely
+    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RunOnlyIfNetworkAvailable:$false
+    
+    Write-Host "Registering Task: $Name..." -ForegroundColor Cyan
+    
+    try {
+        Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue
+        Register-ScheduledTask -Action $Action -Trigger $Trigger -TaskName $Name -Description $Description -User $User -Settings $Settings -Force
+        Write-Host "Task $Name registered successfully." -ForegroundColor Green
+    } catch {
+        Write-Host "Error registering task $Name : $_" -ForegroundColor Red
     }
 }
 
-Register-ScheduledTask `
-    -TaskName $healthTaskName `
-    -Action $healthAction `
-    -Trigger $healthTrigger `
-    -Settings $settings `
-    -Principal $principal `
-    -Description "LA-CAJA Ferrari healthcheck task"
+# Register Healthcheck (Every 5 mins)
+Register-MyTask -Name "Ferrari_Healthcheck" -Script $HealthCheckScript -IntervalMinutes 5 -Description "La Caja Ferrari - System Health Monitoring"
 
-Register-ScheduledTask `
-    -TaskName $selfHealTaskName `
-    -Action $healAction `
-    -Trigger $healTrigger `
-    -Settings $settings `
-    -Principal $principal `
-    -Description "LA-CAJA Ferrari self-heal task"
+# Register Self-Heal (Every 5 mins)
+Register-MyTask -Name "Ferrari_SelfHeal" -Script $SelfHealScript -IntervalMinutes 5 -Description "La Caja Ferrari - Automatic Recovery System"
 
-Write-Host "Tasks registered:" -ForegroundColor Green
-Write-Host "- $healthTaskName (every $($repeatHealth.TotalMinutes) min)"
-Write-Host "- $selfHealTaskName (every $($repeatHeal.TotalMinutes) min)"
-
-if ($RunNow) {
-    Start-ScheduledTask -TaskName $healthTaskName
-    Start-ScheduledTask -TaskName $selfHealTaskName
-    Write-Host "Tasks started immediately." -ForegroundColor Green
-}
+Write-Host "All Ferrari Tasks Registered." -ForegroundColor Green

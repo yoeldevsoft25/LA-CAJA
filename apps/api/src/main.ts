@@ -21,6 +21,8 @@ async function bootstrap() {
   );
 
   const configService = app.get(ConfigService);
+  const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
+  const isDevelopment = nodeEnv !== 'production';
 
   // WebSocket adapter explícito para Fastify + Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));
@@ -30,24 +32,28 @@ async function bootstrap() {
 
   // Security Headers (debe ir ANTES de CORS)
   await app.register(helmet, {
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline para el dashboard
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
+    contentSecurityPolicy: isDevelopment
+      ? false
+      : {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline para el dashboard
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
+        },
       },
-    },
-    hsts: {
-      maxAge: 31536000, // 1 año
-      includeSubDomains: true,
-      preload: true,
-    },
+    hsts: isDevelopment
+      ? false
+      : {
+        maxAge: 31536000, // 1 año
+        includeSubDomains: true,
+        preload: true,
+      },
     frameguard: {
       action: 'deny',
     },
@@ -56,6 +62,8 @@ async function bootstrap() {
     referrerPolicy: {
       policy: 'strict-origin-when-cross-origin',
     },
+    crossOriginOpenerPolicy: isDevelopment ? false : { policy: 'same-origin' },
+    crossOriginEmbedderPolicy: isDevelopment ? false : true,
   });
 
   // Validación estricta de datos
@@ -71,8 +79,6 @@ async function bootstrap() {
   );
 
   // CORS restringido a orígenes permitidos
-  const nodeEnv = configService.get<string>('NODE_ENV');
-  const isDevelopment = nodeEnv !== 'production';
   const allowAllOriginsLocal =
     configService.get<string>('ALLOW_ALL_ORIGINS_LOCAL') === 'true';
 

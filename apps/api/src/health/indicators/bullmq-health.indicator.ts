@@ -9,17 +9,33 @@ import { Queue } from 'bullmq';
 
 @Injectable()
 export class BullMQHealthIndicator extends HealthIndicator {
-  constructor(@InjectQueue('notifications') private notificationsQueue: Queue) {
+  constructor(
+    @InjectQueue('notifications') private notificationsQueue: Queue,
+    @InjectQueue('federation-sync') private federationSyncQueue: Queue,
+  ) {
     super();
   }
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     try {
-      const [waiting, active, completed, failed] = await Promise.all([
+      const [
+        notifWaiting,
+        notifActive,
+        notifCompleted,
+        notifFailed,
+        fedWaiting,
+        fedActive,
+        fedCompleted,
+        fedFailed,
+      ] = await Promise.all([
         this.notificationsQueue.getWaitingCount(),
         this.notificationsQueue.getActiveCount(),
         this.notificationsQueue.getCompletedCount(),
         this.notificationsQueue.getFailedCount(),
+        this.federationSyncQueue.getWaitingCount(),
+        this.federationSyncQueue.getActiveCount(),
+        this.federationSyncQueue.getCompletedCount(),
+        this.federationSyncQueue.getFailedCount(),
       ]);
 
       const isHealthy = true; // Consideramos saludable si podemos obtener las métricas
@@ -28,10 +44,16 @@ export class BullMQHealthIndicator extends HealthIndicator {
         connection: 'connected',
         queues: {
           notifications: {
-            waiting,
-            active,
-            completed,
-            failed,
+            waiting: notifWaiting,
+            active: notifActive,
+            completed: notifCompleted,
+            failed: notifFailed,
+          },
+          federation_sync: {
+            waiting: fedWaiting,
+            active: fedActive,
+            completed: fedCompleted,
+            failed: fedFailed,
           },
         },
       });
