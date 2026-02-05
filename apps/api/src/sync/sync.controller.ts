@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { SyncService } from './sync.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
+import { FederationSyncService, FederationStatus } from './federation-sync.service';
 import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
 import { ResolveConflictDto } from './dto/resolve-conflict.dto';
@@ -25,6 +26,7 @@ export class SyncController {
   constructor(
     private readonly syncService: SyncService,
     private readonly conflictResolutionService: ConflictResolutionService,
+    private readonly federationSyncService: FederationSyncService,
   ) { }
 
   @Post('push')
@@ -87,6 +89,11 @@ export class SyncController {
       100,
       cursorEventId,
     );
+  }
+
+  @Get('federation/status')
+  async getFederationStatus(): Promise<FederationStatus> {
+    return this.federationSyncService.getFederationStatus();
   }
 
   @Post('resolve-conflict')

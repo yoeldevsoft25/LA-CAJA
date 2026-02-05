@@ -64,6 +64,7 @@
   - Señalizacion de backend no disponible desde capa API client y limpieza automatica al recuperar endpoint.
   - Banner de UX actualizado: **\"Servidor en mantenimiento, tus ventas se guardan localmente\"**.
   - Sesion protegida en modo offline/mantenimiento: no se fuerza logout por inactividad ni por validacion de licencia mientras backend no este disponible.
+  - Diagnostico de federacion agregado en API: `GET /sync/federation/status` (estado de cola `federation-sync`, endpoint remoto configurado, probe remoto, ultimo error de relay).
 - **Validacion tecnica:** build `packages/api-client` y build `apps/pwa` en PASS despues del hardening.
 
 ### KPI operativo (ultimo estado validado)
