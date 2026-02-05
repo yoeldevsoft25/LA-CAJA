@@ -635,6 +635,89 @@ npm run dev:pwa
 npm run dev:desktop
 ```
 
+### 6. Integraciones Futuras / Roadmap
+
+Arquitectura planeada para subsistemas en desarrollo activo.
+
+#### 6.1. Capa de Hardware Híbrida (Print & Peripherals)
+Modelo de abstracción para manejar impresión nativa (Desktop) y web (PWA).
+
+```mermaid
+flowchart TD
+    subgraph App["Velox Client"]
+        PrintService[PrintService]
+        PeriService[PeripheralsService]
+    end
+
+    subgraph Config["Configuración"]
+        DB_Config[IndexedDB: Configs]
+        Default[Default: Browser API]
+    end
+
+    subgraph Drivers["Drivers / Puentes"]
+        Browser[Navegador (Window.print)]
+        Serial[Web Serial API]
+        Bridge[Tauri Rust Bridge]
+        Net[Network / ESC-POS]
+    end
+
+    subgraph Hardware["Hardware Físico"]
+        Thermal[Impresora Térmica]
+        Scanner[Lector Barcode]
+        Scale[Balanza]
+    end
+
+    PeriService -->|1. Cargar Config| DB_Config
+    PrintService -->|2. Resolver Driver| PeriService
+    
+    PeriService -->|Default| Browser
+    PeriService -->|USB Direct| Serial
+    PeriService -->|Nativo| Bridge
+    PeriService -->|LAN| Net
+
+    Browser -.->|OS Dialog| Thermal
+    Serial -->|Raw Bytes| Thermal
+    Bridge -->|Rust SerialPort| Scanner & Scale
+    Net -->|TCP/IP| Thermal
+```
+
+#### 6.2. Autenticación Offline (Credenciales Distribuidas)
+Mecanismo de "Replica de Credenciales" para permitir login sin internet.
+
+```mermaid
+flowchart TD
+    subgraph Online["Fase Online (Sync)"]
+        Login[Login Exitoso]
+        SyncCreds[Sincronizar Hash PIN]
+        SaveCreds[Guardar en IDB Seguro]
+    end
+
+    subgraph Offline["Fase Offline (Login)"]
+        Input[Input PIN]
+        Hash[Hashing Local (Argon2/SHA)]
+        Compare{¿Coincide Hash?}
+        Session[Crear Sesión Local]
+    end
+
+    subgraph Security["Seguridad"]
+        Salt[Salt Específico Dispositivo]
+        TTL[Expiración Token Offline]
+    end
+
+    Login -->|Token + Hash| SyncCreds
+    SyncCreds -->|Encriptado| SaveCreds
+    
+    Input --> Hash
+    SaveCreds -.->|Leer| Compare
+    Hash --> Compare
+    
+    Compare -->|Si| Session
+    Compare -->|No| Error[PIN Inválido]
+    
+    Session -->|Validar| TTL
+```
+
+
 ## Documentacion
 - Indice: `docs/README.md`
 - Mapa de sistema: `docs/architecture/VELOX_SYSTEM_MAP.md`
