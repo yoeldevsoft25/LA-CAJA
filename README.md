@@ -491,9 +491,9 @@ flowchart TD
     VC -->|"Concurrente A || B"| Strategy{"Estrategia?"}
 
     subgraph Strategies["Estrategias CRDT"]
-        LWW[LWW (Ultima-Escritura-Gana)]
-        AWSet[AWSet (Set Agrega-Gana)]
-        MVR[MVR (Registro Multi-Valor)]
+        LWW["LWW (Ultima-Escritura-Gana)"]
+        AWSet["AWSet (Set Agrega-Gana)"]
+        MVR["MVR (Registro Multi-Valor)"]
     end
 
     Strategy -->|Campos Simples| LWW
