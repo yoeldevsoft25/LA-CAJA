@@ -358,10 +358,33 @@ Canales
 - Cobertura de eventos offline para mas dominios (orders/transfers/payments prioritarios).
 - UX de conflictos con resolucion guiada.
 - Idempotencia reforzada en jobs/proyecciones.
+- Base para convergencia automatica (ledger + deltas semanticos) en dominios criticos.
 
 **DoD/KPIs:**
 - Tasa de sincronizacion exitosa > 99.5% en pruebas de red intermitente.
 - Conflictos sin resolver < 0.5% de eventos.
+
+### Sprint 6.1 - Convergencia CRDT + Escrow (Nivel Oro)
+**Objetivo:** consistencia eventual fuerte sin revisiones manuales en caja/inventario.
+
+**Entregables:**
+- **Caja (Ledger + PN-Counter):** ledger inmutable de transacciones + saldo derivado por PN-Counter.
+- **Inventario (Deltas Semanticos):** eventos de movimiento (+x/-x), prohibido enviar "stock final".
+- **Escrow de stock (cuotas por nodo):** cupos asignados por SKU; transferencias de cupo solo online.
+- **Politica de sobreventa (opcional):** permitir negativos temporales solo si el negocio lo acepta.
+- **Idempotencia universal:** `event_id` + `request_id` obligatorios y dedupe server-side/queue.
+- **Causalidad de caja:** Lamport clocks para apertura/cierre y eventos de control.
+- **MVR reducido:** MVR solo para metadata no conmutativa; precios con LWW determinista + auditoria.
+
+**PoC (validacion 3 dias):**
+1. **Caja (PN-Counter):** 3 dispositivos offline -> 100 transacciones -> saldo converge sin intervencion.
+2. **Inventario (Escrow + Deltas):** 3 dispositivos venden mismo SKU con stock limitado -> no oversell si hay cupos; si hay politica negativa, converge con deficit exacto.
+
+**DoD/KPIs:**
+- Convergencia 100% en PoC (saldo e inventario iguales en todos los nodos).
+- Eventos duplicados = 0 (dedupe efectivo).
+- Uso de red reducido (>= 40% vs sync de entidades completas).
+- Oversell = 0 cuando Escrow activo.
 
 ## Sprint 7 - Performance comercial
 **Objetivo:** convertir velocidad en ventaja competitiva visible.
