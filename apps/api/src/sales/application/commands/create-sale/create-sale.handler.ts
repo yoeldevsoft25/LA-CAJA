@@ -19,6 +19,7 @@ import { DebtPayment } from '../../../../database/entities/debt-payment.entity';
 import { CreateSaleDto } from '../../../dto/create-sale.dto';
 import { randomUUID } from 'crypto';
 import { CashSession } from '../../../../database/entities/cash-session.entity';
+import { Event } from '../../../../database/entities/event.entity';
 import {
   PaymentRulesService,
   PaymentSplit,
@@ -429,6 +430,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     private saleReturnItemRepository: Repository<SaleReturnItem>,
     @InjectRepository(CashSession)
     private cashSessionRepository: Repository<CashSession>,
+    @InjectRepository(Event)
+    private eventRepository: Repository<Event>,
     private dataSource: DataSource,
     private paymentRulesService: PaymentRulesService,
     private discountRulesService: DiscountRulesService,
@@ -447,6 +450,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     private validator: CreateSaleValidator,
     @InjectQueue('sales-post-processing')
     private salesPostProcessingQueue: Queue,
+    @InjectQueue('federation-sync')
+    private federationSyncQueue: Queue,
   ) {}
 
   async execute(command: CreateSaleCommand): Promise<Sale> {
@@ -1484,6 +1489,98 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     }
 
     await this.usageService.increment(storeId, 'invoices_per_month');
+
+    // Crear evento SaleCreated para habilitar federación entre APIs incluso cuando
+    // la venta se creó por /sales (flujo online directo, sin /sync/push).
+    try {
+      const serverDeviceId = '00000000-0000-0000-0000-000000000001';
+      const eventSeq = Date.now();
+      const saleEvent = this.eventRepository.create({
+        event_id: randomUUID(),
+        store_id: storeId,
+        device_id: serverDeviceId,
+        seq: eventSeq,
+        type: 'SaleCreated',
+        version: 1,
+        created_at: new Date(saleWithDetailedDebt.sold_at),
+        actor_user_id: userId || null,
+        actor_role: effectiveUserRole || 'cashier',
+        payload: {
+          sale_id: saleWithDetailedDebt.id,
+          cash_session_id: saleWithDetailedDebt.cash_session_id,
+          sold_at: new Date(saleWithDetailedDebt.sold_at).getTime(),
+          exchange_rate: Number(saleWithDetailedDebt.exchange_rate),
+          currency: saleWithDetailedDebt.currency,
+          items: (saleWithDetailedDebt.items || []).map((item) => ({
+            line_id: item.id,
+            product_id: item.product_id,
+            qty: Number(item.qty),
+            unit_price_bs: Number(item.unit_price_bs),
+            unit_price_usd: Number(item.unit_price_usd),
+            discount_bs: Number(item.discount_bs || 0),
+            discount_usd: Number(item.discount_usd || 0),
+            is_weight_product: Boolean(item.is_weight_product),
+            weight_unit: item.weight_unit || null,
+            weight_value:
+              item.weight_value === null || item.weight_value === undefined
+                ? null
+                : Number(item.weight_value),
+            price_per_weight_bs:
+              item.price_per_weight_bs === null ||
+              item.price_per_weight_bs === undefined
+                ? null
+                : Number(item.price_per_weight_bs),
+            price_per_weight_usd:
+              item.price_per_weight_usd === null ||
+              item.price_per_weight_usd === undefined
+                ? null
+                : Number(item.price_per_weight_usd),
+          })),
+          totals: {
+            subtotal_bs: Number(saleWithDetailedDebt.totals?.subtotal_bs || 0),
+            subtotal_usd: Number(saleWithDetailedDebt.totals?.subtotal_usd || 0),
+            discount_bs: Number(saleWithDetailedDebt.totals?.discount_bs || 0),
+            discount_usd: Number(saleWithDetailedDebt.totals?.discount_usd || 0),
+            total_bs: Number(saleWithDetailedDebt.totals?.total_bs || 0),
+            total_usd: Number(saleWithDetailedDebt.totals?.total_usd || 0),
+          },
+          payment: saleWithDetailedDebt.payment,
+          customer: saleWithDetailedDebt.customer_id
+            ? {
+                customer_id: saleWithDetailedDebt.customer_id,
+              }
+            : undefined,
+          note: saleWithDetailedDebt.note || undefined,
+        },
+        vector_clock: { [serverDeviceId]: eventSeq },
+        causal_dependencies: [],
+        delta_payload: null,
+        full_payload_hash: null,
+      });
+
+      await this.eventRepository.save(saleEvent);
+      await this.federationSyncQueue.add(
+        'relay-event',
+        {
+          eventId: saleEvent.event_id,
+          storeId: saleEvent.store_id,
+          deviceId: saleEvent.device_id,
+        },
+        {
+          attempts: 10,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+          removeOnComplete: true,
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `[SALE_CREATE] Error creando/encolando evento de federación para venta ${saleWithDetailedDebt.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
     return saleWithDetailedDebt;
   }

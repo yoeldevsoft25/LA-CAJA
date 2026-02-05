@@ -196,6 +196,7 @@ export class SyncService {
         if (event.type === 'SaleCreated') {
           if (
             authenticatedUserId &&
+            authenticatedUserId !== 'system-federation' &&
             event.actor?.user_id &&
             event.actor.user_id !== authenticatedUserId
           ) {
@@ -496,6 +497,7 @@ export class SyncService {
 
     if (
       authenticatedUserId &&
+      authenticatedUserId !== 'system-federation' &&
       actorUserId &&
       actorUserId !== authenticatedUserId
     ) {
