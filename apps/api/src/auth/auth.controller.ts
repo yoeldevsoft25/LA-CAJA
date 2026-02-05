@@ -35,6 +35,7 @@ import { LoginRateLimitGuard } from './guards/login-rate-limit.guard';
 import { SecurityAuditService } from '../security/security-audit.service';
 import { AdminApiGuard } from '../admin/admin-api.guard';
 import { RequestWithUser } from './auth.types';
+import { getClientIp } from '../common/utils/client-ip.util';
 
 @Controller('auth')
 export class AuthController {
@@ -173,8 +174,7 @@ export class AuthController {
     license_grace_days: number;
     trial_days_remaining: number;
   }> {
-    const ipAddress =
-      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress = getClientIp(req);
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(`Intento de registro para tienda: ${dto.store_name}`);
@@ -259,8 +259,7 @@ export class AuthController {
     @Body() dto: ForgotPinDto,
     @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress =
-      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress = getClientIp(req);
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(
@@ -312,8 +311,7 @@ export class AuthController {
     @Body() dto: ResetPinDto,
     @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress =
-      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress = getClientIp(req);
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log('Intento de restablecimiento de PIN');
@@ -379,8 +377,7 @@ export class AuthController {
       pin: String(body.pin).trim(),
     };
 
-    const ipAddress =
-      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress = getClientIp(req);
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     this.logger.log(`Intento de login para tienda: ${dto.store_id}`);
@@ -436,8 +433,7 @@ export class AuthController {
     @Body() dto: RefreshTokenDto,
     @Req() req: Request,
   ): Promise<RefreshTokenResponseDto> {
-    const ipAddress =
-      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress = getClientIp(req);
     const userAgent = (req.headers['user-agent'] as string) || 'unknown';
 
     if (!dto.refresh_token) {
@@ -492,8 +488,7 @@ export class AuthController {
     @Req() req: RequestWithUser,
   ): Promise<{ message: string }> {
     const user = req.user;
-    const ipAddress =
-      (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown';
+    const ipAddress = getClientIp(req);
 
     if (body.refresh_token) {
       // Revocar refresh token específico

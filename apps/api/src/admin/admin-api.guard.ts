@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { SecurityAuditService } from '../security/security-audit.service';
+import { getClientIp } from '../common/utils/client-ip.util';
 
 /**
  * Guard para proteger endpoints administrativos
@@ -29,7 +30,7 @@ export class AdminApiGuard implements CanActivate {
     }
 
     if (!headerKey || headerKey !== expected) {
-      const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+      const ipAddress = getClientIp(req);
 
       // ✅ Registrar intento no autorizado (no esperar para no bloquear)
       this.securityAudit

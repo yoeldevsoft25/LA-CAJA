@@ -6,7 +6,9 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { SecurityAuditService } from '../../security/security-audit.service';
+import { getClientIp } from '../../common/utils/client-ip.util';
 
 /**
  * Guard mejorado de rate limiting para login
@@ -22,9 +24,8 @@ export class LoginRateLimitGuard implements CanActivate {
   constructor(private readonly securityAudit: SecurityAuditService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const ipAddress =
-      request.ip || request.headers['x-forwarded-for'] || 'unknown';
+    const request = context.switchToHttp().getRequest<Request>();
+    const ipAddress = getClientIp(request);
     const body = request.body || {};
     const storeId = body.store_id;
 
