@@ -11,6 +11,7 @@ const FAILOVER_API_URLS = [PRIMARY_API_URL, FALLBACK_API_URL, TERTIARY_API_URL].
   (url): url is string => Boolean(url)
 );
 const API_BASE_STORAGE_KEY = 'velox_api_base';
+const SERVER_UNAVAILABLE_KEY = 'velox_server_unavailable';
 
 const isLocalHostname = (hostname: string): boolean =>
   hostname === 'localhost' || hostname === '127.0.0.1';
@@ -188,7 +189,21 @@ const probePrimaryApi = async (): Promise<boolean> => {
   if (available) {
     setStoredApiBase(available);
     api.defaults.baseURL = available;
+    try {
+      localStorage.removeItem(SERVER_UNAVAILABLE_KEY);
+      window.dispatchEvent(new CustomEvent('api:endpoint_recovered', { detail: { at: Date.now(), baseURL: available } }));
+    } catch {
+      // ignore
+    }
     return available === PREFERRED_API_URL;
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      localStorage.setItem(SERVER_UNAVAILABLE_KEY, '1');
+      window.dispatchEvent(new CustomEvent('api:all_endpoints_down', { detail: { reason: 'probe_failed', at: Date.now() } }));
+    } catch {
+      // ignore
+    }
   }
   return false;
 };

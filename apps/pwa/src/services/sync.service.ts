@@ -63,6 +63,9 @@ export interface SyncStatus {
 
 class SyncServiceClass {
   private readonly ZERO_UUID = '00000000-0000-0000-0000-000000000000';
+  private readonly PUSH_LOCK_KEY = 'sync_push_lock';
+  private readonly PUSH_LOCK_TTL_MS = 15_000;
+  private readonly PUSH_LOCK_OWNER = `fg-${crypto.randomUUID()}`;
   private syncQueue: SyncQueue | null = null;
   private metrics: SyncMetricsCollector;
   private isInitialized = false;
@@ -941,94 +944,117 @@ class SyncServiceClass {
       };
     }
 
-    // Verificar conectividad antes de intentar sincronizar
-    if (!navigator.onLine) {
-      this.logger.warn('Aborting sync, navigator.offline');
-      const offlineError = new Error('Sin conexión a internet');
-      offlineError.name = 'OfflineError';
+    const hasPushLock = await this.acquirePushLock('foreground');
+    if (!hasPushLock) {
+      this.logger.debug('syncBatchToServer skipped: push lock busy');
+      const lockError = new Error('Sin conexión o sync en progreso');
+      lockError.name = 'OfflineError';
       return {
         success: false,
-        error: offlineError,
+        error: lockError,
       };
     }
 
-    // Validar storeId y deviceId antes de enviar
-    if (!this.storeId || !this.isUUID(this.storeId)) {
-      this.logger.error('storeId inválido antes de sync', undefined, { storeId: this.storeId });
-      const err = new Error(`storeId inválido para sync: ${this.storeId}`);
-      return { success: false, error: err };
-    }
-    if (!this.deviceId || !this.isUUID(this.deviceId)) {
-      this.logger.error('deviceId inválido antes de sync', undefined, { deviceId: this.deviceId });
-      const err = new Error(`deviceId inválido para sync: ${this.deviceId}`);
-      return { success: false, error: err };
-    }
-
-    // Filtrar y sanear eventos (backend no quiere store_id/device_id dentro de cada evento)
-    const invalidActorEventIds: string[] = [];
-    const sanitizedEvents = events
-      .map((evt) => {
-        const actorUserId = evt.actor?.user_id;
-        if (!this.isUUID(actorUserId)) {
-          invalidActorEventIds.push(evt.event_id);
-          return null;
-        }
-        // Remover metadatos locales no aceptados por DTO del backend.
-        const {
-          id,
-          store_id,
-          device_id,
-          sync_status,
-          sync_attempts,
-          synced_at,
-          next_retry_at,
-          last_error,
-          last_error_code,
-          payload,
-          ...rest
-        } = evt as any;
-        void id;
-        void store_id;
-        void device_id;
-        void sync_status;
-        void sync_attempts;
-        void synced_at;
-        void next_retry_at;
-        void last_error;
-        void last_error_code;
-        // Crear evento sin store_id y device_id para enviar al backend
-        // El backend los espera solo en el DTO principal, no en cada evento
-        // Remover store_id y device_id del payload (si vienen por compatibilidad legacy)
-        const cleanPayload = { ...(payload || {}) } as Record<string, unknown>;
-        delete cleanPayload.store_id;
-        delete cleanPayload.device_id;
-        return {
-          ...rest,
-          payload: cleanPayload,
-        } as Omit<BaseEvent, 'store_id' | 'device_id'>;
-      })
-      .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> => evt !== null);
-
-    this.logger.debug('Sanitized events', {
-      original_count: events.length,
-      sanitized_count: sanitizedEvents.length,
-      invalid_actor_count: invalidActorEventIds.length,
-    });
-
-    if (invalidActorEventIds.length > 0) {
-      const error = new Error('Eventos inválidos (falta actor.user_id UUID). Se marcan como failed.');
-      error.name = 'ValidationError';
-      for (const evtId of invalidActorEventIds) {
-        await this.markEventAsFailed(evtId, error);
-      }
-      this.syncQueue?.markAsFailed(invalidActorEventIds, error);
-    }
-
-    if (sanitizedEvents.length === 0) {
-      return { success: true };
-    }
-
     try {
+      // Verificar conectividad antes de intentar sincronizar
+      if (!navigator.onLine) {
+        this.logger.warn('Aborting sync, navigator.offline');
+        const offlineError = new Error('Sin conexión a internet');
+        offlineError.name = 'OfflineError';
+        return {
+          success: false,
+          error: offlineError,
+        };
+      }
+
+      // Validar storeId y deviceId antes de enviar
+      if (!this.storeId || !this.isUUID(this.storeId)) {
+        this.logger.error('storeId inválido antes de sync', undefined, { storeId: this.storeId });
+        const err = new Error(`storeId inválido para sync: ${this.storeId}`);
+        return { success: false, error: err };
+      }
+      if (!this.deviceId || !this.isUUID(this.deviceId)) {
+        this.logger.error('deviceId inválido antes de sync', undefined, { deviceId: this.deviceId });
+        const err = new Error(`deviceId inválido para sync: ${this.deviceId}`);
+        return { success: false, error: err };
+      }
+
+      // Evitar doble-push: solo sincronizar eventos que sigan pending/retrying en IndexedDB.
+      const eventIds = events.map((e) => e.event_id);
+      const dbEvents = await db.localEvents.where('event_id').anyOf(eventIds).toArray();
+      const pendingDbIds = new Set(
+        dbEvents
+          .filter((e) => e.sync_status === 'pending' || e.sync_status === 'retrying')
+          .map((e) => e.event_id)
+      );
+      const liveEvents = events.filter((evt) => pendingDbIds.has(evt.event_id));
+      if (liveEvents.length === 0) {
+        this.logger.debug('syncBatchToServer: nothing pending in DB, skipping push');
+        return { success: true };
+      }
+
+      // Filtrar y sanear eventos (backend no quiere store_id/device_id dentro de cada evento)
+      const invalidActorEventIds: string[] = [];
+      const sanitizedEvents = liveEvents
+        .map((evt) => {
+          const actorUserId = evt.actor?.user_id;
+          if (!this.isUUID(actorUserId)) {
+            invalidActorEventIds.push(evt.event_id);
+            return null;
+          }
+          // Remover metadatos locales no aceptados por DTO del backend.
+          const {
+            id,
+            store_id,
+            device_id,
+            sync_status,
+            sync_attempts,
+            synced_at,
+            next_retry_at,
+            last_error,
+            last_error_code,
+            payload,
+            ...rest
+          } = evt as any;
+          void id;
+          void store_id;
+          void device_id;
+          void sync_status;
+          void sync_attempts;
+          void synced_at;
+          void next_retry_at;
+          void last_error;
+          void last_error_code;
+          const cleanPayload = { ...(payload || {}) } as Record<string, unknown>;
+          delete cleanPayload.store_id;
+          delete cleanPayload.device_id;
+          return {
+            ...rest,
+            payload: cleanPayload,
+          } as Omit<BaseEvent, 'store_id' | 'device_id'>;
+        })
+        .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> => evt !== null);
+
+      this.logger.debug('Sanitized events', {
+        original_count: events.length,
+        live_count: liveEvents.length,
+        sanitized_count: sanitizedEvents.length,
+        invalid_actor_count: invalidActorEventIds.length,
+      });
+
+      if (invalidActorEventIds.length > 0) {
+        const error = new Error('Eventos inválidos (falta actor.user_id UUID). Se marcan como failed.');
+        error.name = 'ValidationError';
+        for (const evtId of invalidActorEventIds) {
+          await this.markEventAsFailed(evtId, error);
+        }
+        this.syncQueue?.markAsFailed(invalidActorEventIds, error);
+      }
+
+      if (sanitizedEvents.length === 0) {
+        return { success: true };
+      }
+
       this.logger.debug('Enviando /sync/push', {
         store_id: this.storeId,
         device_id: this.deviceId,
@@ -1122,7 +1148,47 @@ class SyncServiceClass {
       this.notifySyncError(err);
 
       return { success: false, error: err };
+    } finally {
+      await this.releasePushLock();
     }
+  }
+
+  private async acquirePushLock(context: 'foreground' | 'sw'): Promise<boolean> {
+    const now = Date.now();
+    const expiresAt = now + this.PUSH_LOCK_TTL_MS;
+    let acquired = false;
+
+    await db.transaction('rw', db.kv, async () => {
+      const current = await db.kv.get(this.PUSH_LOCK_KEY);
+      const lock = current?.value as { owner?: string; expiresAt?: number } | undefined;
+      const isExpired = !lock?.expiresAt || lock.expiresAt <= now;
+      const isMine = lock?.owner === this.PUSH_LOCK_OWNER;
+
+      if (!lock || isExpired || isMine) {
+        await db.kv.put({
+          key: this.PUSH_LOCK_KEY,
+          value: {
+            owner: this.PUSH_LOCK_OWNER,
+            context,
+            acquiredAt: now,
+            expiresAt,
+          },
+        });
+        acquired = true;
+      }
+    });
+
+    return acquired;
+  }
+
+  private async releasePushLock(): Promise<void> {
+    await db.transaction('rw', db.kv, async () => {
+      const current = await db.kv.get(this.PUSH_LOCK_KEY);
+      const lock = current?.value as { owner?: string } | undefined;
+      if (lock?.owner === this.PUSH_LOCK_OWNER) {
+        await db.kv.delete(this.PUSH_LOCK_KEY);
+      }
+    });
   }
 
   /**

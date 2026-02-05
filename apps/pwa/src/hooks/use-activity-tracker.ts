@@ -9,6 +9,8 @@ export function useActivityTracker() {
   const { user, isAuthenticated } = useAuth()
   const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutos
   const WARNING_BEFORE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutos antes
+  const isProtectedOfflineMode = () =>
+    !navigator.onLine || localStorage.getItem('velox_server_unavailable') === '1'
 
   const handleActivity = useCallback(() => {
     // Cualquier actividad del usuario resetea el timer
@@ -37,6 +39,7 @@ export function useActivityTracker() {
 
       // Timer de advertencia (5 minutos antes del timeout)
       warningTimer = setTimeout(() => {
+        if (isProtectedOfflineMode()) return
         const timeRemaining = Math.ceil(
           (INACTIVITY_TIMEOUT_MS - WARNING_BEFORE_TIMEOUT_MS) / 1000 / 60,
         )
@@ -52,6 +55,15 @@ export function useActivityTracker() {
 
       // Timer de timeout (30 minutos)
       inactivityTimer = setTimeout(() => {
+        if (isProtectedOfflineMode()) {
+          import('@/lib/toast').then(({ default: toast }) => {
+            toast('Modo offline activo: mantenemos la sesión para no interrumpir ventas.', {
+              duration: 5000,
+            })
+          })
+          resetTimers()
+          return
+        }
         import('@/lib/toast').then(({ default: toast }) => {
           toast.error('Tu sesión ha expirado por inactividad. Serás redirigido al login.', {
             duration: 5000,

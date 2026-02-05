@@ -19,6 +19,8 @@ type ErrorCallback = (error: string) => void
 class RealtimeWebSocketService {
   private socket: Socket | null = null
   private isConnected = false
+  private isConnecting = false
+  private connectivityListenersBound = false
   private maxReconnectAttempts = 5
   private reconnectDelay = 1000
 
@@ -33,7 +35,16 @@ class RealtimeWebSocketService {
    * Conecta al WebSocket
    */
   connect(): void {
-    if (this.socket?.connected) {
+    if (!navigator.onLine) {
+      logger.debug('Offline: se pospone conexión realtime')
+      return
+    }
+
+    if (this.socket) {
+      if (!this.socket.connected && !this.isConnecting) {
+        this.isConnecting = true
+        this.socket.connect()
+      }
       return
     }
 
@@ -57,10 +68,35 @@ class RealtimeWebSocketService {
       transports: ['polling', 'websocket'], // Priorizar polling para mayor compatibilidad (ej. ngrok)
       reconnection: true,
       reconnectionDelay: this.reconnectDelay,
+      reconnectionDelayMax: 30000,
+      randomizationFactor: 0.5,
       reconnectionAttempts: this.maxReconnectAttempts,
+      autoConnect: false,
     })
 
+    this.bindConnectivityListeners()
+    this.isConnecting = true
+    this.socket.connect()
     this.setupEventHandlers()
+  }
+
+  private bindConnectivityListeners(): void {
+    if (this.connectivityListenersBound) return
+    this.connectivityListenersBound = true
+
+    window.addEventListener('offline', () => {
+      if (this.socket) {
+        this.isConnecting = false
+        this.socket.disconnect()
+      }
+    })
+
+    window.addEventListener('online', () => {
+      if (this.socket && !this.socket.connected && !this.isConnecting) {
+        this.isConnecting = true
+        this.socket.connect()
+      }
+    })
   }
 
   /**
@@ -70,11 +106,13 @@ class RealtimeWebSocketService {
     if (!this.socket) return
 
     this.socket.on('connect', () => {
+      this.isConnecting = false
       this.isConnected = true
       logger.info('Conectado')
     })
 
     this.socket.on('disconnect', () => {
+      this.isConnecting = false
       this.isConnected = false
       logger.info('Desconectado')
     })
@@ -122,6 +160,8 @@ class RealtimeWebSocketService {
 
     // Manejar errores de conexión
     this.socket.on('connect_error', (error: Error) => {
+      this.isConnecting = false
+      if (!navigator.onLine) return
       // Solo mostrar como debug en desarrollo, no inundar la consola
       if (import.meta.env.DEV) {
         logger.debug('Error de conexión (esperado si el backend no está corriendo)', { error: error.message })
@@ -240,6 +280,7 @@ class RealtimeWebSocketService {
    */
   disconnect(): void {
     if (this.socket) {
+      this.isConnecting = false
       this.socket.disconnect()
       this.socket = null
       this.isConnected = false

@@ -119,6 +119,10 @@ async function updateCatalogs() {
 // Importamos db desde database (Vite lo bundlizará)
 import { db } from '@/db/database'
 
+const PUSH_LOCK_KEY = 'sync_push_lock'
+const PUSH_LOCK_TTL_MS = 15_000
+const SW_PUSH_LOCK_OWNER = `sw-${crypto.randomUUID()}`
+
 function sanitizeEventForPush(event: any) {
     const payload = { ...(event?.payload || {}) }
     delete payload.store_id
@@ -143,6 +147,12 @@ function sanitizeEventForPush(event: any) {
 async function syncEvents() {
     const startTime = Date.now();
     console.log('[SW] 🚀 Iniciando sincronización de fondo...')
+
+    const hasPushLock = await acquirePushLock()
+    if (!hasPushLock) {
+        console.log('[SW] ⏭️ Sync omitido: lock ocupado por otro contexto')
+        return
+    }
 
     try {
         // 1. Obtener configuración y validar contexto completo
@@ -329,7 +339,47 @@ async function syncEvents() {
             duration_ms: duration
         });
         // No relanzar error para evitar reintentos infinitos inmediatos del navegador
+    } finally {
+        await releasePushLock()
     }
+}
+
+async function acquirePushLock(): Promise<boolean> {
+    const now = Date.now()
+    const expiresAt = now + PUSH_LOCK_TTL_MS
+    let acquired = false
+
+    await db.transaction('rw', db.kv, async () => {
+        const current = await db.kv.get(PUSH_LOCK_KEY)
+        const lock = current?.value as { owner?: string; expiresAt?: number } | undefined
+        const isExpired = !lock?.expiresAt || lock.expiresAt <= now
+        const isMine = lock?.owner === SW_PUSH_LOCK_OWNER
+
+        if (!lock || isExpired || isMine) {
+            await db.kv.put({
+                key: PUSH_LOCK_KEY,
+                value: {
+                    owner: SW_PUSH_LOCK_OWNER,
+                    context: 'sw',
+                    acquiredAt: now,
+                    expiresAt,
+                },
+            })
+            acquired = true
+        }
+    })
+
+    return acquired
+}
+
+async function releasePushLock(): Promise<void> {
+    await db.transaction('rw', db.kv, async () => {
+        const current = await db.kv.get(PUSH_LOCK_KEY)
+        const lock = current?.value as { owner?: string } | undefined
+        if (lock?.owner === SW_PUSH_LOCK_OWNER) {
+            await db.kv.delete(PUSH_LOCK_KEY)
+        }
+    })
 }
 
 function getNgrokHeaders(url: string): Record<string, string> {

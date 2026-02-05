@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiConfig } from '../types';
 
+const SERVER_UNAVAILABLE_KEY = 'velox_server_unavailable';
 
 // Variable para evitar múltiples redirecciones simultáneas
 let isRedirecting = false;
@@ -35,6 +36,20 @@ interface RequestConfigWithRetry extends InternalAxiosRequestConfig {
     _apiFailoverRetryCount?: number;
 }
 
+function markServerUnavailable(reason: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(SERVER_UNAVAILABLE_KEY, '1');
+        window.dispatchEvent(
+            new CustomEvent('api:all_endpoints_down', {
+                detail: { reason, at: Date.now() },
+            })
+        );
+    } catch {
+        // ignore
+    }
+}
+
 export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, failoverUrls: string[]) {
     return async (error: AxiosError & { isOffline?: boolean; isAuthError?: boolean }) => {
         // Si es un error offline, no hacer nada más (ya fue manejado en el request interceptor)
@@ -59,6 +74,11 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
             api.defaults.baseURL = nextBaseUrl;
             originalRequest.baseURL = nextBaseUrl;
             return api(originalRequest);
+        }
+
+        // Online pero sin respuesta en todos los endpoints => mantenimiento/caída de backend.
+        if (!error.response && typeof navigator !== 'undefined' && navigator.onLine) {
+            markServerUnavailable(error.message || 'all_endpoints_unreachable');
         }
 
         // 401 Unauthorized - Token refresh logic

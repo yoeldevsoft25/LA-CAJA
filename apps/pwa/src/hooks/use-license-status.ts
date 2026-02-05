@@ -25,6 +25,8 @@ export function useLicenseStatus() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [lastCheck, setLastCheck] = useState<number>(Date.now())
+  const isProtectedOfflineMode = () =>
+    !navigator.onLine || localStorage.getItem('velox_server_unavailable') === '1'
 
   // Validar licencia periódicamente
   const { data: licenseStatus } = useQuery({
@@ -71,6 +73,13 @@ export function useLicenseStatus() {
 
     // Verificar si la licencia está bloqueada
     if (licenseStatus.status === 'suspended' || licenseStatus.status === 'expired') {
+      if (isProtectedOfflineMode()) {
+        toast('Servidor no disponible. Se mantiene sesión y modo offline activo.', {
+          duration: 5000,
+          icon: '⚠️',
+        })
+        return
+      }
       toast.error('Tu licencia ha sido suspendida o expirada. Serás redirigido.', {
         duration: 5000,
       })
@@ -140,6 +149,13 @@ export function useLicenseStatus() {
 
       // Verificar si la licencia está bloqueada
       if (newLicenseStatus.status === 'suspended' || newLicenseStatus.status === 'expired') {
+        if (isProtectedOfflineMode()) {
+          toast('Servidor no disponible. Se mantiene sesión y modo offline activo.', {
+            duration: 5000,
+            icon: '⚠️',
+          })
+          return
+        }
         toast.error('Tu licencia ha sido suspendida o expirada. Serás redirigido.', {
           duration: 5000,
         })

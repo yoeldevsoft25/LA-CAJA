@@ -50,6 +50,22 @@
 - `a6a70f0` refactor(accounting): extract reporting service and fix period DI wiring
 - `6d5d192` docs(roadmap): close sprint 4 and update execution status
 
+### Trazabilidad de robustez offline-first (2026-02-05)
+
+- **Objetivo:** evitar bloqueos de operacion cuando hay caida de endpoints o desconexion de internet, sin perder ventas ni cerrar sesion.
+- **Deteccion diferenciada implementada:**
+  - `sin internet` via `navigator.onLine=false`.
+  - `internet disponible + endpoints no disponibles` via eventos globales (`api:all_endpoints_down`, `api:endpoint_recovered`) y bandera `localStorage: velox_server_unavailable`.
+- **Cambios tecnicos aplicados (E2E):**
+  - Lock distribuido de push entre foreground/SW para eliminar carrera y doble envio (`apps/pwa/src/services/sync.service.ts`, `apps/pwa/src/sw.ts`).
+  - Filtrado de eventos realmente pendientes en IndexedDB antes de `/sync/push` (fuente de verdad local).
+  - WebSockets (`realtime` y `notifications`) con control de reconexion offline, anti-duplicado de socket y backoff con jitter.
+  - Failover probes deshabilitados cuando no hay internet para evitar ruido/storm.
+  - Señalizacion de backend no disponible desde capa API client y limpieza automatica al recuperar endpoint.
+  - Banner de UX actualizado: **\"Servidor en mantenimiento, tus ventas se guardan localmente\"**.
+  - Sesion protegida en modo offline/mantenimiento: no se fuerza logout por inactividad ni por validacion de licencia mientras backend no este disponible.
+- **Validacion tecnica:** build `packages/api-client` y build `apps/pwa` en PASS despues del hardening.
+
 ### KPI operativo (ultimo estado validado)
 
 - `sales-contract.spec.ts`: **12/12** passing.

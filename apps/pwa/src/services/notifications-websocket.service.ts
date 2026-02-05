@@ -12,6 +12,8 @@ type EventCallback = (...args: unknown[]) => void
 class NotificationsWebSocketService {
   private socket: Socket | null = null
   private listeners: Map<string, Set<EventCallback>> = new Map()
+  private isConnecting = false
+  private connectivityListenersBound = false
 
   /**
    * Conecta al WebSocket de notificaciones
@@ -19,7 +21,16 @@ class NotificationsWebSocketService {
   connect(storeId: string, userId: string): void {
     void storeId
     void userId
-    if (this.socket?.connected) {
+    if (!navigator.onLine) {
+      logger.debug('Offline: se pospone conexión notifications')
+      return
+    }
+
+    if (this.socket) {
+      if (!this.socket.connected && !this.isConnecting) {
+        this.isConnecting = true
+        this.socket.connect()
+      }
       return
     }
 
@@ -41,10 +52,35 @@ class NotificationsWebSocketService {
       transports: ['polling', 'websocket'], // Priorizar polling para mayor compatibilidad (ej. ngrok)
       reconnection: true,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 30000,
+      randomizationFactor: 0.5,
       reconnectionAttempts: 5,
+      autoConnect: false,
     })
 
+    this.bindConnectivityListeners()
+    this.isConnecting = true
+    this.socket.connect()
     this.setupEventListeners()
+  }
+
+  private bindConnectivityListeners(): void {
+    if (this.connectivityListenersBound) return
+    this.connectivityListenersBound = true
+
+    window.addEventListener('offline', () => {
+      if (this.socket) {
+        this.isConnecting = false
+        this.socket.disconnect()
+      }
+    })
+
+    window.addEventListener('online', () => {
+      if (this.socket && !this.socket.connected && !this.isConnecting) {
+        this.isConnecting = true
+        this.socket.connect()
+      }
+    })
   }
 
   /**
@@ -52,6 +88,7 @@ class NotificationsWebSocketService {
    */
   disconnect(): void {
     if (this.socket) {
+      this.isConnecting = false
       this.socket.disconnect()
       this.socket = null
       this.listeners.clear()
@@ -112,10 +149,12 @@ class NotificationsWebSocketService {
     if (!this.socket) return
 
     this.socket.on('connect', () => {
+      this.isConnecting = false
       logger.info('Conectado')
     })
 
     this.socket.on('disconnect', () => {
+      this.isConnecting = false
       logger.info('Desconectado')
     })
 
@@ -132,6 +171,8 @@ class NotificationsWebSocketService {
 
     // Manejar errores de conexión
     this.socket.on('connect_error', (error: Error) => {
+      this.isConnecting = false
+      if (!navigator.onLine) return
       // Solo mostrar como debug en desarrollo, no inundar la consola
       if (import.meta.env.DEV) {
         logger.debug('Error de conexión (esperado si el backend no está corriendo)', { error: error.message })

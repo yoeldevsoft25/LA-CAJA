@@ -6,6 +6,8 @@ import { createErrorInterceptor } from './interceptors/error.interceptor';
 import { ensurePrimaryPreferred } from './utils/failover';
 import { isNgrokUrl } from './utils/ngrok';
 
+const SERVER_UNAVAILABLE_KEY = 'velox_server_unavailable';
+
 export interface ApiClientConfig extends ApiConfig {
     baseURL: string;
     timeout?: number;
@@ -74,7 +76,23 @@ export function createApiClient(config: ApiClientConfig): AxiosInstance {
 
     // Response interceptor
     api.interceptors.response.use(
-        (response) => response,
+        (response) => {
+            if (typeof window !== 'undefined') {
+                try {
+                    if (localStorage.getItem(SERVER_UNAVAILABLE_KEY) === '1') {
+                        localStorage.removeItem(SERVER_UNAVAILABLE_KEY);
+                        window.dispatchEvent(
+                            new CustomEvent('api:endpoint_recovered', {
+                                detail: { at: Date.now(), baseURL: response.config.baseURL || api.defaults.baseURL },
+                            })
+                        );
+                    }
+                } catch {
+                    // ignore
+                }
+            }
+            return response;
+        },
         createErrorInterceptor(api, config, failoverUrls)
     );
 

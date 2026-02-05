@@ -15,6 +15,10 @@ let primaryProbeInFlight: Promise<boolean> | null = null;
  * @returns true if API responds successfully, false otherwise
  */
 export async function probeApi(url: string, timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS): Promise<boolean> {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return false;
+    }
+
     const normalizedUrl = normalizeBaseUrl(url);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -40,6 +44,10 @@ export async function probeApi(url: string, timeoutMs: number = DEFAULT_PROBE_TI
  * @returns First available URL or null if none are available
  */
 export async function pickAvailableApi(urls: string[]): Promise<string | null> {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return null;
+    }
+
     for (const url of urls) {
         const normalizedUrl = normalizeBaseUrl(url);
         if (await probeApi(normalizedUrl)) {
@@ -72,6 +80,7 @@ export async function ensurePrimaryPreferred(
     isProduction: boolean,
     isLocalEnv: boolean
 ): Promise<string> {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return currentBaseUrl;
     if (!isProduction || isLocalEnv) return currentBaseUrl;
     if (!primaryUrl) return currentBaseUrl;
     if (currentBaseUrl === primaryUrl) return currentBaseUrl;

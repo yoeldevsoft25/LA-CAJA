@@ -42,7 +42,8 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
       try {
         const status = syncService.getStatus()
         setPendingCount(status.pendingCount)
-        setIsServerDown(!status.isServerAvailable)
+        const unavailableFlag = localStorage.getItem('velox_server_unavailable') === '1'
+        setIsServerDown(unavailableFlag || !status.isServerAvailable)
       } catch {
         setPendingCount(0)
       }
@@ -50,7 +51,17 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
 
     updateStats()
     const interval = setInterval(updateStats, 5000)
-    return () => clearInterval(interval)
+
+    const handleEndpointsDown = () => setIsServerDown(true)
+    const handleEndpointRecovered = () => setIsServerDown(false)
+    window.addEventListener('api:all_endpoints_down', handleEndpointsDown as EventListener)
+    window.addEventListener('api:endpoint_recovered', handleEndpointRecovered as EventListener)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('api:all_endpoints_down', handleEndpointsDown as EventListener)
+      window.removeEventListener('api:endpoint_recovered', handleEndpointRecovered as EventListener)
+    }
   }, [])
 
   // Intentar sincronizar manualmente
@@ -97,8 +108,8 @@ export default function OfflineBanner({ className }: OfflineBannerProps) {
               ) : isServerDown ? (
                 <>
                   <AlertCircle className="w-5 h-5 text-white animate-pulse" />
-                  <span className="text-white font-medium text-sm uppercase tracking-tight">
-                    ⚠️ Error: Servidor Local Fuera de Línea - Ventas Protegidas en este Equipo
+                  <span className="text-white font-medium text-sm">
+                    Servidor en mantenimiento. Tus ventas se guardan localmente y se sincronizan al volver.
                   </span>
                 </>
               ) : (
