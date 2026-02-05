@@ -98,6 +98,72 @@ flowchart LR
   API --> Logs
 ```
 
+## Subflujos operativos (detalle real)
+
+```mermaid
+flowchart TD
+  subgraph Client["Cliente Offline First"]
+    UI[POS UI]
+    LocalDB["Local DB"]
+    LocalQ["Local Event Queue"]
+  end
+
+  subgraph SyncEngine["Sync Engine"]
+    Detect[Detect Online]
+    Push[Push Events]
+    Pull[Pull Changes]
+    Merge[Reconcile Merge]
+  end
+
+  subgraph API["Backend API"]
+    Ingress["Sync Ingress"]
+    EventStore["Event Store"]
+    Relay["Federation Relay"]
+  end
+
+  subgraph Queues["BullMQ"]
+    QProj["sales-projections"]
+    QPost["sales-post-processing"]
+    QNotif["notifications"]
+    QFed["federation-sync"]
+  end
+
+  subgraph Projections["Read Models"]
+    SalesRM["Sales"]
+    InvRM["Inventory"]
+    CashRM["Cash Payments"]
+    DebtRM["Debts"]
+    ReportsRM["Reports"]
+  end
+
+  subgraph SideEffects["Side Effects"]
+    Fiscal["Fiscal Invoice"]
+    Accounting["Accounting Entries"]
+    Email["Email"]
+    WhatsApp["WhatsApp"]
+  end
+
+  subgraph DB["PostgreSQL Supabase"]
+    Data[(Data)]
+  end
+
+  UI --> LocalDB --> LocalQ
+  LocalQ --> Detect
+  Detect -->|online| Push --> Ingress
+  Detect -->|offline| LocalQ
+  Ingress --> EventStore
+  EventStore --> QProj
+  EventStore --> Relay --> QFed
+  QProj --> Projections --> Data
+  Projections --> QPost --> Fiscal
+  QPost --> Accounting
+  QNotif --> Email
+  QNotif --> WhatsApp
+  Pull --> Merge --> LocalDB
+
+  Ingress --> Pull
+```
+
 ## Componentes principales
 - **API**: `apps/api` (NestJS + Fastify)
 - **PWA**: `apps/pwa` (React + Vite + Dexie)
