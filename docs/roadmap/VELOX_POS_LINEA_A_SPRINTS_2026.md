@@ -386,6 +386,10 @@ Canales
 - Uso de red reducido (>= 40% vs sync de entidades completas).
 - Oversell = 0 cuando Escrow activo.
 
+**Referencias de ejecucion (E2E):**
+- ADR: `docs/architecture/adr/ADR-007-crdt-escrow-convergence.md`
+- Plan E2E: `docs/roadmap/SPRINT_6_1_CRDT_ESCROW_EXECUTION.md`
+
 ## Sprint 7 - Performance comercial
 **Objetivo:** convertir velocidad en ventaja competitiva visible.
 
