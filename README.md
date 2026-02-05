@@ -233,6 +233,99 @@ flowchart TD
   EventStore --> Pull --> Merge --> LocalDB
 ```
 
+## Subflujo: ventas offline end to end
+
+```mermaid
+flowchart TD
+  subgraph Client["Cliente POS"]
+    UI["POS UI"]
+    LocalDB["Local DB"]
+    LocalQ["Local Event Queue"]
+  end
+
+  subgraph Sync["Sync Engine"]
+    Push["Push Events"]
+    Pull["Pull Changes"]
+    Merge["Reconcile Merge"]
+  end
+
+  subgraph API["Backend API"]
+    Ingress["Sync Ingress"]
+    EventStore["Event Store"]
+    Auth["Auth + License"]
+  end
+
+  subgraph Queues["BullMQ"]
+    QProj["sales-projections"]
+    QPost["sales-post-processing"]
+  end
+
+  subgraph Projections["Read Models"]
+    SalesRM["Sales Projection"]
+    CashRM["Cash/Payments Projection"]
+    DebtRM["Debts Projection"]
+  end
+
+  subgraph SideEffects["Side Effects"]
+    Fiscal["Fiscal Invoice"]
+    Accounting["Accounting Entry"]
+  end
+
+  subgraph DB["PostgreSQL Supabase"]
+    Data[(Data)]
+  end
+
+  UI --> LocalDB --> LocalQ --> Push --> Auth --> Ingress --> EventStore
+  EventStore --> QProj --> SalesRM --> Data
+  SalesRM --> CashRM --> Data
+  SalesRM --> DebtRM --> Data
+  EventStore --> QPost --> Fiscal
+  QPost --> Accounting
+  EventStore --> Pull --> Merge --> LocalDB
+```
+
+## Subflujo: colas BullMQ y proyecciones
+
+```mermaid
+flowchart LR
+  subgraph Producers["Producers"]
+    Sync["SyncService.push"]
+    CreateSale["CreateSaleHandler"]
+    Notif["Notification Orchestrator"]
+    Federation["FederationSyncService"]
+  end
+
+  subgraph Queues["BullMQ"]
+    QProj["sales-projections"]
+    QPost["sales-post-processing"]
+    QNotif["notifications"]
+    QFed["federation-sync"]
+  end
+
+  subgraph Workers["Workers"]
+    ProjWorker["SalesProjectionQueueProcessor"]
+    PostWorker["SalesPostProcessingQueueProcessor"]
+    NotifWorker["NotificationsQueueProcessor"]
+    FedWorker["FederationSyncProcessor"]
+  end
+
+  subgraph Outputs["Outputs"]
+    Projections["Read Models"]
+    Fiscal["Fiscal Invoice"]
+    Accounting["Accounting Entry"]
+    Email["Email"]
+    WhatsApp["WhatsApp"]
+    Remote["Remote Relay"]
+  end
+
+  Sync --> QProj --> ProjWorker --> Projections
+  CreateSale --> QPost --> PostWorker --> Fiscal
+  PostWorker --> Accounting
+  Notif --> QNotif --> NotifWorker --> Email
+  NotifWorker --> WhatsApp
+  Federation --> QFed --> FedWorker --> Remote
+```
+
 ## Componentes principales
 - **API**: `apps/api` (NestJS + Fastify)
 - **PWA**: `apps/pwa` (React + Vite + Dexie)
