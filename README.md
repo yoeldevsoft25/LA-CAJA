@@ -164,6 +164,75 @@ flowchart TD
   Ingress --> Pull
 ```
 
+## Subflujo: federacion y auto-reconcile
+
+```mermaid
+flowchart LR
+  subgraph LocalNode["Nodo Local"]
+    LocalEvents["Eventos Locales"]
+    LocalQueue["Queue Federation"]
+    LocalAPI["API Local"]
+  end
+
+  subgraph Central["Servidor Central"]
+    CentralAPI["API Central"]
+    CentralEvents["Event Store Central"]
+    CentralQueue["Queue Federation"]
+  end
+
+  subgraph Heal["Auto Reconcile"]
+    Diff["Diff IDs"]
+    Replay["Replay Missing"]
+    HealStock["Heal Inventory Stock"]
+  end
+
+  LocalEvents --> LocalAPI --> LocalQueue
+  LocalQueue --> CentralAPI --> CentralEvents
+  CentralEvents --> CentralQueue --> LocalAPI
+
+  CentralAPI --> Diff --> Replay --> LocalAPI
+  LocalAPI --> Diff --> Replay --> CentralAPI
+  Diff --> HealStock
+```
+
+## Subflujo: inventario end to end
+
+```mermaid
+flowchart TD
+  subgraph Client["Cliente"]
+    UIInv["Inventory UI"]
+    LocalDB["Local DB"]
+    LocalQ["Local Event Queue"]
+  end
+
+  subgraph Sync["Sync Engine"]
+    Push["Push Events"]
+    Pull["Pull Changes"]
+    Merge["Reconcile Merge"]
+  end
+
+  subgraph API["Backend API"]
+    Ingress["Sync Ingress"]
+    EventStore["Event Store"]
+  end
+
+  subgraph Queues["BullMQ"]
+    QProj["sales-projections"]
+  end
+
+  subgraph Projections["Read Models"]
+    InvRM["Inventory Projection"]
+  end
+
+  subgraph DB["PostgreSQL Supabase"]
+    Data[(Data)]
+  end
+
+  UIInv --> LocalDB --> LocalQ --> Push --> Ingress --> EventStore --> QProj
+  QProj --> InvRM --> Data
+  EventStore --> Pull --> Merge --> LocalDB
+```
+
 ## Componentes principales
 - **API**: `apps/api` (NestJS + Fastify)
 - **PWA**: `apps/pwa` (React + Vite + Dexie)
