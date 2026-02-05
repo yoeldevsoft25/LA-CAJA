@@ -60,7 +60,12 @@ export class InventoryController {
   @HttpCode(HttpStatus.CREATED)
   async stockAdjusted(@Body() dto: StockAdjustedDto, @Request() req: any) {
     const storeId = req.user.store_id;
-    return this.inventoryService.stockAdjusted(storeId, dto, req.user.sub);
+    return this.inventoryService.stockAdjusted(
+      storeId,
+      dto,
+      req.user.sub,
+      req.user.role,
+    );
   }
 
   @Post('stock/approve')
