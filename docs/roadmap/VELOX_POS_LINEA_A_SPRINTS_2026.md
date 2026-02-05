@@ -489,3 +489,11 @@ Si ejecutamos este plan de 10 sprints con rigor, Velox pasa de "producto promete
   - `POST /sync/federation/replay-sales`
   - body: `{ "sale_ids": ["uuid1", "uuid2"] }`
   - Funcion: vuelve a encolar `SaleCreated` existentes para relay federado y cerrar desfases historicos entre local y render.
+- Se agrego reconciliacion automatica de desfase federado (cron cada 10 minutos):
+  - compara IDs de ventas e inventario (movements `StockReceived`/`StockAdjusted`) entre nodos via endpoints federados.
+  - auto-dispara replay bidireccional por lotes para cerrar drift.
+  - endpoint manual de control: `POST /sync/federation/auto-reconcile`.
+  - endpoints de soporte:
+    - `GET /sync/federation/sales-ids`
+    - `GET /sync/federation/inventory-movement-ids`
+    - `POST /sync/federation/replay-inventory`

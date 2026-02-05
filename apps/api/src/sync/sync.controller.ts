@@ -18,6 +18,8 @@ import {
   FederationStatus,
   FederationReplayResult,
   FederationReplayInventoryResult,
+  FederationIdsResult,
+  FederationAutoReconcileResult,
 } from './federation-sync.service';
 import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
@@ -101,6 +103,60 @@ export class SyncController {
     return this.federationSyncService.getFederationStatus();
   }
 
+  @Get('federation/sales-ids')
+  async getFederationSalesIds(
+    @Query('store_id') storeIdQuery: string,
+    @Query('date_from') dateFrom: string,
+    @Query('date_to') dateTo: string,
+    @Query('limit') limitRaw: string,
+    @Query('offset') offsetRaw: string,
+    @Request() req: any,
+  ): Promise<FederationIdsResult> {
+    const storeId = storeIdQuery || req.user.store_id;
+    if (!storeId) {
+      throw new BadRequestException('store_id es requerido');
+    }
+    if (!dateFrom || !dateTo) {
+      throw new BadRequestException('date_from y date_to son requeridos');
+    }
+    const limit = Number(limitRaw || 10000);
+    const offset = Number(offsetRaw || 0);
+    return this.federationSyncService.getSalesIds(
+      storeId,
+      dateFrom,
+      dateTo,
+      limit,
+      offset,
+    );
+  }
+
+  @Get('federation/inventory-movement-ids')
+  async getFederationInventoryMovementIds(
+    @Query('store_id') storeIdQuery: string,
+    @Query('date_from') dateFrom: string,
+    @Query('date_to') dateTo: string,
+    @Query('limit') limitRaw: string,
+    @Query('offset') offsetRaw: string,
+    @Request() req: any,
+  ): Promise<FederationIdsResult> {
+    const storeId = storeIdQuery || req.user.store_id;
+    if (!storeId) {
+      throw new BadRequestException('store_id es requerido');
+    }
+    if (!dateFrom || !dateTo) {
+      throw new BadRequestException('date_from y date_to son requeridos');
+    }
+    const limit = Number(limitRaw || 10000);
+    const offset = Number(offsetRaw || 0);
+    return this.federationSyncService.getInventoryMovementIds(
+      storeId,
+      dateFrom,
+      dateTo,
+      limit,
+      offset,
+    );
+  }
+
   @Post('federation/replay-sales')
   @HttpCode(HttpStatus.OK)
   async replaySales(
@@ -136,6 +192,14 @@ export class SyncController {
       safeMovementIds,
       safeProductIds,
     );
+  }
+
+  @Post('federation/auto-reconcile')
+  @HttpCode(HttpStatus.OK)
+  async autoReconcile(
+    @Body('store_id') storeId: string,
+  ): Promise<FederationAutoReconcileResult[]> {
+    return this.federationSyncService.runAutoReconcile(storeId);
   }
 
   @Post('resolve-conflict')

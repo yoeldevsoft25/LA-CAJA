@@ -27,11 +27,13 @@ export class FederationAuthGuard implements CanActivate {
             // ⚡ BYPASS: If admin secret matches, we inject a "system" user
             // so that controllers and interceptors don't complain about missing store_id
             const bodyStoreId = request.body?.store_id;
+            const queryStoreId = request.query?.store_id;
+            const storeId = bodyStoreId || queryStoreId;
 
             request.user = {
                 sub: 'system-federation',
                 user_id: 'system-federation',
-                store_id: bodyStoreId, // Use the store_id provided in the body for validation
+                store_id: storeId, // Use store_id from body/query for validation
                 role: 'admin',
             };
             request.isFederationAuthenticated = true;

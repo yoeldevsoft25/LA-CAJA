@@ -4,6 +4,7 @@ import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Queue, Job } from 'bullmq';
 import { Repository, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Event } from '../database/entities/event.entity';
 import axios from 'axios';
 
@@ -57,6 +58,29 @@ export interface FederationReplayInventoryResult {
     missingMovementIds: string[];
 }
 
+export interface FederationIdsResult {
+    total: number;
+    ids: string[];
+}
+
+export interface FederationAutoReconcileResult {
+    storeId: string;
+    sales: {
+        remoteMissingCount: number;
+        localMissingCount: number;
+        replayedToRemote: number;
+        replayedToLocal: number;
+    };
+    inventory: {
+        remoteMissingCount: number;
+        localMissingCount: number;
+        replayedToRemote: number;
+        replayedToLocal: number;
+    };
+    skipped?: boolean;
+    reason?: string;
+}
+
 @Injectable()
 export class FederationSyncService implements OnModuleInit {
     private readonly logger = new Logger(FederationSyncService.name);
@@ -67,6 +91,7 @@ export class FederationSyncService implements OnModuleInit {
         message: string;
         at: string;
     } | null = null;
+    private autoReconcileInFlight = false;
 
     constructor(
         @InjectRepository(Event)
@@ -86,6 +111,13 @@ export class FederationSyncService implements OnModuleInit {
         } else {
             this.logger.log('🌐 Federation Sync DISABLED (REMOTE_SYNC_URL not set)');
         }
+    }
+
+    @Cron(CronExpression.EVERY_10_MINUTES)
+    async autoReconcileCron() {
+        const enabled = this.configService.get<string>('FEDERATION_AUTO_RECONCILE_ENABLED');
+        if (enabled?.toLowerCase() === 'false') return;
+        await this.runAutoReconcile();
     }
 
     /**
@@ -296,6 +328,255 @@ export class FederationSyncService implements OnModuleInit {
             queued,
             missingMovementIds,
         };
+    }
+
+    async getSalesIds(
+        storeId: string,
+        dateFrom: string,
+        dateTo: string,
+        limit = 10000,
+        offset = 0,
+    ): Promise<FederationIdsResult> {
+        const totalRows = await this.dataSource.query(
+            `
+            SELECT COUNT(1)::int AS total
+            FROM sales
+            WHERE store_id = $1
+              AND sold_at >= $2::date
+              AND sold_at < ($3::date + interval '1 day')
+            `,
+            [storeId, dateFrom, dateTo],
+        );
+
+        const rows = await this.dataSource.query(
+            `
+            SELECT id
+            FROM sales
+            WHERE store_id = $1
+              AND sold_at >= $2::date
+              AND sold_at < ($3::date + interval '1 day')
+            ORDER BY sold_at DESC
+            LIMIT $4 OFFSET $5
+            `,
+            [storeId, dateFrom, dateTo, limit, offset],
+        );
+
+        return {
+            total: Number(totalRows?.[0]?.total || 0),
+            ids: rows.map((row: { id: string }) => row.id),
+        };
+    }
+
+    async getInventoryMovementIds(
+        storeId: string,
+        dateFrom: string,
+        dateTo: string,
+        limit = 10000,
+        offset = 0,
+    ): Promise<FederationIdsResult> {
+        const totalRows = await this.dataSource.query(
+            `
+            SELECT COUNT(1)::int AS total
+            FROM events
+            WHERE store_id = $1
+              AND type IN ('StockReceived', 'StockAdjusted')
+              AND created_at >= $2::date
+              AND created_at < ($3::date + interval '1 day')
+              AND payload->>'movement_id' IS NOT NULL
+            `,
+            [storeId, dateFrom, dateTo],
+        );
+
+        const rows = await this.dataSource.query(
+            `
+            SELECT DISTINCT payload->>'movement_id' AS movement_id
+            FROM events
+            WHERE store_id = $1
+              AND type IN ('StockReceived', 'StockAdjusted')
+              AND created_at >= $2::date
+              AND created_at < ($3::date + interval '1 day')
+              AND payload->>'movement_id' IS NOT NULL
+            ORDER BY movement_id ASC
+            LIMIT $4 OFFSET $5
+            `,
+            [storeId, dateFrom, dateTo, limit, offset],
+        );
+
+        return {
+            total: Number(totalRows?.[0]?.total || 0),
+            ids: rows.map((row: { movement_id: string }) => row.movement_id),
+        };
+    }
+
+    async runAutoReconcile(storeId?: string): Promise<FederationAutoReconcileResult[]> {
+        if (this.autoReconcileInFlight) {
+            return [
+                {
+                    storeId: storeId || 'all',
+                    sales: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                    inventory: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                    skipped: true,
+                    reason: 'auto-reconcile already in flight',
+                },
+            ];
+        }
+
+        if (!this.remoteUrl || !this.adminKey) {
+            return [
+                {
+                    storeId: storeId || 'all',
+                    sales: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                    inventory: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                    skipped: true,
+                    reason: 'federation not configured',
+                },
+            ];
+        }
+
+        this.autoReconcileInFlight = true;
+        try {
+            const targetStoreIds = storeId
+                ? [storeId]
+                : await this.getKnownStoreIds();
+            const results: FederationAutoReconcileResult[] = [];
+            for (const currentStoreId of targetStoreIds) {
+                try {
+                    results.push(await this.reconcileStore(currentStoreId));
+                } catch (error) {
+                    const reason = error instanceof Error ? error.message : String(error);
+                    this.logger.warn(`Auto-reconcile skipped for ${currentStoreId}: ${reason}`);
+                    results.push({
+                        storeId: currentStoreId,
+                        sales: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                        inventory: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+                        skipped: true,
+                        reason,
+                    });
+                }
+            }
+            return results;
+        } finally {
+            this.autoReconcileInFlight = false;
+        }
+    }
+
+    private async getKnownStoreIds(): Promise<string[]> {
+        const rows = await this.dataSource.query(
+            `SELECT id FROM stores ORDER BY created_at DESC LIMIT 50`,
+        );
+        return rows.map((row: { id: string }) => row.id);
+    }
+
+    private async reconcileStore(storeId: string): Promise<FederationAutoReconcileResult> {
+        const days = Number(this.configService.get<string>('FEDERATION_RECONCILE_DAYS') || 30);
+        const maxBatch = Number(this.configService.get<string>('FEDERATION_RECONCILE_MAX_BATCH') || 500);
+        const now = new Date();
+        const fromDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        const dateFrom = fromDate.toISOString().slice(0, 10);
+        const dateTo = now.toISOString().slice(0, 10);
+
+        const [localSales, localInventory] = await Promise.all([
+            this.getSalesIds(storeId, dateFrom, dateTo),
+            this.getInventoryMovementIds(storeId, dateFrom, dateTo),
+        ]);
+
+        const [remoteSales, remoteInventory] = await Promise.all([
+            this.fetchRemoteIds('/sync/federation/sales-ids', storeId, dateFrom, dateTo),
+            this.fetchRemoteIds('/sync/federation/inventory-movement-ids', storeId, dateFrom, dateTo),
+        ]);
+
+        const salesMissingInRemote = this.diff(localSales.ids, remoteSales.ids);
+        const salesMissingInLocal = this.diff(remoteSales.ids, localSales.ids);
+        const invMissingInRemote = this.diff(localInventory.ids, remoteInventory.ids);
+        const invMissingInLocal = this.diff(remoteInventory.ids, localInventory.ids);
+
+        const replaySalesToRemote = salesMissingInRemote.slice(0, maxBatch);
+        const replaySalesToLocal = salesMissingInLocal.slice(0, maxBatch);
+        const replayInvToRemote = invMissingInRemote.slice(0, maxBatch);
+        const replayInvToLocal = invMissingInLocal.slice(0, maxBatch);
+
+        const [salesToRemoteResult, invToRemoteResult] = await Promise.all([
+            replaySalesToRemote.length > 0
+                ? this.replaySalesByIds(storeId, replaySalesToRemote)
+                : Promise.resolve({ queued: 0 }),
+            replayInvToRemote.length > 0
+                ? this.replayInventoryByFilter(storeId, replayInvToRemote, [])
+                : Promise.resolve({ queued: 0 }),
+        ]);
+
+        if (replaySalesToLocal.length > 0) {
+            await this.postRemoteReplay('/sync/federation/replay-sales', {
+                store_id: storeId,
+                sale_ids: replaySalesToLocal,
+            });
+        }
+        if (replayInvToLocal.length > 0) {
+            await this.postRemoteReplay('/sync/federation/replay-inventory', {
+                store_id: storeId,
+                movement_ids: replayInvToLocal,
+            });
+        }
+
+        const result: FederationAutoReconcileResult = {
+            storeId,
+            sales: {
+                remoteMissingCount: salesMissingInRemote.length,
+                localMissingCount: salesMissingInLocal.length,
+                replayedToRemote: Number((salesToRemoteResult as { queued: number }).queued || 0),
+                replayedToLocal: replaySalesToLocal.length,
+            },
+            inventory: {
+                remoteMissingCount: invMissingInRemote.length,
+                localMissingCount: invMissingInLocal.length,
+                replayedToRemote: Number((invToRemoteResult as { queued: number }).queued || 0),
+                replayedToLocal: replayInvToLocal.length,
+            },
+        };
+
+        this.logger.log(
+            `🧭 Reconcile store ${storeId}: sales(remote=${result.sales.remoteMissingCount}, local=${result.sales.localMissingCount}), inventory(remote=${result.inventory.remoteMissingCount}, local=${result.inventory.localMissingCount})`,
+        );
+        return result;
+    }
+
+    private diff(source: string[], target: string[]): string[] {
+        const targetSet = new Set(target);
+        return source.filter((id) => !targetSet.has(id));
+    }
+
+    private async fetchRemoteIds(
+        endpoint: '/sync/federation/sales-ids' | '/sync/federation/inventory-movement-ids',
+        storeId: string,
+        dateFrom: string,
+        dateTo: string,
+    ): Promise<FederationIdsResult> {
+        const response = await axios.get(`${this.remoteUrl}${endpoint}`, {
+            headers: {
+                Authorization: `Bearer ${this.adminKey}`,
+            },
+            params: {
+                store_id: storeId,
+                date_from: dateFrom,
+                date_to: dateTo,
+                limit: 10000,
+                offset: 0,
+            },
+            timeout: 15000,
+        });
+        return {
+            total: Number(response.data?.total || 0),
+            ids: Array.isArray(response.data?.ids) ? response.data.ids : [],
+        };
+    }
+
+    private async postRemoteReplay(endpoint: string, payload: Record<string, unknown>) {
+        await axios.post(`${this.remoteUrl}${endpoint}`, payload, {
+            headers: {
+                Authorization: `Bearer ${this.adminKey}`,
+                'Content-Type': 'application/json',
+            },
+            timeout: 15000,
+        });
     }
 }
 
