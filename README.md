@@ -70,7 +70,8 @@ Toda la documentación está organizada en el directorio [`docs/`](./docs/). Ver
 ### Guías Rápidas
 - 📖 [Instalación](./docs/development/INSTALL.md)
 - 🚀 [Despliegue](./docs/deployment/DEPLOY.md)
-- 🏗️ [Arquitectura](./docs/architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md)
+- 🧭 [Mapa del Sistema (Velox POS)](./docs/architecture/VELOX_SYSTEM_MAP.md)
+- 🏗️ [Arquitectura Offline-First](./docs/architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md)
 - 🗺️ [Roadmap](./docs/roadmap/roadmap%20la%20caja.md)
 
 ## Scripts

@@ -29,6 +29,7 @@ Documentación de correcciones y soluciones a problemas específicos:
 
 ### 🏗️ [architecture/](./architecture/)
 Documentación de arquitectura y diseño del sistema:
+- Mapa general del sistema (Velox POS)
 - Arquitectura offline-first
 - Sistema de sincronización
 - Sistema de cache
@@ -62,9 +63,10 @@ Documentación estratégica y análisis competitivo:
 3. [Configuración de Netlify](./deployment/NETLIFY_CONFIG.md)
 
 ### Para entender la arquitectura
-1. [Arquitectura Offline-First](./architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md)
-2. [Sistema de Sincronización](./architecture/SYNC_IMPLEMENTACION_COMPLETA.md)
-3. [Sistema de Cache](./architecture/SISTEMA_CACHE_COMPLETO.md)
+1. [Mapa del Sistema (Velox POS)](./architecture/VELOX_SYSTEM_MAP.md)
+2. [Arquitectura Offline-First](./architecture/ARQUITECTURA_OFFLINE_ROBUSTA.md)
+3. [Sistema de Sincronización](./architecture/SYNC_IMPLEMENTACION_COMPLETA.md)
+4. [Sistema de Cache](./architecture/SISTEMA_CACHE_COMPLETO.md)
 
 ### Para estrategia y competitividad
 1. **[Resumen Ejecutivo Competitivo](./RESUMEN_EJECUTIVO_COMPETITIVO.md)** ⭐ - Empieza aquí
