@@ -14,13 +14,11 @@ import { LicensesModule } from '../licenses/licenses.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { QueuesModule } from '../queues/queues.module';
 import { FederationSyncService, FederationSyncProcessor } from './federation-sync.service';
-import { BullModule } from '@nestjs/bullmq';
 import { InventoryEscrowModule } from '../inventory/escrow/inventory-escrow.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Event, Product, CashSession]),
-    BullModule.registerQueue({ name: 'federation-sync' }),
     ProjectionsModule,
     DiscountsModule,
     QueuesModule,

@@ -5,15 +5,10 @@ import { RedisHealthIndicator } from './indicators/redis-health.indicator';
 import { BullMQHealthIndicator } from './indicators/bullmq-health.indicator';
 import { ExternalApisHealthIndicator } from './indicators/external-apis-health.indicator';
 import { WebSocketHealthIndicator } from './indicators/websocket-health.indicator';
-import { BullModule } from '@nestjs/bullmq';
 import { QueuesModule } from '../queues/queues.module';
 
 @Module({
-  imports: [
-    TerminusModule,
-    QueuesModule,
-    BullModule.registerQueue({ name: 'federation-sync' }),
-  ],
+  imports: [TerminusModule, QueuesModule],
   controllers: [HealthController],
   providers: [
     RedisHealthIndicator,

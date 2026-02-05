@@ -22,6 +22,7 @@ export class RedisCacheService implements OnModuleDestroy {
         ? new Redis(redisUrl, {
             enableOfflineQueue: true,
             maxRetriesPerRequest: 3,
+            lazyConnect: true,
           })
         : new Redis({
             host,
@@ -29,6 +30,7 @@ export class RedisCacheService implements OnModuleDestroy {
             password,
             enableOfflineQueue: true,
             maxRetriesPerRequest: 3,
+            lazyConnect: true,
           });
 
       this.client.on('error', (err) => {
@@ -95,6 +97,10 @@ export class RedisCacheService implements OnModuleDestroy {
     const fresh = await loader();
     await this.set(key, fresh, ttlSeconds);
     return fresh;
+  }
+
+  getRawClient(): Redis | null {
+    return this.getClient();
   }
 
   async onModuleDestroy(): Promise<void> {
