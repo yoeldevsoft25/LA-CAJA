@@ -406,8 +406,13 @@ class SyncServiceClass {
       // ✅ Persistir auth_token para que SW pueda autenticarse
       // El token debe estar en los headers de axios
       const authHeader = api.defaults.headers.common['Authorization'];
-      if (authHeader && typeof authHeader === 'string') {
-        const token = authHeader.replace('Bearer ', '');
+      const localToken = localStorage.getItem('auth_token');
+      const token =
+        authHeader && typeof authHeader === 'string'
+          ? authHeader.replace('Bearer ', '')
+          : localToken;
+
+      if (token) {
         await db.kv.put({ key: 'auth_token', value: token });
         this.logger.debug('Auth token persistido para SW');
       } else {
@@ -968,22 +973,38 @@ class SyncServiceClass {
           invalidActorEventIds.push(evt.event_id);
           return null;
         }
-        // Remover store_id, device_id y last_error del payload individual
-        // El backend los recibe en el DTO principal o no los espera (last_error)
-        const { store_id, device_id, last_error, payload, ...rest } = evt as any;
+        // Remover metadatos locales no aceptados por DTO del backend.
+        const {
+          id,
+          store_id,
+          device_id,
+          sync_status,
+          sync_attempts,
+          synced_at,
+          next_retry_at,
+          last_error,
+          last_error_code,
+          payload,
+          ...rest
+        } = evt as any;
+        void id;
         void store_id;
         void device_id;
+        void sync_status;
+        void sync_attempts;
+        void synced_at;
+        void next_retry_at;
         void last_error;
+        void last_error_code;
         // Crear evento sin store_id y device_id para enviar al backend
         // El backend los espera solo en el DTO principal, no en cada evento
-        // Remover store_id y device_id del evento (van en el DTO principal)
+        // Remover store_id y device_id del payload (si vienen por compatibilidad legacy)
+        const cleanPayload = { ...(payload || {}) } as Record<string, unknown>;
+        delete cleanPayload.store_id;
+        delete cleanPayload.device_id;
         return {
           ...rest,
-          payload: {
-            ...(payload || {}),
-            store_id: undefined,
-            device_id: undefined,
-          },
+          payload: cleanPayload,
         } as Omit<BaseEvent, 'store_id' | 'device_id'>;
       })
       .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> => evt !== null);
