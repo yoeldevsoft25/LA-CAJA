@@ -29,6 +29,7 @@ import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { ProductLot } from '../database/entities/product-lot.entity';
 import { Product } from '../database/entities/product.entity';
+import { FiscalConfig } from '../database/entities/fiscal-config.entity';
 import {
   AccountingPeriod,
   AccountingPeriodStatus,
@@ -81,6 +82,8 @@ export class AccountingService {
     private productRepository: Repository<Product>,
     @InjectRepository(AccountingPeriod)
     private periodRepository: Repository<AccountingPeriod>,
+    @InjectRepository(FiscalConfig)
+    private fiscalConfigRepository: Repository<FiscalConfig>,
     private sharedService: AccountingSharedService,
     private reportingService: AccountingReportingService,
     @Inject(forwardRef(() => AccountingPeriodService))
@@ -377,6 +380,7 @@ export class AccountingService {
           'inventory_asset',
           'income',
           'adjustment',
+          'sale_tax', // Tipo de mapeo correcto según la entidad
         ],
         sale.payment,
       );
@@ -387,6 +391,7 @@ export class AccountingService {
       const inventoryMapping = mappings.get('inventory_asset');
       const incomeMapping = mappings.get('income');
       const adjustmentMapping = mappings.get('adjustment');
+      const taxMapping = mappings.get('sale_tax');
 
       if (!revenueMapping || !costMapping) {
         this.logger.warn(
@@ -394,6 +399,11 @@ export class AccountingService {
         );
         return null;
       }
+
+      // Obtener configuración fiscal para segregación de IVA
+      const fiscalConfig = await this.fiscalConfigRepository.findOne({
+        where: { store_id: storeId, is_active: true },
+      });
 
       const entryDate = new Date(sale.sold_at);
       const entryNumber = await this.generateEntryNumber(storeId, entryDate);
@@ -411,14 +421,31 @@ export class AccountingService {
 
       // Redondear todos los valores a 2 decimales para consistencia contable
       const roundTwo = (value: number) => Math.round(value * 100) / 100;
-      const totalBs = roundTwo(sale.totals.total_bs);
-      const totalUsd = roundTwo(sale.totals.total_usd);
+      const totalAmountBs = roundTwo(sale.totals.total_bs);
+      const totalAmountUsd = roundTwo(sale.totals.total_usd);
+
+      // Calcular segregación de impuestos
+      let taxAmountBs = 0;
+      let taxAmountUsd = 0;
+      let netRevenueBs = totalAmountBs;
+      let netRevenueUsd = totalAmountUsd;
+
+      if (fiscalConfig && fiscalConfig.default_tax_rate > 0) {
+        const taxRate = fiscalConfig.default_tax_rate;
+        // Asumiendo que el total de la venta es BRUTO
+        const divisor = 1 + taxRate / 100;
+        netRevenueBs = roundTwo(totalAmountBs / divisor);
+        netRevenueUsd = roundTwo(totalAmountUsd / divisor);
+        taxAmountBs = roundTwo(totalAmountBs - netRevenueBs);
+        taxAmountUsd = roundTwo(totalAmountUsd - netRevenueUsd);
+      }
+
       const roundingAdjustmentBs = roundTwo(
         (sale.payment?.cash_payment?.change_rounding?.adjustment_bs || 0) +
         (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0),
       );
 
-      // Calcular costo real desde sale_items
+      // Calcular costo real desde sale_items (opcional, si hay inventario)
       const saleItems = await this.saleItemRepository.find({
         where: { sale_id: sale.id },
         relations: ['lot', 'product'],
@@ -429,7 +456,7 @@ export class AccountingService {
       const costBs = roundTwo(rawCostBs);
       const costUsd = roundTwo(rawCostUsd);
 
-      // Si es FIAO, usar cuenta por cobrar
+      // 1. LÍNEA DE COBRO O CUENTA POR COBRAR (DEBE)
       if (sale.payment.method === 'FIAO') {
         if (receivableMapping) {
           lines.push({
@@ -438,42 +465,66 @@ export class AccountingService {
             account_name:
               receivableMapping.account?.account_name ||
               receivableMapping.account_code,
-            debit_amount_bs: totalBs,
+            debit_amount_bs: totalAmountBs,
             credit_amount_bs: 0,
-            debit_amount_usd: totalUsd,
+            debit_amount_usd: totalAmountUsd,
             credit_amount_usd: 0,
             description: `Venta FIAO - ${sale.invoice_full_number || sale.id}`,
           });
         }
       } else {
-        // Si es pago inmediato, usar cuenta de caja
         if (cashMapping) {
           lines.push({
             account_id: cashMapping.account_id,
             account_code: cashMapping.account_code,
             account_name:
               cashMapping.account?.account_name || cashMapping.account_code,
-            debit_amount_bs: totalBs,
+            debit_amount_bs: totalAmountBs,
             credit_amount_bs: 0,
-            debit_amount_usd: totalUsd,
+            debit_amount_usd: totalAmountUsd,
             credit_amount_usd: 0,
             description: `Cobro de venta - ${sale.invoice_full_number || sale.id}`,
           });
         }
       }
 
-      // Ingreso por venta
+      // 2. LÍNEA DE INGRESO (HABER - NETO)
       lines.push({
         account_id: revenueMapping.account_id,
         account_code: revenueMapping.account_code,
         account_name:
           revenueMapping.account?.account_name || revenueMapping.account_code,
         debit_amount_bs: 0,
-        credit_amount_bs: totalBs,
+        credit_amount_bs: netRevenueBs,
         debit_amount_usd: 0,
-        credit_amount_usd: totalUsd,
-        description: `Venta - ${sale.invoice_full_number || sale.id}`,
+        credit_amount_usd: netRevenueUsd,
+        description: `Venta (Neto) - ${sale.invoice_full_number || sale.id}`,
       });
+
+      // 3. LÍNEA DE IVA (HABER - SEGRAGADO)
+      if (taxAmountBs > 0 || taxAmountUsd > 0) {
+        if (taxMapping) {
+          lines.push({
+            account_id: taxMapping.account_id,
+            account_code: taxMapping.account_code,
+            account_name:
+              taxMapping.account?.account_name || taxMapping.account_code,
+            debit_amount_bs: 0,
+            credit_amount_bs: taxAmountBs,
+            debit_amount_usd: 0,
+            credit_amount_usd: taxAmountUsd,
+            description: `IVA por cobrar (Segregado) - ${sale.invoice_full_number || sale.id}`,
+          });
+        } else {
+          // Fallback: Si no hay cuenta de IVA, añadir al ingreso
+          const lastLine = lines[lines.length - 1];
+          lastLine.credit_amount_bs = roundTwo(lastLine.credit_amount_bs + taxAmountBs);
+          lastLine.credit_amount_usd = roundTwo(lastLine.credit_amount_usd + taxAmountUsd);
+          this.logger.warn(`No se encontró cuenta de IVA ('sale_tax'), se incluyó en ingresos para ${sale.id}`);
+        }
+      }
+
+      // 4. LÍNEAS DE COSTO Y AJUSTE (Si aplica)
 
       // Costo de venta (si aplica)
       if (costBs > 0 || costUsd > 0) {

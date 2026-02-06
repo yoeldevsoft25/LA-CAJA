@@ -19,6 +19,7 @@ import { Sale } from '../database/entities/sale.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
 import { PurchaseOrder } from '../database/entities/purchase-order.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
+import { FiscalConfig } from '../database/entities/fiscal-config.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
 import { ProductLot } from '../database/entities/product-lot.entity';
 import { Product } from '../database/entities/product.entity';
@@ -43,6 +44,7 @@ import { LicensesModule } from '../licenses/licenses.module';
       ProductLot,
       Product,
       AccountingPeriod,
+      FiscalConfig,
     ]),
     LicensesModule,
   ],
