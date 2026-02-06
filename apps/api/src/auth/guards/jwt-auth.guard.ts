@@ -23,6 +23,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     const request = context.switchToHttp().getRequest();
     if (request?.isFederationAuthenticated === true) {
+      console.log('[JwtAuthGuard] Federation authenticated, skipping JWT check.');
       return true;
     }
 

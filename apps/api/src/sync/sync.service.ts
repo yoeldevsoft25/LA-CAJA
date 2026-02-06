@@ -192,6 +192,9 @@ export class SyncService {
       try {
         // 2a. Validación básica
         if (!this.isEventValid(event)) {
+          this.logger.warn(
+            `Event ${event.event_id} rejected: VALIDATION_ERROR - missing required fields`,
+          );
           rejected.push({
             event_id: event.event_id || 'unknown',
             seq: event.seq,
@@ -204,6 +207,9 @@ export class SyncService {
 
         // 2b. Validar tipo conocido
         if (!this.knownEventTypes.includes(event.type)) {
+          this.logger.warn(
+            `Event ${event.event_id} rejected: VALIDATION_ERROR - unknown event type ${event.type}`,
+          );
           rejected.push({
             event_id: event.event_id,
             seq: event.seq,
@@ -214,7 +220,6 @@ export class SyncService {
         }
 
         // ⚡ OPTIMIZACIÓN: Validaciones simplificadas para SaleCreated
-        // Las validaciones pesadas se hacen en la proyección asíncrona
         if (event.type === 'SaleCreated') {
           if (
             authenticatedUserId &&
@@ -222,6 +227,9 @@ export class SyncService {
             event.actor?.user_id &&
             event.actor.user_id !== authenticatedUserId
           ) {
+            this.logger.warn(
+              `Event ${event.event_id} rejected: SECURITY_ERROR - actor user_id mismatch`,
+            );
             rejected.push({
               event_id: event.event_id,
               seq: event.seq,
@@ -233,12 +241,14 @@ export class SyncService {
           }
 
           const payload = event.payload as any;
-          // Validación básica rápida (sin queries pesadas)
           if (
             !payload ||
             !Array.isArray(payload.items) ||
             payload.items.length === 0
           ) {
+            this.logger.warn(
+              `Event ${event.event_id} rejected: VALIDATION_ERROR - no valid items in sale`,
+            );
             rejected.push({
               event_id: event.event_id,
               seq: event.seq,
@@ -248,6 +258,9 @@ export class SyncService {
             continue;
           }
           if (!payload.cash_session_id) {
+            this.logger.warn(
+              `Event ${event.event_id} rejected: SECURITY_ERROR - missing cash_session_id`,
+            );
             rejected.push({
               event_id: event.event_id,
               seq: event.seq,
@@ -256,21 +269,37 @@ export class SyncService {
             });
             continue;
           }
-          // Validaciones pesadas se harán en la proyección asíncrona
         }
 
-        // 2b. Validación CRDT MAX (Deltas y Hashes)
+        // 2b-2. Validación CRDT MAX (Deltas y Hashes)
         if (isCrdtMaxEnabled || this.criticalEventTypes.includes(event.type)) {
           if (!event.delta_payload) {
-            rejected.push({
-              event_id: event.event_id,
-              seq: event.seq,
-              code: 'CRDT_ERROR',
-              message: `Evento crítico ${event.type} requiere delta_payload bajo CRDT MAX.`,
-            });
-            continue;
+            if (authenticatedUserId === 'system-federation') {
+              this.logger.log(
+                `Event ${event.event_id} (${event.type}) from federation missing delta_payload. Generating from full payload.`,
+              );
+              event.delta_payload = event.payload;
+              if (!event.full_payload_hash) {
+                event.full_payload_hash = this.hashPayload(event.payload);
+              }
+            } else {
+              this.logger.warn(
+                `Event ${event.event_id} rejected: CRDT_ERROR - missing delta_payload`,
+              );
+              rejected.push({
+                event_id: event.event_id,
+                seq: event.seq,
+                code: 'CRDT_ERROR',
+                message: `Evento crítico ${event.type} requiere delta_payload bajo CRDT MAX.`,
+              });
+              continue;
+            }
           }
+
           if (!event.full_payload_hash) {
+            this.logger.warn(
+              `Event ${event.event_id} rejected: CRDT_ERROR - missing full_payload_hash`,
+            );
             rejected.push({
               event_id: event.event_id,
               seq: event.seq,
@@ -279,12 +308,13 @@ export class SyncService {
             });
             continue;
           }
-          // Validamos integridad (comparando hash enviado vs hash del delta)
           const serverHash = this.hashPayload(event.delta_payload);
           if (event.full_payload_hash !== serverHash) {
-            // Permitimos si coincide con el hash del payload principal por compatibilidad
             const payloadHash = this.hashPayload(event.payload);
             if (event.full_payload_hash !== payloadHash) {
+              this.logger.warn(
+                `Event ${event.event_id} rejected: INTEGRITY_ERROR - payload hash mismatch`,
+              );
               rejected.push({
                 event_id: event.event_id,
                 seq: event.seq,
@@ -296,7 +326,7 @@ export class SyncService {
           }
         }
 
-        // 2c. Dedupe por event_id (idempotencia)
+        // 2c. Dedupe por event_id
         if (existingEventIds.has(event.event_id)) {
           this.updateServerVectorClock(serverVectorClock, event, dto.device_id);
           accepted.push({ event_id: event.event_id, seq: event.seq });
@@ -304,16 +334,14 @@ export class SyncService {
           continue;
         }
 
-        // 2d. Dedupe por request_id físico (idempotencia robusta)
+        // 2d. Dedupe por request_id físico
         const payload = event.payload as any;
         const requestId = event.request_id || payload?.request_id;
-
         if (requestId) {
           const existingRequest = await this.eventRepository.findOne({
             where: { request_id: requestId },
             select: ['event_id'],
           });
-
           if (existingRequest) {
             this.updateServerVectorClock(
               serverVectorClock,
@@ -334,18 +362,8 @@ export class SyncService {
           event.vector_clock ||
           this.vectorClockService.fromEvent(dto.device_id, event.seq);
 
-        // ⚡ OPTIMIZACIÓN: Detección de conflictos simplificada para eventos de venta
-        // Para SaleCreated, los conflictos son raros y se pueden manejar en la proyección
-        let conflictResult: {
-          hasConflict: boolean;
-          resolved: boolean;
-          resolvedPayload?: any;
-          conflictId?: string;
-          reason?: string;
-          conflictingWith?: string[];
-        } = { hasConflict: false, resolved: true };
+        let conflictResult: any = { hasConflict: false, resolved: true };
         if (event.type !== 'SaleCreated') {
-          // Solo detectar conflictos para eventos que no sean ventas (más rápidos)
           conflictResult = await this.detectAndResolveConflicts(
             dto.store_id,
             event,
@@ -355,7 +373,6 @@ export class SyncService {
         }
 
         if (conflictResult.hasConflict && !conflictResult.resolved) {
-          // Conflicto no resuelto, requiere intervención manual
           conflicted.push({
             event_id: event.event_id,
             seq: event.seq,
@@ -364,7 +381,7 @@ export class SyncService {
             requires_manual_review: true,
             conflicting_with: conflictResult.conflictingWith || [],
           });
-          continue; // No guardar evento en conflicto
+          continue;
         }
 
         // 5. Calcular hash del payload completo
@@ -385,7 +402,6 @@ export class SyncService {
           actor_role: event.actor.role,
           payload: conflictResult.resolvedPayload || event.payload,
           received_at: new Date(),
-          // ===== OFFLINE-FIRST FIELDS =====
           vector_clock: eventVectorClock,
           causal_dependencies: event.causal_dependencies || [],
           conflict_status: conflictResult.hasConflict
@@ -397,19 +413,13 @@ export class SyncService {
         });
 
         eventsToSave.push(eventEntity);
-
-        // Acumular cuotas para aplicar de forma transaccional al final
         if (event.type === 'ProductCreated') {
           productUsageIncrements++;
         } else if (event.type === 'SaleCreated') {
           invoiceUsageIncrements++;
         }
 
-        accepted.push({
-          event_id: event.event_id,
-          seq: event.seq,
-        });
-
+        accepted.push({ event_id: event.event_id, seq: event.seq });
         serverVectorClock = this.vectorClockService.merge(
           serverVectorClock,
           eventVectorClock,
@@ -423,7 +433,6 @@ export class SyncService {
           `Error procesando evento ${event.event_id}`,
           error instanceof Error ? error.stack : String(error),
         );
-
         rejected.push({
           event_id: event.event_id,
           seq: event.seq,

@@ -14,12 +14,15 @@ export class FederationAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !this.adminSecret) {
-      // Nothing to do here; let JwtAuthGuard validate normal JWT auth.
+      if (!this.adminSecret) {
+        console.warn('[FederationAuthGuard] ADMIN_SECRET not set in environment!');
+      }
       return true;
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (token === this.adminSecret) {
+      console.log('[FederationAuthGuard] Admin secret matched! Bypassing JWT.');
       // ⚡ BYPASS: If admin secret matches, we inject a "system" user
       // so that controllers and interceptors don't complain about missing store_id
       const bodyStoreId = request.body?.store_id;
@@ -37,8 +40,7 @@ export class FederationAuthGuard implements CanActivate {
       return true;
     }
 
-    // Invalid federation token: continue and let JwtAuthGuard decide.
-    // This avoids returning 403 before JWT auth has a chance to run.
+    console.warn('[FederationAuthGuard] Admin secret mismatch');
     return true;
   }
 }

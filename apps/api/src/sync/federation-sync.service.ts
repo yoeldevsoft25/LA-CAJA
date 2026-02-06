@@ -33,17 +33,17 @@ export interface FederationStatus {
     failed: number;
   };
   remoteProbe:
-    | {
-        ok: boolean;
-        latencyMs: number;
-        statusCode: number;
-      }
-    | {
-        ok: false;
-        latencyMs: number;
-        error: string;
-      }
-    | null;
+  | {
+    ok: boolean;
+    latencyMs: number;
+    statusCode: number;
+  }
+  | {
+    ok: false;
+    latencyMs: number;
+    error: string;
+  }
+  | null;
   lastRelayError: {
     eventId: string;
     message: string;
@@ -73,6 +73,12 @@ export interface FederationIdsResult {
 
 export interface FederationAutoReconcileResult {
   storeId: string;
+  sessions?: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
+  };
   sales: {
     remoteMissingCount: number;
     localMissingCount: number;
@@ -221,7 +227,7 @@ export class FederationSyncService implements OnModuleInit {
 
     const waitingThreshold = Number(
       this.configService.get<string>('FEDERATION_HEAL_WAITING_THRESHOLD') ||
-        100,
+      100,
     );
     const failedThreshold = Number(
       this.configService.get<string>('FEDERATION_HEAL_FAILED_THRESHOLD') || 1,
@@ -428,6 +434,70 @@ export class FederationSyncService implements OnModuleInit {
       (saleId) => !foundSaleIds.has(saleId),
     );
 
+    if (missingSaleIds.length > 0) {
+      this.logger.warn(`Missing SaleCreated events for sale_ids: ${missingSaleIds.join(', ')}`);
+    }
+
+    let queued = 0;
+    for (const row of rows as Array<{ event_id: string }>) {
+      const event = await this.eventRepository.findOne({
+        where: { event_id: row.event_id },
+      });
+      if (!event) {
+        this.logger.error(`Event ${row.event_id} found in query but not in repository!`);
+        continue;
+      }
+      await this.queueRelay(event);
+      queued += 1;
+    }
+
+    this.logger.log(
+      `🔁 Federation replay queued ${queued}/${uniqueSaleIds.length} SaleCreated events (found ${rows.length})`,
+    );
+
+    return {
+      requested: uniqueSaleIds.length,
+      found: rows.length,
+      queued,
+      missingSaleIds,
+    };
+  }
+
+  async replaySessionsByIds(
+    storeId: string,
+    sessionIds: string[],
+  ): Promise<FederationReplayResult> {
+    const uniqueSessionIds = Array.from(
+      new Set(sessionIds.map((id) => id?.trim()).filter(Boolean)),
+    );
+
+    if (!this.remoteUrl || uniqueSessionIds.length === 0) {
+      return {
+        requested: uniqueSessionIds.length,
+        found: 0,
+        queued: 0,
+        missingSaleIds: uniqueSessionIds, // Reutilizamos DTO
+      };
+    }
+
+    const rows = await this.dataSource.query(
+      `
+            SELECT event_id, payload->>'session_id' AS session_id
+            FROM events
+            WHERE store_id = $1
+              AND type IN ('CashSessionOpened', 'CashSessionClosed')
+              AND payload->>'session_id' = ANY($2)
+            `,
+      [storeId, uniqueSessionIds],
+    );
+
+    const foundSessionIds = new Set<string>(
+      rows.map((row: { session_id: string }) => row.session_id),
+    );
+    const missingSessionIds = uniqueSessionIds.filter(
+      (sessionId) => !foundSessionIds.has(sessionId),
+    );
+
     let queued = 0;
     for (const row of rows as Array<{ event_id: string }>) {
       const event = await this.eventRepository.findOne({
@@ -439,14 +509,14 @@ export class FederationSyncService implements OnModuleInit {
     }
 
     this.logger.log(
-      `🔁 Federation replay queued ${queued}/${uniqueSaleIds.length} SaleCreated events`,
+      `🔁 Federation replay queued ${queued}/${uniqueSessionIds.length} Session events (found ${rows.length})`,
     );
 
     return {
-      requested: uniqueSaleIds.length,
+      requested: uniqueSessionIds.length,
       found: rows.length,
       queued,
-      missingSaleIds,
+      missingSaleIds: missingSessionIds,
     };
   }
 
@@ -479,7 +549,7 @@ export class FederationSyncService implements OnModuleInit {
             SELECT event_id, payload->>'movement_id' AS movement_id, payload->>'product_id' AS product_id
             FROM events
             WHERE store_id = $1
-              AND type IN ('StockReceived', 'StockAdjusted')
+              AND type IN ('StockReceived', 'StockAdjusted', 'StockDeltaApplied')
         `;
     const params: unknown[] = [storeId];
     const filters: string[] = [];
@@ -570,6 +640,43 @@ export class FederationSyncService implements OnModuleInit {
     };
   }
 
+  async getSessionIds(
+    storeId: string,
+    dateFrom: string,
+    dateTo: string,
+    limit = 10000,
+    offset = 0,
+  ): Promise<FederationIdsResult> {
+    const totalRows = await this.dataSource.query(
+      `
+            SELECT COUNT(1)::int AS total
+            FROM cash_sessions
+            WHERE store_id = $1
+              AND opened_at >= $2::date
+              AND opened_at < ($3::date + interval '1 day')
+            `,
+      [storeId, dateFrom, dateTo],
+    );
+
+    const rows = await this.dataSource.query(
+      `
+            SELECT id
+            FROM cash_sessions
+            WHERE store_id = $1
+              AND opened_at >= $2::date
+              AND opened_at < ($3::date + interval '1 day')
+            ORDER BY opened_at DESC
+            LIMIT $4 OFFSET $5
+            `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
+
+    return {
+      total: Number(totalRows?.[0]?.total || 0),
+      ids: rows.map((row: { id: string }) => row.id),
+    };
+  }
+
   async getInventoryMovementIds(
     storeId: string,
     dateFrom: string,
@@ -582,7 +689,7 @@ export class FederationSyncService implements OnModuleInit {
             SELECT COUNT(1)::int AS total
             FROM events
             WHERE store_id = $1
-              AND type IN ('StockReceived', 'StockAdjusted')
+              AND type IN ('StockReceived', 'StockAdjusted', 'StockDeltaApplied')
               AND created_at >= $2::date
               AND created_at < ($3::date + interval '1 day')
               AND payload->>'movement_id' IS NOT NULL
@@ -595,7 +702,7 @@ export class FederationSyncService implements OnModuleInit {
             SELECT DISTINCT payload->>'movement_id' AS movement_id
             FROM events
             WHERE store_id = $1
-              AND type IN ('StockReceived', 'StockAdjusted')
+              AND type IN ('StockReceived', 'StockAdjusted', 'StockDeltaApplied')
               AND created_at >= $2::date
               AND created_at < ($3::date + interval '1 day')
               AND payload->>'movement_id' IS NOT NULL
@@ -678,6 +785,12 @@ export class FederationSyncService implements OnModuleInit {
           );
           results.push({
             storeId: currentStoreId,
+            sessions: {
+              remoteMissingCount: 0,
+              localMissingCount: 0,
+              replayedToRemote: 0,
+              replayedToLocal: 0,
+            },
             sales: {
               remoteMissingCount: 0,
               localMissingCount: 0,
@@ -734,12 +847,13 @@ export class FederationSyncService implements OnModuleInit {
       },
     );
 
-    const [localSales, localInventory] = await Promise.all([
+    const [localSales, localInventory, localSessions] = await Promise.all([
       this.getSalesIds(storeId, dateFrom, dateTo),
       this.getInventoryMovementIds(storeId, dateFrom, dateTo),
+      this.getSessionIds(storeId, dateFrom, dateTo),
     ]);
 
-    const [remoteSales, remoteInventory] = await Promise.all([
+    const [remoteSales, remoteInventory, remoteSessions] = await Promise.all([
       this.fetchRemoteIds(
         '/sync/federation/sales-ids',
         storeId,
@@ -752,10 +866,29 @@ export class FederationSyncService implements OnModuleInit {
         dateFrom,
         dateTo,
       ),
+      this.fetchRemoteIds(
+        '/sync/federation/session-ids',
+        storeId,
+        dateFrom,
+        dateTo,
+      ),
     ]);
 
+    // Sessions diff
+    const sessionsMissingInRemote = this.diff(
+      localSessions.ids,
+      remoteSessions.ids,
+    );
+    const sessionsMissingInLocal = this.diff(
+      remoteSessions.ids,
+      localSessions.ids,
+    );
+
+    // Sales diff
     const salesMissingInRemote = this.diff(localSales.ids, remoteSales.ids);
     const salesMissingInLocal = this.diff(remoteSales.ids, localSales.ids);
+
+    // Inventory diff
     const invMissingInRemote = this.diff(
       localInventory.ids,
       remoteInventory.ids,
@@ -765,11 +898,21 @@ export class FederationSyncService implements OnModuleInit {
       localInventory.ids,
     );
 
+    const replaySessionsToRemote = sessionsMissingInRemote.slice(0, maxBatch);
+    const replaySessionsToLocal = sessionsMissingInLocal.slice(0, maxBatch);
     const replaySalesToRemote = salesMissingInRemote.slice(0, maxBatch);
     const replaySalesToLocal = salesMissingInLocal.slice(0, maxBatch);
     const replayInvToRemote = invMissingInRemote.slice(0, maxBatch);
     const replayInvToLocal = invMissingInLocal.slice(0, maxBatch);
 
+    // PASO 2: Replicar sesiones (Local -> Remote) primero para dependencias
+    const [sessionsToRemoteResult] = await Promise.all([
+      replaySessionsToRemote.length > 0
+        ? this.replaySessionsByIds(storeId, replaySessionsToRemote)
+        : Promise.resolve({ queued: 0 }),
+    ]);
+
+    // PASO 3: Replicar ventas e inventario (Local -> Remote)
     const [salesToRemoteResult, invToRemoteResult] = await Promise.all([
       replaySalesToRemote.length > 0
         ? this.replaySalesByIds(storeId, replaySalesToRemote)
@@ -778,6 +921,14 @@ export class FederationSyncService implements OnModuleInit {
         ? this.replayInventoryByFilter(storeId, replayInvToRemote, [])
         : Promise.resolve({ queued: 0 }),
     ]);
+
+    // PASO 4: Pedir repetición remota (Remote -> Local)
+    if (replaySessionsToLocal.length > 0) {
+      await this.postRemoteReplay('/sync/federation/replay-sessions', {
+        store_id: storeId,
+        session_ids: replaySessionsToLocal,
+      });
+    }
 
     if (replaySalesToLocal.length > 0) {
       await this.postRemoteReplay('/sync/federation/replay-sales', {
@@ -792,7 +943,7 @@ export class FederationSyncService implements OnModuleInit {
       });
     }
 
-    // Paso 2: Re-ejecutar autocorrección luego de replicar eventos.
+    // Paso 5: Re-ejecutar autocorrección luego de replicar eventos.
     const localPostHeal = await this.reconcileInventoryStock(storeId);
     const remotePostHeal = await this.postRemoteStockReconcile(storeId).catch(
       (error) => {
@@ -809,6 +960,14 @@ export class FederationSyncService implements OnModuleInit {
 
     const result: FederationAutoReconcileResult = {
       storeId,
+      sessions: {
+        remoteMissingCount: sessionsMissingInRemote.length,
+        localMissingCount: sessionsMissingInLocal.length,
+        replayedToRemote: Number(
+          (sessionsToRemoteResult as { queued: number }).queued || 0,
+        ),
+        replayedToLocal: replaySessionsToLocal.length,
+      },
       sales: {
         remoteMissingCount: salesMissingInRemote.length,
         localMissingCount: salesMissingInLocal.length,
@@ -843,7 +1002,8 @@ export class FederationSyncService implements OnModuleInit {
   private async fetchRemoteIds(
     endpoint:
       | '/sync/federation/sales-ids'
-      | '/sync/federation/inventory-movement-ids',
+      | '/sync/federation/inventory-movement-ids'
+      | '/sync/federation/session-ids',
     storeId: string,
     dateFrom: string,
     dateTo: string,

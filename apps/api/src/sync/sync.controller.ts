@@ -35,7 +35,7 @@ export class SyncController {
     private readonly syncService: SyncService,
     private readonly conflictResolutionService: ConflictResolutionService,
     private readonly federationSyncService: FederationSyncService,
-  ) {}
+  ) { }
 
   @Post('push')
   @HttpCode(HttpStatus.OK)
@@ -156,6 +156,46 @@ export class SyncController {
       limit,
       offset,
     );
+  }
+
+  @Get('federation/session-ids')
+  async getFederationSessionIds(
+    @Query('store_id') storeIdQuery: string,
+    @Query('date_from') dateFrom: string,
+    @Query('date_to') dateTo: string,
+    @Query('limit') limitRaw: string,
+    @Query('offset') offsetRaw: string,
+    @Request() req: any,
+  ): Promise<FederationIdsResult> {
+    const storeId = storeIdQuery || req.user.store_id;
+    if (!storeId) {
+      throw new BadRequestException('store_id es requerido');
+    }
+    if (!dateFrom || !dateTo) {
+      throw new BadRequestException('date_from y date_to son requeridos');
+    }
+    const limit = Number(limitRaw || 10000);
+    const offset = Number(offsetRaw || 0);
+    return this.federationSyncService.getSessionIds(
+      storeId,
+      dateFrom,
+      dateTo,
+      limit,
+      offset,
+    );
+  }
+
+  @Post('federation/replay-sessions')
+  @HttpCode(HttpStatus.OK)
+  async replaySessions(
+    @Body('session_ids') sessionIds: string[],
+    @Request() req: any,
+  ): Promise<FederationReplayResult> {
+    const storeId = req.user.store_id;
+    if (!Array.isArray(sessionIds) || sessionIds.length === 0) {
+      throw new BadRequestException('session_ids es requerido');
+    }
+    return this.federationSyncService.replaySessionsByIds(storeId, sessionIds);
   }
 
   @Post('federation/replay-sales')
