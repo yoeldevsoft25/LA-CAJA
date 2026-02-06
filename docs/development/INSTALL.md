@@ -1,8 +1,10 @@
 # Guía de Instalación - LA CAJA
 
+**Requisitos detallados y verificación de entorno:** [ENTORNO_LOCAL.md](./ENTORNO_LOCAL.md).
+
 ## Requisitos Previos
 
-- Node.js >= 18.0.0
+- Node.js 20.x (recomendado; ver `.nvmrc`)
 - npm >= 9.0.0
 - PostgreSQL (para desarrollo local) o cuenta de Supabase
 - **Rust (para compilar Tauri Desktop)** - Solo si quieres buildear desktop
@@ -22,9 +24,13 @@
 
 ### 1. Instalar dependencias
 
+Desde la raíz del repo (recomendado para CI y entornos reproducibles):
+
 ```bash
-npm install
+npm ci
 ```
+
+Opcional antes: `./scripts/check-env.sh` para verificar Node. Ver [ENTORNO_LOCAL.md](./ENTORNO_LOCAL.md).
 
 ### 2. Configurar Backend
 

@@ -5,7 +5,14 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In, EntityManager, IsNull, MoreThan } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  In,
+  EntityManager,
+  IsNull,
+  MoreThan,
+} from 'typeorm';
 import { CreateSaleDto } from '../../../dto/create-sale.dto';
 import { CashSession } from '../../../../database/entities/cash-session.entity';
 import { Product } from '../../../../database/entities/product.entity';
@@ -33,7 +40,7 @@ export class CreateSaleValidator {
     private readonly stockEscrowRepository: Repository<StockEscrow>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
-  ) { }
+  ) {}
 
   async validateSaleRequest(
     storeId: string,
@@ -165,50 +172,51 @@ export class CreateSaleValidator {
       .map((item) => item.variant_id)
       .filter((id): id is string => !!id);
 
-    const [stockRecords, products, variants, allLots, escrows] = await Promise.all([
-      warehouseId
-        ? this.dataSource.query(
-          `SELECT product_id, variant_id, stock, reserved
+    const [stockRecords, products, variants, allLots, escrows] =
+      await Promise.all([
+        warehouseId
+          ? this.dataSource.query(
+              `SELECT product_id, variant_id, stock, reserved
              FROM warehouse_stock
              WHERE warehouse_id = $1
                AND product_id = ANY($2::uuid[])`,
-          [warehouseId, productIds],
-        )
-        : this.dataSource.query(
-          `SELECT ws.product_id, ws.variant_id, COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as stock, 0 as reserved
+              [warehouseId, productIds],
+            )
+          : this.dataSource.query(
+              `SELECT ws.product_id, ws.variant_id, COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as stock, 0 as reserved
              FROM warehouse_stock ws
              INNER JOIN warehouses w ON ws.warehouse_id = w.id
              WHERE w.store_id = $1
                AND ws.product_id = ANY($2::uuid[])
              GROUP BY ws.product_id, ws.variant_id`,
-          [storeId, productIds],
-        ),
-      this.productRepository.find({
-        where: {
-          id: In(productIds),
-          store_id: storeId,
-          is_active: true,
-        },
-      }),
-      variantIds.length > 0
-        ? this.dataSource.getRepository(ProductVariant).find({
-          where: { id: In(variantIds) },
-        })
-        : Promise.resolve([]),
-      this.dataSource.getRepository(ProductLot).find({
-        where: { product_id: In(productIds) },
-      }),
-      dto.device_id
-        ? this.stockEscrowRepository.find({
+              [storeId, productIds],
+            ),
+        this.productRepository.find({
           where: {
+            id: In(productIds),
             store_id: storeId,
-            device_id: dto.device_id,
-            product_id: In(productIds),
-            expires_at: MoreThan(new Date()),
+            is_active: true,
           },
-        })
-        : Promise.resolve([] as StockEscrow[]),
-    ]);
+        }),
+        variantIds.length > 0
+          ? this.dataSource.getRepository(ProductVariant).find({
+              where: { id: In(variantIds) },
+            })
+          : Promise.resolve([]),
+        this.dataSource.getRepository(ProductLot).find({
+          where: { product_id: In(productIds) },
+        }),
+        dto.device_id
+          ? this.stockEscrowRepository.find({
+              where: {
+                store_id: storeId,
+                device_id: dto.device_id,
+                product_id: In(productIds),
+                expires_at: MoreThan(new Date()),
+              },
+            })
+          : Promise.resolve([] as StockEscrow[]),
+      ]);
 
     const productsWithSerials = products
       .filter((p) => !p.is_weight_product)
@@ -216,8 +224,8 @@ export class CreateSaleValidator {
     const allSerials =
       productsWithSerials.length > 0
         ? await this.dataSource.getRepository(ProductSerial).find({
-          where: { product_id: In(productsWithSerials) },
-        })
+            where: { product_id: In(productsWithSerials) },
+          })
         : [];
 
     const stockMap = new Map<string, number>();
@@ -439,25 +447,25 @@ export class CreateSaleValidator {
     const result =
       variantId === null
         ? await manager.query(
-          `SELECT stock, reserved
+            `SELECT stock, reserved
            FROM warehouse_stock
            WHERE warehouse_id = $1
              AND product_id = $2
              AND variant_id IS NULL
            FOR UPDATE
            LIMIT 1`,
-          [warehouseId, productId],
-        )
+            [warehouseId, productId],
+          )
         : await manager.query(
-          `SELECT stock, reserved
+            `SELECT stock, reserved
            FROM warehouse_stock
            WHERE warehouse_id = $1
              AND product_id = $2
              AND variant_id = $3
            FOR UPDATE
            LIMIT 1`,
-          [warehouseId, productId, variantId],
-        );
+            [warehouseId, productId, variantId],
+          );
 
     if (!result || result.length === 0) {
       if (requestedQty > 0) {
@@ -483,25 +491,25 @@ export class CreateSaleValidator {
     const result =
       variantId === null
         ? await manager.query(
-          `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
+            `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
            FROM warehouse_stock ws
            INNER JOIN warehouses w ON ws.warehouse_id = w.id
            WHERE w.store_id = $1
              AND ws.product_id = $2
              AND ws.variant_id IS NULL
            FOR UPDATE OF ws`,
-          [storeId, productId],
-        )
+            [storeId, productId],
+          )
         : await manager.query(
-          `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
+            `SELECT COALESCE(SUM(ws.stock - COALESCE(ws.reserved, 0)), 0) as total_available
            FROM warehouse_stock ws
            INNER JOIN warehouses w ON ws.warehouse_id = w.id
            WHERE w.store_id = $1
              AND ws.product_id = $2
              AND ws.variant_id = $3
            FOR UPDATE OF ws`,
-          [storeId, productId, variantId],
-        );
+            [storeId, productId, variantId],
+          );
 
     const totalAvailable = Number(result[0]?.total_available || 0);
     return Math.max(0, totalAvailable);

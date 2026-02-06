@@ -5,6 +5,8 @@ import { SyncService } from './sync.service';
 import { VectorClockService } from './vector-clock.service';
 import { CRDTService } from './crdt.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
+import { CrdtSnapshotService } from './crdt-snapshot.service';
+import { CrdtVerifyService } from './crdt-verify.service';
 import { Event } from '../database/entities/event.entity';
 import { ProjectionsModule } from '../projections/projections.module';
 import { Product } from '../database/entities/product.entity';
@@ -13,12 +15,23 @@ import { DiscountsModule } from '../discounts/discounts.module';
 import { LicensesModule } from '../licenses/licenses.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { QueuesModule } from '../queues/queues.module';
-import { FederationSyncService, FederationSyncProcessor } from './federation-sync.service';
+import { CrdtSnapshot } from '../database/entities/crdt-snapshot.entity';
+import { Store } from '../database/entities/store.entity';
+import {
+  FederationSyncService,
+  FederationSyncProcessor,
+} from './federation-sync.service';
 import { InventoryEscrowModule } from '../inventory/escrow/inventory-escrow.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Event, Product, CashSession]),
+    TypeOrmModule.forFeature([
+      Event,
+      Product,
+      CashSession,
+      Store,
+      CrdtSnapshot,
+    ]),
     ProjectionsModule,
     DiscountsModule,
     QueuesModule,
@@ -34,7 +47,14 @@ import { InventoryEscrowModule } from '../inventory/escrow/inventory-escrow.modu
     ConflictResolutionService,
     FederationSyncService,
     FederationSyncProcessor,
+    CrdtSnapshotService,
+    CrdtVerifyService,
   ],
-  exports: [SyncService, FederationSyncService],
+  exports: [
+    SyncService,
+    FederationSyncService,
+    CrdtSnapshotService,
+    CrdtVerifyService,
+  ],
 })
-export class SyncModule { }
+export class SyncModule {}

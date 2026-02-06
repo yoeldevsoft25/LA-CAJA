@@ -12,7 +12,12 @@ import { SyncModule } from '../sync/sync.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InventoryMovement, Product, WarehouseStock, Event]),
+    TypeOrmModule.forFeature([
+      InventoryMovement,
+      Product,
+      WarehouseStock,
+      Event,
+    ]),
     WarehousesModule,
     AccountingModule,
     SyncModule,

@@ -62,7 +62,7 @@ export class AuthService {
     private emailService: EmailService,
     private usageService: UsageService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;
@@ -666,7 +666,9 @@ export class AuthService {
       try {
         await this.storeRepository.save(store);
       } catch (e) {
-        this.logger.warn(`⚠️ No se pudo auto-actualizar licencia de la tienda: ${e instanceof Error ? e.message : String(e)}`);
+        this.logger.warn(
+          `⚠️ No se pudo auto-actualizar licencia de la tienda: ${e instanceof Error ? e.message : String(e)}`,
+        );
         // No fallar el login por esto, permitir que el proceso siga
       }
     }

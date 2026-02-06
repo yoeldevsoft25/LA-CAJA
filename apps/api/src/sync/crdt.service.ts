@@ -1,45 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { VectorClockService, VectorClock } from './vector-clock.service';
+import {
+  PNCounter,
+  PNCounterState,
+  PNCounterDelta,
+  LWWRegister as LWWReg,
+  LWWRegisterState,
+  LWWRegisterDelta,
+  ORSet,
+  ORSetState,
+  ORSetDelta,
+  RGACRDT,
+  RGAState,
+  RGADelta,
+} from '@la-caja/crdt';
 
-/**
- * CRDT Service - Conflict-free Replicated Data Types
- *
- * Implementa estrategias de resolución automática de conflictos:
- * 1. Last-Write-Wins (LWW) Register
- * 2. Add-Wins Set (AWSet)
- * 3. Multi-Value Register (MVR)
- * 4. G-Counter (Grow-only Counter)
- *
- * Cada estrategia garantiza convergencia eventual sin coordinación.
- */
-
-/**
- * Last-Write-Wins Register
- * Usado para: Campos simples que pueden sobrescribirse
- * Ejemplos: nombre de producto, dirección de cliente
- */
-export interface LWWRegister<T> {
-  value: T;
-  timestamp: number; // Epoch ms
-  device_id: string;
-  vector_clock: VectorClock;
-}
-
-/**
- * Add-Wins Set
- * Usado para: Colecciones donde agregar siempre gana sobre remover
- * Ejemplos: movimientos de inventario, ítems de venta
- */
-export interface AWSet<T> {
-  adds: Map<string, { value: T; timestamp: number; device_id: string }>;
-  removes: Set<string>;
-}
-
-/**
- * Multi-Value Register
- * Usado para: Cuando no se puede decidir automáticamente
- * Ejemplos: precio modificado concurrentemente
- */
+// Mapeo de tipos para compatibilidad
+export type LWWRegister<T> = LWWRegisterState<T> & {
+  device_id?: string; // Mantener alias para compatibilidad de DTOs si es necesario
+  vector_clock?: VectorClock;
+};
+export type AWSet<T> = ORSetState;
+export type GCounter = PNCounterState;
 export interface MVRegister<T> {
   values: Array<{
     value: T;
@@ -49,20 +31,42 @@ export interface MVRegister<T> {
   }>;
 }
 
-/**
- * G-Counter (Grow-only Counter)
- * Usado para: Contadores que solo incrementan
- * Ejemplos: total de ventas del día, stock recibido
- */
-export interface GCounter {
-  counts: Map<string, number>; // device_id → count
-}
-
 @Injectable()
 export class CRDTService {
   private readonly logger = new Logger(CRDTService.name);
+  private readonly pnCounter = new PNCounter();
+  private readonly lwwRegister = new LWWReg<any>();
+  private readonly orSet = new ORSet();
+  private readonly rgaComp = new RGACRDT<any>();
 
-  constructor(private readonly vectorClockService: VectorClockService) {}
+  constructor(private readonly vectorClockService: VectorClockService) { }
+
+  /**
+   * Aplica un delta a un estado CRDT basado en el tipo de entidad
+   */
+  applyDelta(entity: string, state: any, delta: any): any {
+    try {
+      const type = this.recommendStrategy(entity, '');
+      switch (type) {
+        case 'gcounter':
+          return this.pnCounter.applyDelta(state, delta);
+        case 'lww':
+          return this.lwwRegister.applyDelta(state, delta);
+        case 'awset':
+          return this.orSet.applyDelta(state, delta);
+        case 'rga' as any:
+          return this.rgaComp.applyDelta(state, delta);
+        default:
+          return state;
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error applying delta for entity ${entity}`,
+        error.stack,
+      );
+      return state;
+    }
+  }
 
   // =====================================================
   // LAST-WRITE-WINS (LWW) REGISTER
@@ -79,20 +83,8 @@ export class CRDTService {
    * @returns LWW register ganador
    */
   mergeLWW<T>(a: LWWRegister<T>, b: LWWRegister<T>): LWWRegister<T> {
-    // Comparar timestamps
-    if (a.timestamp > b.timestamp) {
-      return a;
-    } else if (a.timestamp < b.timestamp) {
-      return b;
-    }
-
-    // Timestamps iguales: usar device_id como tie-breaker
-    // Mayor device_id gana (orden lexicográfico)
-    if (a.device_id > b.device_id) {
-      return a;
-    } else {
-      return b;
-    }
+    // Usar la implementación de la clase para consistencia
+    return this.lwwRegister.merge(a, b) as LWWRegister<T>;
   }
 
   /**
@@ -113,7 +105,8 @@ export class CRDTService {
     return {
       value,
       timestamp,
-      device_id: deviceId,
+      nodeId: deviceId,
+      device_id: deviceId, // Mantener alias
       vector_clock: vectorClock,
     };
   }
@@ -148,20 +141,13 @@ export class CRDTService {
    */
   createAWSet<T>(): AWSet<T> {
     return {
-      adds: new Map(),
-      removes: new Set(),
+      elements: {},
+      tombstones: new Set(),
     };
   }
 
   /**
    * Agrega un elemento al AWSet
-   *
-   * @param set - AWSet
-   * @param id - ID único del elemento
-   * @param value - Valor del elemento
-   * @param timestamp - Timestamp del evento
-   * @param deviceId - ID del dispositivo
-   * @returns AWSet actualizado
    */
   addToAWSet<T>(
     set: AWSet<T>,
@@ -170,99 +156,32 @@ export class CRDTService {
     timestamp: number,
     deviceId: string,
   ): AWSet<T> {
-    const newAdds = new Map(set.adds);
-    newAdds.set(id, { value, timestamp, device_id: deviceId });
-
-    return {
-      adds: newAdds,
-      removes: set.removes,
-    };
+    return this.orSet.applyDelta(set, {
+      type: 'add',
+      element: id,
+      tag: `${deviceId}-${timestamp}`,
+    });
   }
 
   /**
    * Remueve un elemento del AWSet
-   *
-   * Nota: El elemento no se elimina realmente, solo se marca como removido.
-   * Add siempre gana sobre Remove en caso de conflicto.
-   *
-   * @param set - AWSet
-   * @param id - ID del elemento a remover
-   * @returns AWSet actualizado
    */
   removeFromAWSet<T>(set: AWSet<T>, id: string): AWSet<T> {
-    const newRemoves = new Set(set.removes);
-    newRemoves.add(id);
-
-    return {
-      adds: set.adds,
-      removes: newRemoves,
-    };
+    return this.orSet.applyDelta(set, { type: 'remove', element: id, tag: '' });
   }
 
   /**
    * Mergea dos AWSets
-   *
-   * Estrategia:
-   * - adds: unión de ambos (Map merge)
-   * - removes: unión de ambos (Set union)
-   * - Add siempre gana sobre Remove (bias-to-add)
-   *
-   * @param a - AWSet A
-   * @param b - AWSet B
-   * @returns AWSet merged
    */
   mergeAWSet<T>(a: AWSet<T>, b: AWSet<T>): AWSet<T> {
-    // Merge adds: unión tomando el más reciente si hay conflicto
-    const mergedAdds = new Map(a.adds);
-
-    for (const [id, entry] of b.adds.entries()) {
-      const existing = mergedAdds.get(id);
-
-      if (!existing) {
-        mergedAdds.set(id, entry);
-      } else {
-        // Si hay conflicto, tomar el más reciente
-        if (entry.timestamp > existing.timestamp) {
-          mergedAdds.set(id, entry);
-        } else if (
-          entry.timestamp === existing.timestamp &&
-          entry.device_id > existing.device_id
-        ) {
-          mergedAdds.set(id, entry); // Tie-breaker por device_id
-        }
-      }
-    }
-
-    // Merge removes: unión simple
-    const mergedRemoves = new Set([...a.removes, ...b.removes]);
-
-    return {
-      adds: mergedAdds,
-      removes: mergedRemoves,
-    };
+    return this.orSet.merge(a, b);
   }
 
   /**
    * Obtiene los valores actuales del AWSet
-   *
-   * Retorna solo elementos que:
-   * - Están en adds
-   * - NO están en removes
-   *
-   * @param set - AWSet
-   * @returns Array de valores
    */
   getAWSetValues<T>(set: AWSet<T>): T[] {
-    const values: T[] = [];
-
-    for (const [id, entry] of set.adds.entries()) {
-      // Add gana sobre Remove: solo excluir si fue removido DESPUÉS de ser agregado
-      if (!set.removes.has(id)) {
-        values.push(entry.value);
-      }
-    }
-
-    return values;
+    return this.orSet.computeValue(set) as any;
   }
 
   // =====================================================
@@ -381,62 +300,37 @@ export class CRDTService {
    */
   createGCounter(): GCounter {
     return {
-      counts: new Map(),
+      increments: {},
+      decrements: {},
     };
   }
 
   /**
    * Incrementa el contador de un dispositivo
-   *
-   * @param counter - G-Counter
-   * @param deviceId - ID del dispositivo
-   * @param amount - Cantidad a incrementar (default: 1)
-   * @returns G-Counter actualizado
    */
   incrementGCounter(
     counter: GCounter,
     deviceId: string,
     amount: number = 1,
   ): GCounter {
-    const newCounts = new Map(counter.counts);
-    const current = newCounts.get(deviceId) || 0;
-    newCounts.set(deviceId, current + amount);
-
-    return { counts: newCounts };
+    return this.pnCounter.applyDelta(counter, {
+      nodeId: deviceId,
+      increment: amount,
+    });
   }
 
   /**
-   * Mergea dos G-Counters tomando el máximo de cada contador
-   *
-   * @param a - G-Counter A
-   * @param b - G-Counter B
-   * @returns G-Counter merged
+   * Mergea dos G-Counters
    */
   mergeGCounter(a: GCounter, b: GCounter): GCounter {
-    const mergedCounts = new Map(a.counts);
-
-    for (const [device, count] of b.counts.entries()) {
-      const existing = mergedCounts.get(device) || 0;
-      mergedCounts.set(device, Math.max(existing, count));
-    }
-
-    return { counts: mergedCounts };
+    return this.pnCounter.merge(a, b);
   }
 
   /**
-   * Obtiene el valor total del G-Counter
-   *
-   * @param counter - G-Counter
-   * @returns Suma de todos los contadores
+   * Obtiene el valor total del PNCounter
    */
   getGCounterValue(counter: GCounter): number {
-    let total = 0;
-
-    for (const count of counter.counts.values()) {
-      total += count;
-    }
-
-    return total;
+    return this.pnCounter.computeValue(counter);
   }
 
   // =====================================================
@@ -499,34 +393,17 @@ export class CRDTService {
    * @param type - Tipo de CRDT
    * @returns JSON serializable
    */
-  serialize(
-    crdt: LWWRegister<any> | AWSet<any> | MVRegister<any> | GCounter,
-    type: 'lww' | 'awset' | 'mvr' | 'gcounter',
-  ): any {
+  serialize(crdt: any, type: 'lww' | 'awset' | 'mvr' | 'gcounter'): any {
     switch (type) {
-      case 'lww':
-        return crdt as LWWRegister<any>;
-
       case 'awset': {
-        const awset = crdt as AWSet<any>;
+        const awset = crdt as ORSetState;
         return {
-          adds: Array.from(awset.adds.entries()),
-          removes: Array.from(awset.removes),
+          elements: awset.elements,
+          tombstones: Array.from(awset.tombstones),
         };
       }
-
-      case 'mvr':
-        return crdt as MVRegister<any>;
-
-      case 'gcounter': {
-        const counter = crdt as GCounter;
-        return {
-          counts: Array.from(counter.counts.entries()),
-        };
-      }
-
       default:
-        throw new Error(`Unknown CRDT type: ${type}`);
+        return crdt;
     }
   }
 
@@ -539,25 +416,13 @@ export class CRDTService {
    */
   deserialize(json: any, type: 'lww' | 'awset' | 'mvr' | 'gcounter'): any {
     switch (type) {
-      case 'lww':
-        return json as LWWRegister<any>;
-
       case 'awset':
         return {
-          adds: new Map(json.adds || []),
-          removes: new Set(json.removes || []),
-        } as AWSet<any>;
-
-      case 'mvr':
-        return json as MVRegister<any>;
-
-      case 'gcounter':
-        return {
-          counts: new Map(json.counts || []),
-        } as GCounter;
-
+          elements: json.elements || {},
+          tombstones: new Set(json.tombstones || []),
+        } as ORSetState;
       default:
-        throw new Error(`Unknown CRDT type: ${type}`);
+        return json;
     }
   }
 }

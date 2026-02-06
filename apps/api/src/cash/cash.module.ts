@@ -13,7 +13,13 @@ import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CashSession, Sale, CashMovement, Event, CashLedgerEntry]),
+    TypeOrmModule.forFeature([
+      CashSession,
+      Sale,
+      CashMovement,
+      Event,
+      CashLedgerEntry,
+    ]),
     AccountingModule,
     SecurityModule,
     SyncModule,
@@ -22,4 +28,4 @@ import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
   providers: [CashService],
   exports: [CashService],
 })
-export class CashModule { }
+export class CashModule {}

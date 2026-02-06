@@ -159,7 +159,11 @@ const QUEUES_ENABLED =
               // Cliente compartido para publicar trabajos (puede ser usado por todas las colas)
               const sharedClient = redisUrl
                 ? new Redis(redisUrl, clientOptions)
-                : new Redis(connectionOpts.port, connectionOpts.host, clientOptions);
+                : new Redis(
+                    connectionOpts.port,
+                    connectionOpts.host,
+                    clientOptions,
+                  );
 
               // Cliente compartido para suscripciones (puede ser usado por todas las colas)
               const sharedSubscriber = sharedClient.duplicate();
@@ -256,7 +260,8 @@ const QUEUES_ENABLED =
           resolvedDb.host.includes('aws') ||
           resolvedDb.host.includes('azure') ||
           resolvedDb.host.includes('gcp') ||
-          (configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'false' &&
+          (configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED') ===
+            'false' &&
             !isLocalDbHost(resolvedDb.host));
 
         // Configuración SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
@@ -336,12 +341,11 @@ const QUEUES_ENABLED =
           // SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
           // NOTA: Supabase pooler requiere SSL siempre, incluso en desarrollo
           ssl:
-            (isCloudDatabase || isProduction) &&
-              !isLocalDbHost(resolvedDb.host)
+            (isCloudDatabase || isProduction) && !isLocalDbHost(resolvedDb.host)
               ? {
-                rejectUnauthorized: sslRejectUnauthorized,
-                ...(sslCa ? { ca: sslCa } : {}),
-              }
+                  rejectUnauthorized: sslRejectUnauthorized,
+                  ...(sslCa ? { ca: sslCa } : {}),
+                }
               : false,
         };
       },
@@ -430,4 +434,4 @@ const QUEUES_ENABLED =
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

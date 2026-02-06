@@ -1,26 +1,26 @@
 import { CRDT } from './types';
 
-export interface RgaNode<T> {
+export interface RGANode<T> {
   id: string;
   value: T;
   visible: boolean;
 }
 
-export interface RgaState<T> {
-  nodes: RgaNode<T>[];
+export interface RGAState<T> {
+  nodes: RGANode<T>[];
 }
 
-export interface RgaDelta<T> {
+export interface RGADelta<T> {
   insert?: { id: string; value: T; afterId?: string };
   remove?: string;
 }
 
-export class RgaCRDT<T> implements CRDT<RgaState<T>, RgaDelta<T>> {
-  empty(): RgaState<T> {
+export class RGACRDT<T> implements CRDT<RGAState<T>, RGADelta<T>> {
+  empty(): RGAState<T> {
     return { nodes: [] };
   }
 
-  applyDelta(state: RgaState<T>, delta: RgaDelta<T>): RgaState<T> {
+  applyDelta(state: RGAState<T>, delta: RGADelta<T>): RGAState<T> {
     const nodes = [...state.nodes];
     if (delta.insert) {
       const idx = delta.insert.afterId
@@ -41,8 +41,8 @@ export class RgaCRDT<T> implements CRDT<RgaState<T>, RgaDelta<T>> {
     return { nodes };
   }
 
-  merge(a: RgaState<T>, b: RgaState<T>): RgaState<T> {
-    const nodesMap = new Map<string, RgaNode<T>>();
+  merge(a: RGAState<T>, b: RGAState<T>): RGAState<T> {
+    const nodesMap = new Map<string, RGANode<T>>();
     for (const node of a.nodes) {
       nodesMap.set(node.id, node);
     }
@@ -58,7 +58,7 @@ export class RgaCRDT<T> implements CRDT<RgaState<T>, RgaDelta<T>> {
     return { nodes };
   }
 
-  visible(state: RgaState<T>): T[] {
+  computeValue(state: RGAState<T>): T[] {
     return state.nodes.filter((node) => node.visible).map((node) => node.value);
   }
 }

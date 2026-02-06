@@ -629,11 +629,13 @@ flowchart TD
 
 ## Desarrollo
 ```bash
-npm install
+npm ci
 npm run dev:api
 npm run dev:pwa
 npm run dev:desktop
 ```
+
+**Entorno y CI local:** Requisitos (Node 20, `npm ci`), script `./scripts/check-env.sh` y pasos para verificar builds/tests/lint como en CI: [docs/development/ENTORNO_LOCAL.md](docs/development/ENTORNO_LOCAL.md).
 
 ### 6. Integraciones Futuras / Roadmap
 

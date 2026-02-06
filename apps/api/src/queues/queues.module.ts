@@ -87,4 +87,4 @@ const REGISTERED_QUEUES_MODULE = QUEUES_ENABLED
     ...(!QUEUES_ENABLED ? QUEUE_NAMES.map((name) => getQueueToken(name)) : []),
   ],
 })
-export class QueuesModule { }
+export class QueuesModule {}

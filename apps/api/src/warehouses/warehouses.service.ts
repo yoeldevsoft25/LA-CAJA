@@ -56,7 +56,7 @@ export class WarehousesService {
     private productRepository: Repository<Product>,
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
-  ) { }
+  ) {}
 
   /**
    * Crea una nueva bodega
@@ -295,18 +295,18 @@ export class WarehousesService {
           updated_at: stock.updated_at,
           product: product
             ? {
-              id: product.id,
-              name: product.name,
-              sku: product.sku ?? null,
-              barcode: product.barcode ?? null,
-            }
+                id: product.id,
+                name: product.name,
+                sku: product.sku ?? null,
+                barcode: product.barcode ?? null,
+              }
             : null,
           variant: variant
             ? {
-              id: variant.id,
-              variant_type: variant.variant_type,
-              variant_value: variant.variant_value,
-            }
+                id: variant.id,
+                variant_type: variant.variant_type,
+                variant_value: variant.variant_value,
+              }
             : null,
         };
       }),
@@ -365,25 +365,25 @@ export class WarehousesService {
       const result =
         variantId === null
           ? await queryExecutor.query(
-            `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
+              `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
            FROM warehouse_stock
            WHERE warehouse_id = $1
              AND product_id = $2
              AND variant_id IS NULL
            ${lockClause}
            LIMIT 1`,
-            [warehouseId, productId],
-          )
+              [warehouseId, productId],
+            )
           : await queryExecutor.query(
-            `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
+              `SELECT id, warehouse_id, product_id, variant_id, stock, reserved, updated_at
            FROM warehouse_stock
            WHERE warehouse_id = $1
              AND product_id = $2
              AND variant_id = $3
            ${lockClause}
            LIMIT 1`,
-            [warehouseId, productId, variantId],
-          );
+              [warehouseId, productId, variantId],
+            );
       if (!result[0]) {
         return null;
       }
@@ -401,25 +401,25 @@ export class WarehousesService {
         const result =
           variantId === null
             ? await queryExecutor.query(
-              `SELECT warehouse_id, product_id, variant_id, stock, reserved, updated_at
+                `SELECT warehouse_id, product_id, variant_id, stock, reserved, updated_at
              FROM warehouse_stock
              WHERE warehouse_id = $1
                AND product_id = $2
                AND variant_id IS NULL
              ${lockClause}
              LIMIT 1`,
-              [warehouseId, productId],
-            )
+                [warehouseId, productId],
+              )
             : await queryExecutor.query(
-              `SELECT warehouse_id, product_id, variant_id, stock, reserved, updated_at
+                `SELECT warehouse_id, product_id, variant_id, stock, reserved, updated_at
              FROM warehouse_stock
              WHERE warehouse_id = $1
                AND product_id = $2
                AND variant_id = $3
              ${lockClause}
              LIMIT 1`,
-              [warehouseId, productId, variantId],
-            );
+                [warehouseId, productId, variantId],
+              );
         if (!result[0]) {
           return null;
         }
@@ -532,21 +532,21 @@ export class WarehousesService {
       const insertResult =
         variantId === null
           ? await queryExecutor.query(
-            `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+              `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
              VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
              ON CONFLICT (warehouse_id, product_id) WHERE variant_id IS NULL
              DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
              RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
-            [warehouseId, productId, variantId, qtyDelta, qtyDelta],
-          )
+              [warehouseId, productId, variantId, qtyDelta, qtyDelta],
+            )
           : await queryExecutor.query(
-            `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
+              `INSERT INTO warehouse_stock (id, warehouse_id, product_id, variant_id, stock, reserved, updated_at)
              VALUES (gen_random_uuid(), $1, $2, $3, GREATEST(0, $4), 0, NOW())
              ON CONFLICT (warehouse_id, product_id, variant_id)
              DO UPDATE SET stock = GREATEST(0, warehouse_stock.stock + $5), updated_at = NOW()
              RETURNING id, warehouse_id, product_id, variant_id, stock, reserved, updated_at`,
-            [warehouseId, productId, variantId, qtyDelta, qtyDelta],
-          );
+              [warehouseId, productId, variantId, qtyDelta, qtyDelta],
+            );
 
       if (!insertResult || insertResult.length === 0) {
         throw new Error(

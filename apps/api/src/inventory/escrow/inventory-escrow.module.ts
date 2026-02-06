@@ -8,12 +8,12 @@ import { StockEscrow } from '../../database/entities/stock-escrow.entity';
 import { SyncModule } from '../../sync/sync.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Event, Product, StockEscrow]),
-        forwardRef(() => SyncModule),
-    ],
-    controllers: [InventoryEscrowController],
-    providers: [InventoryEscrowService],
-    exports: [InventoryEscrowService],
+  imports: [
+    TypeOrmModule.forFeature([Event, Product, StockEscrow]),
+    forwardRef(() => SyncModule),
+  ],
+  controllers: [InventoryEscrowController],
+  providers: [InventoryEscrowService],
+  exports: [InventoryEscrowService],
 })
-export class InventoryEscrowModule { }
+export class InventoryEscrowModule {}

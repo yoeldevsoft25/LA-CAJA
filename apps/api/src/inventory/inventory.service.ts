@@ -121,7 +121,7 @@ export class InventoryService {
     private accountingService: AccountingService,
     private federationSyncService: FederationSyncService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   private buildServerEvent(
     manager: EntityManager,
@@ -160,174 +160,174 @@ export class InventoryService {
     userId: string,
     role: string,
   ): Promise<InventoryMovement> {
-    const { movement, event } = await this.dataSource.transaction(async (manager) => {
-      // Verificar que el producto existe y pertenece a la tienda
-      const product = await manager.findOne(Product, {
-        where: { id: dto.product_id, store_id: storeId },
-      });
-
-      if (!product) {
-        throw new NotFoundException('Producto no encontrado');
-      }
-
-      // Determinar bodega destino (obligatoria: el stock se envía siempre a una bodega)
-      let warehouseId: string | null = null;
-      if (dto.warehouse_id) {
-        // Verificar existencia de bodega
-        const warehouse = await manager.findOne('Warehouse', {
-          where: { id: dto.warehouse_id, store_id: storeId },
+    const { movement, event } = await this.dataSource.transaction(
+      async (manager) => {
+        // Verificar que el producto existe y pertenece a la tienda
+        const product = await manager.findOne(Product, {
+          where: { id: dto.product_id, store_id: storeId },
         });
-        if (!warehouse) throw new NotFoundException('Bodega no encontrada');
-        warehouseId = dto.warehouse_id;
-      } else {
-        const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(
+
+        if (!product) {
+          throw new NotFoundException('Producto no encontrado');
+        }
+
+        // Determinar bodega destino (obligatoria: el stock se envía siempre a una bodega)
+        let warehouseId: string | null = null;
+        if (dto.warehouse_id) {
+          // Verificar existencia de bodega
+          const warehouse = await manager.findOne('Warehouse', {
+            where: { id: dto.warehouse_id, store_id: storeId },
+          });
+          if (!warehouse) throw new NotFoundException('Bodega no encontrada');
+          warehouseId = dto.warehouse_id;
+        } else {
+          const defaultWarehouse =
+            await this.warehousesService.getDefaultOrFirst(storeId, manager);
+          warehouseId = defaultWarehouse.id;
+        }
+        if (!warehouseId) {
+          throw new BadRequestException(
+            'No se pudo determinar la bodega de destino. Crea al menos una bodega activa en la tienda.',
+          );
+        }
+
+        const unitCostBs = this.roundToTwoDecimals(dto.unit_cost_bs);
+        const unitCostUsd = this.roundToTwoDecimals(dto.unit_cost_usd);
+
+        // Obtener stock actual (usando query runner de la transacción)
+        const currentStock = await this.getCurrentStock(
+          storeId,
+          dto.product_id,
+          manager,
+        );
+
+        // Actualizar costos del producto con costo promedio ponderado
+        if (product.is_weight_product) {
+          const weightUnit = (product.weight_unit || 'kg') as
+            | 'kg'
+            | 'g'
+            | 'lb'
+            | 'oz';
+          const currentCostPerWeightUsd =
+            product.cost_per_weight_usd ??
+            this.getPerWeightCostFromBase(
+              Number(product.cost_usd || 0),
+              weightUnit,
+            );
+          const currentCostPerWeightBs =
+            product.cost_per_weight_bs ??
+            this.getPerWeightCostFromBase(
+              Number(product.cost_bs || 0),
+              weightUnit,
+            );
+
+          const avgCostPerWeightUsd = this.calculateWeightedAverage(
+            currentStock,
+            Number(currentCostPerWeightUsd || 0),
+            dto.qty,
+            dto.unit_cost_usd,
+          );
+          const avgCostPerWeightBs = this.calculateWeightedAverage(
+            currentStock,
+            Number(currentCostPerWeightBs || 0),
+            dto.qty,
+            dto.unit_cost_bs,
+          );
+
+          const normalizedPerWeightUsd = this.roundToDecimals(
+            avgCostPerWeightUsd,
+            6,
+          );
+          const normalizedPerWeightBs = this.roundToDecimals(
+            avgCostPerWeightBs,
+            6,
+          );
+
+          product.cost_per_weight_usd = normalizedPerWeightUsd;
+          product.cost_per_weight_bs = normalizedPerWeightBs;
+          product.cost_usd = this.roundToTwoDecimals(
+            this.getBaseCostFromPerWeight(normalizedPerWeightUsd, weightUnit),
+          );
+          product.cost_bs = this.roundToTwoDecimals(
+            this.getBaseCostFromPerWeight(normalizedPerWeightBs, weightUnit),
+          );
+        } else {
+          const avgCostUsd = this.calculateWeightedAverage(
+            currentStock,
+            Number(product.cost_usd || 0),
+            dto.qty,
+            dto.unit_cost_usd,
+          );
+          const avgCostBs = this.calculateWeightedAverage(
+            currentStock,
+            Number(product.cost_bs || 0),
+            dto.qty,
+            dto.unit_cost_bs,
+          );
+
+          product.cost_usd = this.roundToTwoDecimals(avgCostUsd);
+          product.cost_bs = this.roundToTwoDecimals(avgCostBs);
+        }
+        await manager.save(Product, product);
+
+        // 1) Actualizar stock en bodega (usando manager de transacción)
+        await this.warehousesService.updateStock(
+          warehouseId,
+          dto.product_id,
+          null, // variant_id: productos sin variantes
+          dto.qty,
           storeId,
           manager,
         );
-        warehouseId = defaultWarehouse.id;
-      }
-      if (!warehouseId) {
-        throw new BadRequestException(
-          'No se pudo determinar la bodega de destino. Crea al menos una bodega activa en la tienda.',
-        );
-      }
 
-      const unitCostBs = this.roundToTwoDecimals(dto.unit_cost_bs);
-      const unitCostUsd = this.roundToTwoDecimals(dto.unit_cost_usd);
+        // 2) Crear y guardar el movimiento
+        const movement = manager.create(InventoryMovement, {
+          id: randomUUID(),
+          store_id: storeId,
+          product_id: dto.product_id,
+          movement_type: 'received',
+          qty_delta: dto.qty,
+          unit_cost_bs: unitCostBs,
+          unit_cost_usd: unitCostUsd,
+          warehouse_id: warehouseId,
+          note: dto.note || null,
+          ref: dto.ref || null,
+          happened_at: new Date(),
+          approved: role === 'owner',
+          requested_by: role === 'owner' ? null : userId,
+          approved_by: role === 'owner' ? userId : null,
+          approved_at: role === 'owner' ? new Date() : null,
+        });
 
-      // Obtener stock actual (usando query runner de la transacción)
-      const currentStock = await this.getCurrentStock(
-        storeId,
-        dto.product_id,
-        manager,
-      );
+        const savedMovement = await manager.save(InventoryMovement, movement);
 
-      // Actualizar costos del producto con costo promedio ponderado
-      if (product.is_weight_product) {
-        const weightUnit = (product.weight_unit || 'kg') as
-          | 'kg'
-          | 'g'
-          | 'lb'
-          | 'oz';
-        const currentCostPerWeightUsd =
-          product.cost_per_weight_usd ??
-          this.getPerWeightCostFromBase(
-            Number(product.cost_usd || 0),
-            weightUnit,
-          );
-        const currentCostPerWeightBs =
-          product.cost_per_weight_bs ??
-          this.getPerWeightCostFromBase(
-            Number(product.cost_bs || 0),
-            weightUnit,
-          );
+        const eventSeq = Date.now();
+        const stockEvent = this.buildServerEvent(manager, {
+          storeId,
+          userId,
+          role: role || 'owner',
+          type: 'StockDeltaApplied',
+          seq: eventSeq,
+          createdAt: savedMovement.happened_at,
+          payload: {
+            movement_id: savedMovement.id,
+            product_id: savedMovement.product_id,
+            variant_id: savedMovement.variant_id,
+            warehouse_id: savedMovement.warehouse_id,
+            qty_delta: Number(savedMovement.qty_delta),
+            unit_cost_bs: Number(savedMovement.unit_cost_bs || 0),
+            unit_cost_usd: Number(savedMovement.unit_cost_usd || 0),
+            reason: 'received',
+            ref: savedMovement.ref || null,
+            request_id: randomUUID(), // TODO: Pass from DTO if available
+          },
+        });
+        stockEvent.request_id = (stockEvent.payload as any).request_id;
 
-        const avgCostPerWeightUsd = this.calculateWeightedAverage(
-          currentStock,
-          Number(currentCostPerWeightUsd || 0),
-          dto.qty,
-          dto.unit_cost_usd,
-        );
-        const avgCostPerWeightBs = this.calculateWeightedAverage(
-          currentStock,
-          Number(currentCostPerWeightBs || 0),
-          dto.qty,
-          dto.unit_cost_bs,
-        );
-
-        const normalizedPerWeightUsd = this.roundToDecimals(
-          avgCostPerWeightUsd,
-          6,
-        );
-        const normalizedPerWeightBs = this.roundToDecimals(
-          avgCostPerWeightBs,
-          6,
-        );
-
-        product.cost_per_weight_usd = normalizedPerWeightUsd;
-        product.cost_per_weight_bs = normalizedPerWeightBs;
-        product.cost_usd = this.roundToTwoDecimals(
-          this.getBaseCostFromPerWeight(normalizedPerWeightUsd, weightUnit),
-        );
-        product.cost_bs = this.roundToTwoDecimals(
-          this.getBaseCostFromPerWeight(normalizedPerWeightBs, weightUnit),
-        );
-      } else {
-        const avgCostUsd = this.calculateWeightedAverage(
-          currentStock,
-          Number(product.cost_usd || 0),
-          dto.qty,
-          dto.unit_cost_usd,
-        );
-        const avgCostBs = this.calculateWeightedAverage(
-          currentStock,
-          Number(product.cost_bs || 0),
-          dto.qty,
-          dto.unit_cost_bs,
-        );
-
-        product.cost_usd = this.roundToTwoDecimals(avgCostUsd);
-        product.cost_bs = this.roundToTwoDecimals(avgCostBs);
-      }
-      await manager.save(Product, product);
-
-      // 1) Actualizar stock en bodega (usando manager de transacción)
-      await this.warehousesService.updateStock(
-        warehouseId,
-        dto.product_id,
-        null, // variant_id: productos sin variantes
-        dto.qty,
-        storeId,
-        manager,
-      );
-
-      // 2) Crear y guardar el movimiento
-      const movement = manager.create(InventoryMovement, {
-        id: randomUUID(),
-        store_id: storeId,
-        product_id: dto.product_id,
-        movement_type: 'received',
-        qty_delta: dto.qty,
-        unit_cost_bs: unitCostBs,
-        unit_cost_usd: unitCostUsd,
-        warehouse_id: warehouseId,
-        note: dto.note || null,
-        ref: dto.ref || null,
-        happened_at: new Date(),
-        approved: role === 'owner',
-        requested_by: role === 'owner' ? null : userId,
-        approved_by: role === 'owner' ? userId : null,
-        approved_at: role === 'owner' ? new Date() : null,
-      });
-
-      const savedMovement = await manager.save(InventoryMovement, movement);
-
-      const eventSeq = Date.now();
-      const stockEvent = this.buildServerEvent(manager, {
-        storeId,
-        userId,
-        role: role || 'owner',
-        type: 'StockDeltaApplied',
-        seq: eventSeq,
-        createdAt: savedMovement.happened_at,
-        payload: {
-          movement_id: savedMovement.id,
-          product_id: savedMovement.product_id,
-          variant_id: savedMovement.variant_id,
-          warehouse_id: savedMovement.warehouse_id,
-          qty_delta: Number(savedMovement.qty_delta),
-          unit_cost_bs: Number(savedMovement.unit_cost_bs || 0),
-          unit_cost_usd: Number(savedMovement.unit_cost_usd || 0),
-          reason: 'received',
-          ref: savedMovement.ref || null,
-          request_id: randomUUID(), // TODO: Pass from DTO if available
-        },
-      });
-      stockEvent.request_id = (stockEvent.payload as any).request_id;
-
-      const savedEvent = await manager.save(Event, stockEvent);
-      return { movement: savedMovement, event: savedEvent };
-    });
+        const savedEvent = await manager.save(Event, stockEvent);
+        return { movement: savedMovement, event: savedEvent };
+      },
+    );
 
     await this.federationSyncService.queueRelay(event);
     return movement;
@@ -339,108 +339,109 @@ export class InventoryService {
     userId: string,
     role = 'owner',
   ): Promise<InventoryMovement> {
-    const { movement, event } = await this.dataSource.transaction(async (manager) => {
-      // Verificar que el producto existe
-      const product = await manager.findOne(Product, {
-        where: { id: dto.product_id, store_id: storeId },
-      });
-
-      if (!product) {
-        throw new NotFoundException('Producto no encontrado');
-      }
-
-      // Determinar bodega
-      let warehouseId: string | null = null;
-      if (dto.warehouse_id) {
-        // Validar que la bodega existe y pertenece a la tienda
-        const warehouse = await manager.findOne('Warehouse', {
-          where: { id: dto.warehouse_id, store_id: storeId },
+    const { movement, event } = await this.dataSource.transaction(
+      async (manager) => {
+        // Verificar que el producto existe
+        const product = await manager.findOne(Product, {
+          where: { id: dto.product_id, store_id: storeId },
         });
-        if (!warehouse) throw new NotFoundException('Bodega no encontrada');
-        warehouseId = dto.warehouse_id;
-      } else {
-        const defaultWarehouse = await this.warehousesService.getDefaultOrFirst(
+
+        if (!product) {
+          throw new NotFoundException('Producto no encontrado');
+        }
+
+        // Determinar bodega
+        let warehouseId: string | null = null;
+        if (dto.warehouse_id) {
+          // Validar que la bodega existe y pertenece a la tienda
+          const warehouse = await manager.findOne('Warehouse', {
+            where: { id: dto.warehouse_id, store_id: storeId },
+          });
+          if (!warehouse) throw new NotFoundException('Bodega no encontrada');
+          warehouseId = dto.warehouse_id;
+        } else {
+          const defaultWarehouse =
+            await this.warehousesService.getDefaultOrFirst(storeId, manager);
+          warehouseId = defaultWarehouse.id;
+        }
+
+        // Verificar que no se ajuste a negativo en la bodega específica
+        if (dto.qty_delta < 0 && warehouseId) {
+          // Nota: getStock devuelve array, habría que sumar.
+          // Para simplificar dentro de la tx podríamos confiar en updateStock que usa GREATEST(0, ...)
+          // O re-implementar validación. Por ahora mantenemos la validación estricta usando query manual o servicio si soporta manager.
+          // warehousesService.getStock NO soporta manager aun, pero updateStock si.
+          // Dado el riesgo, añadimos manager a getStock en el futuro o hacemos query manual rapida aquí.
+          // Por simplicidad para este fix critico, validaremos stock actual usando query directa
+          const currentStock =
+            await this.warehousesService.getTotalStockQuantity(
+              storeId,
+              dto.product_id,
+              null,
+            ); // Ojo: esto no usa manager, podría leer dato viejo.
+          // Mejor usar getCurrentStock que ya soporta manager y da el total global.
+          // Pero arriba la validación era "en esta bodega".
+          // Omitimos validación estricta de "negativo" prev-tx porque updateStock ya hace GREATEST(0, ...).
+          // Sin embargo, si el usuario quiere "error si baja de 0", updateStock lo dejará en 0 silenciosamente.
+          // Asumamos que updateStock maneja la consistencia final.
+        }
+
+        const movement = manager.create(InventoryMovement, {
+          id: randomUUID(),
+          store_id: storeId,
+          product_id: dto.product_id,
+          movement_type: 'adjust',
+          qty_delta: dto.qty_delta,
+          unit_cost_bs: 0, // Los ajustes no tienen costo
+          unit_cost_usd: 0,
+          warehouse_id: warehouseId,
+          note: dto.note || null,
+          ref: { reason: dto.reason },
+          happened_at: new Date(),
+          approved: true,
+          requested_by: userId,
+          approved_by: userId,
+          approved_at: new Date(),
+        });
+
+        const saved = await manager.save(InventoryMovement, movement);
+
+        // Actualizar stock de la bodega si se especificó
+        if (warehouseId) {
+          await this.warehousesService.updateStock(
+            warehouseId,
+            dto.product_id,
+            null,
+            dto.qty_delta,
+            storeId,
+            manager,
+          );
+        }
+        const eventSeq = Date.now();
+        const stockEvent = this.buildServerEvent(manager, {
           storeId,
-          manager,
-        );
-        warehouseId = defaultWarehouse.id;
-      }
+          userId,
+          role: role || 'owner',
+          type: 'StockDeltaApplied',
+          seq: eventSeq,
+          createdAt: saved.happened_at,
+          payload: {
+            movement_id: saved.id,
+            product_id: saved.product_id,
+            variant_id: saved.variant_id,
+            warehouse_id: saved.warehouse_id,
+            qty_delta: Number(saved.qty_delta),
+            reason: dto.reason || 'adjust',
+            note: saved.note,
+            request_id: randomUUID(), // TODO: Pass from DTO if available
+          },
+        });
+        stockEvent.request_id = (stockEvent.payload as any).request_id;
 
-      // Verificar que no se ajuste a negativo en la bodega específica
-      if (dto.qty_delta < 0 && warehouseId) {
-        // Nota: getStock devuelve array, habría que sumar.
-        // Para simplificar dentro de la tx podríamos confiar en updateStock que usa GREATEST(0, ...)
-        // O re-implementar validación. Por ahora mantenemos la validación estricta usando query manual o servicio si soporta manager.
-        // warehousesService.getStock NO soporta manager aun, pero updateStock si.
-        // Dado el riesgo, añadimos manager a getStock en el futuro o hacemos query manual rapida aquí.
-        // Por simplicidad para este fix critico, validaremos stock actual usando query directa
-        const currentStock = await this.warehousesService.getTotalStockQuantity(
-          storeId,
-          dto.product_id,
-          null,
-        ); // Ojo: esto no usa manager, podría leer dato viejo.
-        // Mejor usar getCurrentStock que ya soporta manager y da el total global.
-        // Pero arriba la validación era "en esta bodega".
-        // Omitimos validación estricta de "negativo" prev-tx porque updateStock ya hace GREATEST(0, ...).
-        // Sin embargo, si el usuario quiere "error si baja de 0", updateStock lo dejará en 0 silenciosamente.
-        // Asumamos que updateStock maneja la consistencia final.
-      }
-
-      const movement = manager.create(InventoryMovement, {
-        id: randomUUID(),
-        store_id: storeId,
-        product_id: dto.product_id,
-        movement_type: 'adjust',
-        qty_delta: dto.qty_delta,
-        unit_cost_bs: 0, // Los ajustes no tienen costo
-        unit_cost_usd: 0,
-        warehouse_id: warehouseId,
-        note: dto.note || null,
-        ref: { reason: dto.reason },
-        happened_at: new Date(),
-        approved: true,
-        requested_by: userId,
-        approved_by: userId,
-        approved_at: new Date(),
-      });
-
-      const saved = await manager.save(InventoryMovement, movement);
-
-      // Actualizar stock de la bodega si se especificó
-      if (warehouseId) {
-        await this.warehousesService.updateStock(
-          warehouseId,
-          dto.product_id,
-          null,
-          dto.qty_delta,
-          storeId,
-          manager,
-        );
-      }
-      const eventSeq = Date.now();
-      const stockEvent = this.buildServerEvent(manager, {
-        storeId,
-        userId,
-        role: role || 'owner',
-        type: 'StockDeltaApplied',
-        seq: eventSeq,
-        createdAt: saved.happened_at,
-        payload: {
-          movement_id: saved.id,
-          product_id: saved.product_id,
-          variant_id: saved.variant_id,
-          warehouse_id: saved.warehouse_id,
-          qty_delta: Number(saved.qty_delta),
-          reason: dto.reason || 'adjust',
-          note: saved.note,
-          request_id: randomUUID(), // TODO: Pass from DTO if available
-        },
-      });
-      stockEvent.request_id = (stockEvent.payload as any).request_id;
-
-      const savedEvent = await manager.save(Event, stockEvent);
-      return { movement: saved, event: savedEvent };
-    });
+        const savedEvent = await manager.save(Event, stockEvent);
+        return { movement: saved, event: savedEvent };
+      },
+    );
 
     await this.federationSyncService.queueRelay(event);
 
@@ -784,7 +785,11 @@ export class InventoryService {
       }
 
       // Obtener stock actual
-      const currentStock = await this.getCurrentStock(storeId, productId, manager);
+      const currentStock = await this.getCurrentStock(
+        storeId,
+        productId,
+        manager,
+      );
 
       // Si ya está en 0, no hacer nada
       if (currentStock === 0) {
@@ -949,7 +954,9 @@ export class InventoryService {
     );
 
     if (events.length > 0) {
-      await Promise.all(events.map((event) => this.federationSyncService.queueRelay(event)));
+      await Promise.all(
+        events.map((event) => this.federationSyncService.queueRelay(event)),
+      );
     }
 
     return { reset_count: movements.length, movements };
@@ -1167,7 +1174,9 @@ export class InventoryService {
 
     if (relayEvents.length > 0) {
       await Promise.all(
-        relayEvents.map((event) => this.federationSyncService.queueRelay(event)),
+        relayEvents.map((event) =>
+          this.federationSyncService.queueRelay(event),
+        ),
       );
     }
 

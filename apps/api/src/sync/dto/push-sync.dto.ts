@@ -66,6 +66,10 @@ class EventDto {
   @IsString()
   @IsOptional()
   request_id?: string;
+
+  @IsString()
+  @IsOptional()
+  causal_digest?: string;
 }
 
 export class PushSyncDto {
@@ -82,6 +86,10 @@ export class PushSyncDto {
   @ValidateNested({ each: true })
   @Type(() => EventDto)
   events: EventDto[];
+
+  @IsString()
+  @IsOptional()
+  causal_digest?: string;
 }
 
 export class AcceptedEventDto {
@@ -112,4 +120,5 @@ export class PushSyncResponseDto {
   server_time: number;
   last_processed_seq: number;
   server_vector_clock?: Record<string, number>;
+  causal_digest?: string;
 }

@@ -40,4 +40,4 @@ import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
   providers: [ProjectionsService],
   exports: [ProjectionsService],
 })
-export class ProjectionsModule { }
+export class ProjectionsModule {}

@@ -1,4 +1,11 @@
-import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  ManyToOne,
+  JoinColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Store } from './store.entity';
 
 export enum CashSessionStatus {

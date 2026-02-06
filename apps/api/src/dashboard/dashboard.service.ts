@@ -360,9 +360,12 @@ export class DashboardService {
           .andWhere('rate.rate_type = :rateType', { rateType: 'BCV' })
           .andWhere('rate.is_active = true')
           .andWhere('rate.effective_from <= :now', { now })
-          .andWhere('(rate.effective_until IS NULL OR rate.effective_until > :now)', {
-            now,
-          })
+          .andWhere(
+            '(rate.effective_until IS NULL OR rate.effective_until > :now)',
+            {
+              now,
+            },
+          )
           .orderBy('rate.is_preferred', 'DESC')
           .addOrderBy('rate.effective_from', 'DESC')
           .addOrderBy('rate.updated_at', 'DESC')

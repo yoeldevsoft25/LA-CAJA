@@ -6,7 +6,13 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager, IsNull, Brackets } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  EntityManager,
+  IsNull,
+  Brackets,
+} from 'typeorm';
 import { CashSession } from '../database/entities/cash-session.entity';
 import { Sale } from '../database/entities/sale.entity';
 import {
@@ -46,7 +52,7 @@ export class CashService {
     private accountingService: AccountingService,
     private securityAuditService: SecurityAuditService,
     private federationSyncService: FederationSyncService,
-  ) { }
+  ) {}
 
   private buildServerEvent(
     manager: EntityManager,
@@ -484,9 +490,7 @@ export class CashService {
    * Valida la integridad de la sesión comparando los contadores PN (derivados del ledger)
    * con la suma física de las entradas del ledger y el balance calculado legado.
    */
-  private async validateSessionLedgerIntegrity(
-    session: CashSession,
-  ): Promise<{
+  private async validateSessionLedgerIntegrity(session: CashSession): Promise<{
     ledgerOk: boolean;
     legacyOk: boolean;
     discrepancy: Record<string, any>;
@@ -505,8 +509,10 @@ export class CashService {
     const actualLedgerUsd = Number(ledgerSum?.total_usd || 0);
 
     // 2. Balance derivado de los contadores PN (CRDT)
-    const pnBalanceBs = Number(session.ledger_p_bs) - Number(session.ledger_n_bs);
-    const pnBalanceUsd = Number(session.ledger_p_usd) - Number(session.ledger_n_usd);
+    const pnBalanceBs =
+      Number(session.ledger_p_bs) - Number(session.ledger_n_bs);
+    const pnBalanceUsd =
+      Number(session.ledger_p_usd) - Number(session.ledger_n_usd);
 
     // 3. Verificación CRDT vs Ledger Físico
     const ledgerOk =
@@ -514,9 +520,10 @@ export class CashService {
       Math.abs(pnBalanceUsd - actualLedgerUsd) < 0.01;
 
     // 4. Verificación vs Legado (expected en sesión si ya está calculado)
-    const legacyOk = session.expected ?
-      (Math.abs(pnBalanceBs - Number(session.expected.cash_bs)) < 0.01 &&
-        Math.abs(pnBalanceUsd - Number(session.expected.cash_usd)) < 0.01) : true;
+    const legacyOk = session.expected
+      ? Math.abs(pnBalanceBs - Number(session.expected.cash_bs)) < 0.01 &&
+        Math.abs(pnBalanceUsd - Number(session.expected.cash_usd)) < 0.01
+      : true;
 
     const result = {
       ledgerOk,

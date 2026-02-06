@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager, In, IsNull, MoreThan } from 'typeorm';
+import {
+  Repository,
+  DataSource,
+  EntityManager,
+  In,
+  IsNull,
+  MoreThan,
+} from 'typeorm';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
 import { RecipeIngredient } from '../database/entities/recipe-ingredient.entity';
@@ -75,7 +82,7 @@ export class ProjectionsService {
     private warehousesService: WarehousesService,
     private metricsService: SyncMetricsService,
     private invoiceSeriesService: InvoiceSeriesService,
-  ) { }
+  ) {}
 
   private toBoolean(value: unknown): boolean {
     if (typeof value === 'boolean') {
@@ -564,10 +571,11 @@ export class ProjectionsService {
       let invoiceFullNumber: string | null = null;
 
       try {
-        const invoiceData = await this.invoiceSeriesService.generateNextInvoiceNumber(
-          event.store_id,
-          undefined, // Usar serie por defecto
-        );
+        const invoiceData =
+          await this.invoiceSeriesService.generateNextInvoiceNumber(
+            event.store_id,
+            undefined, // Usar serie por defecto
+          );
         invoiceSeriesId = invoiceData.series.id;
         invoiceNumber = invoiceData.invoice_number;
         invoiceFullNumber = invoiceData.invoice_full_number;
@@ -661,13 +669,13 @@ export class ProjectionsService {
           const productIds = payload.items.map((i) => i.product_id);
           const deviceEscrows = event.device_id
             ? await manager.getRepository(StockEscrow).find({
-              where: {
-                store_id: event.store_id,
-                device_id: event.device_id,
-                product_id: In(productIds),
-                expires_at: MoreThan(new Date()),
-              },
-            })
+                where: {
+                  store_id: event.store_id,
+                  device_id: event.device_id,
+                  product_id: In(productIds),
+                  expires_at: MoreThan(new Date()),
+                },
+              })
             : [];
 
           const escrowMap = new Map<string, StockEscrow>();
@@ -681,7 +689,7 @@ export class ProjectionsService {
           for (const item of payload.items) {
             const totalQty =
               this.toBoolean(item.is_weight_product) &&
-                item.weight_value != null
+              item.weight_value != null
                 ? this.toNumber(item.weight_value)
                 : this.toNumber(item.qty);
 
@@ -1066,7 +1074,9 @@ export class ProjectionsService {
       return; // Ya existe, idempotente
     }
 
-    const soldAt = payload.sold_at ? new Date(payload.sold_at) : event.created_at;
+    const soldAt = payload.sold_at
+      ? new Date(payload.sold_at)
+      : event.created_at;
 
     const entry = this.cashLedgerRepository.create({
       id: payload.entry_id,
@@ -1097,21 +1107,29 @@ export class ProjectionsService {
       // Tipos que restan (N): expense
       // Tipos ambivalentes (adjustment, transfer): depende del signo
 
-      let pBs = 0, nBs = 0, pUsd = 0, nUsd = 0;
+      let pBs = 0,
+        nBs = 0,
+        pUsd = 0,
+        nUsd = 0;
 
       if (payload.entry_type === 'expense') {
         nBs = Math.abs(amountBs);
         nUsd = Math.abs(amountUsd);
-      } else if (['sale', 'income', 'initial_balance'].includes(payload.entry_type)) {
+      } else if (
+        ['sale', 'income', 'initial_balance'].includes(payload.entry_type)
+      ) {
         pBs = Math.abs(amountBs);
         pUsd = Math.abs(amountUsd);
       } else {
         // adjustment o transfer: usamos el signo
-        if (amountBs > 0) pBs = amountBs; else nBs = Math.abs(amountBs);
-        if (amountUsd > 0) pUsd = amountUsd; else nUsd = Math.abs(amountUsd);
+        if (amountBs > 0) pBs = amountBs;
+        else nBs = Math.abs(amountBs);
+        if (amountUsd > 0) pUsd = amountUsd;
+        else nUsd = Math.abs(amountUsd);
       }
 
-      await this.cashSessionRepository.manager.createQueryBuilder()
+      await this.cashSessionRepository.manager
+        .createQueryBuilder()
         .update(CashSession)
         .set({
           ledger_p_bs: () => `ledger_p_bs + ${pBs}`,
@@ -1154,7 +1172,10 @@ export class ProjectionsService {
       unit_cost_usd: Number(payload.unit_cost_usd) || 0,
       warehouse_id: warehouseId,
       note: payload.reason || 'Stock Delta Applied',
-      ref: payload.ref || { request_id: payload.request_id, reason: payload.reason },
+      ref: payload.ref || {
+        request_id: payload.request_id,
+        reason: payload.reason,
+      },
       happened_at: event.created_at,
       from_escrow: !!payload.from_escrow,
     });
@@ -1175,9 +1196,13 @@ export class ProjectionsService {
       if (escrow) {
         escrow.qty_granted = Math.max(0, Number(escrow.qty_granted) + qtyDelta); // qtyDelta es negativo para ventas
         await this.stockEscrowRepository.save(escrow);
-        this.logger.debug(`Escrow consumido para device ${event.device_id}: ${qtyDelta} (Nuevo: ${escrow.qty_granted})`);
+        this.logger.debug(
+          `Escrow consumido para device ${event.device_id}: ${qtyDelta} (Nuevo: ${escrow.qty_granted})`,
+        );
       } else {
-        this.logger.warn(`Evento con from_escrow=true pero no se encontró cuota para device ${event.device_id} y producto ${payload.product_id}`);
+        this.logger.warn(
+          `Evento con from_escrow=true pero no se encontró cuota para device ${event.device_id} y producto ${payload.product_id}`,
+        );
       }
     } else if (warehouseId) {
       // Si no es de escrow, restamos del stock central normal
@@ -1186,7 +1211,7 @@ export class ProjectionsService {
         payload.product_id,
         payload.variant_id || null,
         qtyDelta,
-        event.store_id
+        event.store_id,
       );
     }
 
@@ -1194,7 +1219,7 @@ export class ProjectionsService {
     await this.validateProductEscrowIntegrity(
       event.store_id,
       payload.product_id,
-      payload.variant_id || null
+      payload.variant_id || null,
     );
   }
 
@@ -1203,7 +1228,9 @@ export class ProjectionsService {
     if (!payload.quota_id) return;
 
     const movementId = `grant-${payload.request_id || payload.quota_id}`;
-    const exists = await this.movementRepository.findOne({ where: { id: movementId, store_id: event.store_id } });
+    const exists = await this.movementRepository.findOne({
+      where: { id: movementId, store_id: event.store_id },
+    });
     if (exists) return;
 
     const qty = Number(payload.qty_granted) || 0;
@@ -1215,12 +1242,13 @@ export class ProjectionsService {
         product_id: payload.product_id,
         device_id: payload.device_id,
         variant_id: payload.variant_id || IsNull(),
-      }
+      },
     });
 
     if (existingEscrow) {
       existingEscrow.qty_granted = Number(existingEscrow.qty_granted) + qty;
-      if (payload.expires_at) existingEscrow.expires_at = new Date(payload.expires_at);
+      if (payload.expires_at)
+        existingEscrow.expires_at = new Date(payload.expires_at);
       await this.stockEscrowRepository.save(existingEscrow);
     } else {
       const escrow = this.stockEscrowRepository.create({
@@ -1230,7 +1258,9 @@ export class ProjectionsService {
         variant_id: payload.variant_id || null,
         device_id: payload.device_id,
         qty_granted: qty,
-        expires_at: payload.expires_at ? new Date(payload.expires_at) : undefined,
+        expires_at: payload.expires_at
+          ? new Date(payload.expires_at)
+          : undefined,
       });
       await this.stockEscrowRepository.save(escrow);
     }
@@ -1243,7 +1273,7 @@ export class ProjectionsService {
         payload.product_id,
         payload.variant_id || null,
         -qty, // Grant REMOVES from available warehouse stock
-        event.store_id
+        event.store_id,
       );
 
       const movement = this.movementRepository.create({
@@ -1269,7 +1299,9 @@ export class ProjectionsService {
     if (!payload.request_id) return;
 
     const movementId = `transfer-${payload.request_id}`;
-    const exists = await this.movementRepository.findOne({ where: { id: movementId, store_id: event.store_id } });
+    const exists = await this.movementRepository.findOne({
+      where: { id: movementId, store_id: event.store_id },
+    });
     if (exists) return;
 
     const qty = Number(payload.qty) || 0;
@@ -1281,10 +1313,13 @@ export class ProjectionsService {
         product_id: payload.product_id,
         device_id: payload.from_device_id,
         variant_id: payload.variant_id || IsNull(),
-      }
+      },
     });
     if (fromEscrow) {
-      fromEscrow.qty_granted = Math.max(0, Number(fromEscrow.qty_granted) - qty);
+      fromEscrow.qty_granted = Math.max(
+        0,
+        Number(fromEscrow.qty_granted) - qty,
+      );
       await this.stockEscrowRepository.save(fromEscrow);
     }
 
@@ -1295,7 +1330,7 @@ export class ProjectionsService {
         product_id: payload.product_id,
         device_id: payload.to_device_id,
         variant_id: payload.variant_id || IsNull(),
-      }
+      },
     });
     if (toEscrow) {
       toEscrow.qty_granted = Number(toEscrow.qty_granted) + qty;
@@ -1323,7 +1358,11 @@ export class ProjectionsService {
       unit_cost_usd: 0,
       warehouse_id: null,
       note: `Escrow Transfer ${payload.from_device_id} -> ${payload.to_device_id}`,
-      ref: { request_id: payload.request_id, from: payload.from_device_id, to: payload.to_device_id },
+      ref: {
+        request_id: payload.request_id,
+        from: payload.from_device_id,
+        to: payload.to_device_id,
+      },
       happened_at: event.created_at,
     });
     await this.movementRepository.save(movement);
@@ -1334,7 +1373,9 @@ export class ProjectionsService {
     if (!payload.request_id) return;
 
     const movementId = `reclaim-${payload.request_id}`;
-    const exists = await this.movementRepository.findOne({ where: { id: movementId, store_id: event.store_id } });
+    const exists = await this.movementRepository.findOne({
+      where: { id: movementId, store_id: event.store_id },
+    });
     if (exists) return;
 
     const qty = Number(payload.qty_reclaimed) || 0;
@@ -1352,7 +1393,9 @@ export class ProjectionsService {
     if (escrow) {
       escrow.qty_granted = Math.max(0, Number(escrow.qty_granted) - qty);
       await this.stockEscrowRepository.save(escrow);
-      this.logger.debug(`Escrow reclamado para device ${payload.device_id}: ${qty} (Nuevo: ${escrow.qty_granted})`);
+      this.logger.debug(
+        `Escrow reclamado para device ${payload.device_id}: ${qty} (Nuevo: ${escrow.qty_granted})`,
+      );
     }
 
     // 2. Devolver stock al almacén central
@@ -1363,7 +1406,7 @@ export class ProjectionsService {
         payload.product_id,
         payload.variant_id || null,
         qty, // Reclaim ADDS back to warehouse stock
-        event.store_id
+        event.store_id,
       );
 
       const movement = this.movementRepository.create({
@@ -1387,7 +1430,7 @@ export class ProjectionsService {
     await this.validateProductEscrowIntegrity(
       event.store_id,
       payload.product_id,
-      payload.variant_id || null
+      payload.variant_id || null,
     );
   }
 
@@ -1411,13 +1454,20 @@ export class ProjectionsService {
       .select('SUM(m.qty_delta)', 'total')
       .where('m.store_id = :storeId', { storeId })
       .andWhere('m.product_id = :productId', { productId })
-      .andWhere(variantId ? 'm.variant_id = :variantId' : 'm.variant_id IS NULL', { variantId })
+      .andWhere(
+        variantId ? 'm.variant_id = :variantId' : 'm.variant_id IS NULL',
+        { variantId },
+      )
       .getRawOne();
 
     const ledgerTotal = Number(movementSum?.total || 0);
 
     // 2. Stock en almacenes físicos (total de la tienda)
-    const physicalStock = await this.warehousesService.getTotalStockQuantity(storeId, productId, variantId);
+    const physicalStock = await this.warehousesService.getTotalStockQuantity(
+      storeId,
+      productId,
+      variantId,
+    );
 
     // 3. Stock en Escrow (bloqueado en dispositivos)
     const escrowSum = await this.stockEscrowRepository
@@ -1425,7 +1475,10 @@ export class ProjectionsService {
       .select('SUM(e.qty_granted)', 'total')
       .where('e.store_id = :storeId', { storeId })
       .andWhere('e.product_id = :productId', { productId })
-      .andWhere(variantId ? 'e.variant_id = :variantId' : 'e.variant_id IS NULL', { variantId })
+      .andWhere(
+        variantId ? 'e.variant_id = :variantId' : 'e.variant_id IS NULL',
+        { variantId },
+      )
       .getRawOne();
 
     const escrowTotal = Number(escrowSum?.total || 0);

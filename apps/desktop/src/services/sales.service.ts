@@ -430,8 +430,10 @@ export const salesService = {
         total_usd: subtotalUsd - discountUsd,
       }
 
+      const requestId = randomUUID()
       const payload: SaleCreatedPayload = {
         sale_id: saleId,
+        request_id: requestId,
         cash_session_id: data.cash_session_id || '',
         sold_at: now,
         exchange_rate: data.exchange_rate,
@@ -630,8 +632,10 @@ export const salesService = {
         total_usd: subtotalUsd - discountUsd,
       }
 
+      const requestId = randomUUID()
       const payload: SaleCreatedPayload = {
         sale_id: saleId,
+        request_id: requestId,
         cash_session_id: data.cash_session_id || '',
         sold_at: now,
         exchange_rate: exchangeRate,
@@ -891,8 +895,10 @@ export const salesService = {
           total_usd: subtotalUsd - discountUsd,
         }
 
+        const requestId = randomUUID()
         const payload: SaleCreatedPayload = {
           sale_id: saleId,
+          request_id: requestId,
           cash_session_id: data.cash_session_id || '',
           sold_at: now,
           exchange_rate: exchangeRate,

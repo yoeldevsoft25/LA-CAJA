@@ -37,6 +37,8 @@
   - Sigue pendiente plan formal de chunking y reduccion de bundle grande.
 - **Sprints 6/8/9/10:** **⏳ Pendientes**
 
+**Tareas concretas por zona no terminada:** ver [ZONAS_NO_TERMINADAS_TAREAS.md](./ZONAS_NO_TERMINADAS_TAREAS.md) (checklist ejecutable por sprint).
+
 ### Evidencia tecnica reciente (commits en `main`)
 
 - `0e00a16` feat(sales): integrate returns domain decomposition with any-zero type hardening

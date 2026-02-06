@@ -29,6 +29,11 @@ import { HealthModule } from '../health/health.module';
     SyncMetricsService,
     ObservabilityGateway,
   ],
-  exports: [ObservabilityService, AlertService, UptimeTrackerService, SyncMetricsService],
+  exports: [
+    ObservabilityService,
+    AlertService,
+    UptimeTrackerService,
+    SyncMetricsService,
+  ],
 })
-export class ObservabilityModule { }
+export class ObservabilityModule {}

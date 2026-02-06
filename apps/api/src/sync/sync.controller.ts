@@ -35,7 +35,7 @@ export class SyncController {
     private readonly syncService: SyncService,
     private readonly conflictResolutionService: ConflictResolutionService,
     private readonly federationSyncService: FederationSyncService,
-  ) { }
+  ) {}
 
   @Post('push')
   @HttpCode(HttpStatus.OK)
@@ -183,9 +183,7 @@ export class SyncController {
     const safeProductIds = Array.isArray(productIds) ? productIds : [];
 
     if (safeMovementIds.length === 0 && safeProductIds.length === 0) {
-      throw new BadRequestException(
-        'movement_ids o product_ids es requerido',
-      );
+      throw new BadRequestException('movement_ids o product_ids es requerido');
     }
 
     return this.federationSyncService.replayInventoryByFilter(

@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('cash')
 @UseGuards(JwtAuthGuard)
 export class CashController {
-  constructor(private readonly cashService: CashService) { }
+  constructor(private readonly cashService: CashService) {}
 
   @Post('sessions/open')
   @HttpCode(HttpStatus.CREATED)

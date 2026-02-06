@@ -70,14 +70,13 @@ export function resolveDbConnection(getEnv: GetEnvValue): ResolvedDbConnection {
   // Prefer DATABASE_URL whenever available to avoid accidental process-level
   // env overrides (common on Windows sessions). Use field config only when:
   // 1) explicitly forced, or 2) DATABASE_URL is not defined.
-  const useFieldConfig =
-    forceFieldConfig || (!databaseUrl && hasFieldConfig);
+  const useFieldConfig = forceFieldConfig || (!databaseUrl && hasFieldConfig);
 
   const host =
-    (useFieldConfig ? dbHost : undefined) ||
-    parsedUrl?.hostname ||
-    'localhost';
-  const port = parsePort((useFieldConfig ? dbPort : undefined) || parsedUrl?.port);
+    (useFieldConfig ? dbHost : undefined) || parsedUrl?.hostname || 'localhost';
+  const port = parsePort(
+    (useFieldConfig ? dbPort : undefined) || parsedUrl?.port,
+  );
   const username =
     (useFieldConfig ? dbUser : undefined) || parsedUrl?.username || 'postgres';
   const passwordFromUrl = safeDecode(parsedUrl?.password ?? '');

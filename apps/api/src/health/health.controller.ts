@@ -32,7 +32,7 @@ export class HealthController {
     private bullmq: BullMQHealthIndicator,
     private externalApis: ExternalApisHealthIndicator,
     private websocket: WebSocketHealthIndicator,
-  ) { }
+  ) {}
 
   // Cache simple para mejorar rendimiento
   private cache: Map<string, { result: any; time: number }> = new Map();
@@ -73,7 +73,9 @@ export class HealthController {
   @ApiResponse({ status: 503, description: 'Base de datos no disponible' })
   checkDatabase() {
     return this.checkWithCache('database', () =>
-      this.health.check([() => this.db.pingCheck('database', { timeout: 10000 })]),
+      this.health.check([
+        () => this.db.pingCheck('database', { timeout: 10000 }),
+      ]),
     );
   }
 
@@ -175,14 +177,19 @@ export class HealthController {
               ? result.reason.message
               : String(result.reason);
           // Usar warn en lugar de debug para visibilidad, pero sin stack trace completo para reducir ruido
-          this.logger.warn(`Health check background warmup failed for ${checks[index]}: ${error}`);
+          this.logger.warn(
+            `Health check background warmup failed for ${checks[index]}: ${error}`,
+          );
         }
       });
 
       this.logger.debug('Health check cache warmed up successfully');
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      this.logger.error(`Critical error in health cache background task: ${errorMsg}`, e instanceof Error ? e.stack : undefined);
+      this.logger.error(
+        `Critical error in health cache background task: ${errorMsg}`,
+        e instanceof Error ? e.stack : undefined,
+      );
     }
   }
 

@@ -23,4 +23,4 @@ import { QueuesModule } from '../queues/queues.module';
     WebSocketHealthIndicator,
   ],
 })
-export class HealthModule { }
+export class HealthModule {}

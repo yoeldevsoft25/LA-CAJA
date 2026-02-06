@@ -6,6 +6,7 @@ import { Repository, In } from 'typeorm';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
 import { CashSession } from '../database/entities/cash-session.entity';
+import { Store } from '../database/entities/store.entity';
 import {
   PushSyncDto,
   PushSyncResponseDto,
@@ -112,6 +113,15 @@ export class SyncService {
     'DebtPaymentRecorded',
   ];
 
+  // Tipos de eventos que REQUIEREN delta_payload y full_payload_hash bajo CRDT MAX
+  private readonly criticalEventTypes = [
+    'SaleCreated',
+    'StockReceived',
+    'StockAdjusted',
+    'CashSessionOpened',
+    'CashSessionClosed',
+  ];
+
   constructor(
     @InjectRepository(Event)
     private eventRepository: Repository<Event>,
@@ -119,6 +129,8 @@ export class SyncService {
     private productRepository: Repository<Product>,
     @InjectRepository(CashSession)
     private cashSessionRepository: Repository<CashSession>,
+    @InjectRepository(Store)
+    private storeRepository: Repository<Store>,
     private projectionsService: ProjectionsService,
     private vectorClockService: VectorClockService,
     private crdtService: CRDTService,
@@ -129,7 +141,7 @@ export class SyncService {
     private salesProjectionQueue: Queue,
     private metricsService: SyncMetricsService,
     private federationSyncService: FederationSyncService,
-  ) { }
+  ) {}
 
   async push(
     dto: PushSyncDto,
@@ -168,6 +180,13 @@ export class SyncService {
 
     const eventsToSave: Event[] = [];
 
+    // 1.5 Obtener configuración de la tienda para feature flags
+    const store = await this.storeRepository.findOne({
+      where: { id: dto.store_id },
+      select: ['settings'],
+    });
+    const isCrdtMaxEnabled = store?.settings?.crdt_max === true;
+
     // 2. Procesar cada evento
     for (const event of dto.events) {
       try {
@@ -192,6 +211,43 @@ export class SyncService {
             message: `Tipo de evento desconocido: ${event.type}`,
           });
           continue;
+        }
+
+        // 2b. Validación CRDT MAX (Deltas y Hashes)
+        if (isCrdtMaxEnabled || this.criticalEventTypes.includes(event.type)) {
+          if (!event.delta_payload) {
+            rejected.push({
+              event_id: event.event_id,
+              seq: event.seq,
+              code: 'CRDT_ERROR',
+              message: `Evento crítico ${event.type} requiere delta_payload bajo CRDT MAX.`,
+            });
+            continue;
+          }
+          if (!event.full_payload_hash) {
+            rejected.push({
+              event_id: event.event_id,
+              seq: event.seq,
+              code: 'CRDT_ERROR',
+              message: `Evento crítico ${event.type} requiere full_payload_hash bajo CRDT MAX.`,
+            });
+            continue;
+          }
+          // Validamos integridad (comparando hash enviado vs hash del delta)
+          const serverHash = this.hashPayload(event.delta_payload);
+          if (event.full_payload_hash !== serverHash) {
+            // Permitimos si coincide con el hash del payload principal por compatibilidad
+            const payloadHash = this.hashPayload(event.payload);
+            if (event.full_payload_hash !== payloadHash) {
+              rejected.push({
+                event_id: event.event_id,
+                seq: event.seq,
+                code: 'INTEGRITY_ERROR',
+                message: 'Hash de payload inválido (drift detectado).',
+              });
+              continue;
+            }
+          }
         }
 
         // ⚡ OPTIMIZACIÓN: Validaciones simplificadas para SaleCreated
@@ -259,10 +315,16 @@ export class SyncService {
           });
 
           if (existingRequest) {
-            this.updateServerVectorClock(serverVectorClock, event, dto.device_id);
+            this.updateServerVectorClock(
+              serverVectorClock,
+              event,
+              dto.device_id,
+            );
             accepted.push({ event_id: event.event_id, seq: event.seq });
             lastProcessedSeq = Math.max(lastProcessedSeq, event.seq);
-            this.logger.warn(`Dedupe por request_id físico: ${requestId} (evento ${event.event_id})`);
+            this.logger.warn(
+              `Dedupe por request_id físico: ${requestId} (evento ${event.event_id})`,
+            );
             continue;
           }
         }
@@ -454,7 +516,8 @@ export class SyncService {
                 );
                 await this.eventRepository.update(event.event_id, {
                   projection_status: 'failed',
-                  projection_error: err instanceof Error ? err.message : String(err),
+                  projection_error:
+                    err instanceof Error ? err.message : String(err),
                 });
               }
             }
@@ -486,7 +549,8 @@ export class SyncService {
               if (!queuesEnabled) {
                 await this.eventRepository.update(event.event_id, {
                   projection_status: 'failed',
-                  projection_error: err instanceof Error ? err.message : String(err),
+                  projection_error:
+                    err instanceof Error ? err.message : String(err),
                 });
               }
             }
@@ -529,16 +593,31 @@ export class SyncService {
       server_time: Date.now(),
       last_processed_seq: lastProcessedSeq,
       server_vector_clock: serverVectorClock,
+      causal_digest: this.generateCausalDigest(serverVectorClock),
     };
+  }
+
+  /**
+   * Genera un digest causal (hash) a partir del vector clock
+   */
+  private generateCausalDigest(vectorClock: Record<string, number>): string {
+    const sortedKeys = Object.keys(vectorClock).sort();
+    const digestStr = sortedKeys.map((k) => `${k}:${vectorClock[k]}`).join('|');
+    return crypto.createHash('sha256').update(digestStr).digest('hex');
   }
 
   private updateServerVectorClock(
     serverVectorClock: Record<string, number>,
     event: any,
-    deviceId: string
+    deviceId: string,
   ) {
-    const clock = event.vector_clock || this.vectorClockService.fromEvent(deviceId, event.seq);
-    Object.assign(serverVectorClock, this.vectorClockService.merge(serverVectorClock, clock));
+    const clock =
+      event.vector_clock ||
+      this.vectorClockService.fromEvent(deviceId, event.seq);
+    Object.assign(
+      serverVectorClock,
+      this.vectorClockService.merge(serverVectorClock, clock),
+    );
   }
 
   private async validateSaleCreatedEvent(
@@ -769,9 +848,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedSubtotalBs - Number(payload.totals.subtotal_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedSubtotalUsd - Number(payload.totals.subtotal_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -782,9 +861,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedDiscountBs - Number(payload.totals.discount_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedDiscountUsd - Number(payload.totals.discount_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -795,9 +874,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedTotalBs - Number(payload.totals.total_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedTotalUsd - Number(payload.totals.total_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -1119,7 +1198,9 @@ export class SyncService {
         : since.getTime();
 
     const lastServerEventId =
-      events.length > 0 ? events[events.length - 1].event_id : safeCursorEventId;
+      events.length > 0
+        ? events[events.length - 1].event_id
+        : safeCursorEventId;
 
     // Mapear a formato DTO
     const dtos = events.map((e) => ({
