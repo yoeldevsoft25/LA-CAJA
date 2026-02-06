@@ -32,7 +32,7 @@
         "../../node_modules/@fastify/helmet"
       ],
       "@la-caja/crdt": [
-        "../../packages/crdt/src/index.ts"
+        "../../packages/crdt/dist/index.d.ts"
       ]
     }
   },
