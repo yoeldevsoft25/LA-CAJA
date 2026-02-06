@@ -60,22 +60,24 @@ export class SalesPostProcessingQueueProcessor extends WorkerHost {
       }
 
       if (sale.voided_at) {
-        const entry = await this.accountingService.findEntryBySource(
+        const entries = await this.accountingService.findEntriesBySale(
           storeId,
-          'sale',
           saleId,
         );
-        if (entry) {
-          const cancelUserId = sale.voided_by_user_id || userId || 'system';
-          await this.accountingService.cancelEntry(
-            storeId,
-            entry.id,
-            cancelUserId,
-            sale.void_reason || 'Anulacion de venta',
-          );
-          this.logger.log(
-            `✅ Asiento contable cancelado por venta anulada ${saleId}`,
-          );
+
+        for (const entry of entries) {
+          if (entry.status !== 'cancelled') {
+            const cancelUserId = sale.voided_by_user_id || userId || 'system';
+            await this.accountingService.cancelEntry(
+              storeId,
+              entry.id,
+              cancelUserId,
+              sale.void_reason || 'Anulación de venta',
+            );
+            this.logger.log(
+              `✅ Asiento ${entry.entry_number} cancelado por venta anulada ${saleId}`,
+            );
+          }
         }
         return;
       }

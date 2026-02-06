@@ -179,40 +179,27 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
 
       const savedSale = await manager.save(Sale, sale);
 
-      // 8. Anular asiento contable asociado
+      // 8. Anular asientos contables asociados
       try {
-        let entry = await manager.findOne(JournalEntry, {
-          where: {
-            store_id: storeId,
-            source_type: 'sale',
-            source_id: saleId,
-          },
-        });
+        const entries = await this.accountingService.findEntriesBySale(
+          storeId,
+          saleId,
+          manager,
+        );
 
-        if (!entry && fiscalInvoices.length > 0) {
-          for (const invoice of fiscalInvoices) {
-            entry = await manager.findOne(JournalEntry, {
-              where: {
-                store_id: storeId,
-                source_type: 'fiscal_invoice',
-                source_id: invoice.id,
-              },
-            });
-            if (entry) {
-              break;
-            }
+        for (const entry of entries) {
+          if (entry.status !== 'cancelled') {
+            this.logger.log(
+              `Anulando asiento contable ${entry.entry_number} por anulación de venta ${saleId}`,
+            );
+            await this.accountingService.cancelEntry(
+              storeId,
+              entry.id,
+              userId,
+              reason || 'Anulación de venta',
+              manager,
+            );
           }
-        }
-
-        if (entry) {
-          this.logger.log(`Anulando asiento contable ${entry.entry_number} por anulación de venta ${saleId}`);
-          await this.accountingService.cancelEntry(
-            storeId,
-            entry.id,
-            userId,
-            reason || 'Anulación de venta',
-            manager,
-          );
         }
       } catch (error) {
         // Loguear error pero no revertir la anulación de la venta si falla lo contable

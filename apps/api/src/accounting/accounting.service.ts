@@ -274,16 +274,68 @@ export class AccountingService {
 
   async findEntryBySource(
     storeId: string,
-    sourceType: string,
+    sourceType: string | string[],
     sourceId: string,
   ): Promise<JournalEntry | null> {
-    return this.journalEntryRepository.findOne({
+    const where: any = {
+      store_id: storeId,
+      source_id: sourceId,
+    };
+
+    if (Array.isArray(sourceType)) {
+      where.source_type = In(sourceType);
+    } else {
+      where.source_type = sourceType;
+    }
+
+    return this.journalEntryRepository.findOne({ where });
+  }
+
+  /**
+   * Busca todos los asientos relacionados con una venta (sea fuente 'sale' o 'fiscal_invoice')
+   */
+  async findEntriesBySale(
+    storeId: string,
+    saleId: string,
+    entityManager?: EntityManager,
+  ): Promise<JournalEntry[]> {
+    const entryRepo = entityManager
+      ? entityManager.getRepository(JournalEntry)
+      : this.journalEntryRepository;
+    const fiscalRepo = entityManager
+      ? entityManager.getRepository(FiscalInvoice)
+      : this.fiscalInvoiceRepository;
+
+    // Buscar asientos donde la fuente sea la venta directamente
+    const saleEntries = await entryRepo.find({
       where: {
         store_id: storeId,
-        source_type: sourceType,
-        source_id: sourceId,
+        source_type: 'sale',
+        source_id: saleId,
       },
     });
+
+    // Buscar asientos vinculados a facturas fiscales de esa venta
+    const fiscalInvoices = await fiscalRepo.find({
+      where: { store_id: storeId, sale_id: saleId },
+    });
+
+    const fiscalEntries: JournalEntry[] = [];
+    if (fiscalInvoices.length > 0) {
+      const entries = await entryRepo.find({
+        where: {
+          store_id: storeId,
+          source_type: 'fiscal_invoice',
+          source_id: In(fiscalInvoices.map((inv) => inv.id)),
+        },
+      });
+      fiscalEntries.push(...entries);
+    }
+
+    // Retornar lista sin duplicados (por ID)
+    const all = [...saleEntries, ...fiscalEntries];
+    const unique = Array.from(new Map(all.map((e) => [e.id, e])).values());
+    return unique;
   }
 
   /**
