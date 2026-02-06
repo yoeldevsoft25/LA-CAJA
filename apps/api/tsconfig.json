@@ -10,7 +10,7 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "baseUrl": "../../",
     "incremental": false,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -24,15 +24,15 @@
     "moduleResolution": "node",
     "paths": {
       "resend": [
-        "./node_modules/resend/dist/index.d.cts",
-        "../../node_modules/resend/dist/index.d.cts"
+        "node_modules/resend/dist/index.d.cts",
+        "apps/api/node_modules/resend/dist/index.d.cts"
       ],
       "@fastify/helmet": [
-        "./node_modules/@fastify/helmet",
-        "../../node_modules/@fastify/helmet"
+        "node_modules/@fastify/helmet",
+        "apps/api/node_modules/@fastify/helmet"
       ],
       "@la-caja/crdt": [
-        "../../packages/crdt/dist/index.d.ts"
+        "packages/crdt/dist/index"
       ]
     }
   },
