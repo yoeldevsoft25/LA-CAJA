@@ -272,6 +272,20 @@ export class AccountingService {
     return { costBs, costUsd };
   }
 
+  async findEntryBySource(
+    storeId: string,
+    sourceType: string,
+    sourceId: string,
+  ): Promise<JournalEntry | null> {
+    return this.journalEntryRepository.findOne({
+      where: {
+        store_id: storeId,
+        source_type: sourceType,
+        source_id: sourceId,
+      },
+    });
+  }
+
   /**
    * Generar asiento contable automático desde una venta
    */

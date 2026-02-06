@@ -47,6 +47,39 @@ export class SalesPostProcessingQueueProcessor extends WorkerHost {
     );
 
     try {
+      const sale = await this.saleRepository.findOne({
+        where: { id: saleId, store_id: storeId },
+        relations: ['items', 'items.product', 'customer'],
+      });
+
+      if (!sale) {
+        this.logger.warn(
+          `Venta ${saleId} no encontrada para procesar post-venta`,
+        );
+        return;
+      }
+
+      if (sale.voided_at) {
+        const entry = await this.accountingService.findEntryBySource(
+          storeId,
+          'sale',
+          saleId,
+        );
+        if (entry) {
+          const cancelUserId = sale.voided_by_user_id || userId || 'system';
+          await this.accountingService.cancelEntry(
+            storeId,
+            entry.id,
+            cancelUserId,
+            sale.void_reason || 'Anulacion de venta',
+          );
+          this.logger.log(
+            `✅ Asiento contable cancelado por venta anulada ${saleId}`,
+          );
+        }
+        return;
+      }
+
       await job.updateProgress(10);
 
       // 1. Procesar factura fiscal si está configurado Y el usuario lo solicitó
@@ -140,23 +173,11 @@ export class SalesPostProcessingQueueProcessor extends WorkerHost {
           );
         }
       } else {
-        // Obtener la venta completa para el asiento contable
-        const sale = await this.saleRepository.findOne({
-          where: { id: saleId, store_id: storeId },
-          relations: ['items', 'items.product', 'customer'],
-        });
+        await this.accountingService.generateEntryFromSale(storeId, sale);
 
-        if (!sale) {
-          this.logger.warn(
-            `Venta ${saleId} no encontrada para generar asiento contable`,
-          );
-        } else {
-          await this.accountingService.generateEntryFromSale(storeId, sale);
-
-          this.logger.log(
-            `✅ Asiento contable generado para venta ${saleId}`,
-          );
-        }
+        this.logger.log(
+          `✅ Asiento contable generado para venta ${saleId}`,
+        );
       }
 
       await job.updateProgress(100);
