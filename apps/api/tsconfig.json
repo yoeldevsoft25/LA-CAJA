@@ -30,6 +30,9 @@
       "@fastify/helmet": [
         "./node_modules/@fastify/helmet",
         "../../node_modules/@fastify/helmet"
+      ],
+      "@la-caja/crdt": [
+        "../../packages/crdt/src/index.ts"
       ]
     }
   },
