@@ -181,13 +181,28 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
 
       // 8. Anular asiento contable asociado
       try {
-        const entry = await manager.findOne(JournalEntry, {
+        let entry = await manager.findOne(JournalEntry, {
           where: {
             store_id: storeId,
             source_type: 'sale',
             source_id: saleId,
           },
         });
+
+        if (!entry && fiscalInvoices.length > 0) {
+          for (const invoice of fiscalInvoices) {
+            entry = await manager.findOne(JournalEntry, {
+              where: {
+                store_id: storeId,
+                source_type: 'fiscal_invoice',
+                source_id: invoice.id,
+              },
+            });
+            if (entry) {
+              break;
+            }
+          }
+        }
 
         if (entry) {
           this.logger.log(`Anulando asiento contable ${entry.entry_number} por anulación de venta ${saleId}`);
