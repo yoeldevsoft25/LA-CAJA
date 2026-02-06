@@ -47,6 +47,7 @@ import {
   StockQuotaGrantedPayload,
   StockQuotaTransferredPayload,
   StockQuotaReclaimedPayload,
+  SaleVoidedPayload,
 } from '../sync/dto/sync-types';
 
 @Injectable()
@@ -82,7 +83,7 @@ export class ProjectionsService {
     private warehousesService: WarehousesService,
     private metricsService: SyncMetricsService,
     private invoiceSeriesService: InvoiceSeriesService,
-  ) {}
+  ) { }
 
   private toBoolean(value: unknown): boolean {
     if (typeof value === 'boolean') {
@@ -219,6 +220,9 @@ export class ProjectionsService {
         break;
       case 'StockQuotaReclaimed':
         await this.projectStockQuotaReclaimed(event);
+        break;
+      case 'SaleVoided':
+        await this.projectSaleVoided(event);
         break;
       default:
         // Tipo de evento desconocido, no se proyecta
@@ -669,13 +673,13 @@ export class ProjectionsService {
           const productIds = payload.items.map((i) => i.product_id);
           const deviceEscrows = event.device_id
             ? await manager.getRepository(StockEscrow).find({
-                where: {
-                  store_id: event.store_id,
-                  device_id: event.device_id,
-                  product_id: In(productIds),
-                  expires_at: MoreThan(new Date()),
-                },
-              })
+              where: {
+                store_id: event.store_id,
+                device_id: event.device_id,
+                product_id: In(productIds),
+                expires_at: MoreThan(new Date()),
+              },
+            })
             : [];
 
           const escrowMap = new Map<string, StockEscrow>();
@@ -689,7 +693,7 @@ export class ProjectionsService {
           for (const item of payload.items) {
             const totalQty =
               this.toBoolean(item.is_weight_product) &&
-              item.weight_value != null
+                item.weight_value != null
                 ? this.toNumber(item.weight_value)
                 : this.toNumber(item.qty);
 
@@ -1503,5 +1507,133 @@ export class ProjectionsService {
     }
 
     return { integrityOk, discrepancy, details };
+  }
+
+  private async projectSaleVoided(event: Event): Promise<void> {
+    const payload = event.payload as unknown as SaleVoidedPayload;
+    const sale = await this.saleRepository.findOne({
+      where: { id: payload.sale_id, store_id: event.store_id },
+      relations: ['items'],
+    });
+
+    if (!sale) {
+      this.logger.warn(`Venta ${payload.sale_id} no encontrada para anular.`);
+      return;
+    }
+
+    if (sale.voided_at) {
+      return; // Ya anulada
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const now = payload.voided_at
+        ? new Date(payload.voided_at)
+        : event.created_at;
+
+      sale.voided_at = now;
+      sale.voided_by_user_id = payload.voided_by_user_id;
+      sale.void_reason = payload.reason || null;
+      await manager.save(Sale, sale);
+
+      // Revertir stock si hay items
+      if (sale.items && sale.items.length > 0) {
+        const stockUpdates: Array<{
+          product_id: string;
+          variant_id: string | null;
+          qty_delta: number;
+        }> = [];
+
+        // Buscar almacén (warehouse_id) de los movimientos originales
+        const originalMovements = await manager
+          .getRepository(InventoryMovement)
+          .createQueryBuilder('im')
+          .where("im.ref->>'sale_id' = :saleId", { saleId: sale.id })
+          .andWhere("im.movement_type = 'sold'")
+          .getMany();
+
+        const warehouseByItem = new Map<string, string | null>();
+        for (const m of originalMovements) {
+          const key = `${m.product_id}:${m.variant_id || 'null'}`;
+          if (!warehouseByItem.has(key)) {
+            warehouseByItem.set(key, m.warehouse_id || null);
+          }
+        }
+
+        const movements: InventoryMovement[] = [];
+        for (const item of sale.items) {
+          const key = `${item.product_id}:${item.variant_id || 'null'}`;
+          const warehouseId = warehouseByItem.get(key) || null;
+
+          movements.push(
+            manager.getRepository(InventoryMovement).create({
+              id: randomUUID(),
+              store_id: event.store_id,
+              product_id: item.product_id,
+              variant_id: item.variant_id || null,
+              movement_type: 'adjust',
+              qty_delta: Number(item.qty), // Positivo para devolver
+              unit_cost_bs: 0,
+              unit_cost_usd: 0,
+              warehouse_id: warehouseId,
+              note: `Anulación venta ${sale.id}`,
+              ref: {
+                sale_id: sale.id,
+                reversal: true,
+                warehouse_id: warehouseId,
+              },
+              happened_at: now,
+              approved: true,
+            }),
+          );
+
+          if (warehouseId) {
+            stockUpdates.push({
+              product_id: item.product_id,
+              variant_id: item.variant_id || null,
+              qty_delta: Number(item.qty),
+            });
+          }
+        }
+
+        if (movements.length > 0) {
+          await manager.save(InventoryMovement, movements);
+        }
+
+        if (stockUpdates.length > 0) {
+          // Agrupar por almacén para actualizaciones por lote
+          const updatesByWarehouse = new Map<string, typeof stockUpdates>();
+          for (const update of stockUpdates) {
+            const itemKey = `${update.product_id}:${update.variant_id || 'null'}`;
+            const wId = warehouseByItem.get(itemKey);
+            if (wId) {
+              if (!updatesByWarehouse.has(wId)) {
+                updatesByWarehouse.set(wId, []);
+              }
+              updatesByWarehouse.get(wId)!.push(update);
+            }
+          }
+
+          for (const [wId, updates] of updatesByWarehouse.entries()) {
+            await this.warehousesService.updateStockBatch(
+              wId,
+              updates,
+              event.store_id,
+              manager,
+            );
+          }
+        }
+      }
+
+      // ELIMINAR DEUDA SI EXISTE
+      const debt = await manager.getRepository(Debt).findOne({
+        where: { sale_id: sale.id, store_id: event.store_id },
+      });
+      if (debt) {
+        await manager.getRepository(DebtPayment).delete({ debt_id: debt.id });
+        await manager.getRepository(Debt).delete({ id: debt.id });
+      }
+    });
+
+    this.logger.log(`Venta ${payload.sale_id} anulada por proyección.`);
   }
 }

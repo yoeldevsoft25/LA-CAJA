@@ -135,6 +135,44 @@ export interface ProductUpdatedPayload {
   };
 }
 
+export interface FederationAutoReconcileResult {
+  storeId: string;
+  sessions: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
+  };
+  sales: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
+  };
+  inventory: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
+    localStockHealed: number;
+    remoteStockHealed: number;
+  };
+  debts?: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
+  };
+  voids?: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
+  };
+  skipped?: boolean;
+  reason?: string;
+}
+
 export interface ProductDeactivatedPayload {
   product_id: string;
 }
@@ -191,12 +229,12 @@ export interface CashLedgerEntryCreatedPayload {
   entry_id: string;
   request_id: string;
   entry_type:
-    | 'sale'
-    | 'expense'
-    | 'adjustment'
-    | 'transfer'
-    | 'initial_balance'
-    | 'income';
+  | 'sale'
+  | 'expense'
+  | 'adjustment'
+  | 'transfer'
+  | 'initial_balance'
+  | 'income';
   amount_bs: number | string;
   amount_usd: number | string;
   currency: 'BS' | 'USD' | 'MIXED';
@@ -245,4 +283,11 @@ export interface StockQuotaReclaimedPayload {
   request_id: string;
   variant_id?: string | null;
   reason?: string;
+}
+
+export interface SaleVoidedPayload {
+  sale_id: string;
+  voided_at: string | number | Date;
+  voided_by_user_id: string | null;
+  reason?: string | null;
 }

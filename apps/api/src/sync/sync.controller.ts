@@ -159,6 +159,7 @@ export class SyncController {
   }
 
   @Get('federation/session-ids')
+  @UseGuards(FederationAuthGuard)
   async getFederationSessionIds(
     @Query('store_id') storeIdQuery: string,
     @Query('date_from') dateFrom: string,
@@ -167,21 +168,77 @@ export class SyncController {
     @Query('offset') offsetRaw: string,
     @Request() req: any,
   ): Promise<FederationIdsResult> {
-    const storeId = storeIdQuery || req.user.store_id;
-    if (!storeId) {
-      throw new BadRequestException('store_id es requerido');
-    }
-    if (!dateFrom || !dateTo) {
-      throw new BadRequestException('date_from y date_to son requeridos');
-    }
-    const limit = Number(limitRaw || 10000);
-    const offset = Number(offsetRaw || 0);
+    const storeId = storeIdQuery || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
     return this.federationSyncService.getSessionIds(
       storeId,
       dateFrom,
       dateTo,
-      limit,
-      offset,
+      limitRaw ? parseInt(limitRaw, 10) : 10000,
+      offsetRaw ? parseInt(offsetRaw, 10) : 0,
+    );
+  }
+
+  @Get('federation/debt-ids')
+  @UseGuards(FederationAuthGuard)
+  async getFederationDebtIds(
+    @Query('store_id') storeIdQuery: string,
+    @Query('date_from') dateFrom: string,
+    @Query('date_to') dateTo: string,
+    @Query('limit') limitRaw: string,
+    @Query('offset') offsetRaw: string,
+    @Request() req: any,
+  ): Promise<FederationIdsResult> {
+    const storeId = storeIdQuery || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
+    return this.federationSyncService.getDebtIds(
+      storeId,
+      dateFrom,
+      dateTo,
+      limitRaw ? parseInt(limitRaw, 10) : 10000,
+      offsetRaw ? parseInt(offsetRaw, 10) : 0,
+    );
+  }
+
+  @Get('federation/debt-payment-ids')
+  @UseGuards(FederationAuthGuard)
+  async getFederationDebtPaymentIds(
+    @Query('store_id') storeIdQuery: string,
+    @Query('date_from') dateFrom: string,
+    @Query('date_to') dateTo: string,
+    @Query('limit') limitRaw: string,
+    @Query('offset') offsetRaw: string,
+    @Request() req: any,
+  ): Promise<FederationIdsResult> {
+    const storeId = storeIdQuery || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
+    return this.federationSyncService.getDebtPaymentIds(
+      storeId,
+      dateFrom,
+      dateTo,
+      limitRaw ? parseInt(limitRaw, 10) : 10000,
+      offsetRaw ? parseInt(offsetRaw, 10) : 0,
+    );
+  }
+
+  @Get('federation/voided-sales-ids')
+  @UseGuards(FederationAuthGuard)
+  async getFederationVoidedSalesIds(
+    @Query('store_id') storeIdQuery: string,
+    @Query('date_from') dateFrom: string,
+    @Query('date_to') dateTo: string,
+    @Query('limit') limitRaw: string,
+    @Query('offset') offsetRaw: string,
+    @Request() req: any,
+  ): Promise<FederationIdsResult> {
+    const storeId = storeIdQuery || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
+    return this.federationSyncService.getVoidedSalesIds(
+      storeId,
+      dateFrom,
+      dateTo,
+      limitRaw ? parseInt(limitRaw, 10) : 10000,
+      offsetRaw ? parseInt(offsetRaw, 10) : 0,
     );
   }
 
@@ -200,15 +257,44 @@ export class SyncController {
 
   @Post('federation/replay-sales')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(FederationAuthGuard)
   async replaySales(
+    @Body('store_id') storeIdFromBody: string,
     @Body('sale_ids') saleIds: string[],
     @Request() req: any,
   ): Promise<FederationReplayResult> {
-    const storeId = req.user.store_id;
-    if (!Array.isArray(saleIds) || saleIds.length === 0) {
-      throw new BadRequestException('sale_ids es requerido');
-    }
+    const storeId = storeIdFromBody || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
     return this.federationSyncService.replaySalesByIds(storeId, saleIds);
+  }
+
+  @Post('federation/replay-debts')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(FederationAuthGuard)
+  async replayDebts(
+    @Body('store_id') storeIdFromBody: string,
+    @Body('debt_ids') debtIds: string[],
+    @Request() req: any,
+  ): Promise<FederationReplayResult> {
+    const storeId = storeIdFromBody || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
+    return this.federationSyncService.replayDebtsByIds(storeId, debtIds);
+  }
+
+  @Post('federation/replay-debt-payments')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(FederationAuthGuard)
+  async replayDebtPayments(
+    @Body('store_id') storeIdFromBody: string,
+    @Body('payment_ids') paymentIds: string[],
+    @Request() req: any,
+  ): Promise<FederationReplayResult> {
+    const storeId = storeIdFromBody || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
+    return this.federationSyncService.replayDebtPaymentsByIds(
+      storeId,
+      paymentIds,
+    );
   }
 
   @Post('federation/replay-inventory')

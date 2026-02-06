@@ -111,6 +111,7 @@ export class SyncService {
     'CustomerUpdated',
     'DebtCreated',
     'DebtPaymentRecorded',
+    'SaleVoided',
   ];
 
   // Tipos de eventos que REQUIEREN delta_payload y full_payload_hash bajo CRDT MAX
@@ -120,6 +121,7 @@ export class SyncService {
     'StockAdjusted',
     'CashSessionOpened',
     'CashSessionClosed',
+    'SaleVoided',
   ];
 
   constructor(

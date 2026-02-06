@@ -55,7 +55,8 @@ export interface FederationReplayResult {
   requested: number;
   found: number;
   queued: number;
-  missingSaleIds: string[];
+  missingSaleIds?: string[];
+  missingIds?: string[];
 }
 
 export interface FederationReplayInventoryResult {
@@ -92,6 +93,18 @@ export interface FederationAutoReconcileResult {
     replayedToLocal: number;
     localStockHealed: number;
     remoteStockHealed: number;
+  };
+  debts?: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
+  };
+  voids?: {
+    remoteMissingCount: number;
+    localMissingCount: number;
+    replayedToRemote: number;
+    replayedToLocal: number;
   };
   skipped?: boolean;
   reason?: string;
@@ -421,7 +434,7 @@ export class FederationSyncService implements OnModuleInit {
             SELECT event_id, payload->>'sale_id' AS sale_id
             FROM events
             WHERE store_id = $1
-              AND type = 'SaleCreated'
+              AND type IN ('SaleCreated', 'SaleVoided')
               AND payload->>'sale_id' = ANY($2)
             `,
       [storeId, uniqueSaleIds],
@@ -460,6 +473,108 @@ export class FederationSyncService implements OnModuleInit {
       found: rows.length,
       queued,
       missingSaleIds,
+    };
+  }
+
+  async replayDebtsByIds(
+    storeId: string,
+    debtIds: string[],
+  ): Promise<FederationReplayResult> {
+    const uniqueDebtIds = Array.from(
+      new Set(debtIds.map((id) => id?.trim()).filter(Boolean)),
+    );
+
+    if (!this.remoteUrl || uniqueDebtIds.length === 0) {
+      return {
+        requested: uniqueDebtIds.length,
+        found: 0,
+        queued: 0,
+        missingIds: uniqueDebtIds,
+      };
+    }
+
+    const rows = await this.dataSource.query(
+      `
+            SELECT event_id, payload->>'debt_id' AS debt_id
+            FROM events
+            WHERE store_id = $1
+              AND type = 'DebtCreated'
+              AND payload->>'debt_id' = ANY($2)
+            `,
+      [storeId, uniqueDebtIds],
+    );
+
+    const foundIds = new Set<string>(
+      rows.map((row: { debt_id: string }) => row.debt_id),
+    );
+    const missingIds = uniqueDebtIds.filter((id) => !foundIds.has(id));
+
+    let queued = 0;
+    for (const row of rows as Array<{ event_id: string }>) {
+      const event = await this.eventRepository.findOne({
+        where: { event_id: row.event_id },
+      });
+      if (!event) continue;
+      await this.queueRelay(event);
+      queued += 1;
+    }
+
+    return {
+      requested: uniqueDebtIds.length,
+      found: rows.length,
+      queued,
+      missingIds,
+    };
+  }
+
+  async replayDebtPaymentsByIds(
+    storeId: string,
+    paymentIds: string[],
+  ): Promise<FederationReplayResult> {
+    const uniquePaymentIds = Array.from(
+      new Set(paymentIds.map((id) => id?.trim()).filter(Boolean)),
+    );
+
+    if (!this.remoteUrl || uniquePaymentIds.length === 0) {
+      return {
+        requested: uniquePaymentIds.length,
+        found: 0,
+        queued: 0,
+        missingIds: uniquePaymentIds,
+      };
+    }
+
+    const rows = await this.dataSource.query(
+      `
+            SELECT event_id, payload->>'payment_id' AS payment_id
+            FROM events
+            WHERE store_id = $1
+              AND type = 'DebtPaymentRecorded'
+              AND payload->>'payment_id' = ANY($2)
+            `,
+      [storeId, uniquePaymentIds],
+    );
+
+    const foundIds = new Set<string>(
+      rows.map((row: { payment_id: string }) => row.payment_id),
+    );
+    const missingIds = uniquePaymentIds.filter((id) => !foundIds.has(id));
+
+    let queued = 0;
+    for (const row of rows as Array<{ event_id: string }>) {
+      const event = await this.eventRepository.findOne({
+        where: { event_id: row.event_id },
+      });
+      if (!event) continue;
+      await this.queueRelay(event);
+      queued += 1;
+    }
+
+    return {
+      requested: uniquePaymentIds.length,
+      found: rows.length,
+      queued,
+      missingIds,
     };
   }
 
@@ -718,6 +833,119 @@ export class FederationSyncService implements OnModuleInit {
     };
   }
 
+  async getDebtIds(
+    storeId: string,
+    dateFrom: string,
+    dateTo: string,
+    limit = 10000,
+    offset = 0,
+  ): Promise<FederationIdsResult> {
+    const totalRows = await this.dataSource.query(
+      `
+            SELECT COUNT(1)::int AS total
+            FROM debts
+            WHERE store_id = $1
+              AND created_at >= $2::date
+              AND created_at < ($3::date + interval '1 day')
+            `,
+      [storeId, dateFrom, dateTo],
+    );
+
+    const rows = await this.dataSource.query(
+      `
+            SELECT id
+            FROM debts
+            WHERE store_id = $1
+              AND created_at >= $2::date
+              AND created_at < ($3::date + interval '1 day')
+            ORDER BY created_at DESC
+            LIMIT $4 OFFSET $5
+            `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
+
+    return {
+      total: Number(totalRows?.[0]?.total || 0),
+      ids: rows.map((row: { id: string }) => row.id),
+    };
+  }
+
+  async getDebtPaymentIds(
+    storeId: string,
+    dateFrom: string,
+    dateTo: string,
+    limit = 10000,
+    offset = 0,
+  ): Promise<FederationIdsResult> {
+    const totalRows = await this.dataSource.query(
+      `
+            SELECT COUNT(1)::int AS total
+            FROM debt_payments
+            WHERE store_id = $1
+              AND paid_at >= $2::date
+              AND paid_at < ($3::date + interval '1 day')
+            `,
+      [storeId, dateFrom, dateTo],
+    );
+
+    const rows = await this.dataSource.query(
+      `
+            SELECT id
+            FROM debt_payments
+            WHERE store_id = $1
+              AND paid_at >= $2::date
+              AND paid_at < ($3::date + interval '1 day')
+            ORDER BY paid_at DESC
+            LIMIT $4 OFFSET $5
+            `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
+
+    return {
+      total: Number(totalRows?.[0]?.total || 0),
+      ids: rows.map((row: { id: string }) => row.id),
+    };
+  }
+
+  async getVoidedSalesIds(
+    storeId: string,
+    dateFrom: string,
+    dateTo: string,
+    limit = 10000,
+    offset = 0,
+  ): Promise<FederationIdsResult> {
+    const totalRows = await this.dataSource.query(
+      `
+            SELECT COUNT(1)::int AS total
+            FROM sales
+            WHERE store_id = $1
+              AND voided_at IS NOT NULL
+              AND sold_at >= $2::date
+              AND sold_at < ($3::date + interval '1 day')
+            `,
+      [storeId, dateFrom, dateTo],
+    );
+
+    const rows = await this.dataSource.query(
+      `
+            SELECT id
+            FROM sales
+            WHERE store_id = $1
+              AND voided_at IS NOT NULL
+              AND sold_at >= $2::date
+              AND sold_at < ($3::date + interval '1 day')
+            ORDER BY sold_at DESC
+            LIMIT $4 OFFSET $5
+            `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
+
+    return {
+      total: Number(totalRows?.[0]?.total || 0),
+      ids: rows.map((row: { id: string }) => row.id),
+    };
+  }
+
   async runAutoReconcile(
     storeId?: string,
   ): Promise<FederationAutoReconcileResult[]> {
@@ -847,56 +1075,47 @@ export class FederationSyncService implements OnModuleInit {
       },
     );
 
-    const [localSales, localInventory, localSessions] = await Promise.all([
+    const [localSales, localInventory, localSessions, localDebts, localDebtPayments, localVoids] = await Promise.all([
       this.getSalesIds(storeId, dateFrom, dateTo),
       this.getInventoryMovementIds(storeId, dateFrom, dateTo),
       this.getSessionIds(storeId, dateFrom, dateTo),
+      this.getDebtIds(storeId, dateFrom, dateTo),
+      this.getDebtPaymentIds(storeId, dateFrom, dateTo),
+      this.getVoidedSalesIds(storeId, dateFrom, dateTo),
     ]);
 
-    const [remoteSales, remoteInventory, remoteSessions] = await Promise.all([
-      this.fetchRemoteIds(
-        '/sync/federation/sales-ids',
-        storeId,
-        dateFrom,
-        dateTo,
-      ),
-      this.fetchRemoteIds(
-        '/sync/federation/inventory-movement-ids',
-        storeId,
-        dateFrom,
-        dateTo,
-      ),
-      this.fetchRemoteIds(
-        '/sync/federation/session-ids',
-        storeId,
-        dateFrom,
-        dateTo,
-      ),
+    const [remoteSales, remoteInventory, remoteSessions, remoteDebts, remoteDebtPayments, remoteVoids] = await Promise.all([
+      this.fetchRemoteIds('/sync/federation/sales-ids', storeId, dateFrom, dateTo),
+      this.fetchRemoteIds('/sync/federation/inventory-movement-ids', storeId, dateFrom, dateTo),
+      this.fetchRemoteIds('/sync/federation/session-ids', storeId, dateFrom, dateTo),
+      this.fetchRemoteIds('/sync/federation/debt-ids', storeId, dateFrom, dateTo),
+      this.fetchRemoteIds('/sync/federation/debt-payment-ids', storeId, dateFrom, dateTo),
+      this.fetchRemoteIds('/sync/federation/voided-sales-ids', storeId, dateFrom, dateTo),
     ]);
 
     // Sessions diff
-    const sessionsMissingInRemote = this.diff(
-      localSessions.ids,
-      remoteSessions.ids,
-    );
-    const sessionsMissingInLocal = this.diff(
-      remoteSessions.ids,
-      localSessions.ids,
-    );
+    const sessionsMissingInRemote = this.diff(localSessions.ids, remoteSessions.ids);
+    const sessionsMissingInLocal = this.diff(remoteSessions.ids, localSessions.ids);
 
     // Sales diff
     const salesMissingInRemote = this.diff(localSales.ids, remoteSales.ids);
     const salesMissingInLocal = this.diff(remoteSales.ids, localSales.ids);
 
     // Inventory diff
-    const invMissingInRemote = this.diff(
-      localInventory.ids,
-      remoteInventory.ids,
-    );
-    const invMissingInLocal = this.diff(
-      remoteInventory.ids,
-      localInventory.ids,
-    );
+    const invMissingInRemote = this.diff(localInventory.ids, remoteInventory.ids);
+    const invMissingInLocal = this.diff(remoteInventory.ids, localInventory.ids);
+
+    // Debts diff
+    const debtsMissingInRemote = this.diff(localDebts.ids, remoteDebts.ids);
+    const debtsMissingInLocal = this.diff(remoteDebts.ids, localDebts.ids);
+
+    // Debt Payments diff
+    const paymentsMissingInRemote = this.diff(localDebtPayments.ids, remoteDebtPayments.ids);
+    const paymentsMissingInLocal = this.diff(remoteDebtPayments.ids, localDebtPayments.ids);
+
+    // Voided Sales diff (Status bidirectional)
+    const voidsMissingInRemote = this.diff(localVoids.ids, remoteVoids.ids);
+    const voidsMissingInLocal = this.diff(remoteVoids.ids, localVoids.ids);
 
     const replaySessionsToRemote = sessionsMissingInRemote.slice(0, maxBatch);
     const replaySessionsToLocal = sessionsMissingInLocal.slice(0, maxBatch);
@@ -904,6 +1123,12 @@ export class FederationSyncService implements OnModuleInit {
     const replaySalesToLocal = salesMissingInLocal.slice(0, maxBatch);
     const replayInvToRemote = invMissingInRemote.slice(0, maxBatch);
     const replayInvToLocal = invMissingInLocal.slice(0, maxBatch);
+    const replayDebtsToRemote = debtsMissingInRemote.slice(0, maxBatch);
+    const replayDebtsToLocal = debtsMissingInLocal.slice(0, maxBatch);
+    const replayPaymentsToRemote = paymentsMissingInRemote.slice(0, maxBatch);
+    const replayPaymentsToLocal = paymentsMissingInLocal.slice(0, maxBatch);
+    const replayVoidsToRemote = voidsMissingInRemote.slice(0, maxBatch);
+    const replayVoidsToLocal = voidsMissingInLocal.slice(0, maxBatch);
 
     // PASO 2: Replicar sesiones (Local -> Remote) primero para dependencias
     const [sessionsToRemoteResult] = await Promise.all([
@@ -912,13 +1137,27 @@ export class FederationSyncService implements OnModuleInit {
         : Promise.resolve({ queued: 0 }),
     ]);
 
-    // PASO 3: Replicar ventas e inventario (Local -> Remote)
-    const [salesToRemoteResult, invToRemoteResult] = await Promise.all([
+    // PASO 3: Replicar deudas y ventas (Local -> Remote)
+    // Las deudas antes de los pagos
+    const [debtsToRemoteResult, salesToRemoteResult, invToRemoteResult, voidsToRemoteResult] = await Promise.all([
+      replayDebtsToRemote.length > 0
+        ? this.replayDebtsByIds(storeId, replayDebtsToRemote)
+        : Promise.resolve({ queued: 0 }),
       replaySalesToRemote.length > 0
         ? this.replaySalesByIds(storeId, replaySalesToRemote)
         : Promise.resolve({ queued: 0 }),
       replayInvToRemote.length > 0
         ? this.replayInventoryByFilter(storeId, replayInvToRemote, [])
+        : Promise.resolve({ queued: 0 }),
+      replayVoidsToRemote.length > 0
+        ? this.replaySalesByIds(storeId, replayVoidsToRemote) // Reusamos replaySalesByIds ya que maneja SaleVoided
+        : Promise.resolve({ queued: 0 }),
+    ]);
+
+    // Replicar pagos de deuda después de las deudas
+    const [paymentsToRemoteResult] = await Promise.all([
+      replayPaymentsToRemote.length > 0
+        ? this.replayDebtPaymentsByIds(storeId, replayPaymentsToRemote)
         : Promise.resolve({ queued: 0 }),
     ]);
 
@@ -930,16 +1169,39 @@ export class FederationSyncService implements OnModuleInit {
       });
     }
 
+    if (replayDebtsToLocal.length > 0) {
+      await this.postRemoteReplay('/sync/federation/replay-debts', {
+        store_id: storeId,
+        debt_ids: replayDebtsToLocal,
+      });
+    }
+
     if (replaySalesToLocal.length > 0) {
       await this.postRemoteReplay('/sync/federation/replay-sales', {
         store_id: storeId,
         sale_ids: replaySalesToLocal,
       });
     }
+
+    if (replayPaymentsToLocal.length > 0) {
+      await this.postRemoteReplay('/sync/federation/replay-debt-payments', {
+        store_id: storeId,
+        payment_ids: replayPaymentsToLocal,
+      });
+    }
+
     if (replayInvToLocal.length > 0) {
       await this.postRemoteReplay('/sync/federation/replay-inventory', {
         store_id: storeId,
         movement_ids: replayInvToLocal,
+      });
+    }
+
+    // Bidirectional voids: Si el remoto tiene anulaciones que yo no tengo localmente
+    if (replayVoidsToLocal.length > 0) {
+      await this.postRemoteReplay('/sync/federation/replay-sales', {
+        store_id: storeId,
+        sale_ids: replayVoidsToLocal,
       });
     }
 
@@ -986,10 +1248,23 @@ export class FederationSyncService implements OnModuleInit {
         localStockHealed,
         remoteStockHealed,
       },
+      debts: {
+        remoteMissingCount: debtsMissingInRemote.length + paymentsMissingInRemote.length,
+        localMissingCount: debtsMissingInLocal.length + paymentsMissingInLocal.length,
+        replayedToRemote: Number((debtsToRemoteResult as { queued: number }).queued || 0) +
+          Number((paymentsToRemoteResult as { queued: number }).queued || 0),
+        replayedToLocal: replayDebtsToLocal.length + replayPaymentsToLocal.length,
+      },
+      voids: {
+        remoteMissingCount: voidsMissingInRemote.length,
+        localMissingCount: voidsMissingInLocal.length,
+        replayedToRemote: Number((voidsToRemoteResult as { queued: number }).queued || 0),
+        replayedToLocal: replayVoidsToLocal.length,
+      },
     };
 
     this.logger.log(
-      `🧭 Reconcile store ${storeId}: sales(remote=${result.sales.remoteMissingCount}, local=${result.sales.localMissingCount}), inventory(remote=${result.inventory.remoteMissingCount}, local=${result.inventory.localMissingCount}, healedLocal=${localStockHealed}, healedRemote=${remoteStockHealed})`,
+      `🧭 Reconcile store ${storeId}: sales(rem=${result.sales.remoteMissingCount}, loc=${result.sales.localMissingCount}), debts(rem=${result.debts!.remoteMissingCount}, loc=${result.debts!.localMissingCount}), inventory(rem=${result.inventory.remoteMissingCount}, loc=${result.inventory.localMissingCount}, healedLocal=${localStockHealed})`,
     );
     return result;
   }
@@ -1003,7 +1278,10 @@ export class FederationSyncService implements OnModuleInit {
     endpoint:
       | '/sync/federation/sales-ids'
       | '/sync/federation/inventory-movement-ids'
-      | '/sync/federation/session-ids',
+      | '/sync/federation/session-ids'
+      | '/sync/federation/debt-ids'
+      | '/sync/federation/debt-payment-ids'
+      | '/sync/federation/voided-sales-ids',
     storeId: string,
     dateFrom: string,
     dateTo: string,

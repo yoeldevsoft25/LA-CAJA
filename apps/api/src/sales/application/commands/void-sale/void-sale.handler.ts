@@ -15,6 +15,12 @@ import { WarehousesService } from '../../../../warehouses/warehouses.service';
 import { randomUUID } from 'crypto';
 import { AccountingService } from '../../../../accounting/accounting.service';
 import { JournalEntry } from '../../../../database/entities/journal-entry.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Event } from '../../../../database/entities/event.entity';
+import { FederationSyncService } from '../../../../sync/federation-sync.service';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bullmq';
 
 @CommandHandler(VoidSaleCommand)
 export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
@@ -24,12 +30,17 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
     private readonly dataSource: DataSource,
     private readonly warehousesService: WarehousesService,
     private readonly accountingService: AccountingService,
+    @InjectRepository(Event)
+    private readonly eventRepository: Repository<Event>,
+    private readonly federationSyncService: FederationSyncService,
+    @InjectQueue('federation-sync')
+    private readonly federationSyncQueue: Queue,
   ) { }
 
   async execute(command: VoidSaleCommand): Promise<Sale> {
     const { storeId, saleId, userId, reason } = command;
 
-    return this.dataSource.transaction(async (manager: EntityManager) => {
+    const savedSale = await this.dataSource.transaction(async (manager: EntityManager) => {
       const sale = await manager.findOne(Sale, {
         where: { id: saleId, store_id: storeId },
         relations: ['items'],
@@ -213,5 +224,64 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
 
       return savedSale;
     });
+
+    // Enviar evento de anulación a la federación
+    try {
+      const serverDeviceId = '00000000-0000-0000-0000-000000000001';
+      const eventSeq = Date.now();
+      const voidEvent = this.eventRepository.create({
+        event_id: randomUUID(),
+        store_id: storeId,
+        device_id: serverDeviceId,
+        seq: eventSeq,
+        type: 'SaleVoided',
+        version: 1,
+        created_at: new Date(),
+        actor_user_id: userId || null,
+        actor_role: 'owner', // Solo owners pueden anular según controller
+        payload: {
+          sale_id: saleId,
+          voided_at: new Date().getTime(),
+          voided_by_user_id: userId,
+          reason: reason || null,
+        },
+        vector_clock: { [serverDeviceId]: eventSeq },
+        causal_dependencies: [],
+        delta_payload: null,
+        full_payload_hash: null,
+      });
+
+      await this.eventRepository.save(voidEvent);
+
+      const queuesEnabled =
+        process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+        process.env.QUEUES_DISABLED?.toLowerCase() !== 'true';
+
+      if (queuesEnabled) {
+        await this.federationSyncQueue.add(
+          'relay-event',
+          {
+            eventId: voidEvent.event_id,
+            storeId: voidEvent.store_id,
+            deviceId: voidEvent.device_id,
+          },
+          {
+            jobId: `relay-${voidEvent.event_id}`,
+            attempts: 10,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: true,
+          },
+        );
+      } else {
+        await this.federationSyncService.queueRelay(voidEvent);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error al emitir evento SaleVoided para venta ${saleId}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    return savedSale;
   }
 }
