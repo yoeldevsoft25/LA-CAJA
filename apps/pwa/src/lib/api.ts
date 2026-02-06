@@ -150,6 +150,20 @@ function getApiUrl(): string {
   return `http://${hostname}:3000`;
 }
 
+// SANEAMIENTO DE INICIO: Limpiar tokens locales si estamos en producción web
+(() => {
+  const isPublic = isPublicWebRuntime();
+  if (isPublic) {
+    const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
+    if (storedBase && classifyApiUrl(storedBase) !== 'public') {
+      logger.warn('SANEAMIENTO: Limpiando endpoint local/tailscale en runtime público.');
+      localStorage.removeItem(API_BASE_STORAGE_KEY);
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+    }
+  }
+})();
+
 const isLocalEnv = () =>
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1' ||
@@ -178,12 +192,31 @@ const apiConfig: ApiClientConfig = {
     useAuth.getState().setToken(token);
   },
   onLogout: () => {
+    logger.info('NUCLEAR LOGOUT: Iniciando limpieza total de sesión.');
+
+    // 1. Limpieza LocalStorage
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_info');
+    localStorage.removeItem(API_BASE_STORAGE_KEY);
+    localStorage.removeItem(SERVER_UNAVAILABLE_KEY);
+
+    // 2. Limpieza IndexedDB (Nuclear) e ignorar errores
+    try {
+      import('@/db/database').then(({ db }) => {
+        db.delete().catch(() => { });
+      });
+    } catch { }
+
+    // 3. Reset del State Manager
     useAuth.getState().logout();
+
+    // 4. Redirección Instantánea (replace para evitar back-button loops)
     setTimeout(() => {
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
+        window.location.replace('/login');
       }
-    }, 100);
+    }, 50);
   },
   getApiUrl,
   logger: logger as ApiClientConfig['logger'],

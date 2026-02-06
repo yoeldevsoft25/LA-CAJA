@@ -139,6 +139,7 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
                 let selectedBaseUrl: string | null = null;
                 let sawInfraFailure = false;
                 let sawAuthFailure = false;
+                let sawPublicAuthFailure = false;
                 let lastRefreshError: Error | null = null;
 
                 for (const baseUrl of candidateBases) {
@@ -163,6 +164,10 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
 
                         if (status === 400 || status === 401 || status === 403) {
                             sawAuthFailure = true;
+                            // Si un endpoint público falla por auth, es una señal fuerte
+                            if (baseUrl.includes('.ts.net') === false && !baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
+                                sawPublicAuthFailure = true;
+                            }
                         } else {
                             sawInfraFailure = true;
                         }
@@ -174,7 +179,7 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
                         lastRefreshError ?? new Error('No se pudo renovar token en ningún endpoint'),
                         {
                             _refreshFailureKind:
-                                sawAuthFailure && !sawInfraFailure
+                                (sawAuthFailure && !sawInfraFailure) || sawPublicAuthFailure
                                     ? 'auth'
                                     : 'infra',
                         }
@@ -250,6 +255,18 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
 
             if (isLicenseBlocked && config.logger) {
                 config.logger.warn('Licencia bloqueada detectada');
+            }
+        }
+
+        // Si llegamos aquí y es un 401 de un endpoint público persistente, forzar logout
+        if (error.response?.status === 401) {
+            const isPublic = currentBaseUrl && !currentBaseUrl.includes('.ts.net') && !currentBaseUrl.includes('localhost');
+            if (isPublic && !isRedirecting) {
+                isRedirecting = true;
+                if (config.logger) {
+                    config.logger.error('PERSISTENT 401 PUBLIC: Forzando logout nuclear.');
+                }
+                config.onLogout();
             }
         }
 
