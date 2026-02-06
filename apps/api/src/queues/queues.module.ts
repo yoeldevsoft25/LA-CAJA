@@ -13,64 +13,62 @@ const QUEUES_ENABLED =
   process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
   process.env.QUEUES_DISABLED?.toLowerCase() !== 'true';
 
+const REGISTERED_QUEUES_MODULE = QUEUES_ENABLED
+  ? BullModule.registerQueue(
+      {
+        name: 'notifications',
+        defaultJobOptions: {
+          attempts: 5,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
+      {
+        name: 'sales-projections',
+        defaultJobOptions: {
+          attempts: 10, // Projections are CRITICAL
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false, // Keep failed jobs for inspection (DLQ-like)
+        },
+      },
+      {
+        name: 'sales-post-processing',
+        defaultJobOptions: {
+          attempts: 5,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
+      {
+        name: 'federation-sync',
+        defaultJobOptions: {
+          attempts: 10,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
+    )
+  : null;
+
 @Global()
 @Module({
-  imports: [
-    ...(QUEUES_ENABLED
-      ? [
-          BullModule.registerQueue(
-            {
-              name: 'notifications',
-              defaultJobOptions: {
-                attempts: 5,
-                backoff: {
-                  type: 'exponential',
-                  delay: 2000,
-                },
-                removeOnComplete: true,
-                removeOnFail: false,
-              },
-            },
-            {
-              name: 'sales-projections',
-              defaultJobOptions: {
-                attempts: 10, // Projections are CRITICAL
-                backoff: {
-                  type: 'exponential',
-                  delay: 1000,
-                },
-                removeOnComplete: true,
-                removeOnFail: false, // Keep failed jobs for inspection (DLQ-like)
-              },
-            },
-            {
-              name: 'sales-post-processing',
-              defaultJobOptions: {
-                attempts: 5,
-                backoff: {
-                  type: 'exponential',
-                  delay: 2000,
-                },
-                removeOnComplete: true,
-                removeOnFail: false,
-              },
-            },
-            {
-              name: 'federation-sync',
-              defaultJobOptions: {
-                attempts: 10,
-                backoff: {
-                  type: 'exponential',
-                  delay: 5000,
-                },
-                removeOnComplete: true,
-                removeOnFail: false,
-              },
-            },
-          ),
-        ]
-      : []),
-  ],
+  imports: [...(REGISTERED_QUEUES_MODULE ? [REGISTERED_QUEUES_MODULE] : [])],
   providers: [
     {
       provide: 'QUEUES_ENABLED',
@@ -84,9 +82,9 @@ const QUEUES_ENABLED =
       : []),
   ],
   exports: [
-    ...(QUEUES_ENABLED ? [BullModule] : []),
+    ...(REGISTERED_QUEUES_MODULE ? [REGISTERED_QUEUES_MODULE] : []),
     'QUEUES_ENABLED',
-    ...QUEUE_NAMES.map((name) => getQueueToken(name)),
+    ...(!QUEUES_ENABLED ? QUEUE_NAMES.map((name) => getQueueToken(name)) : []),
   ],
 })
 export class QueuesModule { }
