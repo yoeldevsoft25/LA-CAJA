@@ -40,6 +40,7 @@ import { SalesReturnValidationService } from './domain/services/sales-return-val
 import { SalesReturnInventoryService } from './domain/services/sales-return-inventory.service';
 import { SalesReturnFinancialService } from './domain/services/sales-return-financial.service';
 import { ObservabilityModule } from '../observability/observability.module';
+import { SyncModule } from '../sync/sync.module';
 
 import { CqrsModule } from '@nestjs/cqrs';
 import { GetSaleByIdHandler } from './application/queries/get-sale-by-id/get-sale-by-id.handler';
@@ -86,6 +87,7 @@ import { ReturnSaleHandler } from './application/commands/return-sale/return-sal
     QueuesModule,
     LicensesModule,
     ObservabilityModule,
+    SyncModule,
   ],
   controllers: [SalesController],
   providers: [

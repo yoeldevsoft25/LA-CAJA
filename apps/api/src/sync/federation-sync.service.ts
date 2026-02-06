@@ -226,6 +226,15 @@ export class FederationSyncService implements OnModuleInit {
     async queueRelay(event: Event) {
         if (!this.remoteUrl) return;
 
+        const queuesEnabled =
+            process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+            process.env.QUEUES_DISABLED?.toLowerCase() !== 'true';
+
+        if (!queuesEnabled) {
+            await this.relayEventNow(event);
+            return;
+        }
+
         try {
             // Utilizar event_id como jobId para asegurar idempotencia en BullMQ.
             // Si el job ya existe, Bull lo ignorará, logrando "exactly-once" per device.
@@ -251,6 +260,54 @@ export class FederationSyncService implements OnModuleInit {
             this.logger.debug(`Evento ${event.event_id} encolado para relay (JobId: ${jobId})`);
         } catch (error) {
             this.logger.error(`Error encolando relay para evento ${event.event_id}:`, error);
+        }
+    }
+
+    private async relayEventNow(event: Event) {
+        if (!this.remoteUrl) return;
+
+        try {
+            this.logger.debug(
+                `Relaying event ${event.type} (${event.event_id}) to ${this.remoteUrl}...`,
+            );
+
+            const payload = {
+                store_id: event.store_id,
+                device_id: event.device_id,
+                client_version: 'federation-relay-1.0',
+                events: [
+                    {
+                        event_id: event.event_id,
+                        seq: Number(event.seq),
+                        type: event.type,
+                        version: event.version,
+                        created_at: event.created_at.getTime(),
+                        actor: {
+                            user_id: event.actor_user_id,
+                            role: event.actor_role as 'owner' | 'cashier',
+                        },
+                        payload: event.payload,
+                        vector_clock: event.vector_clock,
+                        causal_dependencies: event.causal_dependencies,
+                        delta_payload: event.delta_payload,
+                        full_payload_hash: event.full_payload_hash,
+                    },
+                ],
+            };
+
+            await axios.post(`${this.remoteUrl}/sync/push`, payload, {
+                headers: {
+                    Authorization: `Bearer ${this.adminKey}`,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 10000,
+            });
+
+            this.logger.log(`✅ Event ${event.event_id} relayed successfully.`);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            this.logger.error(`❌ Failed to relay event ${event.event_id}: ${msg}`);
+            this.registerRelayError(event.event_id, msg);
         }
     }
 

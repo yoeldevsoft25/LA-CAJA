@@ -143,6 +143,9 @@ export class SyncService {
     const startTime = Date.now();
     let productUsageIncrements = 0;
     let invoiceUsageIncrements = 0;
+    const queuesEnabled =
+      process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+      process.env.QUEUES_DISABLED?.toLowerCase() !== 'true';
 
     if (!dto.events || dto.events.length === 0) {
       return {
@@ -409,32 +412,53 @@ export class SyncService {
       // Batch processing para eventos de venta (más eficiente que individual)
       if (saleEvents.length > 0) {
         try {
-          // Usar addBulk para encolar múltiples jobs de una vez (mejor performance)
-          const jobs = saleEvents.map((event) => ({
-            name: 'project-sale-event',
-            data: { event },
-            opts: {
-              priority: 10, // Alta prioridad para ventas
-              jobId: `projection-${event.event_id}`, // Evitar duplicados
-              attempts: 3, // Reintentar hasta 3 veces
-              backoff: {
-                type: 'exponential',
-                delay: 2000, // 2s, 4s, 8s
+          if (queuesEnabled) {
+            // Usar addBulk para encolar múltiples jobs de una vez (mejor performance)
+            const jobs = saleEvents.map((event) => ({
+              name: 'project-sale-event',
+              data: { event },
+              opts: {
+                priority: 10, // Alta prioridad para ventas
+                jobId: `projection-${event.event_id}`, // Evitar duplicados
+                attempts: 3, // Reintentar hasta 3 veces
+                backoff: {
+                  type: 'exponential',
+                  delay: 2000, // 2s, 4s, 8s
+                },
+                removeOnComplete: {
+                  age: 3600, // Mantener jobs completados por 1 hora
+                  count: 1000, // Mantener últimos 1000 jobs
+                },
+                removeOnFail: {
+                  age: 86400, // Mantener jobs fallidos por 24 horas para debugging
+                },
               },
-              removeOnComplete: {
-                age: 3600, // Mantener jobs completados por 1 hora
-                count: 1000, // Mantener últimos 1000 jobs
-              },
-              removeOnFail: {
-                age: 86400, // Mantener jobs fallidos por 24 horas para debugging
-              },
-            },
-          }));
+            }));
 
-          await this.salesProjectionQueue.addBulk(jobs);
-          this.logger.debug(
-            `✅ ${saleEvents.length} proyecciones de venta encoladas en batch para procesamiento asíncrono`,
-          );
+            await this.salesProjectionQueue.addBulk(jobs);
+            this.logger.debug(
+              `✅ ${saleEvents.length} proyecciones de venta encoladas en batch para procesamiento asíncrono`,
+            );
+          } else {
+            for (const event of saleEvents) {
+              try {
+                await this.projectionsService.projectEvent(event);
+                await this.eventRepository.update(event.event_id, {
+                  projection_status: 'processed',
+                  projection_error: null,
+                });
+              } catch (err) {
+                this.logger.error(
+                  `Error proyectando evento ${event.event_id} sin colas:`,
+                  err instanceof Error ? err.stack : String(err),
+                );
+                await this.eventRepository.update(event.event_id, {
+                  projection_status: 'failed',
+                  projection_error: err instanceof Error ? err.message : String(err),
+                });
+              }
+            }
+          }
         } catch (error) {
           // Fallback: encolar individualmente si addBulk falla
           this.logger.warn(
@@ -443,14 +467,28 @@ export class SyncService {
           );
           for (const event of saleEvents) {
             try {
-              await this.salesProjectionQueue.add('project-sale-event', {
-                event,
-              });
+              if (queuesEnabled) {
+                await this.salesProjectionQueue.add('project-sale-event', {
+                  event,
+                });
+              } else {
+                await this.projectionsService.projectEvent(event);
+                await this.eventRepository.update(event.event_id, {
+                  projection_status: 'processed',
+                  projection_error: null,
+                });
+              }
             } catch (err) {
               this.logger.error(
-                `Error encolando evento ${event.event_id}:`,
+                `Error procesando evento ${event.event_id}:`,
                 err instanceof Error ? err.stack : String(err),
               );
+              if (!queuesEnabled) {
+                await this.eventRepository.update(event.event_id, {
+                  projection_status: 'failed',
+                  projection_error: err instanceof Error ? err.message : String(err),
+                });
+              }
             }
           }
         }

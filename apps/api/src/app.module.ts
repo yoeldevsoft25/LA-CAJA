@@ -96,6 +96,10 @@ const ENV_FILE_PATHS = IS_PRODUCTION_RUNTIME
   ? []
   : ENV_FILE_CANDIDATES.filter((candidate) => existsSync(candidate));
 
+const QUEUES_ENABLED =
+  process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+  process.env.QUEUES_DISABLED?.toLowerCase() !== 'true';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -113,110 +117,114 @@ const ENV_FILE_PATHS = IS_PRODUCTION_RUNTIME
     // ⚡ CRÍTICO: Conexión Redis compartida globalmente para BullMQ
     // Esto evita crear múltiples conexiones Redis (cada una consume un cliente)
     // El plan gratuito de Redis Cloud tiene límite de ~10-30 conexiones
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        const redisUrl = configService.get<string>('REDIS_URL');
-        let connectionOpts: any = {};
+    ...(QUEUES_ENABLED
+      ? [
+          BullModule.forRootAsync({
+            imports: [ConfigModule],
+            useFactory: async (configService: ConfigService) => {
+              const redisUrl = configService.get<string>('REDIS_URL');
+              let connectionOpts: any = {};
 
-        if (redisUrl) {
-          connectionOpts = {
-            url: redisUrl,
-            maxRetriesPerRequest: null,
-            enableOfflineQueue: true,
-            connectTimeout: 5000, // 5s timeout to avoid hanging
-          };
-        } else {
-          connectionOpts = {
-            host: configService.get<string>('REDIS_HOST') || 'localhost',
-            port: configService.get<number>('REDIS_PORT') || 6379,
-            password: configService.get<string>('REDIS_PASSWORD'),
-            maxRetriesPerRequest: null,
-            enableOfflineQueue: true,
-            connectTimeout: 5000, // 5s timeout to avoid hanging
-          };
-        }
+              if (redisUrl) {
+                connectionOpts = {
+                  url: redisUrl,
+                  maxRetriesPerRequest: null,
+                  enableOfflineQueue: true,
+                  connectTimeout: 5000, // 5s timeout to avoid hanging
+                };
+              } else {
+                connectionOpts = {
+                  host: configService.get<string>('REDIS_HOST') || 'localhost',
+                  port: configService.get<number>('REDIS_PORT') || 6379,
+                  password: configService.get<string>('REDIS_PASSWORD'),
+                  maxRetriesPerRequest: null,
+                  enableOfflineQueue: true,
+                  connectTimeout: 5000, // 5s timeout to avoid hanging
+                };
+              }
 
-        // ⚡ OPTIMIZACIÓN: Crear instancias compartidas para clientes y suscriptores
-        // Esto reduce drásticamente el número de conexiones (ahorra 2 conexiones por cola)
-        const Redis = require('ioredis');
+              // ⚡ OPTIMIZACIÓN: Crear instancias compartidas para clientes y suscriptores
+              // Esto reduce drásticamente el número de conexiones (ahorra 2 conexiones por cola)
+              const Redis = require('ioredis');
 
-        // Habilitar offline queue para mayor resiliencia ante desconexiones temporales
-        // BullMQ requiere maxRetriesPerRequest: null
-        const clientOptions = {
-          ...connectionOpts,
-          maxRetriesPerRequest: null,
-          enableOfflineQueue: true,
-          connectTimeout: 5000,
-        };
+              // Habilitar offline queue para mayor resiliencia ante desconexiones temporales
+              // BullMQ requiere maxRetriesPerRequest: null
+              const clientOptions = {
+                ...connectionOpts,
+                maxRetriesPerRequest: null,
+                enableOfflineQueue: true,
+                connectTimeout: 5000,
+              };
 
-        // Cliente compartido para publicar trabajos (puede ser usado por todas las colas)
-        const sharedClient = redisUrl
-          ? new Redis(redisUrl, clientOptions)
-          : new Redis(connectionOpts.port, connectionOpts.host, clientOptions);
+              // Cliente compartido para publicar trabajos (puede ser usado por todas las colas)
+              const sharedClient = redisUrl
+                ? new Redis(redisUrl, clientOptions)
+                : new Redis(connectionOpts.port, connectionOpts.host, clientOptions);
 
-        // Cliente compartido para suscripciones (puede ser usado por todas las colas)
-        const sharedSubscriber = sharedClient.duplicate();
+              // Cliente compartido para suscripciones (puede ser usado por todas las colas)
+              const sharedSubscriber = sharedClient.duplicate();
 
-        // Manejo de errores en conexiones compartidas
-        sharedClient.on('error', (err: any) => {
-          if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
-            console.error(
-              `❌ Redis Connection Error: ${err.message}. Is Redis installed and running? (brew services start redis)`,
-            );
-          } else {
-            console.error('Redis Shared Client Error:', err.message);
-          }
-        });
-        sharedSubscriber.on('error', (err: any) => {
-          if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
-            // Silenciar duplicados del suscriptor para no inundar el log
-          } else {
-            console.error('Redis Shared Subscriber Error:', err.message);
-          }
-        });
+              // Manejo de errores en conexiones compartidas
+              sharedClient.on('error', (err: any) => {
+                if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+                  console.error(
+                    `❌ Redis Connection Error: ${err.message}. Is Redis installed and running? (brew services start redis)`,
+                  );
+                } else {
+                  console.error('Redis Shared Client Error:', err.message);
+                }
+              });
+              sharedSubscriber.on('error', (err: any) => {
+                if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+                  // Silenciar duplicados del suscriptor para no inundar el log
+                } else {
+                  console.error('Redis Shared Subscriber Error:', err.message);
+                }
+              });
 
-        // Poner un límite máximo de listeners para evitar advertencias
-        sharedClient.setMaxListeners(100);
-        sharedSubscriber.setMaxListeners(100);
+              // Poner un límite máximo de listeners para evitar advertencias
+              sharedClient.setMaxListeners(100);
+              sharedSubscriber.setMaxListeners(100);
 
-        return {
-          // Dummy connection para satisfacer el tipo QueueOptions
-          connection: connectionOpts,
-          // Usar la fábrica createClient para reutilizar conexiones
-          createClient: (type) => {
-            switch (type) {
-              case 'client':
-                return sharedClient;
-              case 'subscriber':
-                return sharedSubscriber;
-              case 'bclient':
-                // bclient (blocking client) NO puede ser compartido entre workers
-                // porque usa comandos bloqueantes como BRPOP
-                const bclient = sharedClient.duplicate();
-                // Importante: Manejar errores en bclient para evitar crashes
-                bclient.on('error', (err: any) => {
-                  console.error('Redis BClient Error:', err.message);
-                });
-                return bclient;
-              default:
-                return sharedClient.duplicate();
-            }
-          },
-          // Opciones por defecto para jobs
-          defaultJobOptions: {
-            removeOnComplete: 100, // Mantener solo los últimos 100 trabajos completados
-            removeOnFail: 200, // Mantener los últimos 200 fallidos para debugging
-            attempts: 3,
-            backoff: {
-              type: 'exponential',
-              delay: 1000,
+              return {
+                // Dummy connection para satisfacer el tipo QueueOptions
+                connection: connectionOpts,
+                // Usar la fábrica createClient para reutilizar conexiones
+                createClient: (type) => {
+                  switch (type) {
+                    case 'client':
+                      return sharedClient;
+                    case 'subscriber':
+                      return sharedSubscriber;
+                    case 'bclient':
+                      // bclient (blocking client) NO puede ser compartido entre workers
+                      // porque usa comandos bloqueantes como BRPOP
+                      const bclient = sharedClient.duplicate();
+                      // Importante: Manejar errores en bclient para evitar crashes
+                      bclient.on('error', (err: any) => {
+                        console.error('Redis BClient Error:', err.message);
+                      });
+                      return bclient;
+                    default:
+                      return sharedClient.duplicate();
+                  }
+                },
+                // Opciones por defecto para jobs
+                defaultJobOptions: {
+                  removeOnComplete: 100, // Mantener solo los últimos 100 trabajos completados
+                  removeOnFail: 200, // Mantener los últimos 200 fallidos para debugging
+                  attempts: 3,
+                  backoff: {
+                    type: 'exponential',
+                    delay: 1000,
+                  },
+                },
+              };
             },
-          },
-        };
-      },
-      inject: [ConfigService],
-    }),
+            inject: [ConfigService],
+          }),
+        ]
+      : []),
     // Rate limiting global
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],

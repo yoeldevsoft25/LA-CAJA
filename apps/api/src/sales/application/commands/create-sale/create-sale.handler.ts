@@ -50,6 +50,7 @@ import { SecurityAuditService } from '../../../../security/security-audit.servic
 import { UsageService } from '../../../../licenses/usage.service';
 import { CreateSaleCommand } from './create-sale.command';
 import { CreateSaleValidator } from './create-sale.validator';
+import { FederationSyncService } from '../../../../sync/federation-sync.service';
 
 @CommandHandler(CreateSaleCommand)
 export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
@@ -448,6 +449,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     private securityAuditService: SecurityAuditService,
     private usageService: UsageService,
     private validator: CreateSaleValidator,
+    private federationSyncService: FederationSyncService,
     @InjectQueue('sales-post-processing')
     private salesPostProcessingQueue: Queue,
     @InjectQueue('federation-sync')
@@ -1435,7 +1437,16 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     // ⚡ OPTIMIZACIÓN: Encolar tareas post-venta de forma asíncrona
     // Esto permite retornar la respuesta inmediatamente sin esperar
     // facturas fiscales y asientos contables (que pueden tardar 1-3 segundos)
+    const queuesEnabled =
+      process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+      process.env.QUEUES_DISABLED?.toLowerCase() !== 'true';
+
     try {
+      if (!queuesEnabled) {
+        this.logger.debug(
+          `Queues disabled: skipping post-processing queue for sale ${saleWithDetailedDebt.id}`,
+        );
+      } else {
       await this.salesPostProcessingQueue.add(
         'post-process-sale',
         {
@@ -1464,6 +1475,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       this.logger.debug(
         `Tareas post-venta encoladas para venta ${saleWithDetailedDebt.id}`,
       );
+      }
     } catch (error) {
       // Log error pero no fallar la venta
       this.logger.error(
@@ -1559,23 +1571,27 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       });
 
       await this.eventRepository.save(saleEvent);
-      await this.federationSyncQueue.add(
-        'relay-event',
-        {
-          eventId: saleEvent.event_id,
-          storeId: saleEvent.store_id,
-          deviceId: saleEvent.device_id,
-        },
-        {
-          jobId: `relay-${saleEvent.event_id}`,
-          attempts: 10,
-          backoff: {
-            type: 'exponential',
-            delay: 5000,
+      if (queuesEnabled) {
+        await this.federationSyncQueue.add(
+          'relay-event',
+          {
+            eventId: saleEvent.event_id,
+            storeId: saleEvent.store_id,
+            deviceId: saleEvent.device_id,
           },
-          removeOnComplete: true,
-        },
-      );
+          {
+            jobId: `relay-${saleEvent.event_id}`,
+            attempts: 10,
+            backoff: {
+              type: 'exponential',
+              delay: 5000,
+            },
+            removeOnComplete: true,
+          },
+        );
+      } else {
+        await this.federationSyncService.queueRelay(saleEvent);
+      }
 
       // --- NEW: Emit CashLedgerEntryCreated for Immutable Ledger ---
       const ledgerEventId = randomUUID();
@@ -1609,23 +1625,27 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       });
 
       await this.eventRepository.save(ledgerEvent);
-      await this.federationSyncQueue.add(
-        'relay-event',
-        {
-          eventId: ledgerEvent.event_id,
-          storeId: ledgerEvent.store_id,
-          deviceId: ledgerEvent.device_id,
-        },
-        {
-          jobId: `relay-${ledgerEvent.event_id}`,
-          attempts: 10,
-          backoff: {
-            type: 'exponential',
-            delay: 5000,
+      if (queuesEnabled) {
+        await this.federationSyncQueue.add(
+          'relay-event',
+          {
+            eventId: ledgerEvent.event_id,
+            storeId: ledgerEvent.store_id,
+            deviceId: ledgerEvent.device_id,
           },
-          removeOnComplete: true,
-        }
-      );
+          {
+            jobId: `relay-${ledgerEvent.event_id}`,
+            attempts: 10,
+            backoff: {
+              type: 'exponential',
+              delay: 5000,
+            },
+            removeOnComplete: true,
+          },
+        );
+      } else {
+        await this.federationSyncService.queueRelay(ledgerEvent);
+      }
 
     } catch (error) {
       this.logger.error(

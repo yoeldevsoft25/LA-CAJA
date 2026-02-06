@@ -18,6 +18,13 @@ export class BullMQHealthIndicator extends HealthIndicator {
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
     try {
+      const queuesEnabled =
+        process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+        process.env.QUEUES_DISABLED?.toLowerCase() !== 'true';
+      if (!queuesEnabled) {
+        return this.getStatus(key, true, { message: 'queues disabled' });
+      }
+
       const [
         notifWaiting,
         notifActive,

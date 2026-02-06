@@ -10,6 +10,13 @@ export class RedisCacheService implements OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {}
 
   private getClient(): Redis | null {
+    const redisEnabled =
+      process.env.REDIS_ENABLED?.toLowerCase() !== 'false' &&
+      process.env.REDIS_DISABLED?.toLowerCase() !== 'true';
+    if (!redisEnabled) {
+      return null;
+    }
+
     if (this.client) return this.client;
 
     const redisUrl = this.configService.get<string>('REDIS_URL');

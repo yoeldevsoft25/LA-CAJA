@@ -62,6 +62,13 @@ export class RedisHealthIndicator
   }
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
+    const redisEnabled =
+      process.env.REDIS_ENABLED?.toLowerCase() !== 'false' &&
+      process.env.REDIS_DISABLED?.toLowerCase() !== 'true';
+    if (!redisEnabled) {
+      return this.getStatus(key, true, { message: 'redis disabled' });
+    }
+
     const client = this.getRedisClient();
 
     if (!client) {
