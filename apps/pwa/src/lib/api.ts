@@ -142,9 +142,17 @@ const isLocalEnv = () =>
 
 const API_URL = normalizeBaseUrl(getApiUrl());
 
+const API_TIMEOUT_MS = (() => {
+  const raw = Number(import.meta.env.VITE_API_TIMEOUT_MS);
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.max(1000, raw);
+  }
+  return 30000;
+})();
+
 const apiConfig: ApiClientConfig = {
   baseURL: API_URL,
-  timeout: 30000,
+  timeout: API_TIMEOUT_MS,
   failoverUrls: ORDERED_FAILOVER_API_URLS,
   isProduction: import.meta.env.PROD,
   isLocalEnv: isLocalEnv(),
