@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In } from 'typeorm';
+import { Repository, Between, In, EntityManager } from 'typeorm';
 import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
@@ -26,7 +26,7 @@ export class AccountingSharedService {
     private accountRepository: Repository<ChartOfAccount>,
     @InjectRepository(AccountBalance)
     private balanceRepository: Repository<AccountBalance>,
-  ) {}
+  ) { }
 
   /**
    * Generar número de asiento único
@@ -147,7 +147,15 @@ export class AccountingSharedService {
       debit_amount_usd: number;
       credit_amount_usd: number;
     }>,
+    entityManager?: EntityManager,
   ): Promise<void> {
+    const repo = entityManager
+      ? entityManager.getRepository(AccountBalance)
+      : this.balanceRepository;
+    const accountRepo = entityManager
+      ? entityManager.getRepository(ChartOfAccount)
+      : this.accountRepository;
+
     if (lines.length === 0) return;
 
     const year = entryDate.getFullYear();
@@ -159,7 +167,7 @@ export class AccountingSharedService {
     const accountIds = [...new Set(lines.map((l) => l.account_id))];
 
     // ⚡ OPTIMIZACIÓN: Batch query para balances existentes
-    const existingBalances = await this.balanceRepository.find({
+    const existingBalances = await repo.find({
       where: {
         store_id: storeId,
         account_id: In(accountIds),
@@ -174,9 +182,9 @@ export class AccountingSharedService {
     );
     const accounts =
       missingAccountIds.length > 0
-        ? await this.accountRepository.find({
-            where: { id: In(missingAccountIds) },
-          })
+        ? await accountRepo.find({
+          where: { id: In(missingAccountIds) },
+        })
         : [];
 
     // Crear mapa de balances existentes
@@ -231,7 +239,7 @@ export class AccountingSharedService {
           continue;
         }
 
-        balance = this.balanceRepository.create({
+        balance = repo.create({
           id: randomUUID(),
           store_id: storeId,
           account_id: accountId,
@@ -286,7 +294,7 @@ export class AccountingSharedService {
 
     // ⚡ OPTIMIZACIÓN: Batch save
     if (balancesToSave.length > 0) {
-      await this.balanceRepository.save(balancesToSave);
+      await repo.save(balancesToSave);
     }
   }
 }

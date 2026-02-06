@@ -13,6 +13,8 @@ import { LotMovement } from '../../../../database/entities/lot-movement.entity';
 import { ProductSerial } from '../../../../database/entities/product-serial.entity';
 import { WarehousesService } from '../../../../warehouses/warehouses.service';
 import { randomUUID } from 'crypto';
+import { AccountingService } from '../../../../accounting/accounting.service';
+import { JournalEntry } from '../../../../database/entities/journal-entry.entity';
 
 @CommandHandler(VoidSaleCommand)
 export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
@@ -21,7 +23,8 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
   constructor(
     private readonly dataSource: DataSource,
     private readonly warehousesService: WarehousesService,
-  ) {}
+    private readonly accountingService: AccountingService,
+  ) { }
 
   async execute(command: VoidSaleCommand): Promise<Sale> {
     const { storeId, saleId, userId, reason } = command;
@@ -174,7 +177,39 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
       sale.voided_by_user_id = userId;
       sale.void_reason = reason || null;
 
-      return manager.save(Sale, sale);
+      const savedSale = await manager.save(Sale, sale);
+
+      // 8. Anular asiento contable asociado
+      try {
+        const entry = await manager.findOne(JournalEntry, {
+          where: {
+            store_id: storeId,
+            source_type: 'sale',
+            source_id: saleId,
+          },
+        });
+
+        if (entry) {
+          this.logger.log(`Anulando asiento contable ${entry.entry_number} por anulación de venta ${saleId}`);
+          await this.accountingService.cancelEntry(
+            storeId,
+            entry.id,
+            userId,
+            reason || 'Anulación de venta',
+            manager,
+          );
+        }
+      } catch (error) {
+        // Loguear error pero no revertir la anulación de la venta si falla lo contable
+        // (aunque al estar en la misma transacción, si cancelEntry lanza error, fallará todo)
+        this.logger.error(
+          `Error al intentar anular el asiento contable de la venta ${saleId}:`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        throw error; // Re-lanzar para asegurar atomicidad de la transacción
+      }
+
+      return savedSale;
     });
   }
 }

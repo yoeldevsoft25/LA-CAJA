@@ -126,50 +126,35 @@ export class SalesPostProcessingQueueProcessor extends WorkerHost {
       // 2. Procesar/Verificar asiento contable
       // Asegurar que exista un asiento contable, ya sea de la factura fiscal o de la venta
       if (fiscalInvoiceIssued || fiscalInvoiceFound) {
-        try {
-          const invoice = await this.fiscalInvoicesService.findBySale(
+        const invoice = await this.fiscalInvoicesService.findBySale(
+          storeId,
+          saleId,
+        );
+        if (invoice && invoice.status === 'issued') {
+          await this.accountingService.generateEntryFromFiscalInvoice(
             storeId,
-            saleId,
+            invoice,
           );
-          if (invoice && invoice.status === 'issued') {
-            await this.accountingService.generateEntryFromFiscalInvoice(
-              storeId,
-              invoice,
-            );
-            this.logger.log(
-              `✅ Asiento contable verificado/generado para factura fiscal ${invoice.invoice_number}`,
-            );
-          }
-        } catch (error) {
-          this.logger.error(
-            `Error generando asiento contable para factura fiscal de venta ${saleId}:`,
-            error instanceof Error ? error.stack : String(error),
+          this.logger.log(
+            `✅ Asiento contable verificado/generado para factura fiscal ${invoice.invoice_number}`,
           );
         }
       } else {
-        try {
-          // Obtener la venta completa para el asiento contable
-          const sale = await this.saleRepository.findOne({
-            where: { id: saleId, store_id: storeId },
-            relations: ['items', 'items.product', 'customer'],
-          });
+        // Obtener la venta completa para el asiento contable
+        const sale = await this.saleRepository.findOne({
+          where: { id: saleId, store_id: storeId },
+          relations: ['items', 'items.product', 'customer'],
+        });
 
-          if (!sale) {
-            this.logger.warn(
-              `Venta ${saleId} no encontrada para generar asiento contable`,
-            );
-          } else {
-            await this.accountingService.generateEntryFromSale(storeId, sale);
+        if (!sale) {
+          this.logger.warn(
+            `Venta ${saleId} no encontrada para generar asiento contable`,
+          );
+        } else {
+          await this.accountingService.generateEntryFromSale(storeId, sale);
 
-            this.logger.log(
-              `✅ Asiento contable generado para venta ${saleId}`,
-            );
-          }
-        } catch (error) {
-          // Log error pero no fallar el job completo
-          this.logger.error(
-            `Error generando asiento contable para venta ${saleId}:`,
-            error instanceof Error ? error.stack : String(error),
+          this.logger.log(
+            `✅ Asiento contable generado para venta ${saleId}`,
           );
         }
       }

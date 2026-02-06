@@ -7,8 +7,12 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, IsNull, In } from 'typeorm';
-import { JournalEntry } from '../database/entities/journal-entry.entity';
+import { Repository, Between, IsNull, In, EntityManager } from 'typeorm';
+import {
+  JournalEntry,
+  JournalEntryType,
+  JournalEntryStatus,
+} from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
 import {
@@ -81,7 +85,7 @@ export class AccountingService {
     private reportingService: AccountingReportingService,
     @Inject(forwardRef(() => AccountingPeriodService))
     private periodService: AccountingPeriodService,
-  ) {}
+  ) { }
 
   /**
    * Generar número de asiento único (delegado a AccountingSharedService)
@@ -345,7 +349,7 @@ export class AccountingService {
       const totalUsd = roundTwo(sale.totals.total_usd);
       const roundingAdjustmentBs = roundTwo(
         (sale.payment?.cash_payment?.change_rounding?.adjustment_bs || 0) +
-          (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0),
+        (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0),
       );
 
       // Calcular costo real desde sale_items
@@ -894,9 +898,15 @@ export class AccountingService {
     entryId: string,
     userId: string,
     reason: string,
+    entityManager?: EntityManager,
   ): Promise<JournalEntry> {
-    const entry = await this.journalEntryRepository.findOne({
+    const entryRepo = entityManager
+      ? entityManager.getRepository(JournalEntry)
+      : this.journalEntryRepository;
+
+    const entry = await entryRepo.findOne({
       where: { id: entryId, store_id: storeId },
+      relations: ['lines'],
     });
 
     if (!entry) {
@@ -907,12 +917,32 @@ export class AccountingService {
       throw new BadRequestException('El asiento ya está cancelado');
     }
 
+    // Si el asiento estaba posteado, revertir saldos
+    if (entry.status === 'posted' && entry.lines && entry.lines.length > 0) {
+      this.logger.log(`Revirtiendo saldos por cancelación de asiento ${entry.entry_number}`);
+
+      const linesToRevert = entry.lines.map((line) => ({
+        account_id: line.account_id,
+        debit_amount_bs: -Number(line.debit_amount_bs || 0),
+        credit_amount_bs: -Number(line.credit_amount_bs || 0),
+        debit_amount_usd: -Number(line.debit_amount_usd || 0),
+        credit_amount_usd: -Number(line.credit_amount_usd || 0),
+      }));
+
+      await this.sharedService.updateAccountBalances(
+        storeId,
+        entry.entry_date,
+        linesToRevert,
+        entityManager,
+      );
+    }
+
     entry.status = 'cancelled';
     entry.cancelled_at = new Date();
     entry.cancelled_by = userId;
     entry.cancellation_reason = reason;
 
-    return this.journalEntryRepository.save(entry);
+    return entryRepo.save(entry);
   }
 
   /**
@@ -1064,6 +1094,9 @@ export class AccountingService {
     fiscalInvoice: FiscalInvoice,
   ): Promise<JournalEntry | null> {
     try {
+      const isCreditNote = fiscalInvoice.invoice_type === 'credit_note';
+      const typeLabel = isCreditNote ? 'Nota de crédito' : 'Factura fiscal';
+
       // Solo generar asiento cuando la factura está emitida
       if (fiscalInvoice.status !== 'issued') {
         return null;
@@ -1088,13 +1121,49 @@ export class AccountingService {
             source_type: 'sale',
             source_id: fiscalInvoice.sale_id,
           },
+          relations: ['lines'],
         });
 
         if (existingSaleEntry) {
-          this.logger.warn(
-            `Asiento de venta ya existe para la venta ${fiscalInvoice.sale_id}. Se omite asiento fiscal ${fiscalInvoice.id}.`,
+          // Si ya existe un asiento de venta, lo promocionamos a factura fiscal
+          this.logger.log(
+            `Promocionando asiento de venta ${existingSaleEntry.entry_number} a factura fiscal ${fiscalInvoice.invoice_number}`,
           );
-          return null;
+
+          existingSaleEntry.source_type = 'fiscal_invoice';
+          existingSaleEntry.source_id = fiscalInvoice.id;
+          existingSaleEntry.entry_type = (isCreditNote
+            ? 'credit_note'
+            : 'fiscal_invoice') as JournalEntryType;
+          existingSaleEntry.description = `${typeLabel} ${fiscalInvoice.invoice_number}`;
+          existingSaleEntry.reference_number = fiscalInvoice.invoice_number;
+          existingSaleEntry.metadata = {
+            ...(existingSaleEntry.metadata || {}),
+            fiscal_invoice_id: fiscalInvoice.id,
+            original_source_type: 'sale',
+            original_source_id: fiscalInvoice.sale_id,
+          };
+
+          // Actualizar descripciones de líneas para que coincidan con la factura
+          if (existingSaleEntry.lines) {
+            for (const line of existingSaleEntry.lines) {
+              if (line.description && line.description.includes('Venta')) {
+                line.description = `${typeLabel} ${fiscalInvoice.invoice_number} - Venta`;
+              } else if (
+                line.description &&
+                line.description.includes('Cobro')
+              ) {
+                line.description = `${typeLabel} ${fiscalInvoice.invoice_number} - Cobro`;
+              } else if (
+                line.description &&
+                line.description.includes('IVA')
+              ) {
+                line.description = `${typeLabel} ${fiscalInvoice.invoice_number} - IVA`;
+              }
+            }
+          }
+
+          return this.journalEntryRepository.save(existingSaleEntry);
         }
       }
 
@@ -1135,12 +1204,14 @@ export class AccountingService {
         description?: string;
       }> = [];
 
-      const subtotalBs = Number(fiscalInvoice.subtotal_bs);
-      const subtotalUsd = Number(fiscalInvoice.subtotal_usd);
-      const taxBs = Number(fiscalInvoice.tax_amount_bs);
-      const taxUsd = Number(fiscalInvoice.tax_amount_usd);
-      const totalBs = Number(fiscalInvoice.total_bs);
-      const totalUsd = Number(fiscalInvoice.total_usd);
+      const multiplier = isCreditNote ? -1 : 1;
+
+      const subtotalBs = Number(fiscalInvoice.subtotal_bs) * multiplier;
+      const subtotalUsd = Number(fiscalInvoice.subtotal_usd) * multiplier;
+      const taxBs = Number(fiscalInvoice.tax_amount_bs) * multiplier;
+      const taxUsd = Number(fiscalInvoice.tax_amount_usd) * multiplier;
+      const totalBs = Number(fiscalInvoice.total_bs) * multiplier;
+      const totalUsd = Number(fiscalInvoice.total_usd) * multiplier;
       let costBs = 0;
       let costUsd = 0;
 
@@ -1150,8 +1221,8 @@ export class AccountingService {
           relations: ['lot', 'product'],
         });
         const costs = await this.calculateSaleCosts(storeId, saleItems);
-        costBs = costs.costBs;
-        costUsd = costs.costUsd;
+        costBs = costs.costBs * multiplier;
+        costUsd = costs.costUsd * multiplier;
       }
 
       // Determinar método de pago (si está vinculada a una venta)
@@ -1168,11 +1239,11 @@ export class AccountingService {
           account_code: cashMapping.account_code,
           account_name:
             cashMapping.account?.account_name || cashMapping.account_code,
-          debit_amount_bs: totalBs,
-          credit_amount_bs: 0,
-          debit_amount_usd: totalUsd,
-          credit_amount_usd: 0,
-          description: `Factura fiscal ${fiscalInvoice.invoice_number} - Cobro`,
+          debit_amount_bs: multiplier > 0 ? totalBs : 0,
+          credit_amount_bs: multiplier < 0 ? Math.abs(totalBs) : 0,
+          debit_amount_usd: multiplier > 0 ? totalUsd : 0,
+          credit_amount_usd: multiplier < 0 ? Math.abs(totalUsd) : 0,
+          description: `${typeLabel} ${fiscalInvoice.invoice_number} - Cobro`,
         });
       } else if (isCredit && receivableMapping) {
         lines.push({
@@ -1181,56 +1252,56 @@ export class AccountingService {
           account_name:
             receivableMapping.account?.account_name ||
             receivableMapping.account_code,
-          debit_amount_bs: totalBs,
-          credit_amount_bs: 0,
-          debit_amount_usd: totalUsd,
-          credit_amount_usd: 0,
-          description: `Factura fiscal ${fiscalInvoice.invoice_number} - Cuenta por cobrar`,
+          debit_amount_bs: multiplier > 0 ? totalBs : 0,
+          credit_amount_bs: multiplier < 0 ? Math.abs(totalBs) : 0,
+          debit_amount_usd: multiplier > 0 ? totalUsd : 0,
+          credit_amount_usd: multiplier < 0 ? Math.abs(totalUsd) : 0,
+          description: `${typeLabel} ${fiscalInvoice.invoice_number} - Cuenta por cobrar`,
         });
       }
 
-      // Ingreso por venta (crédito)
+      // Ingreso por venta
       lines.push({
         account_id: revenueMapping.account_id,
         account_code: revenueMapping.account_code,
         account_name:
           revenueMapping.account?.account_name || revenueMapping.account_code,
-        debit_amount_bs: 0,
-        credit_amount_bs: subtotalBs,
-        debit_amount_usd: 0,
-        credit_amount_usd: subtotalUsd,
-        description: `Factura fiscal ${fiscalInvoice.invoice_number} - Venta`,
+        debit_amount_bs: multiplier < 0 ? Math.abs(subtotalBs) : 0,
+        credit_amount_bs: multiplier > 0 ? subtotalBs : 0,
+        debit_amount_usd: multiplier < 0 ? Math.abs(subtotalUsd) : 0,
+        credit_amount_usd: multiplier > 0 ? subtotalUsd : 0,
+        description: `${typeLabel} ${fiscalInvoice.invoice_number} - Venta`,
       });
 
       // Impuesto (si aplica)
-      if (taxBs > 0 || taxUsd > 0) {
+      if (Math.abs(taxBs) > 0 || Math.abs(taxUsd) > 0) {
         if (taxMapping) {
           lines.push({
             account_id: taxMapping.account_id,
             account_code: taxMapping.account_code,
             account_name:
               taxMapping.account?.account_name || taxMapping.account_code,
-            debit_amount_bs: 0,
-            credit_amount_bs: taxBs,
-            debit_amount_usd: 0,
-            credit_amount_usd: taxUsd,
-            description: `Factura fiscal ${fiscalInvoice.invoice_number} - IVA`,
+            debit_amount_bs: multiplier < 0 ? Math.abs(taxBs) : 0,
+            credit_amount_bs: multiplier > 0 ? taxBs : 0,
+            debit_amount_usd: multiplier < 0 ? Math.abs(taxUsd) : 0,
+            credit_amount_usd: multiplier > 0 ? taxUsd : 0,
+            description: `${typeLabel} ${fiscalInvoice.invoice_number} - IVA`,
           });
         }
       }
 
-      if (costBs > 0 || costUsd > 0) {
+      if (Math.abs(costBs) > 0 || Math.abs(costUsd) > 0) {
         if (costMapping) {
           lines.push({
             account_id: costMapping.account_id,
             account_code: costMapping.account_code,
             account_name:
               costMapping.account?.account_name || costMapping.account_code,
-            debit_amount_bs: costBs,
-            credit_amount_bs: 0,
-            debit_amount_usd: costUsd,
-            credit_amount_usd: 0,
-            description: `Costo de venta - ${fiscalInvoice.invoice_number}`,
+            debit_amount_bs: multiplier > 0 ? costBs : 0,
+            credit_amount_bs: multiplier < 0 ? Math.abs(costBs) : 0,
+            debit_amount_usd: multiplier > 0 ? costUsd : 0,
+            credit_amount_usd: multiplier < 0 ? Math.abs(costUsd) : 0,
+            description: `Costo de venta - ${typeLabel} ${fiscalInvoice.invoice_number}`,
           });
         }
 
@@ -1241,11 +1312,11 @@ export class AccountingService {
             account_name:
               inventoryMapping.account?.account_name ||
               inventoryMapping.account_code,
-            debit_amount_bs: 0,
-            credit_amount_bs: costBs,
-            debit_amount_usd: 0,
-            credit_amount_usd: costUsd,
-            description: `Salida de inventario - ${fiscalInvoice.invoice_number}`,
+            debit_amount_bs: multiplier < 0 ? Math.abs(costBs) : 0,
+            credit_amount_bs: multiplier > 0 ? costBs : 0,
+            debit_amount_usd: multiplier < 0 ? Math.abs(costUsd) : 0,
+            credit_amount_usd: multiplier > 0 ? costUsd : 0,
+            description: `Reingreso/Salida de inventario - ${typeLabel} ${fiscalInvoice.invoice_number}`,
           });
         }
       }
@@ -1256,10 +1327,10 @@ export class AccountingService {
         store_id: storeId,
         entry_number: entryNumber,
         entry_date: entryDate,
-        entry_type: 'fiscal_invoice',
+        entry_type: (isCreditNote ? 'credit_note' : 'fiscal_invoice') as JournalEntryType,
         source_type: 'fiscal_invoice',
         source_id: fiscalInvoice.id,
-        description: `Factura fiscal ${fiscalInvoice.invoice_number}`,
+        description: `${typeLabel} ${fiscalInvoice.invoice_number}`,
         reference_number: fiscalInvoice.invoice_number,
         total_debit_bs: lines.reduce((sum, l) => sum + l.debit_amount_bs, 0),
         total_credit_bs: lines.reduce((sum, l) => sum + l.credit_amount_bs, 0),
@@ -1273,8 +1344,11 @@ export class AccountingService {
         status: 'posted',
         is_auto_generated: true,
         posted_at: new Date(),
-        metadata: { fiscal_invoice_id: fiscalInvoice.id },
-      });
+        metadata: {
+          fiscal_invoice_id: fiscalInvoice.id,
+          is_credit_note: isCreditNote,
+        },
+      }) as JournalEntry;
 
       const savedEntry = await this.journalEntryRepository.save(entry);
 
@@ -2926,18 +3000,18 @@ export class AccountingService {
     const cashBalancesStart =
       cashAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            cashAccountIds,
-            startDate,
-          )
+          storeId,
+          cashAccountIds,
+          startDate,
+        )
         : new Map();
     const cashBalancesEnd =
       cashAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            cashAccountIds,
-            endDate,
-          )
+          storeId,
+          cashAccountIds,
+          endDate,
+        )
         : new Map();
 
     // Calcular saldos al inicio del período
@@ -2981,18 +3055,18 @@ export class AccountingService {
     const specialBalancesStart =
       specialAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            specialAccountIds,
-            startDate,
-          )
+          storeId,
+          specialAccountIds,
+          startDate,
+        )
         : new Map();
     const specialBalancesEnd =
       specialAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            specialAccountIds,
-            endDate,
-          )
+          storeId,
+          specialAccountIds,
+          endDate,
+        )
         : new Map();
 
     if (receivableAccount) {
@@ -3301,11 +3375,11 @@ export class AccountingService {
 
             const expectedBalanceBs =
               account.account_type === 'asset' ||
-              account.account_type === 'expense'
+                account.account_type === 'expense'
                 ? Number(balance.closing_balance_debit_bs || 0) -
-                  Number(balance.closing_balance_credit_bs || 0)
+                Number(balance.closing_balance_credit_bs || 0)
                 : Number(balance.closing_balance_credit_bs || 0) -
-                  Number(balance.closing_balance_debit_bs || 0);
+                Number(balance.closing_balance_debit_bs || 0);
 
             const calculatedBalanceBs = calculatedBalance.balance_bs;
             const difference = Math.abs(
@@ -3472,11 +3546,11 @@ export class AccountingService {
   }> {
     const accountsToReconcile = accountIds
       ? await this.accountRepository.find({
-          where: accountIds.map((id) => ({ id, store_id: storeId })),
-        })
+        where: accountIds.map((id) => ({ id, store_id: storeId })),
+      })
       : await this.accountRepository.find({
-          where: { store_id: storeId, is_active: true },
-        });
+        where: { store_id: storeId, is_active: true },
+      });
 
     const discrepancies: Array<{
       account_id: string;
@@ -3516,19 +3590,19 @@ export class AccountingService {
         if (balance) {
           expectedBalanceBs =
             account.account_type === 'asset' ||
-            account.account_type === 'expense'
+              account.account_type === 'expense'
               ? Number(balance.closing_balance_debit_bs || 0) -
-                Number(balance.closing_balance_credit_bs || 0)
+              Number(balance.closing_balance_credit_bs || 0)
               : Number(balance.closing_balance_credit_bs || 0) -
-                Number(balance.closing_balance_debit_bs || 0);
+              Number(balance.closing_balance_debit_bs || 0);
 
           expectedBalanceUsd =
             account.account_type === 'asset' ||
-            account.account_type === 'expense'
+              account.account_type === 'expense'
               ? Number(balance.closing_balance_debit_usd || 0) -
-                Number(balance.closing_balance_credit_usd || 0)
+              Number(balance.closing_balance_credit_usd || 0)
               : Number(balance.closing_balance_credit_usd || 0) -
-                Number(balance.closing_balance_debit_usd || 0);
+              Number(balance.closing_balance_debit_usd || 0);
         }
 
         const differenceBs = Math.abs(
@@ -3891,19 +3965,19 @@ export class AccountingService {
             // Ajustar la línea para balancear
             const newDebitBs = roundTo2Decimals(
               Number(adjustmentLine.debit_amount_bs || 0) +
-                (diffBs > 0 ? 0 : Math.abs(diffBs)),
+              (diffBs > 0 ? 0 : Math.abs(diffBs)),
             );
             const newCreditBs = roundTo2Decimals(
               Number(adjustmentLine.credit_amount_bs || 0) +
-                (diffBs > 0 ? Math.abs(diffBs) : 0),
+              (diffBs > 0 ? Math.abs(diffBs) : 0),
             );
             const newDebitUsd = roundTo2Decimals(
               Number(adjustmentLine.debit_amount_usd || 0) +
-                (diffUsd > 0 ? 0 : Math.abs(diffUsd)),
+              (diffUsd > 0 ? 0 : Math.abs(diffUsd)),
             );
             const newCreditUsd = roundTo2Decimals(
               Number(adjustmentLine.credit_amount_usd || 0) +
-                (diffUsd > 0 ? Math.abs(diffUsd) : 0),
+              (diffUsd > 0 ? Math.abs(diffUsd) : 0),
             );
 
             // Actualizar la línea con información del tipo de error

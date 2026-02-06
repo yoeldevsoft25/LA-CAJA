@@ -18,6 +18,7 @@ export type JournalEntryType =
   | 'purchase'
   | 'invoice'
   | 'fiscal_invoice'
+  | 'credit_note'
   | 'adjustment'
   | 'transfer'
   | 'expense'

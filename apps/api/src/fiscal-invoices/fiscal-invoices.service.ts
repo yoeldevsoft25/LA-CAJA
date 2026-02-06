@@ -52,7 +52,7 @@ export class FiscalInvoicesService {
     private seniatIntegrationService: SeniatIntegrationService,
     private accountingService: AccountingService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   /**
    * Valida que una factura pueda ser modificada
@@ -64,7 +64,7 @@ export class FiscalInvoicesService {
     if (invoice.status === 'issued') {
       throw new BadRequestException(
         'Las facturas emitidas no pueden modificarse. ' +
-          'Para corregir una factura emitida, debe crear una nota de crédito o débito.',
+        'Para corregir una factura emitida, debe crear una nota de crédito o débito.',
       );
     }
     if (invoice.status === 'cancelled') {
@@ -556,7 +556,7 @@ export class FiscalInvoicesService {
       // Deben corregirse mediante notas de crédito
       throw new BadRequestException(
         'Las facturas emitidas no pueden cancelarse directamente. ' +
-          'Debe crear una nota de crédito para anular la factura.',
+        'Debe crear una nota de crédito para anular la factura.',
       );
     }
 
@@ -596,9 +596,9 @@ export class FiscalInvoicesService {
     if (invoice.status !== 'issued') {
       throw new BadRequestException(
         'Solo puede crear nota de crédito para facturas emitidas. ' +
-          'La factura actual está en estado "' +
-          invoice.status +
-          '".',
+        'La factura actual está en estado "' +
+        invoice.status +
+        '".',
       );
     }
 
@@ -607,6 +607,10 @@ export class FiscalInvoicesService {
         'No puede crear una nota de crédito a partir de otra nota de crédito.',
       );
     }
+
+    // Validar que el período contable esté abierto antes de proceder
+    // Se usa la fecha actual ya que es la fecha contable de la Nota de Crédito
+    await this.accountingService.validatePeriodOpen(storeId, new Date());
 
     return this.dataSource.transaction(async (manager) => {
       const ncNumber = await this.generateCreditNoteNumber(storeId);
