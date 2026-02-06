@@ -70,9 +70,20 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
         const nextBaseUrl = currentIndex >= 0 ? failoverUrls[currentIndex + 1] : undefined;
 
         if (!error.response && maxFailoverRetries > 0 && currentRetry < maxFailoverRetries && nextBaseUrl) {
+            if (config.logger) {
+                config.logger.warn(`API Failover: ${currentBaseUrl} falló, intentando con ${nextBaseUrl} (reintento ${currentRetry + 1}/${maxFailoverRetries})`);
+            }
+
             originalRequest._apiFailoverRetryCount = currentRetry + 1;
+
+            // Actualizar el base URL global para futuros requests
             api.defaults.baseURL = nextBaseUrl;
             originalRequest.baseURL = nextBaseUrl;
+
+            // Reducir el timeout para los reintentos de failover (máximo 5 segundos) 
+            // para encontrar un endpoint funcional rápidamente.
+            originalRequest.timeout = Math.min(originalRequest.timeout || 30000, 5000);
+
             return api(originalRequest);
         }
 
