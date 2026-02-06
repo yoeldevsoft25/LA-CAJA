@@ -12,7 +12,7 @@ import { Store } from '../../database/entities/store.entity';
 
 @Injectable()
 export class LicenseInterceptor implements NestInterceptor {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) { }
 
   async intercept(
     context: ExecutionContext,
@@ -26,7 +26,8 @@ export class LicenseInterceptor implements NestInterceptor {
     const user = request?.user;
 
     // Si no hay usuario autenticado, no validamos licencia aquí
-    if (!user || !user.store_id) {
+    // El usuario 'system-federation' también se ignora para permitir sincronización entre nodos
+    if (!user || !user.store_id || user.sub === 'system-federation') {
       return next.handle();
     }
 
