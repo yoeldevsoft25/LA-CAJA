@@ -117,9 +117,9 @@ function getApiUrl(): string {
       return storedBase;
     }
 
-    // Si estamos en Netlify (la-caja.netlify.app), usar el backend de Render
-    if (hostname.includes('netlify.app')) {
-      return FALLBACK_API_URL || TERTIARY_API_URL;
+    // Si estamos en Netlify o en el dominio principal veloxpos.app, usar el backend de Render
+    if (hostname.endsWith('veloxpos.app') || hostname.includes('netlify.app')) {
+      return TERTIARY_API_URL || FALLBACK_API_URL;
     }
 
     // Si estamos en otro dominio, intentar inferir el API URL

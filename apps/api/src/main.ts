@@ -129,6 +129,14 @@ async function bootstrap() {
     );
   };
 
+  const isProductionDomain = (value: string): boolean => {
+    return (
+      value.endsWith('.netlify.app') ||
+      value.endsWith('.netlify.com') ||
+      value.endsWith('veloxpos.app')
+    );
+  };
+
   // Obtener puerto antes de usarlo
   const port = configService.get<number>('PORT') || 3000;
 
@@ -150,7 +158,8 @@ async function bootstrap() {
       if (
         !normalizedOrigin ||
         allowedOriginSet.has(normalizedOrigin) ||
-        isTauriOrigin(normalizedOrigin)
+        isTauriOrigin(normalizedOrigin) ||
+        isProductionDomain(normalizedOrigin)
       ) {
         callback(null, true);
       } else {
