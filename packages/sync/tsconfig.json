@@ -13,6 +13,9 @@
     "paths": {
       "@la-caja/domain": [
         "../domain/dist/index.d.ts"
+      ],
+      "@la-caja/crdt": [
+        "../crdt/dist/index.d.ts"
       ]
     }
   },

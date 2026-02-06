@@ -9,11 +9,11 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@la-caja/domain": "*"
+    "@la-caja/domain": "*",
+    "@la-caja/crdt": "*"
   },
   "devDependencies": {
     "typescript": "^5.3.3"
   }
 }
-
 
