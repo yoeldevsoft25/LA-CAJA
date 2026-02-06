@@ -39,41 +39,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BIN_DIR="apps/desktop/src-tauri/binaries"
-          mkdir -p "$BIN_DIR"
-
-          # Skip if already exists (committed to repo)
-          if [ -f "$BIN_DIR/tailscale-x86_64-apple-darwin" ] && [ -f "$BIN_DIR/tailscale-aarch64-apple-darwin" ]; then
-            echo "Binarios de macOS ya existen, saltando descarga."
-            exit 0
-          fi
-
-          fetch_macos_bin() {
-            local pkg_arch="$1"
-            local target_triple="$2"
-            local tmp_dir
-            tmp_dir="$(mktemp -d)"
-
-            curl -fsSL "https://pkgs.tailscale.com/stable/tailscale_latest_${pkg_arch}.tgz" -o "${tmp_dir}/tailscale.tgz"
-            tar -xzf "${tmp_dir}/tailscale.tgz" -C "${tmp_dir}"
-
-            local extracted_dir
-            extracted_dir="$(find "${tmp_dir}" -maxdepth 1 -type d -name "tailscale_*_${pkg_arch}" | head -n 1)"
-            if [[ -z "${extracted_dir}" ]]; then
-              echo "No se encontró carpeta extraída para arch=${pkg_arch}"
-              ls -la "${tmp_dir}"
-              exit 1
-            fi
-
-            cp "${extracted_dir}/tailscale" "${BIN_DIR}/tailscale-${target_triple}"
-            cp "${extracted_dir}/tailscaled" "${BIN_DIR}/tailscaled-${target_triple}"
-            chmod +x "${BIN_DIR}/tailscale-${target_triple}" "${BIN_DIR}/tailscaled-${target_triple}"
-            rm -rf "${tmp_dir}"
-          }
-
-          fetch_macos_bin "amd64" "x86_64-apple-darwin"
-          fetch_macos_bin "arm64" "aarch64-apple-darwin"
-          ls -la "${BIN_DIR}" | grep -E "tailscale|tailscaled"
+          chmod +x scripts/download-universal-tailscale.sh
+          ./scripts/download-universal-tailscale.sh
 
       - name: Prepare Tailscale sidecar binaries (Windows)
         if: matrix.platform == 'windows-latest'

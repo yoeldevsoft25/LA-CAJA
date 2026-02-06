@@ -1,62 +1,89 @@
 #!/bin/bash
 
-# Script para descargar binarios de Tailscale para arquitecturas universales (x86_64 y aarch64) en macOS.
-# Esto es necesario para que `tauri build --target universal-apple-darwin` funcione correctamente.
+# Script para descargar y preparar los binarios de Tailscale utilizados como sidecar en macOS.
+# Descarga las variantes x86_64 y arm64, los pega en `apps/desktop/src-tauri/binaries` y genera
+# los binarios universales requeridos por `tauri build --target universal-apple-darwin`.
+
+set -euo pipefail
 
 BIN_DIR="apps/desktop/src-tauri/binaries"
 VERSION="latest"
 
-echo "Preparando directorio de binarios: $BIN_DIR"
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  echo "Este script solo se ejecuta en macOS."
+  exit 0
+fi
+
 mkdir -p "$BIN_DIR"
 
-download_tailscale() {
-    local ARCH=$1       # amd64 o arm64
-    local TARGET=$2     # x86_64-apple-darwin o aarch64-apple-darwin
-    
-    local URL="https://pkgs.tailscale.com/stable/tailscale_${VERSION}_${ARCH}.tgz"
-    local FILE="tailscale_${ARCH}.tgz"
-    
-    echo "Descargando Tailscale para $TARGET ($ARCH)..."
-    curl -L "$URL" -o "$FILE"
-    
-    if [ ! -f "$FILE" ]; then
-        echo "Error: No se pudo descargar $URL"
-        return 1
-    fi
+if [[ -f "$BIN_DIR/tailscale-universal-apple-darwin" ]] && [[ -f "$BIN_DIR/tailscaled-universal-apple-darwin" ]]; then
+  echo "Los binarios universales ya existen, no se requiere acción adicional."
+  exit 0
+fi
 
-    # Extraer
-    tar -xzf "$FILE"
-    
-    # El contenido es una carpeta como tailscale_1.x.y_amd64/
-    local FOLDER=$(ls -d tailscale_*_${ARCH} | head -n 1)
-    
-    if [ -d "$FOLDER" ]; then
-        echo "Copiando binarios para $TARGET..."
-        cp "$FOLDER/tailscaled" "$BIN_DIR/tailscaled-$TARGET"
-        cp "$FOLDER/tailscale" "$BIN_DIR/tailscale-$TARGET"
-        chmod +x "$BIN_DIR/tailscaled-$TARGET"
-        chmod +x "$BIN_DIR/tailscale-$TARGET"
-        
-        rm -rf "$FOLDER"
-    else
-        echo "Error: No se encontró la carpeta extraída para $ARCH"
-    fi
-    
-    rm "$FILE"
+download_tailscale() {
+  local ARCH=$1       # amd64 o arm64
+  local TARGET=$2     # x86_64-apple-darwin o aarch64-apple-darwin
+
+  local URL="https://pkgs.tailscale.com/stable/tailscale_${VERSION}_${ARCH}.tgz"
+  local FILE="tailscale_${ARCH}.tgz"
+
+  echo "Descargando Tailscale para $TARGET ($ARCH)..."
+  curl -fsSL "$URL" -o "$FILE"
+
+  tar -xzf "$FILE"
+
+  local FOLDER
+  FOLDER=$(ls -d tailscale_*_"$ARCH" | head -n 1)
+
+  if [[ -d "$FOLDER" ]]; then
+    echo "Copiando binarios para $TARGET..."
+    cp "$FOLDER/tailscaled" "$BIN_DIR/tailscaled-$TARGET"
+    cp "$FOLDER/tailscale" "$BIN_DIR/tailscale-$TARGET"
+    chmod +x "$BIN_DIR/tailscaled-$TARGET" "$BIN_DIR/tailscale-$TARGET"
+    rm -rf "$FOLDER"
+  else
+    echo "Error: No se encontró la carpeta extraída para $ARCH"
+    ls -ld tailscale_*
+    exit 1
+  fi
+
+  rm "$FILE"
 }
 
-# Descargar ambas arquitecturas para macOS
+ensure_tool() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "La herramienta $1 no está instalada; instálala para continuar."
+    exit 1
+  fi
+}
+
+ensure_tool lipo
+
 download_tailscale "amd64" "x86_64-apple-darwin"
 download_tailscale "arm64" "aarch64-apple-darwin"
+
+combine_universal() {
+  local output=$1
+  shift
+  echo "Creando binario universal $output..."
+  lipo -create "${BIN_DIR}/tailscaled-x86_64-apple-darwin" "${BIN_DIR}/tailscaled-aarch64-apple-darwin" -output "${BIN_DIR}/${output}"
+  chmod +x "${BIN_DIR}/${output}"
+}
+
+combine_universal "tailscaled-universal-apple-darwin"
+
+combine_cli_universal() {
+  local output=$1
+  echo "Creando binario universal $output..."
+  lipo -create "${BIN_DIR}/tailscale-x86_64-apple-darwin" "${BIN_DIR}/tailscale-aarch64-apple-darwin" -output "${BIN_DIR}/${output}"
+  chmod +x "${BIN_DIR}/${output}"
+}
+
+combine_cli_universal "tailscale-universal-apple-darwin"
 
 echo "----------------------------------------------------------"
 echo "Contenido de $BIN_DIR:"
 ls -lh "$BIN_DIR"
 echo "----------------------------------------------------------"
-echo "Binarios listos para build universal de macOS."
-echo ""
-echo "NOTA PARA WINDOWS:"
-echo "Los binarios de Windows (x86_64-pc-windows-msvc) no se descargan automáticamente."
-echo "Por favor, descarga el MSI oficial, extrae 'tailscale.exe' y 'tailscaled.exe' y colócalos en:"
-echo "  $BIN_DIR/tailscale-x86_64-pc-windows-msvc.exe"
-echo "  $BIN_DIR/tailscaled-x86_64-pc-windows-msvc.exe"
+echo "Binarios universales listos para el build de macOS."
