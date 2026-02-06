@@ -141,7 +141,7 @@ export class SyncService {
     private salesProjectionQueue: Queue,
     private metricsService: SyncMetricsService,
     private federationSyncService: FederationSyncService,
-  ) {}
+  ) { }
 
   async push(
     dto: PushSyncDto,
@@ -213,43 +213,6 @@ export class SyncService {
           continue;
         }
 
-        // 2b. Validación CRDT MAX (Deltas y Hashes)
-        if (isCrdtMaxEnabled || this.criticalEventTypes.includes(event.type)) {
-          if (!event.delta_payload) {
-            rejected.push({
-              event_id: event.event_id,
-              seq: event.seq,
-              code: 'CRDT_ERROR',
-              message: `Evento crítico ${event.type} requiere delta_payload bajo CRDT MAX.`,
-            });
-            continue;
-          }
-          if (!event.full_payload_hash) {
-            rejected.push({
-              event_id: event.event_id,
-              seq: event.seq,
-              code: 'CRDT_ERROR',
-              message: `Evento crítico ${event.type} requiere full_payload_hash bajo CRDT MAX.`,
-            });
-            continue;
-          }
-          // Validamos integridad (comparando hash enviado vs hash del delta)
-          const serverHash = this.hashPayload(event.delta_payload);
-          if (event.full_payload_hash !== serverHash) {
-            // Permitimos si coincide con el hash del payload principal por compatibilidad
-            const payloadHash = this.hashPayload(event.payload);
-            if (event.full_payload_hash !== payloadHash) {
-              rejected.push({
-                event_id: event.event_id,
-                seq: event.seq,
-                code: 'INTEGRITY_ERROR',
-                message: 'Hash de payload inválido (drift detectado).',
-              });
-              continue;
-            }
-          }
-        }
-
         // ⚡ OPTIMIZACIÓN: Validaciones simplificadas para SaleCreated
         // Las validaciones pesadas se hacen en la proyección asíncrona
         if (event.type === 'SaleCreated') {
@@ -294,6 +257,43 @@ export class SyncService {
             continue;
           }
           // Validaciones pesadas se harán en la proyección asíncrona
+        }
+
+        // 2b. Validación CRDT MAX (Deltas y Hashes)
+        if (isCrdtMaxEnabled || this.criticalEventTypes.includes(event.type)) {
+          if (!event.delta_payload) {
+            rejected.push({
+              event_id: event.event_id,
+              seq: event.seq,
+              code: 'CRDT_ERROR',
+              message: `Evento crítico ${event.type} requiere delta_payload bajo CRDT MAX.`,
+            });
+            continue;
+          }
+          if (!event.full_payload_hash) {
+            rejected.push({
+              event_id: event.event_id,
+              seq: event.seq,
+              code: 'CRDT_ERROR',
+              message: `Evento crítico ${event.type} requiere full_payload_hash bajo CRDT MAX.`,
+            });
+            continue;
+          }
+          // Validamos integridad (comparando hash enviado vs hash del delta)
+          const serverHash = this.hashPayload(event.delta_payload);
+          if (event.full_payload_hash !== serverHash) {
+            // Permitimos si coincide con el hash del payload principal por compatibilidad
+            const payloadHash = this.hashPayload(event.payload);
+            if (event.full_payload_hash !== payloadHash) {
+              rejected.push({
+                event_id: event.event_id,
+                seq: event.seq,
+                code: 'INTEGRITY_ERROR',
+                message: 'Hash de payload inválido (drift detectado).',
+              });
+              continue;
+            }
+          }
         }
 
         // 2c. Dedupe por event_id (idempotencia)
@@ -393,6 +393,7 @@ export class SyncService {
             : 'resolved',
           delta_payload: event.delta_payload || null,
           full_payload_hash: fullPayloadHash,
+          request_id: requestId,
         });
 
         eventsToSave.push(eventEntity);
@@ -848,9 +849,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedSubtotalBs - Number(payload.totals.subtotal_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedSubtotalUsd - Number(payload.totals.subtotal_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,
@@ -861,9 +862,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedDiscountBs - Number(payload.totals.discount_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedDiscountUsd - Number(payload.totals.discount_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,
@@ -874,9 +875,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedTotalBs - Number(payload.totals.total_bs || 0)) >
-        tolerance ||
+      tolerance ||
       Math.abs(expectedTotalUsd - Number(payload.totals.total_usd || 0)) >
-        tolerance
+      tolerance
     ) {
       return {
         valid: false,

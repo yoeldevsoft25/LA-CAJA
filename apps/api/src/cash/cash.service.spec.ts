@@ -5,8 +5,11 @@ import { CashService } from './cash.service';
 import { CashSession } from '../database/entities/cash-session.entity';
 import { Sale } from '../database/entities/sale.entity';
 import { CashMovement } from '../database/entities/cash-movement.entity';
+import { Event } from '../database/entities/event.entity';
+import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
 import { AccountingService } from '../accounting/accounting.service';
 import { SecurityAuditService } from '../security/security-audit.service';
+import { FederationSyncService } from '../sync/federation-sync.service';
 import { DataSource } from 'typeorm';
 
 describe('CashService', () => {
@@ -52,6 +55,20 @@ describe('CashService', () => {
         {
           provide: SecurityAuditService,
           useValue: securityAuditService,
+        },
+        {
+          provide: getRepositoryToken(Event),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(CashLedgerEntry),
+          useValue: {},
+        },
+        {
+          provide: FederationSyncService,
+          useValue: {
+            queueRelay: jest.fn(),
+          },
         },
       ],
     }).compile();

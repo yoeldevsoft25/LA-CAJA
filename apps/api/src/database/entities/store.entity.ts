@@ -32,7 +32,14 @@ export class Store {
   @Column({ type: 'text', nullable: true })
   kitchen_public_pin_hash: string | null;
 
-  @Column({ type: 'jsonb', default: {} })
+  @Column({
+    type: 'jsonb',
+    default: '{}',
+    transformer: {
+      from: (v: string | object) => (typeof v === 'string' ? JSON.parse(v || '{}') : v ?? {}),
+      to: (v: object) => (v && typeof v === 'object' ? JSON.stringify(v) : '{}'),
+    },
+  })
   settings: {
     use_ledger?: boolean;
     use_escrow?: boolean;

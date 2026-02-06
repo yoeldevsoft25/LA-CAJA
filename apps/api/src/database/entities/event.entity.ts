@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
 
 @Entity('events')
 export class Event {
@@ -58,6 +58,7 @@ export class Event {
   @Column({ type: 'text', nullable: true })
   projection_error: string | null;
 
+  @Index('IDX_events_request_id_unique', { unique: true })
   @Column({ type: 'uuid', nullable: true })
   request_id: string | null;
 }

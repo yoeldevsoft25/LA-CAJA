@@ -13,6 +13,8 @@ import { DebtPayment } from '../database/entities/debt-payment.entity';
 import { RecipeIngredient } from '../database/entities/recipe-ingredient.entity';
 import { Debt } from '../database/entities/debt.entity';
 import { InventoryMovement } from '../database/entities/inventory-movement.entity';
+import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
+import { StockEscrow } from '../database/entities/stock-escrow.entity';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
 import { Logger } from '@nestjs/common';
@@ -114,6 +116,8 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
                 { provide: getRepositoryToken(Customer), useValue: mockRepo },
                 { provide: getRepositoryToken(DebtPayment), useValue: mockRepo },
                 { provide: getRepositoryToken(RecipeIngredient), useValue: mockRepo },
+                { provide: getRepositoryToken(CashLedgerEntry), useValue: mockRepo },
+                { provide: getRepositoryToken(StockEscrow), useValue: mockRepo },
                 {
                     provide: InvoiceSeriesService,
                     useValue: {

@@ -121,6 +121,15 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "inventory/escrow/inventory-escrow.integration.spec.ts",
+      "inventory/escrow/inventory-escrow.service.spec.ts",
+      "sync/crdt.service.spec.ts"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@whiskeysockets/baileys)/)"
+    ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

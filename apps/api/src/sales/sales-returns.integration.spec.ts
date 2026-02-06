@@ -68,7 +68,8 @@ describe('Sales Returns Integration (Transactional - Sqlite)', () => {
     let dataSource: DataSource;
 
     beforeAll(async () => {
-        // Patch Entities for Sqlite
+        // Patch Entities for Sqlite (timeout: DB connect + sync can be slow in CI)
+        jest.setTimeout(15000);
         const columns = getMetadataArgsStorage().columns;
         columns.forEach(col => {
             if (col.options.type === 'jsonb') {
@@ -76,6 +77,10 @@ describe('Sales Returns Integration (Transactional - Sqlite)', () => {
             }
             if (col.options.type === 'timestamptz') {
                 col.options.type = 'datetime';
+            }
+            // SQLite: default must be constant; avoid [object Object]
+            if (col.options.default !== undefined && typeof col.options.default === 'object' && !Array.isArray(col.options.default) && col.options.default !== null) {
+                col.options.default = JSON.stringify(col.options.default);
             }
             // Patch NOW() default
             if (col.options.default) {

@@ -5,6 +5,7 @@ import { SyncService } from './sync.service';
 import { Event } from '../database/entities/event.entity';
 import { Product } from '../database/entities/product.entity';
 import { CashSession } from '../database/entities/cash-session.entity';
+import { Store } from '../database/entities/store.entity';
 import { ProjectionsService } from '../projections/projections.service';
 import { VectorClockService } from './vector-clock.service';
 import { CRDTService } from './crdt.service';
@@ -71,6 +72,10 @@ describe('SyncService', () => {
         {
           provide: getRepositoryToken(CashSession),
           useValue: cashSessionRepository,
+        },
+        {
+          provide: getRepositoryToken(Store),
+          useValue: { findOne: jest.fn(), find: jest.fn() },
         },
         {
           provide: ProjectionsService,
