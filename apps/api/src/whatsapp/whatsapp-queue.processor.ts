@@ -27,7 +27,7 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
     @InjectRepository(Store)
     private storeRepository: Repository<Store>,
     private whatsappBotService: WhatsAppBotService,
-  ) {}
+  ) { }
 
   /**
    * Inicializa bots automáticamente al iniciar el módulo (producción).
@@ -36,6 +36,11 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
    * Tras un deploy/restart, la conexión se restaura sin depender de mensajes en cola.
    */
   async onModuleInit() {
+    const isEnabled = process.env.WHATSAPP_ENABLED?.toLowerCase() !== 'false';
+    if (!isEnabled) {
+      this.logger.log('Procesador de cola de WhatsApp deshabilitado por configuración (WHATSAPP_ENABLED=false)');
+      return;
+    }
     this.logger.log('Inicializando procesador de cola de WhatsApp...');
 
     try {
@@ -105,6 +110,9 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
    */
   @Cron('0 */5 * * * *') // Cada 5 minutos
   async restoreDisconnectedBots() {
+    const isEnabled = process.env.WHATSAPP_ENABLED?.toLowerCase() !== 'false';
+    if (!isEnabled) return;
+
     try {
       const configs = await this.whatsappConfigRepository
         .createQueryBuilder('c')
@@ -158,6 +166,9 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
    */
   @Cron('*/30 * * * * *') // Cada 30 segundos
   async processQueue() {
+    const isEnabled = process.env.WHATSAPP_ENABLED?.toLowerCase() !== 'false';
+    if (!isEnabled) return;
+
     try {
       // Obtener mensajes pendientes o en retry, ordenados por fecha de creación
       const pendingMessages = await this.messageQueueRepository.find({
