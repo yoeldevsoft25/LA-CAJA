@@ -135,6 +135,93 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     return Array.from(methods);
   }
 
+  private async runPostSaleInline(
+    storeId: string,
+    saleId: string,
+    userId: string | null,
+    generateFiscalInvoice: boolean,
+  ): Promise<void> {
+    let fiscalInvoiceIssued = false;
+    let fiscalInvoiceFound = false;
+
+    try {
+      const hasFiscalConfig =
+        await this.fiscalInvoicesService.hasActiveFiscalConfig(storeId);
+      if (generateFiscalInvoice && hasFiscalConfig) {
+        const existingInvoice = await this.fiscalInvoicesService.findBySale(
+          storeId,
+          saleId,
+        );
+
+        if (existingInvoice) {
+          fiscalInvoiceFound = true;
+          if (existingInvoice.status === 'draft') {
+            const issuedInvoice = await this.fiscalInvoicesService.issue(
+              storeId,
+              existingInvoice.id,
+            );
+            fiscalInvoiceIssued = issuedInvoice.status === 'issued';
+          } else {
+            fiscalInvoiceIssued = existingInvoice.status === 'issued';
+          }
+        } else {
+          const createdInvoice =
+            await this.fiscalInvoicesService.createFromSale(
+              storeId,
+              saleId,
+              userId,
+            );
+          const issuedInvoice = await this.fiscalInvoicesService.issue(
+            storeId,
+            createdInvoice.id,
+          );
+          fiscalInvoiceIssued = issuedInvoice.status === 'issued';
+          fiscalInvoiceFound = true;
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error procesando factura fiscal inline para venta ${saleId}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    try {
+      if (fiscalInvoiceIssued || fiscalInvoiceFound) {
+        const invoice = await this.fiscalInvoicesService.findBySale(
+          storeId,
+          saleId,
+        );
+        if (invoice && invoice.status === 'issued') {
+          await this.accountingService.generateEntryFromFiscalInvoice(
+            storeId,
+            invoice,
+          );
+          return;
+        }
+      }
+
+      const sale = await this.saleRepository.findOne({
+        where: { id: saleId, store_id: storeId },
+        relations: ['items', 'items.product', 'customer'],
+      });
+
+      if (!sale) {
+        this.logger.warn(
+          `Venta ${saleId} no encontrada para generar asiento contable inline`,
+        );
+        return;
+      }
+
+      await this.accountingService.generateEntryFromSale(storeId, sale);
+    } catch (error) {
+      this.logger.error(
+        `Error generando asiento contable inline para venta ${saleId}:`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
   private async validatePaymentAuthorization(
     storeId: string,
     dto: CreateSaleDto,
@@ -1447,6 +1534,12 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       if (!queuesEnabled) {
         this.logger.debug(
           `Queues disabled: skipping post-processing queue for sale ${saleWithDetailedDebt.id}`,
+        );
+        await this.runPostSaleInline(
+          storeId,
+          saleWithDetailedDebt.id,
+          userId || null,
+          dto.generate_fiscal_invoice || false,
         );
       } else {
         await this.salesPostProcessingQueue.add(
