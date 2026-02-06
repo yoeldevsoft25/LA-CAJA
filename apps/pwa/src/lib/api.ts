@@ -47,9 +47,12 @@ const isPublicWebRuntime = (): boolean => {
   return true;
 };
 
+const FORCE_PRIMARY_FIRST =
+  String(import.meta.env.VITE_FORCE_PRIMARY_API_URL || '').toLowerCase() === 'true';
+
 const ORDERED_FAILOVER_API_URLS = (() => {
   if (FAILOVER_API_URLS.length <= 1) return FAILOVER_API_URLS;
-  if (!isPublicWebRuntime()) return FAILOVER_API_URLS;
+  if (!isPublicWebRuntime() || FORCE_PRIMARY_FIRST) return FAILOVER_API_URLS;
 
   // For public PWA (e.g. veloxpos.app), avoid starting on private/tailnet endpoints.
   const rank: Record<ReturnType<typeof classifyApiUrl>, number> = {
