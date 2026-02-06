@@ -18,4 +18,8 @@ export class StockAdjustedDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  @IsString()
+  @IsOptional()
+  request_id?: string;
 }

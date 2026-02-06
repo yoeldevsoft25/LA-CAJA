@@ -170,4 +170,8 @@ export class CreateProductDto {
   @IsArray()
   @IsOptional()
   ingredients?: { ingredient_product_id: string; qty: number; unit: string }[];
+
+  @IsString()
+  @IsOptional()
+  request_id?: string;
 }

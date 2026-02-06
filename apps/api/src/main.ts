@@ -17,7 +17,19 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: true }),
+    new FastifyAdapter({
+      logger: {
+        level: 'info',
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
+        },
+      }
+    }),
   );
 
   const configService = app.get(ConfigService);
@@ -35,25 +47,25 @@ async function bootstrap() {
     contentSecurityPolicy: isDevelopment
       ? false
       : {
-          directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline para el dashboard
-            imgSrc: ["'self'", 'data:', 'https:'],
-            connectSrc: ["'self'"],
-            fontSrc: ["'self'"],
-            objectSrc: ["'none'"],
-            mediaSrc: ["'self'"],
-            frameSrc: ["'none'"],
-          },
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline para el dashboard
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
         },
+      },
     hsts: isDevelopment
       ? false
       : {
-          maxAge: 31536000, // 1 año
-          includeSubDomains: true,
-          preload: true,
-        },
+        maxAge: 31536000, // 1 año
+        includeSubDomains: true,
+        preload: true,
+      },
     frameguard: {
       action: 'deny',
     },
@@ -86,6 +98,7 @@ async function bootstrap() {
   const extraOrigins = [
     configService.get<string>('PUBLIC_APP_URL'),
     configService.get<string>('APP_URL'),
+    configService.get<string>('FRONTEND_URL'),
     configService.get<string>('RENDER_EXTERNAL_URL'),
     'https://veloxpos.app',
     'https://veloxpos.netlify.app',
@@ -97,10 +110,10 @@ async function bootstrap() {
   const originList = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => normalizeOrigin(origin))
     : [
-        'http://localhost:5173',
-        'http://localhost:4173',
-        'http://localhost:3000',
-      ]; // Defaults para desarrollo (5173) y preview (4173)
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'http://localhost:3000',
+    ]; // Defaults para desarrollo (5173) y preview (4173)
   const origins = Array.from(
     new Set([
       ...originList,
@@ -121,8 +134,9 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Permitir todas las conexiones si está en desarrollo local y se permite (útil para VPN)
-      if (isDevelopment && allowAllOriginsLocal) {
+      // Permitir todas las conexiones si se permite localmente (útil para VPN/Tailscale)
+      // Incluso en start:prod si estamos en local
+      if (allowAllOriginsLocal) {
         return callback(null, true);
       }
 

@@ -33,7 +33,7 @@ import {
 import { RecipeIngredientManager } from './RecipeIngredientManager'
 import { recipesService } from '@/services/recipes.service'
 
-  const productSchema = z.object({
+const productSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   category: z.string().optional(),
   sku: z.string().optional(),
@@ -53,17 +53,17 @@ import { recipesService } from '@/services/recipes.service'
   max_weight: z.number().min(0).nullable().optional(),
   scale_plu: z.string().nullable().optional(),
   scale_department: z.number().min(1).nullable().optional(),
-    image_url: z.string().nullable().optional(),
-    description: z.string().nullable().optional(),
-    is_recipe: z.boolean().optional(),
-    product_type: z.enum(['sale_item', 'ingredient', 'prepared']).optional(),
-    is_visible_public: z.boolean().optional(),
-    public_name: z.string().nullable().optional(),
-    public_description: z.string().nullable().optional(),
-    public_image_url: z.string().nullable().optional(),
-    public_category: z.string().nullable().optional(),
-    profit_margin: z.number().optional(),
-  })
+  image_url: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  is_recipe: z.boolean().optional(),
+  product_type: z.enum(['sale_item', 'ingredient', 'prepared']).nullable().optional(),
+  is_visible_public: z.boolean().optional(),
+  public_name: z.string().nullable().optional(),
+  public_description: z.string().nullable().optional(),
+  public_image_url: z.string().nullable().optional(),
+  public_category: z.string().nullable().optional(),
+  profit_margin: z.number().optional(),
+})
 
 type ProductFormData = z.infer<typeof productSchema>
 type WeightUnit = 'kg' | 'g' | 'lb' | 'oz'
@@ -862,7 +862,13 @@ export default function ProductFormModal({
         </CardHeader>
 
         {/* Contenido - Scrollable */}
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <form
+          onSubmit={handleSubmit(onSubmit, (errors) => {
+            console.error('Validation Errors:', errors)
+            toast.error('Hay errores en el formulario. Por favor revisa todas las pestañas.')
+          })}
+          className="flex-1 flex flex-col min-h-0 overflow-hidden"
+        >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-3 sm:px-4 md:px-6 pt-2">
               <TabsList className="grid w-full grid-cols-3">

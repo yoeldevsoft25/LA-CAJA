@@ -121,7 +121,7 @@ export class InventoryService {
     private accountingService: AccountingService,
     private federationSyncService: FederationSyncService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   private buildServerEvent(
     manager: EntityManager,
@@ -339,6 +339,9 @@ export class InventoryService {
     userId: string,
     role = 'owner',
   ): Promise<InventoryMovement> {
+    this.logger.log(
+      `🔔 Procesando StockAdjusted: store=${storeId}, product=${dto.product_id}, delta=${dto.qty_delta}, reason=${dto.reason}`,
+    );
     const { movement, event } = await this.dataSource.transaction(
       async (manager) => {
         // Verificar que el producto existe
@@ -433,7 +436,7 @@ export class InventoryService {
             qty_delta: Number(saved.qty_delta),
             reason: dto.reason || 'adjust',
             note: saved.note,
-            request_id: randomUUID(), // TODO: Pass from DTO if available
+            request_id: dto.request_id || randomUUID(),
           },
         });
         stockEvent.request_id = (stockEvent.payload as any).request_id;
