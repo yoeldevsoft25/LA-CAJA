@@ -39,12 +39,18 @@ const classifyApiUrl = (url: string): 'public' | 'tailnet' | 'private' | 'local'
 };
 
 const isPublicWebRuntime = (): boolean => {
-  if (!import.meta.env.PROD) return false;
   const hostname = window.location.hostname;
   if (isLocalHostname(hostname)) return false;
   if (isPrivateIp(hostname)) return false;
   if (isTailnetHost(hostname)) return false;
-  return true;
+
+  // Si estamos en el dominio principal o Netlify, es runtime público
+  return (
+    hostname.endsWith('veloxpos.app') ||
+    hostname.includes('netlify.app') ||
+    hostname.endsWith('velox.pos') ||
+    import.meta.env.PROD
+  );
 };
 
 const FORCE_PRIMARY_FIRST =
@@ -75,14 +81,20 @@ function getApiUrl(): string {
   }
 
   // 1.1 Si hay failover definido, usar el último guardado o el primero
-  if (import.meta.env.PROD && ORDERED_FAILOVER_API_URLS.length > 0) {
+  if (ORDERED_FAILOVER_API_URLS.length > 0) {
+    const isPublic = isPublicWebRuntime();
     const storedBase = localStorage.getItem(API_BASE_STORAGE_KEY);
+
+    // VALIDACIÓN CRÍTICA: Si estamos en web pública (veloxpos.app), 
+    // NO permitir que storedBase apunte a una red privada o tailscale 
+    // que funcionó anteriormente (ej. en el local del cliente).
     const shouldIgnoreStoredBase =
       storedBase &&
-      isPublicWebRuntime() &&
+      isPublic &&
       classifyApiUrl(storedBase) !== 'public';
 
     if (shouldIgnoreStoredBase) {
+      logger.warn(`Ignorando endpoint guardado ${storedBase} porque no es público y estamos en runtime web público.`);
       localStorage.removeItem(API_BASE_STORAGE_KEY);
     }
 
@@ -92,9 +104,13 @@ function getApiUrl(): string {
       ORDERED_FAILOVER_API_URLS.includes(storedBase) &&
       !shouldIgnoreStoredBase
     ) {
+      logger.info(`Usando endpoint guardado: ${storedBase}`);
       return storedBase;
     }
-    return ORDERED_FAILOVER_API_URLS[0];
+
+    const defaultUrl = ORDERED_FAILOVER_API_URLS[0];
+    logger.info(`Usando endpoint por defecto (${isPublic ? 'Public Order' : 'Fixed Order'}): ${defaultUrl}`);
+    return defaultUrl;
   }
 
   // 2. Si estamos en localhost o preview local, usar localhost

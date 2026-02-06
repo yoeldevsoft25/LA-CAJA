@@ -80,9 +80,9 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
             api.defaults.baseURL = nextBaseUrl;
             originalRequest.baseURL = nextBaseUrl;
 
-            // Reducir el timeout para los reintentos de failover (máximo 5 segundos) 
+            // Reducir el timeout para los reintentos de failover (máximo 2 segundos) 
             // para encontrar un endpoint funcional rápidamente.
-            originalRequest.timeout = Math.min(originalRequest.timeout || 30000, 5000);
+            originalRequest.timeout = Math.min(originalRequest.timeout || 30000, 2000);
 
             return api(originalRequest);
         }

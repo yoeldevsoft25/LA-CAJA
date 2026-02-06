@@ -49,10 +49,13 @@ export class CRDTService {
       const type = this.recommendStrategy(entity, '');
       switch (type) {
         case 'gcounter':
+        case 'g-counter' as any:
           return this.pnCounter.applyDelta(state, delta);
         case 'lww':
+        case 'lww-register' as any:
           return this.lwwRegister.applyDelta(state, delta);
         case 'awset':
+        case 'aw-set' as any:
           return this.orSet.applyDelta(state, delta);
         case 'rga' as any:
           return this.rgaComp.applyDelta(state, delta);
@@ -167,7 +170,11 @@ export class CRDTService {
    * Remueve un elemento del AWSet
    */
   removeFromAWSet<T>(set: AWSet<T>, id: string): AWSet<T> {
-    return this.orSet.applyDelta(set, { type: 'remove', element: id, tag: '' });
+    const delta = this.orSet.createDelta(
+      { type: 'remove', element: id, tag: '' },
+      set,
+    );
+    return this.orSet.applyDelta(set, delta);
   }
 
   /**
@@ -313,9 +320,10 @@ export class CRDTService {
     deviceId: string,
     amount: number = 1,
   ): GCounter {
+    const current = (counter.increments && counter.increments[deviceId]) || 0;
     return this.pnCounter.applyDelta(counter, {
       nodeId: deviceId,
-      increment: amount,
+      increment: current + amount,
     });
   }
 
@@ -369,6 +377,16 @@ export class CRDTService {
         name: 'lww',
         phone: 'lww',
         address: 'lww',
+      },
+      inventory: {
+        stock: 'gcounter',
+        increments: 'gcounter',
+        decrements: 'gcounter',
+      },
+      cash: {
+        balance: 'gcounter',
+        increments: 'gcounter',
+        decrements: 'gcounter',
       },
       debt: {
         payments: 'awset', // Pagos siempre se agregan

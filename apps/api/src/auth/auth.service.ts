@@ -62,7 +62,7 @@ export class AuthService {
     private emailService: EmailService,
     private usageService: UsageService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;
@@ -946,7 +946,7 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: `${this.ACCESS_TOKEN_EXPIRES_IN} s`,
+      expiresIn: `${this.ACCESS_TOKEN_EXPIRES_IN}s`,
     });
 
     // ROTACIÓN DE REFRESH TOKEN: Generar nuevo refresh token y revocar el anterior

@@ -1,0 +1,65 @@
+
+> @la-caja/api@1.0.0 test
+> jest src/inventory/escrow/inventory-escrow.integration.spec.ts --testPathIgnorePatterns=NONE
+
+FAIL src/inventory/escrow/inventory-escrow.integration.spec.ts
+  ● Test suite failed to run
+
+    [96msrc/inventory/escrow/inventory-escrow.integration.spec.ts[0m:[93m95[0m:[93m34[0m - [91merror[0m[90m TS2341: [0mProperty 'projectStockQuotaGranted' is private and only accessible within class 'ProjectionsService'.
+
+    [7m95[0m         await projectionsService.projectStockQuotaGranted(storeId, {
+    [7m  [0m [91m                                 ~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    [96msrc/inventory/escrow/inventory-escrow.integration.spec.ts[0m:[93m95[0m:[93m68[0m - [91merror[0m[90m TS2554: [0mExpected 1 arguments, but got 2.
+
+    [7m 95[0m         await projectionsService.projectStockQuotaGranted(storeId, {
+    [7m   [0m [91m                                                                   ~[0m
+    [7m 96[0m             product_id: productId,
+    [7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    [7m...[0m 
+    [7m 99[0m             request_id: uuidv4()
+    [7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    [7m100[0m         });
+    [7m   [0m [91m~~~~~~~~~[0m
+    [96msrc/inventory/escrow/inventory-escrow.integration.spec.ts[0m:[93m111[0m:[93m34[0m - [91merror[0m[90m TS2341: [0mProperty 'projectSaleCreated' is private and only accessible within class 'ProjectionsService'.
+
+    [7m111[0m         await projectionsService.projectSaleCreated(storeId, {
+    [7m   [0m [91m                                 ~~~~~~~~~~~~~~~~~~[0m
+    [96msrc/inventory/escrow/inventory-escrow.integration.spec.ts[0m:[93m111[0m:[93m62[0m - [91merror[0m[90m TS2554: [0mExpected 1 arguments, but got 2.
+
+    [7m111[0m         await projectionsService.projectSaleCreated(storeId, {
+    [7m   [0m [91m                                                             ~[0m
+    [7m112[0m             sale_id: saleId,
+    [7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    [7m...[0m 
+    [7m121[0m             payment: { method: 'CASH_USD' }
+    [7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    [7m122[0m         } as any);
+    [7m   [0m [91m~~~~~~~~~~~~~~~~[0m
+    [96msrc/inventory/escrow/inventory-escrow.integration.spec.ts[0m:[93m135[0m:[93m34[0m - [91merror[0m[90m TS2341: [0mProperty 'projectSaleCreated' is private and only accessible within class 'ProjectionsService'.
+
+    [7m135[0m         await projectionsService.projectSaleCreated(storeId, {
+    [7m   [0m [91m                                 ~~~~~~~~~~~~~~~~~~[0m
+    [96msrc/inventory/escrow/inventory-escrow.integration.spec.ts[0m:[93m135[0m:[93m62[0m - [91merror[0m[90m TS2554: [0mExpected 1 arguments, but got 2.
+
+    [7m135[0m         await projectionsService.projectSaleCreated(storeId, {
+    [7m   [0m [91m                                                             ~[0m
+    [7m136[0m             sale_id: saleId2,
+    [7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    [7m...[0m 
+    [7m144[0m             totals: { total_usd: 100 }
+    [7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+    [7m145[0m         } as any);
+    [7m   [0m [91m~~~~~~~~~~~~~~~~[0m
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        8.402 s
+Ran all test suites matching /src\/inventory\/escrow\/inventory-escrow.integration.spec.ts/i.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path /Users/yoeldev/Documents/GitHub/LA-CAJA/apps/api
+npm error workspace @la-caja/api@1.0.0
+npm error location /Users/yoeldev/Documents/GitHub/LA-CAJA/apps/api
+npm error command failed
+npm error command sh -c jest src/inventory/escrow/inventory-escrow.integration.spec.ts --testPathIgnorePatterns=NONE

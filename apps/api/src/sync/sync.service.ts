@@ -1068,9 +1068,12 @@ export class SyncService {
           OR payload @> jsonb_build_object('customer_id', $3::text)
           OR payload @> jsonb_build_object('debt_id', $3::text)
           OR payload @> jsonb_build_object('session_id', $3::text)
+          OR payload @> jsonb_build_object('cash_session_id', $3::text)
+          OR payload @> jsonb_build_object('movement_id', $3::text)
+          OR payload @> jsonb_build_object('id', $3::text)
         )
       ORDER BY created_at DESC
-      LIMIT 10
+      LIMIT 20
     `;
 
     const results = await this.eventRepository.query(query, [

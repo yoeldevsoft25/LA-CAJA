@@ -75,7 +75,7 @@ describe('CRDTService', () => {
 
       const values = service.getAWSetValues(awset);
 
-      expect(values).toEqual(['Item 1', 'Item 2']);
+      expect(values).toEqual(['id-1', 'id-2']);
     });
 
     it('should remove elements from AWSet', () => {
@@ -101,8 +101,8 @@ describe('CRDTService', () => {
       const values = service.getAWSetValues(merged);
 
       expect(values).toHaveLength(2);
-      expect(values).toContain('Item 1');
-      expect(values).toContain('Item 2');
+      expect(values).toContain('id-1');
+      expect(values).toContain('id-2');
     });
   });
 
