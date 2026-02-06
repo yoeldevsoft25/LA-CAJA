@@ -34,7 +34,7 @@ export class DebtsService {
     private exchangeService: ExchangeService,
     private accountingService: AccountingService,
     private whatsappMessagingService: WhatsAppMessagingService,
-  ) {}
+  ) { }
 
   async createDebtFromSale(
     storeId: string,
@@ -524,7 +524,14 @@ export class DebtsService {
   async findAll(storeId: string, status?: DebtStatus): Promise<Debt[]> {
     // ⚠️ CRÍTICO: Antes de listar deudas, crear las faltantes para ventas FIAO sin deuda
     // Esto asegura que todas las ventas FIAO tengan su deuda asociada
-    await this.createMissingDebtsForFIAOSales(storeId);
+    // Se ejecuta en segundo plano para no bloquear la respuesta
+    setImmediate(() => {
+      this.createMissingDebtsForFIAOSales(storeId).catch((err) => {
+        this.logger.error(
+          `Error en segundo plano ejecutando createMissingDebtsForFIAOSales: ${err.message}`,
+        );
+      });
+    });
 
     const query = this.debtRepository
       .createQueryBuilder('debt')
@@ -828,7 +835,7 @@ export class DebtsService {
         const allocations = debtBalances.map((entry) =>
           Math.floor(
             (paymentCents * Math.round(entry.remainingUsd * 100)) /
-              totalRemainingCents,
+            totalRemainingCents,
           ),
         );
 
@@ -931,9 +938,9 @@ export class DebtsService {
               payUsd,
               dto.method,
               dto.note ||
-                (isSelective
-                  ? 'Pago de deudas seleccionadas'
-                  : 'Pago completo de todas las deudas'),
+              (isSelective
+                ? 'Pago de deudas seleccionadas'
+                : 'Pago completo de todas las deudas'),
             ],
           );
 

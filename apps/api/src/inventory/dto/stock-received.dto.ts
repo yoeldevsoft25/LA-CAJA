@@ -34,4 +34,8 @@ export class StockReceivedDto {
   @IsObject()
   @IsOptional()
   ref?: Record<string, any>;
+
+  @IsString()
+  @IsOptional()
+  request_id?: string;
 }
