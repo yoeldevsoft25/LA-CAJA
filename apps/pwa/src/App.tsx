@@ -306,18 +306,18 @@ function App() {
 
   return (
     <>
-      {authShowLoader && !isLoaderComplete && (
+      {authShowLoader && (
         <SimpleLoader
           onComplete={handleLoaderComplete}
           duration={4000}
           userName={user?.full_name}
+          // No ocultar si ya completamos para evitar re-montaje del router
+          className={isLoaderComplete ? 'hidden' : 'fixed inset-0 z-[9999]'}
         />
       )}
-      {(isLoaderComplete || !authShowLoader) && (
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      )}
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
     </>
   )
 }

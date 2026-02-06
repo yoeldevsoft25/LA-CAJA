@@ -93,9 +93,14 @@ class SyncServiceClass {
   private lastRecoveryTime = 0;
   private readonly RECOVERY_COOLDOWN_MS = 8000; // 8 segundos entre recoveries
 
-  // ===== CALLBACKS PARA INVALIDAR CACHE Y NOTIFICAR =====
   private onSyncCompleteCallbacks: Array<(syncedCount: number) => void> = [];
   private onSyncErrorCallbacks: Array<(error: Error) => void> = [];
+
+  // Throttling for UI updates (Anti-Storm)
+  private lastUiNotificationTime = 0;
+  private readonly UI_NOTIFICATION_COOLDOWN_MS = 3000;
+  private pendingSyncedCount = 0;
+  private throttleTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.metrics = new SyncMetricsCollector();
@@ -837,27 +842,46 @@ class SyncServiceClass {
    */
   private notifySyncComplete(syncedCount: number): void {
     // Invalidar cache de entidades críticas después de sincronizar
-    // Esto asegura que los datos se refresquen cuando se sincronizan eventos
-    this.invalidateCriticalCaches().catch((error) => {
-      this.logger.error('Error invalidating caches', error);
-    });
+    // ANTI-STORM: Throttled UI notifications
+    this.pendingSyncedCount += syncedCount;
 
-    // ✅ Emitir evento global para que la UI se actualice
-    window.dispatchEvent(new CustomEvent('sync:completed', {
-      detail: {
-        syncedCount,
-        timestamp: Date.now(),
-        source: 'periodic_sync'
-      }
-    }));
+    if (this.throttleTimeoutId) return;
 
-    this.onSyncCompleteCallbacks.forEach((callback) => {
-      try {
-        callback(syncedCount);
-      } catch (error) {
-        this.logger.error('Error en callback onSyncComplete', error);
-      }
-    });
+    const executeNotification = () => {
+      const totalSynced = this.pendingSyncedCount;
+      this.pendingSyncedCount = 0;
+      this.throttleTimeoutId = null;
+
+      // Invalidad caches críticos
+      this.invalidateCriticalCaches().catch((error) => {
+        this.logger.error('Error invalidating caches', error);
+      });
+
+      // Emitir evento global (throttled)
+      window.dispatchEvent(new CustomEvent('sync:completed', {
+        detail: {
+          syncedCount: totalSynced,
+          timestamp: Date.now(),
+          source: 'periodic_sync'
+        }
+      }));
+
+      this.onSyncCompleteCallbacks.forEach((callback) => {
+        try {
+          callback(totalSynced);
+        } catch (error) {
+          this.logger.error('Error en callback onSyncComplete', error);
+        }
+      });
+    };
+
+    const now = Date.now();
+
+    // Si ha pasado suficiente tiempo, notificar pronto (500ms), si no, esperar al cooldown
+    const delay = Math.max(500, this.UI_NOTIFICATION_COOLDOWN_MS - (now - this.lastUiNotificationTime));
+
+    this.lastUiNotificationTime = now + delay;
+    this.throttleTimeoutId = setTimeout(executeNotification, delay);
   }
 
   /**

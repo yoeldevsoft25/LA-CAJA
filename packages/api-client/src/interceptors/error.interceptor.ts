@@ -70,19 +70,38 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
         const nextBaseUrl = currentIndex >= 0 ? failoverUrls[currentIndex + 1] : undefined;
 
         if (!error.response && maxFailoverRetries > 0 && currentRetry < maxFailoverRetries && nextBaseUrl) {
+            // DEEP FIX: En entornos públicos (Render), no saltar agresivamente si ya estamos en el endpoint preferido.
+            // 2s es insuficiente para Render bajo carga.
+            const isPublicRuntime = typeof window !== 'undefined' &&
+                (window.location.hostname.endsWith('.app') || window.location.hostname.includes('netlify.app'));
+
+            // Si el error es un timeout y estamos en el endpoint público, dar más margen antes de saltar.
+            const isTimeout = error.code === 'ECONNABORTED' || error.message.includes('timeout');
+            const isPublicEndpoint = currentBaseUrl.includes('.onrender.com') || currentBaseUrl.includes('veloxpos.app');
+
+            if (isPublicRuntime && isPublicEndpoint && isTimeout && currentRetry === 0) {
+                // Si es el primer intento en producción y dio timeout, dar una oportunidad más con 10s
+                if (config.logger) {
+                    config.logger.warn(`API Timeout en Producción: Extendiendo espera a 10s antes de failover.`);
+                }
+                originalRequest.timeout = 10000;
+                originalRequest._apiFailoverRetryCount = 0.5; // Marca especial para no entrar en loop infinito de "one more chance"
+                return api(originalRequest);
+            }
+
             if (config.logger) {
                 config.logger.warn(`API Failover: ${currentBaseUrl} falló, intentando con ${nextBaseUrl} (reintento ${currentRetry + 1}/${maxFailoverRetries})`);
             }
 
-            originalRequest._apiFailoverRetryCount = currentRetry + 1;
+            originalRequest._apiFailoverRetryCount = Math.floor(currentRetry) + 1;
 
             // Actualizar el base URL global para futuros requests
             api.defaults.baseURL = nextBaseUrl;
             originalRequest.baseURL = nextBaseUrl;
 
-            // Reducir el timeout para los reintentos de failover (máximo 2 segundos) 
-            // para encontrar un endpoint funcional rápidamente.
-            originalRequest.timeout = Math.min(originalRequest.timeout || 30000, 2000);
+            // Timeout balanceado: 10s para producción, 2s para local (que debería ser rápido)
+            const nextIsPublic = nextBaseUrl.includes('.onrender.com') || nextBaseUrl.includes('veloxpos.app');
+            originalRequest.timeout = nextIsPublic ? 10000 : 2000;
 
             return api(originalRequest);
         }
