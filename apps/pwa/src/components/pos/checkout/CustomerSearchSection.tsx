@@ -42,16 +42,21 @@ export default function CustomerSearchSection({
     const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId)
 
     const filteredCustomers = useMemo(() => {
-        if (!canSearch) return []
         const normalized = trimmedSearch.toLowerCase()
+
+        // Si no hay búsqueda, mostrar los primeros 10 (ej: clientes frecuentes/recientes)
+        if (!normalized) {
+            return customers.slice(0, 10)
+        }
+
         return customers
             .filter((customer) => (
                 customer.name.toLowerCase().includes(normalized)
                 || customer.document_id?.toLowerCase().includes(normalized)
                 || customer.phone?.toLowerCase().includes(normalized)
             ))
-            .slice(0, 10)
-    }, [canSearch, customers, trimmedSearch])
+            .slice(0, 15) // Aumentamos un poco el límite de resultados locales
+    }, [customers, trimmedSearch])
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {

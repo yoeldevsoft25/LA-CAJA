@@ -114,6 +114,25 @@ async function saveCustomersToLocalDB(customers: Customer[]): Promise<void> {
 }
 
 /**
+ * Mapea un cliente de IndexedDB al modelo de dominio
+ */
+function mapLocalToCustomer(c: LocalCustomer): Customer {
+  return {
+    id: c.id,
+    store_id: c.store_id,
+    name: c.name,
+    document_id: c.document_id,
+    phone: c.phone,
+    email: c.email,
+    credit_limit: c.credit_limit,
+    note: c.note,
+    debt_cutoff_at: c.debt_cutoff_at ? new Date(c.debt_cutoff_at).toISOString() : null,
+    created_at: new Date(c.cached_at).toISOString(),
+    updated_at: new Date(c.updated_at).toISOString(),
+  };
+}
+
+/**
  * Servicio para gestión de clientes con soporte offline-first
  * 
  * @remarks
@@ -139,57 +158,16 @@ export const customersService = {
     if (navigator.onLine) {
       const cached = await customerCache.get<Customer[]>(cacheKey)
       if (cached) {
-        logger.debug('Cache hit', { cacheKey })
         return cached
       }
     } else {
-      // OFFLINE: If searching empty string, return recent customers from DB
-      if (!search || search.trim() === '') {
-        return this.searchOffline('');
-      }
+      // OFFLINE directo
+      return this.searchOffline(search);
     }
 
     // 2. Si offline, buscar en IndexedDB local
     if (!navigator.onLine) {
-      logger.debug('Offline mode: searching in IndexedDB')
-      const localCustomers = await db.customers.toArray()
-
-      if (search) {
-        const searchLower = search.toLowerCase()
-        const filtered = localCustomers.filter(
-          (c) =>
-            c.name.toLowerCase().includes(searchLower) ||
-            (c.document_id && c.document_id.toLowerCase().includes(searchLower)) ||
-            (c.phone && c.phone.toLowerCase().includes(searchLower))
-        )
-        return filtered.map((c) => ({
-          id: c.id,
-          store_id: c.store_id,
-          name: c.name,
-          document_id: c.document_id,
-          phone: c.phone,
-          email: c.email,
-          credit_limit: c.credit_limit,
-          note: c.note,
-          debt_cutoff_at: c.debt_cutoff_at ? new Date(c.debt_cutoff_at).toISOString() : null,
-          created_at: new Date(c.cached_at).toISOString(),
-          updated_at: new Date(c.updated_at).toISOString(),
-        }))
-      }
-
-      return localCustomers.map((c) => ({
-        id: c.id,
-        store_id: c.store_id,
-        name: c.name,
-        document_id: c.document_id,
-        phone: c.phone,
-        email: c.email,
-        credit_limit: c.credit_limit,
-        note: c.note,
-        debt_cutoff_at: c.debt_cutoff_at ? new Date(c.debt_cutoff_at).toISOString() : null,
-        created_at: new Date(c.cached_at).toISOString(),
-        updated_at: new Date(c.updated_at).toISOString(),
-      }))
+      return this.searchOffline(search);
     }
 
     // 3. Online: fetch del servidor
@@ -207,41 +185,7 @@ export const customersService = {
     } catch (error) {
       // Si falla la petición, intentar desde IndexedDB como fallback
       logger.warn('API error, falling back to IndexedDB', { error })
-      const localCustomers = await db.customers.toArray()
-      if (search) {
-        const searchLower = search.toLowerCase()
-        return localCustomers
-          .filter(
-            (c) =>
-              c.name.toLowerCase().includes(searchLower) ||
-              (c.document_id && c.document_id.toLowerCase().includes(searchLower)) ||
-              (c.phone && c.phone.toLowerCase().includes(searchLower))
-          )
-          .map((c) => ({
-            id: c.id,
-            store_id: c.store_id,
-            name: c.name,
-            document_id: c.document_id,
-            phone: c.phone,
-            email: c.email,
-            credit_limit: c.credit_limit,
-            note: c.note,
-            created_at: new Date(c.cached_at).toISOString(),
-            updated_at: new Date(c.updated_at).toISOString(),
-          }))
-      }
-      return localCustomers.map((c) => ({
-        id: c.id,
-        store_id: c.store_id,
-        name: c.name,
-        document_id: c.document_id,
-        phone: c.phone,
-        email: c.email,
-        credit_limit: c.credit_limit,
-        note: c.note,
-        created_at: new Date(c.cached_at).toISOString(),
-        updated_at: new Date(c.updated_at).toISOString(),
-      }))
+      return this.searchOffline(search);
     }
   },
 
@@ -270,21 +214,9 @@ export const customersService = {
 
     // 2. Si offline, buscar en IndexedDB local
     if (!navigator.onLine) {
-      logger.debug('Offline mode: searching in IndexedDB')
       const localCustomer = await db.customers.get(id)
       if (localCustomer) {
-        return {
-          id: localCustomer.id,
-          store_id: localCustomer.store_id,
-          name: localCustomer.name,
-          document_id: localCustomer.document_id,
-          phone: localCustomer.phone,
-          email: localCustomer.email,
-          credit_limit: localCustomer.credit_limit,
-          note: localCustomer.note,
-          created_at: new Date(localCustomer.cached_at).toISOString(),
-          updated_at: new Date(localCustomer.updated_at).toISOString(),
-        }
+        return mapLocalToCustomer(localCustomer)
       }
       throw new Error(`Cliente ${id} no encontrado en cache local`)
     }
@@ -304,18 +236,7 @@ export const customersService = {
       logger.warn('API error, falling back to IndexedDB', { error })
       const localCustomer = await db.customers.get(id)
       if (localCustomer) {
-        return {
-          id: localCustomer.id,
-          store_id: localCustomer.store_id,
-          name: localCustomer.name,
-          document_id: localCustomer.document_id,
-          phone: localCustomer.phone,
-          email: localCustomer.email,
-          credit_limit: localCustomer.credit_limit,
-          note: localCustomer.note,
-          created_at: new Date(localCustomer.cached_at).toISOString(),
-          updated_at: new Date(localCustomer.updated_at).toISOString(),
-        }
+        return mapLocalToCustomer(localCustomer)
       }
       throw error
     }
@@ -409,37 +330,14 @@ export const customersService = {
       // Limit results for performance
       const LIMITED = filtered.slice(0, 50);
 
-      return LIMITED.map((c) => ({
-        id: c.id,
-        store_id: c.store_id,
-        name: c.name,
-        document_id: c.document_id,
-        phone: c.phone,
-        email: c.email,
-        credit_limit: c.credit_limit,
-        note: c.note,
-        created_at: new Date(c.cached_at).toISOString(),
-        updated_at: new Date(c.updated_at).toISOString(),
-      }))
+      return LIMITED.map(mapLocalToCustomer)
     }
 
     // If no search, return recent ones (limited)
     return localCustomers
       .sort((a, b) => b.updated_at - a.updated_at)
       .slice(0, 50)
-      .map((c) => ({
-        id: c.id,
-        store_id: c.store_id,
-        name: c.name,
-        document_id: c.document_id,
-        phone: c.phone,
-        email: c.email,
-        credit_limit: c.credit_limit,
-        note: c.note,
-        created_at: new Date(c.cached_at).toISOString(),
-        updated_at: new Date(c.updated_at).toISOString(),
-      }))
-
+      .map(mapLocalToCustomer)
   },
 
   /**
@@ -451,17 +349,6 @@ export const customersService = {
       return null
     }
 
-    return {
-      id: localCustomer.id,
-      store_id: localCustomer.store_id,
-      name: localCustomer.name,
-      document_id: localCustomer.document_id,
-      phone: localCustomer.phone,
-      email: localCustomer.email,
-      credit_limit: localCustomer.credit_limit,
-      note: localCustomer.note,
-      created_at: new Date(localCustomer.cached_at).toISOString(),
-      updated_at: new Date(localCustomer.updated_at).toISOString(),
-    }
+    return mapLocalToCustomer(localCustomer)
   },
 }

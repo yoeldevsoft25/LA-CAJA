@@ -79,13 +79,12 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
     updateProgress('Cacheando clientes...')
     const customersData = await customersService.search('') // Obtener todos los clientes
 
-    // Establecer en múltiples queryKeys para que todos los componentes lo encuentren
-    queryClient.setQueryData(['customers', ''], customersData) // Para CustomersPage
-    queryClient.setQueryData(['customers'], customersData) // Para DebtsPage
+    // Establecer en queryKey estándar usado por useCheckoutData
+    queryClient.setQueryData(['customers', storeId], customersData)
 
     // También prefetch para mantener consistencia
     await queryClient.prefetchQuery({
-      queryKey: ['customers', ''],
+      queryKey: ['customers', storeId],
       queryFn: () => Promise.resolve(customersData),
       staleTime: 1000 * 60 * 30,
       gcTime: Infinity,
