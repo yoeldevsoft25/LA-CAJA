@@ -53,8 +53,6 @@ export default function POSPage() {
   // Usar store persistente para UI State
   const { searchQuery, isCheckoutOpen: showCheckout, setSearchQuery, setIsCheckoutOpen: setShowCheckout } = usePOSStore()
 
-  const mobileSearchRef = useRef<HTMLDivElement | null>(null)
-  const [mobileResultsTop, setMobileResultsTop] = useState<number | null>(null)
   const [shouldPrint, setShouldPrint] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
