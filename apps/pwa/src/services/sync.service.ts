@@ -21,18 +21,7 @@ import { db, LocalEvent } from '@/db/database';
 import { createLogger } from '@/lib/logger';
 import { projectionManager } from './projection.manager';
 import toast from '@/lib/toast';
-
-// Helper for safe UUID generation (crypto.randomUUID requires secure context/HTTPS)
-function randomUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { randomUUID } from '@/lib/uuid';
 
 export interface PushSyncDto {
   store_id: string;

@@ -2,19 +2,9 @@ import { api } from '@/lib/api'
 import { syncService } from './sync.service'
 import { BaseEvent, StockDeltaAppliedPayload } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
+import { randomUUID } from '@/lib/uuid'
 
 const logger = createLogger('InventoryService')
-
-function randomUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
 
 function getDeviceId(): string {
   let deviceId = localStorage.getItem('device_id')

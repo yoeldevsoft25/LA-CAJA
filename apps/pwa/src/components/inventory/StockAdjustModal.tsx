@@ -8,6 +8,7 @@ import { inventoryService, StockAdjustedRequest, StockStatus } from '@/services/
 import { warehousesService } from '@/services/warehouses.service'
 import { salesService } from '@/services/sales.service'
 import { useAuth } from '@/stores/auth.store'
+import { randomUUID } from '@/lib/uuid'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -245,7 +246,7 @@ export default function StockAdjustModal({
 
           // Construir evento
           await syncService.enqueueEvent({
-            event_id: crypto.randomUUID(),
+            event_id: randomUUID(),
             type: 'inventory.stock_adjusted',
             payload: {
               ...variables,

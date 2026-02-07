@@ -3,6 +3,7 @@ import { Customer, customersService } from './customers.service'
 import { syncService } from './sync.service'
 import { db } from '@/db/database'
 import { BaseEvent, CashLedgerEntryCreatedPayload } from '@la-caja/domain'
+import { randomUUID } from '@/lib/uuid'
 
 export type DebtStatus = 'open' | 'partial' | 'paid'
 
@@ -109,15 +110,7 @@ export function calculateDebtTotals(debt: Debt): DebtWithCalculations {
   }
 }
 
-// Función auxiliar para UUID
-function randomUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
+// La función randomUUID ahora se importa de @/lib/uuid
 
 export const debtsService = {
   // Listar todas las deudas (opcionalmente filtradas por estado)

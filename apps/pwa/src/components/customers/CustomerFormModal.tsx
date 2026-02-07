@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { randomUUID } from '@/lib/uuid'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -140,7 +141,7 @@ export default function CustomerFormModal({
           const { syncService } = await import('@/services/sync.service')
 
           await syncService.enqueueEvent({
-            event_id: crypto.randomUUID(),
+            event_id: randomUUID(),
             type: 'customers.created',
             payload: { ...variables, store_id: user?.store_id },
             created_at: Date.now(),
@@ -202,7 +203,7 @@ export default function CustomerFormModal({
           const { syncService } = await import('@/services/sync.service')
 
           await syncService.enqueueEvent({
-            event_id: crypto.randomUUID(),
+            event_id: randomUUID(),
             type: 'customers.updated',
             payload: { id: customer!.id, ...variables },
             created_at: Date.now(),

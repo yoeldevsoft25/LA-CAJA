@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { randomUUID } from '@/lib/uuid'
 import { persist } from 'zustand/middleware'
 
 export type NotificationType = 'info' | 'warning' | 'error' | 'success'
@@ -27,7 +28,7 @@ export const useNotifications = create<NotificationState>()(
       items: [],
       add: (item) => {
         const newItem: NotificationItem = {
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           created_at: Date.now(),
           read: false,
           ...item,

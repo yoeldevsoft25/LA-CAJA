@@ -12,21 +12,9 @@ import {
 } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
 import type { Product } from './products.service'
+import { randomUUID } from '@/lib/uuid'
 
 const logger = createLogger('SalesService')
-
-// Función auxiliar para generar UUIDs
-function randomUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  // Fallback para navegadores antiguos
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
 
 export interface CartItemDto {
   product_id: string
@@ -417,7 +405,7 @@ export const salesService = {
         } catch (error) {
           // Si estamos offline y falla la validación, marcamos como emergencia
           // En una implementación real, esto podría requerir una confirmación del cajero en la UI
-          logger.warn('Validación de stock falló en modo offline - activando modo emergencia', error)
+          logger.warn('Validación de stock falló en modo offline - activando modo emergencia', error as any)
           isEmergencySale = true;
         }
       }

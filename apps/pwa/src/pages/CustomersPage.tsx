@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
+import { randomUUID } from '@/lib/uuid'
 import { Search, Plus, Edit, Users, Phone, CreditCard, FileText, History, Mail, DollarSign, Trash2, AlertTriangle, Printer, MessageCircle } from 'lucide-react'
 import { customersService, Customer } from '@/services/customers.service'
 import { debtsService, DebtSummary } from '@/services/debts.service'
@@ -155,7 +156,7 @@ export default function CustomersPage() {
           const { syncService } = await import('@/services/sync.service')
 
           await syncService.enqueueEvent({
-            event_id: crypto.randomUUID(),
+            event_id: randomUUID(),
             type: 'customers.deleted',
             payload: { id },
             created_at: Date.now(),

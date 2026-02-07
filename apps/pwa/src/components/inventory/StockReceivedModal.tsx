@@ -7,6 +7,7 @@ import { productsCacheService } from '@/services/products-cache.service'
 import { exchangeService } from '@/services/exchange.service'
 import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
+import { randomUUID } from '@/lib/uuid'
 import { useMobileOptimizedQuery } from '@/hooks/use-mobile-optimized-query'
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { Plus, Trash2, Search, Scale } from 'lucide-react'
@@ -491,7 +492,7 @@ export default function StockReceivedModal({
 
           for (const req of variables) {
             await syncService.enqueueEvent({
-              event_id: crypto.randomUUID(),
+              event_id: randomUUID(),
               type: 'inventory.stock_received',
               payload: req,
               created_at: Date.now(),
