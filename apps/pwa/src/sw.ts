@@ -123,25 +123,58 @@ const PUSH_LOCK_KEY = 'sync_push_lock'
 const PUSH_LOCK_TTL_MS = 15_000
 const SW_PUSH_LOCK_OWNER = `sw-${crypto.randomUUID()}`
 
-function sanitizeEventForPush(event: any) {
-    const payload = { ...(event?.payload || {}) }
-    delete payload.store_id
-    delete payload.device_id
+const CRITICAL_EVENT_TYPES = [
+    'SaleCreated',
+    'StockReceived',
+    'StockAdjusted',
+    'CashSessionOpened',
+    'CashSessionClosed',
+    'DebtPaymentRecorded',
+    'SaleVoided',
+    'CashLedgerEntryCreated',
+];
 
-    return {
-        event_id: event.event_id,
-        seq: event.seq,
-        type: event.type,
-        version: event.version,
-        created_at: event.created_at,
-        actor: event.actor,
-        payload,
-        // Optional fields accepted by backend DTO
-        ...(event.vector_clock ? { vector_clock: event.vector_clock } : {}),
-        ...(event.causal_dependencies ? { causal_dependencies: event.causal_dependencies } : {}),
-        ...(event.delta_payload ? { delta_payload: event.delta_payload } : {}),
-        ...(event.full_payload_hash ? { full_payload_hash: event.full_payload_hash } : {}),
+async function generatePayloadHash(payload: any): Promise<string> {
+    try {
+        const json = JSON.stringify(payload, Object.keys(payload || {}).sort());
+        const msgUint8 = new TextEncoder().encode(json);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+        console.error('[SW] Error generando hash de payload', error);
+        return 'hash_error';
     }
+}
+
+async function prepareEventsForPush(events: any[]) {
+    const prepared = [];
+    for (const event of events) {
+        const payload = { ...(event?.payload || {}) };
+        delete payload.store_id;
+        delete payload.device_id;
+
+        const baseEvent: any = {
+            event_id: event.event_id,
+            seq: event.seq,
+            type: event.type,
+            version: event.version,
+            created_at: event.created_at,
+            actor: event.actor,
+            payload,
+            ...(event.vector_clock ? { vector_clock: event.vector_clock } : {}),
+            ...(event.causal_dependencies ? { causal_dependencies: event.causal_dependencies } : {}),
+        };
+
+        // ⚡ CRDT MAX: Asegurar delta_payload y full_payload_hash para eventos críticos
+        if (CRITICAL_EVENT_TYPES.includes(baseEvent.type)) {
+            baseEvent.delta_payload = event.delta_payload || payload;
+            baseEvent.full_payload_hash = event.full_payload_hash || await generatePayloadHash(baseEvent.delta_payload);
+        }
+
+        prepared.push(baseEvent);
+    }
+    return prepared;
 }
 
 async function syncEvents() {
@@ -228,12 +261,12 @@ async function performSync() {
             }
 
 
-            // 3. Preparar payload
+            const sanitizedEvents = await prepareEventsForPush(pendingEvents)
             const payload = {
                 store_id: storeId,
                 device_id: deviceId,
                 client_version: 'pwa-sw-1.1.0', // Updated version
-                events: pendingEvents.map((e) => sanitizeEventForPush(e))
+                events: sanitizedEvents
             }
 
             // 4. Enviar a API con TIMEOUT

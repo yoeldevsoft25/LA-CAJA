@@ -113,6 +113,7 @@ export class SyncService {
     'DebtPaymentRecorded',
     'DebtPaymentAdded', // Alias for backward compatibility
     'SaleVoided',
+    'CashLedgerEntryCreated',
   ];
 
   // Tipos de eventos que REQUIEREN delta_payload y full_payload_hash bajo CRDT MAX

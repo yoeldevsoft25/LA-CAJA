@@ -1087,6 +1087,7 @@ class SyncServiceClass {
         'CashSessionClosed',
         'DebtPaymentRecorded',
         'SaleVoided',
+        'CashLedgerEntryCreated',
       ];
 
       // Evitar doble-push: solo sincronizar eventos que sigan pending/retrying en IndexedDB.
