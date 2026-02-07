@@ -3,7 +3,9 @@ import {
   pickAvailableApi,
   setStoredApiBase,
   normalizeBaseUrl,
-  type ApiClientConfig
+  type ApiClientConfig,
+  NetworkUtils,
+  type NetworkType
 } from '@la-caja/api-client';
 import { useAuth } from '@/stores/auth.store';
 import { createLogger } from '@/lib/logger';
@@ -32,62 +34,13 @@ const STORAGE_KEYS = {
   USER_INFO: 'user_info',
 };
 
-// --- 2. UTILIDADES DE RED (Helpers Puros) ---
-
-type NetworkType = 'local' | 'private' | 'tailnet' | 'public';
-
-const NetworkUtils = {
-  isLocalhost: (hostname: string) =>
-    hostname === 'localhost' || hostname === '127.0.0.1',
-
-  isPrivateIp: (hostname: string) =>
-    /^10\./.test(hostname) ||
-    /^192\.168\./.test(hostname) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname) ||
-    /^100\./.test(hostname) || // Tailscale / CGNAT
-    /^169\.254\./.test(hostname),
-
-  isTailnet: (hostname: string) =>
-    hostname.endsWith('.ts.net'),
-
-  classifyUrl: (urlStr: string): NetworkType => {
-    try {
-      const hostname = new URL(urlStr).hostname;
-      if (NetworkUtils.isLocalhost(hostname)) return 'local';
-      if (NetworkUtils.isTailnet(hostname)) return 'tailnet';
-      if (NetworkUtils.isPrivateIp(hostname)) return 'private';
-      return 'public';
-    } catch {
-      return 'public'; // Fallback seguro
-    }
-  },
-
-  /**
-   * Determina si el cliente (navegador) está corriendo en la web pública
-   * o en una red local/híbrida.
-   */
-  isPublicWebRuntime: () => {
-    const h = window.location.hostname;
-    if (NetworkUtils.isLocalhost(h)) return false;
-    if (NetworkUtils.isPrivateIp(h)) return false;
-    if (NetworkUtils.isTailnet(h)) return false;
-
-    // Dominios conocidos de producción pública
-    return (
-      h.endsWith('veloxpos.app') ||
-      h.includes('netlify.app') ||
-      h.endsWith('velox.pos') ||
-      ENV.IS_PROD // Asumir público en build de prod por defecto si no cae en los anteriores
-    );
-  }
-};
 
 // --- 3. ESTRATEGIA DE PRIORIZACIÓN (Failover Logic) ---
 
 const getPrioritizedUrls = (): string[] => {
   if (RAW_API_URLS.length <= 1) return RAW_API_URLS;
 
-  const isPublicRuntime = NetworkUtils.isPublicWebRuntime();
+  const isPublicRuntime = NetworkUtils.isPublicWebRuntime(ENV.IS_PROD);
 
   // Regla 1: Si forzamos primaria o es runtime privado/local, usamos el orden del .env
   if (ENV.FORCE_PRIMARY || !isPublicRuntime) {
@@ -133,7 +86,7 @@ function detectInitialApiUrl(): string {
   // C. Lógica de Persistencia y Failover
   if (ORDERED_FAILOVER_URLS.length > 0) {
     const storedBase = localStorage.getItem(STORAGE_KEYS.BASE_URL);
-    const isPublicRuntime = NetworkUtils.isPublicWebRuntime();
+    const isPublicRuntime = NetworkUtils.isPublicWebRuntime(ENV.IS_PROD);
     const isServerKnownDown = localStorage.getItem(STORAGE_KEYS.SERVER_UNAVAILABLE) === '1';
     const isPrimaryStored = storedBase === PREFERRED_API_URL;
 
@@ -170,7 +123,7 @@ function detectInitialApiUrl(): string {
 
 // Ejecutar saneamiento inicial (Self-Healing)
 (() => {
-  if (NetworkUtils.isPublicWebRuntime()) {
+  if (NetworkUtils.isPublicWebRuntime(ENV.IS_PROD)) {
     const stored = localStorage.getItem(STORAGE_KEYS.BASE_URL);
     // Si estamos en público y tenemos guardada una IP privada que NO está en la lista blanca
     if (stored && NetworkUtils.classifyUrl(stored) !== 'public' && !RAW_API_URLS.includes(stored)) {

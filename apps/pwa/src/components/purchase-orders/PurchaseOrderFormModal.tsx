@@ -28,7 +28,7 @@ import {
 } from '@/services/purchase-orders.service'
 import { suppliersService } from '@/services/suppliers.service'
 import { warehousesService } from '@/services/warehouses.service'
-import { productsService, Product } from '@/services/products.service'
+import { productsService, Product } from '@la-caja/app-core'
 import { useAuth } from '@/stores/auth.store'
 import toast from '@/lib/toast'
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Progress } from '@/components/ui/progress'
 import toast from '@/lib/toast'
-import { productsService, Product } from '@/services/products.service'
+import { productsService, Product } from '@la-caja/app-core'
 import { useAuth } from '@/stores/auth.store'
 
 interface DuplicateGroup {

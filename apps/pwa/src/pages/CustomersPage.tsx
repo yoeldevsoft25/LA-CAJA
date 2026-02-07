@@ -153,7 +153,7 @@ export default function CustomersPage() {
       // ✅ OFFLINE-FIRST
       if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED' || !navigator.onLine) {
         try {
-          const { syncService } = await import('@/services/sync.service')
+          const { syncService } = await import('@la-caja/app-core')
 
           await syncService.enqueueEvent({
             event_id: randomUUID(),

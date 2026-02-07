@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import { db } from '@/db/database'
-import { syncService } from './sync.service'
+import { syncService } from '@la-caja/app-core'
 import { BaseEvent } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
 import { randomUUID } from '@/lib/uuid'

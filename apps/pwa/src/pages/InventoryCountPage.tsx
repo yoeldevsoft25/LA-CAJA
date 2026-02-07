@@ -7,12 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { usePOSScanner } from '@/hooks/pos/usePOSScanner'
-import { productsCacheService } from '@/services/products-cache.service'
+import { productsCacheService } from '@la-caja/app-core'
 import { inventoryService } from '@/services/inventory.service'
 import toast from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/stores/auth.store'
-import { Product } from '@/services/products.service'
+import { Product } from '@la-caja/app-core'
 
 interface CountItem {
     product_id: string

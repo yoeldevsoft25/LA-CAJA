@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import { syncService } from './sync.service'
+import { syncService } from '@la-caja/app-core'
 import { BaseEvent, StockDeltaAppliedPayload } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
 import { randomUUID } from '@/lib/uuid'

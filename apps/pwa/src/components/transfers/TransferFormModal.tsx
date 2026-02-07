@@ -29,7 +29,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Warehouse } from '@/services/warehouses.service'
-import { productsService, Product } from '@/services/products.service'
+import { productsService, Product } from '@la-caja/app-core'
 import { CreateTransferDto } from '@/services/transfers.service'
 import { ArrowRight, Package, Check, X, Search, AlertCircle, MapPin, Calendar } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'

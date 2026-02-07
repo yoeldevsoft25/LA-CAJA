@@ -1,4 +1,4 @@
-import { Product } from '@/services/products.service'
+import { Product } from '@la-caja/app-core'
 import { StockStatus } from '@/services/inventory.service'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'

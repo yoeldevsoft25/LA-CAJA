@@ -32,7 +32,7 @@ import { format, parseISO } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { exchangeService, usdToBs } from '@/services/exchange.service';
+import { exchangeService, usdToBs } from '@la-caja/app-core';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, AlertCircle } from 'lucide-react';
 

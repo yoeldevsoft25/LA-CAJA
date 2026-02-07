@@ -9,7 +9,11 @@
         "test": "vitest run"
     },
     "dependencies": {
-        "zustand": "^5.0.9"
+        "dexie": "^4.0.1",
+        "zustand": "^5.0.9",
+        "@la-caja/domain": "workspace:*",
+        "@la-caja/sync": "workspace:*",
+        "@la-caja/offline-core": "workspace:*"
     },
     "devDependencies": {
         "react": "^18.2.0",

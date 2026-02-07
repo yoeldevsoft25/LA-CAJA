@@ -26,6 +26,12 @@
       "@/*": [
         "./src/*"
       ],
+      "@la-caja/app-core": [
+        "../../packages/app-core/src/index.ts"
+      ],
+      "@la-caja/app-core/*": [
+        "../../packages/app-core/src/*"
+      ],
       "@la-caja/domain": [
         "../../packages/domain/src/index.ts"
       ],

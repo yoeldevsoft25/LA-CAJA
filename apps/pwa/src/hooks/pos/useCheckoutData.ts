@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { exchangeService } from '@/services/exchange.service'
+import { exchangeService } from '@la-caja/app-core'
 import { customersService } from '@/services/customers.service'
 import { paymentsService } from '@/services/payments.service'
 import { invoiceSeriesService } from '@/services/invoice-series.service'

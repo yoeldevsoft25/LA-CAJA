@@ -7,6 +7,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from '@/components/ui/sonner'
 import ErrorBoundary from './components/errors/ErrorBoundary'
 import { registerSW } from 'virtual:pwa-register'
+import { setApiClient, setToast } from '@la-caja/app-core'
+import { api } from '@/lib/api'
+import toast from '@/lib/toast'
 
 const BUILD_ID = __PWA_BUILD_ID__
 let buildCheckInFlight = false
@@ -132,6 +135,8 @@ const setupPwaUpdates = () => {
 
 void enablePersistentStorage();
 setupPwaUpdates()
+setApiClient(api)
+setToast(toast)
 
 
 const queryClient = new QueryClient({

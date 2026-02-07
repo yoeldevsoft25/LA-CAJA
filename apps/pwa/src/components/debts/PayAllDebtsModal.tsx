@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DollarSign, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals, PaymentMethod, CreateDebtPaymentDto } from '@/services/debts.service'
-import { exchangeService } from '@/services/exchange.service'
+import { exchangeService } from '@la-caja/app-core'
 import { useOnline } from '@/hooks/use-online'
 
 const LIVE_BCV_REFETCH_MS = 30_000

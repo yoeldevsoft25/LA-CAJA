@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { syncService, SyncStatus } from '@/services/sync.service'
+import { syncService, SyncStatus } from '@la-caja/app-core'
 import { CircuitState } from '@la-caja/offline-core'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, AlertCircle } from 'lucide-react'

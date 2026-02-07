@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import type { AxiosResponse } from 'axios'
-import { syncService } from './sync.service'
-import { exchangeService } from './exchange.service'
+import { syncService } from '@la-caja/app-core'
+import { exchangeService } from '@la-caja/app-core'
 import {
   BaseEvent,
   SaleCreatedPayload,
@@ -11,7 +11,7 @@ import {
   CashLedgerEntryCreatedPayload,
 } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
-import type { Product } from './products.service'
+import type { Product } from '@la-caja/app-core'
 import { randomUUID } from '@/lib/uuid'
 
 const logger = createLogger('SalesService')

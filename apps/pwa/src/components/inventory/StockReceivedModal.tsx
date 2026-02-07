@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from '@/lib/toast'
 import { inventoryService, StockReceivedRequest, StockStatus } from '@/services/inventory.service'
-import { productsService, Product } from '@/services/products.service'
-import { productsCacheService } from '@/services/products-cache.service'
-import { exchangeService } from '@/services/exchange.service'
+import { productsService, Product } from '@la-caja/app-core'
+import { productsCacheService } from '@la-caja/app-core'
+import { exchangeService } from '@la-caja/app-core'
 import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
 import { randomUUID } from '@/lib/uuid'
@@ -484,7 +484,7 @@ export default function StockReceivedModal({
       // ✅ OFFLINE-FIRST: Si falla por conexión
       if (error.isOffline || error.code === 'ERR_INTERNET_DISCONNECTED' || !navigator.onLine) {
         try {
-          const { syncService } = await import('@/services/sync.service')
+          const { syncService } = await import('@la-caja/app-core')
 
           // Encolar un evento por cada request (o un evento batch si soportamos batch)
           // DB soporta batch pero SyncService.enqueueEvent es uno a uno por ahora.

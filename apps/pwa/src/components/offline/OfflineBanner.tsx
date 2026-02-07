@@ -4,7 +4,7 @@ import { useOnline } from '@/hooks/use-online'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
-import { syncService } from '@/services/sync.service'
+import { syncService } from '@la-caja/app-core'
 
 interface OfflineBannerProps {
   className?: string

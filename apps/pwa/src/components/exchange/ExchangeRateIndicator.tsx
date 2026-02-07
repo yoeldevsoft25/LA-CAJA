@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, TrendingUp, Clock, Wifi, WifiOff, ChevronDown, Settings } from 'lucide-react'
-import { exchangeService } from '@/services/exchange.service'
+import { exchangeService } from '@la-caja/app-core'
 import { useOnline } from '@/hooks/use-online'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'

@@ -15,7 +15,7 @@ import {
   Trash2,
   ArrowRight
 } from 'lucide-react'
-import { productsService, Product } from '@/services/products.service'
+import { productsService, Product } from '@la-caja/app-core'
 import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
 import { AddOrderItemRequest } from '@/services/orders.service'
 import { useAuth } from '@/stores/auth.store'

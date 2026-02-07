@@ -1,4 +1,4 @@
-import { Product } from '@/services/products.service'
+import { Product } from '@la-caja/app-core'
 import ProductSerialsList from './ProductSerialsList'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 

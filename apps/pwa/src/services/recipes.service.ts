@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import { RecipeIngredient } from './products.service'
+import { RecipeIngredient } from '@la-caja/app-core'
 
 /**
  * Servicio para gestión de recetas en el PWA

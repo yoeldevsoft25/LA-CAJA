@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import { Customer, customersService } from './customers.service'
-import { syncService } from './sync.service'
+import { syncService } from '@la-caja/app-core'
 import { db } from '@/db/database'
 import { BaseEvent, CashLedgerEntryCreatedPayload } from '@la-caja/domain'
 import { randomUUID } from '@/lib/uuid'
@@ -248,7 +248,7 @@ export const debtsService = {
       // pero aqui lo forzamos o dejamos que ProjectionManager.applyDebtPaymentAdded lo haga si sync lo llama.
       // SyncService llama a saveEventToDB pero NO llama a ProjectionManager automáticamente para eventos propios (aun).
       // Deberíamos llamar manualmente a la proyección para updatear la UI inmediata.
-      const { projectionManager } = await import('./projection.manager')
+      const { projectionManager } = await import('@la-caja/app-core')
       await projectionManager.applyDebtPaymentAdded(debtEvent)
 
       // 4. Retornar Mock
@@ -356,7 +356,7 @@ export const debtsService = {
 
       await syncService.enqueueEvent(event)
 
-      const { projectionManager } = await import('./projection.manager')
+      const { projectionManager } = await import('@la-caja/app-core')
       await projectionManager.applyDebtCreated(event)
 
       // Mock return

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Trash2, Search, Utensils } from 'lucide-react'
-import { Product, RecipeIngredient } from '@/services/products.service'
+import { Product, RecipeIngredient } from '@la-caja/app-core'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
