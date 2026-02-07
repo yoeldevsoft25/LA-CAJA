@@ -225,8 +225,10 @@ export const projectionManager = {
             id: payload.customer_id,
             store_id: event.store_id,
             name: payload.name,
-            document_id: null, // Asumir null si no viene en el evento base
+            document_id: payload.document_id || null,
             phone: payload.phone || null,
+            email: payload.email || null,
+            credit_limit: payload.credit_limit || null,
             note: payload.note || null,
             updated_at: event.created_at,
             cached_at: Date.now()

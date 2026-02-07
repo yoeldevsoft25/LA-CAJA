@@ -249,7 +249,10 @@ export interface SaleCreatedPayload {
 export interface CustomerCreatedPayload {
   customer_id: string;
   name: string;
+  document_id?: string;
+  email?: string;
   phone?: string;
+  credit_limit?: number | null;
   note?: string;
 }
 
@@ -257,7 +260,10 @@ export interface CustomerUpdatedPayload {
   customer_id: string;
   patch: Partial<{
     name: string;
+    document_id: string;
+    email: string;
     phone: string;
+    credit_limit: number | null;
     note: string;
   }>;
 }

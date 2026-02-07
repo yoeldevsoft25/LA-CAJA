@@ -70,6 +70,8 @@ export interface LocalCustomer {
   name: string;
   document_id: string | null;
   phone: string | null;
+  email: string | null;
+  credit_limit: number | null;
   note: string | null;
   debt_cutoff_at?: number | null;
   updated_at: number;

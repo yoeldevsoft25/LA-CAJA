@@ -68,7 +68,10 @@ export interface CashSessionClosedPayload {
 export interface CustomerCreatedPayload {
   customer_id: string;
   name: string;
+  document_id?: string | null;
+  email?: string | null;
   phone?: string | null;
+  credit_limit?: number | string | null;
   note?: string | null;
 }
 
@@ -76,7 +79,10 @@ export interface CustomerUpdatedPayload {
   customer_id: string;
   patch: {
     name?: string;
+    document_id?: string | null;
+    email?: string | null;
     phone?: string | null;
+    credit_limit?: number | string | null;
     note?: string | null;
   };
 }
