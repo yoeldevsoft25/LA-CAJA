@@ -439,16 +439,31 @@ class SyncServiceClass {
     }
   }
 
-  /**
-   * Ejecuta ciclo completo de sincronización (Push + Pull)
-   */
   async fullSync(): Promise<void> {
     if (!this.isInitialized) return;
+
+    // ✅ COORDINACIÓN: Solo una sincronización a la vez (SW o Main Thread)
+    if (navigator.locks) {
+      return navigator.locks.request('velox_sync_lock', { ifAvailable: true }, async (lock) => {
+        if (!lock) {
+          this.logger.info('Sync en progreso por SW o pestaña, abortando fullSync manual');
+          return;
+        }
+        return this.performFullSync();
+      });
+    }
+
+    return this.performFullSync();
+  }
+
+  private async performFullSync(): Promise<void> {
+    if (!this.syncQueue) return;
+    const queue = this.syncQueue;
 
     this.logger.info('Ejecutando Full Sync (Push + Pull)');
     try {
       // 1. Push pending
-      if (this.syncQueue) await this.syncQueue.flush();
+      await queue.flush();
 
       // 2. Pull updates (stub - implement real pull logic calling API)
       // await this.pullUpdatesFromServer();
@@ -478,13 +493,34 @@ class SyncServiceClass {
       return;
     }
 
+    // ✅ COORDINACIÓN: Solo una sincronización a la vez
+    if (navigator.locks) {
+      return navigator.locks.request('velox_sync_lock', { ifAvailable: true }, async (lock) => {
+        if (!lock) {
+          this.logger.info('Sync en progreso por SW, abortando hardRecoverySync');
+          return;
+        }
+        return this.performHardRecoverySync();
+      });
+    }
+
+    return this.performHardRecoverySync();
+  }
+
+  private async performHardRecoverySync(): Promise<void> {
+    if (!this.syncQueue) {
+      this.logger.warn('performHardRecoverySync llamado sin syncQueue inicializada');
+      return;
+    }
+
+    const queue = this.syncQueue;
     const startTime = Date.now();
     this.logger.info('🚀 Iniciando Hard Recovery Sync');
 
     try {
       // 1. Recargar pendientes desde IndexedDB (por si hay eventos que no están en cola)
       const pendingEvents = await db.getPendingEvents(1000);
-      const queueDepthBefore = this.syncQueue.getStats().pending;
+      const queueDepthBefore = queue.getStats().pending;
 
       this.logger.info(`📊 Pendientes en IndexedDB: ${pendingEvents.length}, en cola: ${queueDepthBefore}`);
       this.metrics.recordEvent('pending_loaded', {
@@ -495,15 +531,15 @@ class SyncServiceClass {
       // Si hay eventos en DB que no están en cola, agregarlos
       if (pendingEvents.length > queueDepthBefore) {
         const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
-        this.syncQueue.enqueueBatch(baseEvents);
+        queue.enqueueBatch(baseEvents);
         this.logger.info(`➕ Agregados ${pendingEvents.length - queueDepthBefore} eventos a la cola`);
       }
 
       // 2. Flush inmediato con retry
       this.logger.info('⬆️ Ejecutando flush de eventos pendientes...');
-      await this.syncQueue.flush();
+      await queue.flush();
 
-      const queueDepthAfter = this.syncQueue.getStats().pending;
+      const queueDepthAfter = queue.getStats().pending;
       const syncedCount = queueDepthBefore - queueDepthAfter;
 
       this.metrics.recordEvent('push_success', {
@@ -520,7 +556,7 @@ class SyncServiceClass {
       await this.reconcileQueueState();
 
       const totalDuration = Date.now() - startTime;
-      const finalQueueDepth = this.syncQueue.getStats().pending;
+      const finalQueueDepth = queue.getStats().pending;
       this.logger.info(`✅ Hard Recovery completado en ${totalDuration}ms (${syncedCount} eventos sincronizados, queue=${finalQueueDepth})`);
 
       // 5. Emitir evento global para notificar a la UI
@@ -756,14 +792,23 @@ class SyncServiceClass {
   async syncNow(): Promise<void> {
     if (!this.isInitialized || !this.syncQueue) {
       this.logger.warn('syncNow() llamado pero el servicio no está inicializado');
-      // No lanzar error, simplemente retornar silenciosamente
-      // El sync periódico lo intentará cuando el servicio esté listo
       return;
     }
 
     if (!navigator.onLine) {
       this.logger.debug('syncNow() omitido: sin conexión');
       return;
+    }
+
+    // ✅ COORDINACIÓN: Solo una sincronización a la vez
+    if (navigator.locks) {
+      return navigator.locks.request('velox_sync_lock', { ifAvailable: true }, async (lock) => {
+        if (!lock) {
+          this.logger.info('Sync en progreso por SW, abortando syncNow manual');
+          return;
+        }
+        if (this.syncQueue) await this.syncQueue.flush();
+      });
     }
 
     await this.syncQueue.flush();
