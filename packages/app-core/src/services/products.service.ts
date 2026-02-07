@@ -17,8 +17,7 @@ import {
 const logger = createLogger('ProductsService')
 
 function getUserId(): string {
-  // Intentar obtener del token o localStorage
-  // Esto es un fallback, idealmente debería pasarse como argumento
+  if (typeof localStorage === 'undefined') return 'unknown';
   try {
     const authStorage = localStorage.getItem('auth-storage')
     if (authStorage) {
@@ -32,6 +31,7 @@ function getUserId(): string {
 }
 
 function getUserRole(): 'owner' | 'cashier' {
+  if (typeof localStorage === 'undefined') return 'cashier';
   try {
     const authStorage = localStorage.getItem('auth-storage')
     if (authStorage) {
@@ -367,7 +367,7 @@ export const productsService = {
       const event: BaseEvent = {
         event_id: randomUUID(),
         store_id: storeId,
-        device_id: localStorage.getItem('device_id') || 'unknown',
+        device_id: (typeof localStorage !== 'undefined' ? localStorage.getItem('device_id') : null) || 'unknown',
         seq: 0, // SyncService asignará el correcto
         type: 'ProductCreated',
         version: 1,
@@ -389,7 +389,7 @@ export const productsService = {
         await syncService.enqueueEvent({
           event_id: randomUUID(),
           store_id: storeId,
-          device_id: localStorage.getItem('device_id') || 'unknown',
+          device_id: (typeof localStorage !== 'undefined' ? localStorage.getItem('device_id') : null) || 'unknown',
           seq: 0,
           type: 'RecipeIngredientsUpdated',
           version: 1,
@@ -498,7 +498,7 @@ export const productsService = {
       const event: BaseEvent = {
         event_id: randomUUID(),
         store_id: storeId,
-        device_id: localStorage.getItem('device_id') || 'unknown',
+        device_id: (typeof localStorage !== 'undefined' ? localStorage.getItem('device_id') : null) || 'unknown',
         seq: 0,
         type: 'ProductUpdated',
         version: 1,
@@ -561,7 +561,7 @@ export const productsService = {
         await syncService.enqueueEvent({
           event_id: randomUUID(),
           store_id: storeId,
-          device_id: localStorage.getItem('device_id') || 'unknown',
+          device_id: (typeof localStorage !== 'undefined' ? localStorage.getItem('device_id') : null) || 'unknown',
           seq: 0,
           type: 'RecipeIngredientsUpdated',
           version: 1,
@@ -618,7 +618,7 @@ export const productsService = {
       const event: BaseEvent = {
         event_id: randomUUID(),
         store_id: storeId,
-        device_id: localStorage.getItem('device_id') || 'unknown',
+        device_id: (typeof localStorage !== 'undefined' ? localStorage.getItem('device_id') : null) || 'unknown',
         seq: 0,
         type: 'ProductDeactivated',
         version: 1,
@@ -687,7 +687,7 @@ export const productsService = {
       const event: BaseEvent = {
         event_id: randomUUID(),
         store_id: storeId,
-        device_id: localStorage.getItem('device_id') || 'unknown',
+        device_id: (typeof localStorage !== 'undefined' ? localStorage.getItem('device_id') : null) || 'unknown',
         seq: 0,
         type: 'PriceChanged',
         version: 1,
@@ -746,7 +746,7 @@ export const productsService = {
     const now = Date.now();
 
     try {
-      const lastSync = localStorage.getItem(SYNC_KEY);
+      const lastSync = typeof localStorage !== 'undefined' ? localStorage.getItem(SYNC_KEY) : null;
       if (lastSync && now - parseInt(lastSync) < COOLDOWN_MS) {
         // Enfriamiento activo, solo asegurar que el índice esté caliente con lo que ya hay
         await productsCacheService.warmBarcodeIndex(storeId);
@@ -771,7 +771,9 @@ export const productsService = {
         // pero lo forzamos para asegurar consistencia
         await productsCacheService.warmBarcodeIndex(storeId);
 
-        localStorage.setItem(SYNC_KEY, now.toString());
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(SYNC_KEY, now.toString());
+        }
         logger.info('Sincronización de productos optimizada completada', { count: products.length });
       }
     } catch (error) {

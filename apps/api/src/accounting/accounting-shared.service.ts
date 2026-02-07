@@ -31,7 +31,8 @@ export class AccountingSharedService {
   /**
    * Generar número de asiento único
    */
-  async generateEntryNumber(storeId: string, entryDate: Date): Promise<string> {
+  async generateEntryNumber(storeId: string, entryDateInput: Date | string): Promise<string> {
+    const entryDate = new Date(entryDateInput);
     const year = entryDate.getFullYear();
     const month = String(entryDate.getMonth() + 1).padStart(2, '0');
 
@@ -139,7 +140,7 @@ export class AccountingSharedService {
    */
   async updateAccountBalances(
     storeId: string,
-    entryDate: Date,
+    entryDateInput: Date | string,
     lines: Array<{
       account_id: string;
       debit_amount_bs: number;
@@ -149,6 +150,7 @@ export class AccountingSharedService {
     }>,
     entityManager?: EntityManager,
   ): Promise<void> {
+    const entryDate = new Date(entryDateInput);
     const repo = entityManager
       ? entityManager.getRepository(AccountBalance)
       : this.balanceRepository;

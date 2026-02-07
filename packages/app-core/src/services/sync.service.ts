@@ -107,7 +107,11 @@ class SyncServiceClass {
     this.metrics = new SyncMetricsCollector();
     this.circuitBreaker = new CircuitBreaker();
     this.cacheManager = new CacheManager('la-caja-cache');
-    this.setupConnectivityListeners();
+
+    // Solo configurar listeners si estamos en el hilo principal (browser)
+    if (typeof window !== 'undefined') {
+      this.setupConnectivityListeners();
+    }
   }
 
   /**
@@ -167,33 +171,34 @@ class SyncServiceClass {
       }
     );
 
-    // ✅ OFFLINE-FIRST: Listener adicional para offline (registrar background sync)
-    window.addEventListener('offline', () => {
-      this.logger.warn('📵 Conexión perdida');
-      this.metrics.recordEvent('connection_lost', {});
-      this.registerBackgroundSync().catch(() => { });
-    });
+    // listeners adicionales solo si estamos en browser
+    if (typeof window !== 'undefined') {
+      window.addEventListener('offline', () => {
+        this.logger.warn('📵 Conexión perdida');
+        this.metrics.recordEvent('connection_lost', {});
+        this.registerBackgroundSync().catch(() => { });
+      });
 
-    // ✅ OFFLINE-FIRST: Listener adicional para online (hard recovery inmediato)
-    window.addEventListener('online', () => {
-      this.logger.debug('🌐 Evento online detectado');
-      this.metrics.recordEvent('online_event', {});
-      void this.requestRecovery('online');
-    });
+      window.addEventListener('online', () => {
+        this.logger.debug('🌐 Evento online detectado');
+        this.metrics.recordEvent('online_event', {});
+        void this.requestRecovery('online');
+      });
 
-    // ✅ OFFLINE-FIRST: Listener para visibilitychange (app vuelve a foreground)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && navigator.onLine && this.isInitialized) {
-        void this.requestRecovery('visibility');
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible' && navigator.onLine && this.isInitialized) {
+            void this.requestRecovery('visibility');
+          }
+        });
       }
-    });
 
-    // ✅ OFFLINE-FIRST: Listener para focus (ventana recupera foco)
-    window.addEventListener('focus', () => {
-      if (navigator.onLine && this.isInitialized) {
-        void this.requestRecovery('focus');
-      }
-    });
+      window.addEventListener('focus', () => {
+        if (navigator.onLine && this.isInitialized) {
+          void this.requestRecovery('focus');
+        }
+      });
+    }
   }
 
   /**
@@ -253,8 +258,8 @@ class SyncServiceClass {
    * Registra un background sync tag para sincronizar cuando vuelva la conexión
    */
   private async registerBackgroundSync(): Promise<void> {
-    if (!('serviceWorker' in navigator)) {
-      this.logger.debug('Service Worker no está disponible');
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      this.logger.debug('Service Worker Registration no disponible en este contexto');
       return;
     }
 
@@ -559,8 +564,8 @@ class SyncServiceClass {
       const finalQueueDepth = queue.getStats().pending;
       this.logger.info(`✅ Hard Recovery completado en ${totalDuration}ms (${syncedCount} eventos sincronizados, queue=${finalQueueDepth})`);
 
-      // 5. Emitir evento global para notificar a la UI
-      if (syncedCount > 0 || queueDepthAfter !== finalQueueDepth) {
+      // 5. Emitir evento global para notificar a la UI (solo en browser)
+      if (typeof window !== 'undefined' && (syncedCount > 0 || queueDepthAfter !== finalQueueDepth)) {
         window.dispatchEvent(new CustomEvent('sync:completed', {
           detail: {
             syncedCount,
@@ -760,10 +765,17 @@ class SyncServiceClass {
    * Obtiene o crea un deviceId
    */
   private getOrCreateDeviceId(): string {
-    let deviceId = localStorage.getItem('device_id');
+    let deviceId = null;
+
+    if (typeof localStorage !== 'undefined') {
+      deviceId = localStorage.getItem('device_id');
+    }
+
     if (!deviceId) {
       deviceId = randomUUID();
-      localStorage.setItem('device_id', deviceId);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('device_id', deviceId);
+      }
     }
     return deviceId;
   }

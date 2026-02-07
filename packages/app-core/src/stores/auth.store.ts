@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface AuthUser {
     user_id: string;
@@ -34,15 +34,21 @@ export const useAuth = create<AuthState>()(
             isAuthenticated: false,
             showLoader: false,
             login: (token, refreshToken, user) => {
-                localStorage.setItem('auth_token', token);
-                localStorage.setItem('refresh_token', refreshToken);
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('auth_token', token);
+                    localStorage.setItem('refresh_token', refreshToken);
+                }
 
                 set({ token, refreshToken, user, isAuthenticated: true, showLoader: true });
             },
             logout: () => {
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('refresh_token');
-                sessionStorage.removeItem('hasSeenLoader');
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('refresh_token');
+                }
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.removeItem('hasSeenLoader');
+                }
 
                 set({ token: null, refreshToken: null, user: null, isAuthenticated: false, showLoader: false });
             },
@@ -51,12 +57,15 @@ export const useAuth = create<AuthState>()(
             },
             setShowLoader: (show) => set({ showLoader: show }),
             setToken: (token) => {
-                localStorage.setItem('auth_token', token);
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('auth_token', token);
+                }
                 set({ token });
             },
         }),
         {
             name: 'auth-storage',
+            storage: createJSONStorage(() => (typeof localStorage !== 'undefined' ? localStorage : ({} as any))),
             partialize: (state) => ({
                 user: state.user,
                 isAuthenticated: state.isAuthenticated,
