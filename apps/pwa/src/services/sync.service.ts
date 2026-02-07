@@ -22,6 +22,18 @@ import { createLogger } from '@/lib/logger';
 import { projectionManager } from './projection.manager';
 import toast from '@/lib/toast';
 
+// Helper for safe UUID generation (crypto.randomUUID requires secure context/HTTPS)
+function randomUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export interface PushSyncDto {
   store_id: string;
   device_id: string;
@@ -65,7 +77,7 @@ class SyncServiceClass {
   private readonly ZERO_UUID = '00000000-0000-0000-0000-000000000000';
   private readonly PUSH_LOCK_KEY = 'sync_push_lock';
   private readonly PUSH_LOCK_TTL_MS = 15_000;
-  private readonly PUSH_LOCK_OWNER = `fg-${crypto.randomUUID()}`;
+  private readonly PUSH_LOCK_OWNER = `fg-${randomUUID()}`;
   private syncQueue: SyncQueue | null = null;
   private metrics: SyncMetricsCollector;
   private isInitialized = false;
@@ -725,7 +737,7 @@ class SyncServiceClass {
   private getOrCreateDeviceId(): string {
     let deviceId = localStorage.getItem('device_id');
     if (!deviceId) {
-      deviceId = crypto.randomUUID();
+      deviceId = randomUUID();
       localStorage.setItem('device_id', deviceId);
     }
     return deviceId;
