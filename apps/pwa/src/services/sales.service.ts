@@ -238,7 +238,10 @@ async function validateOfflineStock(
 
     if (requested > available) {
       const product = await db.products.get(item.product_id);
-      const errorMsg = `Stock insuficiente para "${product?.name || item.product_id}". Disponible: ${available.toFixed(2)}, Requerido: ${requested.toFixed(2)}`;
+      const stockFound = !!localStock;
+      const escrowFound = !!localEscrow;
+
+      const errorMsg = `Stock insuficiente para "${product?.name || item.product_id}". Disponible: ${available.toFixed(2)} (Stock: ${stock.toFixed(2)}, Cuota: ${escrow.toFixed(2)}), Requerido: ${requested.toFixed(2)}. ${!stockFound && !escrowFound ? 'Registro no encontrado en cache local.' : ''}`;
 
       if (!options?.isEmergency) {
         throw new Error(errorMsg);

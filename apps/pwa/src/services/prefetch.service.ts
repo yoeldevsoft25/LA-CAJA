@@ -56,20 +56,22 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
 
     // 1. Prefetch productos activos (más crítico - se usa en POS)
     updateProgress('Cacheando productos...')
+    logger.debug('Iniciando prefetch de productos...')
     await Promise.all([
       queryClient.prefetchQuery({
         queryKey: ['products', 'search', '', storeId],
-        queryFn: () => productsService.search({ is_active: true, limit: 500 }, storeId),
+        queryFn: () => productsService.search({ is_active: true, limit: 2000 }, storeId),
         staleTime: 1000 * 60 * 30, // 30 minutos
         gcTime: Infinity, // Nunca eliminar
       }),
       // También cachear en IndexedDB
-      productsService.search({ is_active: true, limit: 500 }, storeId).then((data) => {
+      productsService.search({ is_active: true, limit: 2000 }, storeId).then((data) => {
         if (data.products && data.products.length > 0) {
+          logger.debug(`Cacheando ${data.products.length} productos en IndexedDB`)
           return productsCacheService.cacheProducts(data.products, storeId)
         }
-      }).catch(() => {
-        // Silenciar errores
+      }).catch((err) => {
+        logger.error('Error cacheando productos en prefetch', err)
       }),
     ])
 
@@ -133,16 +135,21 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
 
     // 7. Prefetch estado de inventario (Stock y Escrows)
     updateProgress('Cacheando inventario y cuotas...')
-    const stockStatusData = await inventoryService.getStockStatus({ limit: 500 })
+    logger.debug('Iniciando prefetch de estado de stock...')
+    const stockStatusData = await inventoryService.getStockStatus({ limit: 2000 })
 
     // Establecer en la queryKey del prefetch (vía legacy endpoint si se usa)
     queryClient.setQueryData(['inventory', 'status', storeId], stockStatusData)
 
     // ✅ OFFLINE-FIRST: Cachear en IndexedDB para validación local
+    logger.debug(`Cacheando ${stockStatusData.length} registros de stock en IndexedDB`)
     await Promise.all([
       inventoryService.cacheStock(stockStatusData).catch(err => logger.error('Error cacheando stock', err)),
       inventoryService.getEscrowStatus(storeId)
-        .then(escrows => inventoryService.cacheEscrows(escrows))
+        .then(escrows => {
+          logger.debug(`Cacheando ${escrows.length} cuotas (escrow) en IndexedDB`)
+          return inventoryService.cacheEscrows(escrows)
+        })
         .catch(err => logger.error('Error cacheando escrows', err))
     ]);
 
@@ -242,7 +249,7 @@ export async function prefetchPageData(
         // POS ya tiene prefetch completo, solo asegurar productos
         await queryClient.prefetchQuery({
           queryKey: ['products', 'search', '', storeId],
-          queryFn: () => productsService.search({ is_active: true, limit: 500 }, storeId),
+          queryFn: () => productsService.search({ is_active: true, limit: 2000 }, storeId),
           staleTime: 1000 * 60 * 30,
         })
         break

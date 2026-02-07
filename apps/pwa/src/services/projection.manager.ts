@@ -6,7 +6,8 @@ import {
     ProductDeactivatedPayload,
     PriceChangedPayload,
     CustomerCreatedPayload,
-    CustomerUpdatedPayload
+    CustomerUpdatedPayload,
+    SaleCreatedPayload
 } from '@la-caja/domain';
 import { createLogger } from '@/lib/logger';
 
@@ -33,7 +34,7 @@ export const projectionManager = {
         // Agrupamos por tipo para debugging
         const byType: Record<string, number> = {};
 
-        await db.transaction('rw', db.products, db.customers, db.debts, async () => {
+        await db.transaction('rw', [db.products, db.customers, db.debts, db.localStock, db.localEscrow], async () => {
             for (const event of events) {
                 try {
                     await this.applyEvent(event);
@@ -100,6 +101,9 @@ export const projectionManager = {
                 break;
             case 'StockQuotaReclaimed':
                 await this.applyStockQuotaReclaimed(event);
+                break;
+            case 'SaleCreated':
+                await this.applySaleCreated(event);
                 break;
         }
     },
@@ -380,5 +384,36 @@ export const projectionManager = {
         const id = `${productId}:${variantId || 'null'}`;
 
         await db.localEscrow.delete(id);
+    },
+
+    async applySaleCreated(event: BaseEvent) {
+        const payload = event.payload as SaleCreatedPayload;
+        const storeId = event.store_id;
+
+        for (const item of payload.items) {
+            const productId = item.product_id;
+            const variantId = (item as any).variant_id ?? null;
+            const qty = Number(item.qty);
+            const id = `${productId}:${variantId || 'null'}`;
+
+            await db.transaction('rw', db.localStock, async () => {
+                const existing = await db.localStock.get(id);
+                if (existing) {
+                    existing.stock = (existing.stock || 0) - qty;
+                    existing.updated_at = event.created_at;
+                    await db.localStock.put(existing);
+                } else {
+                    // Si no existe, lo creamos con stock negativo (asumiendo que prefetch se perdió esto)
+                    await db.localStock.put({
+                        id,
+                        store_id: storeId,
+                        product_id: productId,
+                        variant_id: variantId,
+                        stock: -qty,
+                        updated_at: event.created_at
+                    });
+                }
+            });
+        }
     }
 };

@@ -365,43 +365,55 @@ export const inventoryService = {
     return response.data
   },
 
-  /**
-   * Cachear stock en IndexedDB
-   */
   async cacheStock(status: StockStatus[]): Promise<void> {
     const { db } = await import('@/db/database');
     const storeId = localStorage.getItem('store_id') || '';
     const now = Date.now();
 
-    const localStocks = status.map(s => ({
-      id: `${s.product_id}:null`, // TODO: Soporte para variantes si se agrega a StockStatus
-      store_id: storeId,
-      product_id: s.product_id,
-      variant_id: null,
-      stock: s.current_stock,
-      updated_at: now
-    }));
+    if (!Array.isArray(status)) {
+      console.warn('[InventoryService] No se pudo cachear stock: los datos no son un array', status);
+      return;
+    }
 
-    await db.localStock.bulkPut(localStocks);
+    const localStocks = status
+      .filter(s => s && s.product_id)
+      .map(s => ({
+        id: `${s.product_id}:null`, // TODO: Soporte para variantes si se agrega a StockStatus
+        store_id: storeId,
+        product_id: s.product_id,
+        variant_id: null,
+        stock: Number(s.current_stock || 0),
+        updated_at: now
+      }));
+
+    if (localStocks.length > 0) {
+      await db.localStock.bulkPut(localStocks);
+    }
   },
 
-  /**
-   * Cachear escrows en IndexedDB
-   */
   async cacheEscrows(escrows: EscrowStatus[]): Promise<void> {
     const { db } = await import('@/db/database');
     const now = Date.now();
 
-    const localEscrows = escrows.map(e => ({
-      id: `${e.product_id}:${e.variant_id || 'null'}`,
-      store_id: e.store_id,
-      product_id: e.product_id,
-      variant_id: e.variant_id,
-      qty_granted: Number(e.qty_granted),
-      expires_at: e.expires_at ? new Date(e.expires_at).getTime() : null,
-      updated_at: now
-    }));
+    if (!Array.isArray(escrows)) {
+      console.warn('[InventoryService] No se pudo cachear escrows: los datos no son un array', escrows);
+      return;
+    }
 
-    await db.localEscrow.bulkPut(localEscrows);
+    const localEscrows = escrows
+      .filter(e => e && e.product_id)
+      .map(e => ({
+        id: `${e.product_id}:${e.variant_id || 'null'}`,
+        store_id: e.store_id || localStorage.getItem('store_id') || '',
+        product_id: e.product_id,
+        variant_id: e.variant_id || null,
+        qty_granted: Number(e.qty_granted || 0),
+        expires_at: e.expires_at ? new Date(e.expires_at).getTime() : null,
+        updated_at: now
+      }));
+
+    if (localEscrows.length > 0) {
+      await db.localEscrow.bulkPut(localEscrows);
+    }
   }
 }
