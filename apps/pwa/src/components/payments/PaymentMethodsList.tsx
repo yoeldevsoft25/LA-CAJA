@@ -45,10 +45,22 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
   CASH_USD: 'Efectivo USD',
   PAGO_MOVIL: 'Pago Móvil',
   TRANSFER: 'Transferencia',
+  POINT_OF_SALE: 'Punto de Venta',
+  ZELLE: 'Zelle',
+  FIAO: 'Fiao / Crédito',
   OTHER: 'Otro',
 }
 
-const allMethods: PaymentMethod[] = ['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER']
+const allMethods: PaymentMethod[] = [
+  'CASH_BS',
+  'CASH_USD',
+  'PAGO_MOVIL',
+  'TRANSFER',
+  'POINT_OF_SALE',
+  'ZELLE',
+  'FIAO',
+  'OTHER',
+]
 
 export default function PaymentMethodsList() {
   const queryClient = useQueryClient()

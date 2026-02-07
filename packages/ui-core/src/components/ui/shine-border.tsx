@@ -4,19 +4,19 @@ import { cn } from "../../lib/utils"
 /**
  * Magic UI - Shine Border
  */
-interface ShineBorderProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ShineBorderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'color'> {
     borderRadius?: number
     borderWidth?: number
     duration?: number
-    shineColor?: string | string[]
+    color?: string | string[]
     children: React.ReactNode
 }
 
 export function ShineBorder({
-    borderRadius = 12,
+    borderRadius = 8,
     borderWidth = 1,
     duration = 14,
-    shineColor = "#000000",
+    color = "#000000",
     className,
     children,
 }: ShineBorderProps) {
@@ -28,7 +28,7 @@ export function ShineBorder({
                 } as React.CSSProperties
             }
             className={cn(
-                "relative min-h-[60px] w-fit min-w-[300px] place-items-center rounded-[var(--border-radius)] bg-white p-3 text-black dark:bg-black dark:text-white",
+                "relative w-full rounded-[var(--border-radius)] p-[2px] text-black dark:text-white",
                 className,
             )}
         >
@@ -38,7 +38,7 @@ export function ShineBorder({
                         "--border-width": `${borderWidth}px`,
                         "--duration": `${duration}s`,
                         "--mask-linear-gradient": `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
-                        "--background-radial-gradient": `radial-gradient(transparent,transparent, ${Array.isArray(shineColor) ? shineColor.join(",") : shineColor
+                        "--background-radial-gradient": `radial-gradient(transparent,transparent, ${Array.isArray(color) ? color.join(",") : color
                             },transparent,transparent)`,
                     } as React.CSSProperties
                 }

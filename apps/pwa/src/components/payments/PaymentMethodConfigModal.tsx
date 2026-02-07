@@ -33,6 +33,9 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
   CASH_USD: 'Efectivo USD',
   PAGO_MOVIL: 'Pago Móvil',
   TRANSFER: 'Transferencia',
+  POINT_OF_SALE: 'Punto de Venta',
+  ZELLE: 'Zelle',
+  FIAO: 'Fiao / Crédito',
   OTHER: 'Otro',
 }
 
