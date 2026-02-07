@@ -1,11 +1,27 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "outDir": "dist",
-        "rootDir": "src",
+        "target": "ES2020",
+        "useDefineForClassFields": true,
         "module": "ESNext",
         "moduleResolution": "node",
-        "jsx": "react-jsx"
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": false,
+        "jsx": "react-jsx",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "declaration": true,
+        "outDir": "dist",
+        "rootDir": "src"
     },
     "include": [
         "src"
