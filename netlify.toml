@@ -1,13 +1,12 @@
 [build]
-  # Comando para construir: compilar packages primero, luego PWA
-  command = "npm run build:pwa"
+  # Instalacion manual para asegurar workspaces en root
+  command = "npm install --workspaces --include-workspace-root --legacy-peer-deps && npm run build:pwa"
   # Directorio de publicación (relativo al base)
   publish = "apps/pwa/dist"
 
 # Configuración de Node.js - Prisma 7.2.0 requiere Node 20.19+
 [build.environment]
-  # Forzar a Netlify a instalar respetando workspaces
-  NPM_FLAGS = "--workspaces --include-workspace-root --legacy-peer-deps"
+  # Estas variables deben estar tambien en Netlify UI para que apliquen al paso de install
   NPM_CONFIG_WORKSPACES = "true"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NODE_VERSION = "20.19.0"
