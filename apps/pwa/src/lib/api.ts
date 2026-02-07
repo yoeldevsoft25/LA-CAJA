@@ -134,26 +134,30 @@ function detectInitialApiUrl(): string {
   if (ORDERED_FAILOVER_URLS.length > 0) {
     const storedBase = localStorage.getItem(STORAGE_KEYS.BASE_URL);
     const isPublicRuntime = NetworkUtils.isPublicWebRuntime();
+    const isServerKnownDown = localStorage.getItem(STORAGE_KEYS.SERVER_UNAVAILABLE) === '1';
+    const isPrimaryStored = storedBase === PREFERRED_API_URL;
 
     // Validación de seguridad: ¿Debemos confiar en el valor guardado?
     const isValidStored = storedBase &&
       ORDERED_FAILOVER_URLS.includes(storedBase) &&
       !(isPublicRuntime && NetworkUtils.classifyUrl(storedBase) !== 'public' && !ORDERED_FAILOVER_URLS.includes(storedBase));
 
-    if (isValidStored) {
+    // Si el guardado NO es la primaria, solo restaurarlo si sabemos que la primaria está caída.
+    // Esto evita que el cliente se quede "pegado" en Render si la IP local vuelve a estar disponible.
+    if (isValidStored && (isPrimaryStored || isServerKnownDown)) {
       logger.info(`Restaurando endpoint previo: ${storedBase}`);
       return storedBase!;
     }
 
-    // Limpieza si el guardado era inválido
-    if (storedBase && !isValidStored) {
-      logger.warn(`Descartando endpoint inválido/inseguro: ${storedBase}`);
-      localStorage.removeItem(STORAGE_KEYS.BASE_URL);
+    // Limpieza si el guardado era inválido o no debemos usarlo aún
+    if (storedBase && (!isValidStored || !isServerKnownDown)) {
+      if (!isPrimaryStored) {
+        logger.debug(`Ignorando endpoint secundario guardado ${storedBase} para reintento de primario.`);
+      }
     }
 
-    const defaultUrl = ORDERED_FAILOVER_URLS[0];
-    logger.info(`Inicializando con endpoint prioritario: ${defaultUrl}`);
-    return defaultUrl;
+    logger.info(`Inicializando con endpoint prioritario: ${PREFERRED_API_URL}`);
+    return PREFERRED_API_URL;
   }
 
   // D. Fallback final (Inferencia)
