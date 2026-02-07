@@ -109,7 +109,7 @@ export interface LocalConflict {
   created_at: number;
   status: 'pending' | 'resolved';
   requires_manual_review: boolean;
-  resolution?: 'keep_mine' | 'take_theirs';
+  resolution?: 'keep_mine' | 'take_theirs' | 'merge';
   resolved_at?: number;
 }
 
