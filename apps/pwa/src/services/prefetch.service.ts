@@ -15,6 +15,8 @@ import { inventoryService } from './inventory.service'
 import { reportsService } from './reports.service'
 import { productsCacheService } from './products-cache.service'
 import { createLogger } from '@/lib/logger'
+import { api } from '@/lib/api'
+import { db } from '@/db/database'
 
 const logger = createLogger('Prefetch')
 
@@ -169,7 +171,24 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
       gcTime: Infinity,
     })
 
-    // 9. Prefetch reportes (hoy) - SOLO para owners
+    // 9. Prefetch hashes de PIN para autenticación offline
+    updateProgress('Cacheando credenciales offline...')
+    try {
+      const offlineHashes = await api.get<Array<{ user_id: string; pin_hash: string; role: string }>>(
+        `/auth/stores/${storeId}/offline-members`
+      )
+      if (offlineHashes.data) {
+        await db.kv.put({
+          key: `offline_creds:${storeId}`,
+          value: offlineHashes.data,
+        })
+        logger.debug('Credenciales offline guardadas', { count: offlineHashes.data.length })
+      }
+    } catch (error) {
+      logger.warn('Error cacheando credenciales offline', { error })
+    }
+
+    // 10. Prefetch reportes (hoy) - SOLO para owners
     if (isOwner) {
       updateProgress('Cacheando reportes...')
       const today = format(new Date(), 'yyyy-MM-dd')

@@ -44,7 +44,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly securityAudit: SecurityAuditService,
-  ) {}
+  ) { }
 
   /**
    * Lista pública de tiendas (solo id y nombre) para flujo de login
@@ -95,6 +95,27 @@ export class AuthController {
     return this.authService.getCashiers(storeId);
   }
 
+  /**
+   * Endpoint para descargar hashes de PIN para autenticación offline
+   */
+  @Get('stores/:storeId/offline-members')
+  @UseGuards(JwtAuthGuard)
+  async getOfflineHashes(
+    @Req() req: RequestWithUser,
+    @Param('storeId') storeId: string,
+  ): Promise<
+    Array<{ user_id: string; pin_hash: string | null; role: string }>
+  > {
+    // Verificar que el usuario pertenece a la tienda
+    if (req.user.store_id !== storeId && req.user.role !== 'owner') {
+      throw new ForbiddenException(
+        'No tienes permiso para acceder a los hashes de esta tienda',
+      );
+    }
+
+    return this.authService.getOfflineHashes(storeId);
+  }
+
   @Get('debug/me')
   @UseGuards(JwtAuthGuard)
   async getCurrentUser(@Req() req: RequestWithUser): Promise<{
@@ -115,11 +136,11 @@ export class AuthController {
       userFromRequest: req.user,
       userFromDB: member
         ? {
-            user_id: member.user_id,
-            store_id: member.store_id,
-            role: member.role,
-            full_name: member.profile?.full_name,
-          }
+          user_id: member.user_id,
+          store_id: member.store_id,
+          role: member.role,
+          full_name: member.profile?.full_name,
+        }
         : null,
       comparison: {
         roleInToken,

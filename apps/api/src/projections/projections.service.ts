@@ -204,6 +204,7 @@ export class ProjectionsService {
         await this.projectDebtCreated(event);
         break;
       case 'DebtPaymentRecorded':
+      case 'DebtPaymentAdded': // Alias
         await this.projectDebtPaymentRecorded(event);
         break;
       case 'CashLedgerEntryCreated':

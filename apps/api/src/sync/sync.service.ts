@@ -111,6 +111,7 @@ export class SyncService {
     'CustomerUpdated',
     'DebtCreated',
     'DebtPaymentRecorded',
+    'DebtPaymentAdded', // Alias for backward compatibility
     'SaleVoided',
   ];
 
@@ -121,6 +122,7 @@ export class SyncService {
     'StockAdjusted',
     'CashSessionOpened',
     'CashSessionClosed',
+    'DebtPaymentRecorded',
     'SaleVoided',
   ];
 

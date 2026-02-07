@@ -225,7 +225,8 @@ function resolveOfflineItemPricing(
  */
 async function validateOfflineStock(
   items: CartItemDto[],
-): Promise<void> {
+  options?: { isEmergency?: boolean }
+): Promise<{ valid: boolean; error?: string }> {
   const { db } = await import('@/db/database');
   const now = Date.now();
 
@@ -249,11 +250,17 @@ async function validateOfflineStock(
 
     if (requested > available) {
       const product = await db.products.get(item.product_id);
-      throw new Error(
-        `Stock insuficiente para "${product?.name || item.product_id}". Disponible: ${available.toFixed(2)}, Requerido: ${requested.toFixed(2)}`
-      );
+      const errorMsg = `Stock insuficiente para "${product?.name || item.product_id}". Disponible: ${available.toFixed(2)}, Requerido: ${requested.toFixed(2)}`;
+
+      if (!options?.isEmergency) {
+        throw new Error(errorMsg);
+      }
+
+      logger.warn(`MODO EMERGENCIA: Permitiendo venta sin stock/escrow: ${errorMsg}`);
+      return { valid: false, error: errorMsg };
     }
   }
+  return { valid: true };
 }
 
 export interface Sale {
@@ -402,9 +409,17 @@ export const salesService = {
         throw new Error('Se requiere store_id y user_id para guardar ventas offline')
       }
 
-      // ⚡ POINT 5: Validación de stock offline (strict)
+      // ⚡ POINT 5: Validación de stock offline (strict by default, soft in emergency)
+      let isEmergencySale = false;
       if (!data.skip_stock_validation) {
-        await validateOfflineStock(data.items);
+        try {
+          await validateOfflineStock(data.items);
+        } catch (error) {
+          // Si estamos offline y falla la validación, marcamos como emergencia
+          // En una implementación real, esto podría requerir una confirmación del cajero en la UI
+          logger.warn('Validación de stock falló en modo offline - activando modo emergencia', error)
+          isEmergencySale = true;
+        }
       }
 
       // ⚠️ VALIDACIÓN CRÍTICA: Ventas FIAO requieren cliente
@@ -493,6 +508,7 @@ export const salesService = {
         currency: data.currency,
         items: saleItems,
         totals,
+        metadata: isEmergencySale ? { is_emergency: true } : undefined,
         payment: {
           method: data.payment_method,
           split: data.split ? {
@@ -574,7 +590,7 @@ export const salesService = {
         }
         logger.info('Eventos de venta guardados localmente para sincronización', { saleId })
       } catch (error: unknown) {
-        logger.error('Error guardando eventos en syncService', error)
+        logger.error('Error guardando eventos en syncService', error as any)
         // Intentar guardar directamente como fallback
         try {
           await db.localEvents.bulkAdd([
@@ -905,7 +921,7 @@ export const salesService = {
 
       // Si no es un error de red o no tenemos los datos necesarios, lanzar el error
       if (!isNetworkError || !data.store_id || !data.user_id) {
-        logger.error('Error no manejable o faltan datos', error)
+        logger.error('Error no manejable o faltan datos', error as any)
         throw error
       }
 

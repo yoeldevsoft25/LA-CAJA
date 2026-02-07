@@ -1,5 +1,22 @@
 import { api } from '@/lib/api'
 import { db } from '@/db/database'
+import { syncService } from './sync.service'
+import { BaseEvent } from '@la-caja/domain'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('CashService')
+
+// Función auxiliar para generar UUIDs
+function randomUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
 
 export interface CashSession {
   id: string
@@ -155,6 +172,52 @@ function isTransientNetworkError(error: any): boolean {
 
 export const cashService = {
   async openSession(data: OpenCashSessionRequest): Promise<CashSession> {
+    const isOnline = navigator.onLine
+    const sessionId = randomUUID()
+    const now = Date.now()
+
+    if (!isOnline) {
+      logger.info('Modo OFFLINE - Encolando apertura de sesión de caja')
+      const storeId = localStorage.getItem('store_id') || ''
+      const userId = localStorage.getItem('user_id') || ''
+
+      const session: CashSession = {
+        id: sessionId,
+        store_id: storeId,
+        opened_by: userId,
+        opened_at: new Date(now).toISOString(),
+        closed_by: null,
+        closed_at: null,
+        opening_amount_bs: data.cash_bs,
+        opening_amount_usd: data.cash_usd,
+        expected: null,
+        counted: null,
+        note: data.note || null,
+      }
+
+      const event: BaseEvent = {
+        event_id: randomUUID(),
+        store_id: storeId,
+        device_id: localStorage.getItem('device_id') || 'unknown',
+        seq: 0,
+        type: 'CashSessionOpened',
+        version: 1,
+        created_at: now,
+        actor: { user_id: userId, role: 'cashier' },
+        payload: {
+          session_id: sessionId,
+          opened_at: session.opened_at,
+          opening_amount_bs: data.cash_bs,
+          opening_amount_usd: data.cash_usd,
+          note: data.note,
+        },
+      }
+
+      await syncService.enqueueEvent(event)
+      await saveCurrentSessionCache(session)
+      return session
+    }
+
     const response = await api.post<CashSession>('/cash/sessions/open', data)
     try {
       await saveCurrentSessionCache(response.data)
@@ -182,6 +245,59 @@ export const cashService = {
   },
 
   async closeSession(sessionId: string, data: CloseCashSessionRequest): Promise<CashSession> {
+    const isOnline = navigator.onLine
+
+    if (!isOnline) {
+      logger.info('Modo OFFLINE - Encolando cierre de sesión de caja')
+      const storeId = localStorage.getItem('store_id') || ''
+      const userId = localStorage.getItem('user_id') || ''
+
+      // Obtener sesión actual para el mock de retorno
+      const currentSession = await getCurrentSessionFromCache()
+      const closedSession: CashSession = {
+        ...(currentSession || {
+          id: sessionId,
+          store_id: storeId,
+          opened_by: userId,
+          opened_at: new Date().toISOString(),
+          opening_amount_bs: 0,
+          opening_amount_usd: 0,
+          expected: null,
+          counted: null,
+          note: null,
+        }),
+        closed_by: userId,
+        closed_at: new Date().toISOString(),
+        expected: currentSession?.expected || null,
+        counted: {
+          cash_bs: data.counted_bs,
+          cash_usd: data.counted_usd,
+        },
+        note: data.note || null,
+      }
+
+      const event: BaseEvent = {
+        event_id: randomUUID(),
+        store_id: storeId,
+        device_id: localStorage.getItem('device_id') || 'unknown',
+        seq: 0,
+        type: 'CashSessionClosed',
+        version: 1,
+        created_at: Date.now(),
+        actor: { user_id: userId, role: 'cashier' },
+        payload: {
+          session_id: sessionId,
+          closed_at: closedSession.closed_at,
+          counted: closedSession.counted,
+          note: data.note,
+        },
+      }
+
+      await syncService.enqueueEvent(event)
+      await saveCurrentSessionCache(null)
+      return closedSession
+    }
+
     const response = await api.post<CashSession>(`/cash/sessions/${sessionId}/close`, data)
     try {
       await saveCurrentSessionCache(null)

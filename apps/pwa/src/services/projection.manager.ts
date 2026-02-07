@@ -86,6 +86,7 @@ export const projectionManager = {
             case 'DebtCreated':
                 await this.applyDebtCreated(event);
                 break;
+            case 'DebtPaymentRecorded':
             case 'DebtPaymentAdded':
                 await this.applyDebtPaymentAdded(event);
                 break;

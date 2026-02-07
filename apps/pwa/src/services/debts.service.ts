@@ -204,7 +204,7 @@ export const debtsService = {
         store_id: data.store_id,
         device_id: localStorage.getItem('device_id') || 'unknown',
         seq: 0, // SyncService assignará seq
-        type: 'DebtPaymentAdded',
+        type: 'DebtPaymentRecorded',
         version: 1,
         created_at: now,
         actor: { user_id: data.user_id, role: 'cashier' },

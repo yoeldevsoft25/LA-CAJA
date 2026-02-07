@@ -1132,6 +1132,29 @@ export class AuthService {
       }));
   }
 
+  /**
+   * Obtiene los hashes de PIN de todos los miembros de la tienda para autenticación offline
+   */
+  async getOfflineHashes(
+    storeId: string,
+  ): Promise<
+    Array<{ user_id: string; pin_hash: string | null; role: string }>
+  > {
+    this.logger.log(`[AuthService] getOfflineHashes - Store: ${storeId}`);
+    const members = await this.storeMemberRepository.find({
+      where: {
+        store_id: storeId,
+      },
+      order: { created_at: 'ASC' },
+    });
+
+    return members.map((member) => ({
+      user_id: member.user_id,
+      pin_hash: member.pin_hash,
+      role: member.role,
+    }));
+  }
+
   async validateUser(
     userId: string,
     storeId: string,

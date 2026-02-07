@@ -1,4 +1,16 @@
 import { api } from '@/lib/api'
+import { db } from '@/db/database'
+
+function randomUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
 
 export interface LoginRequest {
   store_id: string
@@ -64,8 +76,53 @@ export const authService = {
   },
 
   async login(data: LoginRequest): Promise<LoginResponse> {
+    const isOnline = navigator.onLine
+
+    if (!isOnline) {
+      return this.loginOffline(data)
+    }
+
     const response = await api.post<LoginResponse>('/auth/login', data)
     return response.data
+  },
+
+  async loginOffline(data: LoginRequest): Promise<LoginResponse> {
+    const backupHashes = await db.kv.get(`offline_creds:${data.store_id}`)
+    if (!backupHashes || !Array.isArray(backupHashes.value)) {
+      throw new Error('No hay credenciales offline guardadas para esta tienda. Necesitas internet para el primer login.')
+    }
+
+    // En el flujo de la UI, el usuario ya ha sido seleccionado (usualmente guardamos user_id en sessionStorage o similar)
+    // O el frontend pasa el user_id en el LoginRequest extendido.
+    // Vamos a buscar si hay un match de PIN con CUALQUIER usuario de esa tienda que tenga el PIN ingresado.
+    // (Nota: En Velox, el login es Store + PIN, el PIN identifica al usuario dentro de la tienda si es único,
+    // o el usuario se selecciona previamente).
+
+    // Asumiremos que el frontend nos pasa el user_id si ya lo seleccionó, o buscamos por PIN.
+    const bcrypt = await import('bcryptjs')
+
+    let foundMember = null
+    for (const member of backupHashes.value) {
+      if (member.pin_hash && await bcrypt.compare(data.pin, member.pin_hash)) {
+        foundMember = member
+        break
+      }
+    }
+
+    if (!foundMember) {
+      throw new Error('PIN incorrecto (Modo Offline)')
+    }
+
+    // Mock de respuesta de login satisfactoria
+    return {
+      access_token: 'offline_token_' + randomUUID(),
+      refresh_token: 'offline_refresh_' + randomUUID(),
+      user_id: foundMember.user_id,
+      store_id: data.store_id,
+      role: foundMember.role,
+      full_name: foundMember.full_name || 'Usuario Offline',
+      expires_in: 3600 * 24, // 24h
+    }
   },
 
   async refreshToken(refreshToken: string): Promise<{ access_token: string; refresh_token: string }> {

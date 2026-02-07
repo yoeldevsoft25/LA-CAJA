@@ -242,6 +242,7 @@ export interface SaleCreatedPayload {
     customer_id: string | null;
   };
   note?: string;
+  metadata?: Record<string, any>;
 }
 
 // Customer & Debt Events
