@@ -802,6 +802,28 @@ class SyncServiceClass {
   }
 
   /**
+   * Genera un hash SHA-256 de un objeto de forma determinista
+   * ✅ CRDT MAX: Requerido para integridad del delta sync
+   */
+  private async generatePayloadHash(payload: any): Promise<string> {
+    try {
+      // 1. Serializar de forma determinista (ordenar keys)
+      const json = JSON.stringify(payload, Object.keys(payload || {}).sort());
+
+      // 2. Usar Web Crypto API para SHA-256
+      const msgUint8 = new TextEncoder().encode(json);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+
+      // 3. Convertir a hex string
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      this.logger.error('Error generando hash de payload', error);
+      return 'hash_error';
+    }
+  }
+
+  /**
    * Obtiene las métricas de sincronización
    */
   getMetrics() {
@@ -1011,6 +1033,17 @@ class SyncServiceClass {
         return { success: false, error: err };
       }
 
+      // Eventos críticos que REQUIEREN delta_payload y full_payload_hash bajo CRDT MAX
+      const criticalEventTypes = [
+        'SaleCreated',
+        'StockReceived',
+        'StockAdjusted',
+        'CashSessionOpened',
+        'CashSessionClosed',
+        'DebtPaymentRecorded',
+        'SaleVoided',
+      ];
+
       // Evitar doble-push: solo sincronizar eventos que sigan pending/retrying en IndexedDB.
       const eventIds = events.map((e) => e.event_id);
       const dbEvents = await db.localEvents.where('event_id').anyOf(eventIds).toArray();
@@ -1060,12 +1093,30 @@ class SyncServiceClass {
           const cleanPayload = { ...(payload || {}) } as Record<string, unknown>;
           delete cleanPayload.store_id;
           delete cleanPayload.device_id;
-          return {
+
+          const baseEvent = {
             ...rest,
             payload: cleanPayload,
-          } as Omit<BaseEvent, 'store_id' | 'device_id'>;
+          } as any;
+
+          // ⚡ CRDT MAX: Asegurar delta_payload y full_payload_hash para eventos críticos
+          if (criticalEventTypes.includes(baseEvent.type)) {
+            // En esta fase inicial, el delta_payload es el mismo payload (snapshot inicial)
+            baseEvent.delta_payload = cleanPayload;
+            // Generar hash de forma síncrona/placeholder si no podemos esperar a await aquí
+            // NOTA: syncBatchToServer es async, podemos inyectar el hash
+          }
+
+          return baseEvent;
         })
         .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> => evt !== null);
+
+      // Inyectar hashes de forma asíncrona para todos los eventos que lo requieran
+      for (const event of sanitizedEvents as any[]) {
+        if (criticalEventTypes.includes(event.type) && !event.full_payload_hash) {
+          event.full_payload_hash = await this.generatePayloadHash(event.delta_payload || event.payload);
+        }
+      }
 
       this.logger.debug('Sanitized events', {
         original_count: events.length,
