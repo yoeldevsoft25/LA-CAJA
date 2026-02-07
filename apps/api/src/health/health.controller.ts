@@ -32,7 +32,7 @@ export class HealthController {
     private bullmq: BullMQHealthIndicator,
     private externalApis: ExternalApisHealthIndicator,
     private websocket: WebSocketHealthIndicator,
-  ) {}
+  ) { }
 
   // Cache simple para mejorar rendimiento
   private cache: Map<string, { result: any; time: number }> = new Map();
@@ -150,8 +150,6 @@ export class HealthController {
 
   @Cron('*/25 * * * * *')
   async warmUpCache() {
-    this.logger.debug('Warming up health check cache...');
-
     try {
       const warmups = await Promise.allSettled([
         this.checkDatabase(),
@@ -183,7 +181,6 @@ export class HealthController {
         }
       });
 
-      this.logger.debug('Health check cache warmed up successfully');
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       this.logger.error(
