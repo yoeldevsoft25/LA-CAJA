@@ -280,27 +280,6 @@ export default function POSPage() {
     }
   }, [user?.store_id, searchQuery]);
 
-  useEffect(() => {
-    if (!isMobile || searchQuery.trim().length < 2) {
-      setMobileResultsTop(null)
-      return
-    }
-
-    const updatePosition = () => {
-      const rect = mobileSearchRef.current?.getBoundingClientRect()
-      if (!rect) return
-      setMobileResultsTop(rect.bottom + 8)
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition, true)
-    return () => {
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition, true)
-    }
-  }, [isMobile, searchQuery])
-
   // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading, isError: isProductsError } = useQuery({
     queryKey: ['products', 'search', searchQuery, user?.store_id],
@@ -920,7 +899,7 @@ export default function POSPage() {
           !isTabletLandscape && "lg:col-span-1"
         )}>
           {isMobile && (
-            <div className="mb-3" ref={mobileSearchRef}>
+            <div className="mb-3 relative group">
               <CatalogHeader
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -933,45 +912,47 @@ export default function POSPage() {
                 }}
                 isRefetching={isLoading}
               />
-            </div>
-          )}
-          {isMobile && searchQuery.trim().length >= 2 && mobileResultsTop !== null && (
-            <div
-              className="fixed left-0 right-0 z-[100] px-2"
-              style={{ top: mobileResultsTop }}
-            >
-              <div className="rounded-xl border border-border/50 bg-card shadow-lg overflow-hidden">
-                <div className="px-3 py-2 border-b border-border/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Resultados
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {products.length === 0 ? (
-                    <div className="px-3 py-4 text-sm text-muted-foreground">
-                      No se encontraron productos.
+
+              {/* Resultados de búsqueda móviles con posicionamiento CSS absoluto (Zero Reflow) */}
+              {searchQuery.trim().length >= 2 && (
+                <div className="absolute top-full left-0 right-0 z-[100] mt-1 pr-0 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden border-primary/20">
+                    <div className="px-3 py-2 border-b border-border/40 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] bg-primary/5">
+                      Resultados
                     </div>
-                  ) : (
-                    products.slice(0, 8).map((product: any) => (
-                      <button
-                        key={`mobile-result-${product.id}`}
-                        onClick={() => handleProductClick(product)}
-                        className="w-full px-3 py-2 text-left hover:bg-muted/40 transition-colors border-b border-border/20 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium truncate">{product.name}</div>
-                            {product.barcode && (
-                              <div className="text-[11px] text-muted-foreground truncate">{product.barcode}</div>
-                            )}
-                          </div>
-                          <div className="text-sm font-semibold whitespace-nowrap">
-                            ${Number(product.price_usd || 0).toFixed(2)}
-                          </div>
+                    <div className="max-h-64 overflow-y-auto overscroll-contain">
+                      {products.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-muted-foreground bg-background/50">
+                          No se encontraron productos.
                         </div>
-                      </button>
-                    ))
-                  )}
+                      ) : (
+                        products.slice(0, 8).map((product: any) => (
+                          <button
+                            key={`mobile-result-${product.id}`}
+                            onClick={() => {
+                              handleProductClick(product)
+                              setSearchQuery('') // Limpiar búsqueda al seleccionar
+                            }}
+                            className="w-full px-3 py-3 text-left hover:bg-primary/5 active:bg-primary/10 transition-colors border-b border-border/20 last:border-b-0"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-bold truncate text-slate-800">{product.name}</div>
+                                {product.barcode && (
+                                  <div className="text-[10px] font-medium text-slate-400 truncate tracking-tight">{product.barcode}</div>
+                                )}
+                              </div>
+                              <div className="text-sm font-black text-primary tabular-nums">
+                                ${Number(product.price_usd || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
           <div className="flex-1 min-h-0">
