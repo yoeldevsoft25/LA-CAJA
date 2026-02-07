@@ -857,6 +857,10 @@ export default function POSPage() {
   }
 
 
+  const handleAnimationComplete = useCallback(() => {
+    setSuccessSaleId(null)
+  }, [])
+
   return (
     <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4" data-pull-to-refresh>
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
@@ -865,7 +869,6 @@ export default function POSPage() {
         isTabletLandscape ? "grid-cols-[1.3fr_1fr]" : "grid-cols-1 lg:grid-cols-[1fr_400px]"
       )}>
         {/* Búsqueda y Lista de Productos */}
-        {/* Columna Izquierda: Catálogo (ocultar en mobile) */}
         {!isMobile && (
           <div className={cn(
             "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border-2 border-border shadow-md p-3"
@@ -1035,7 +1038,7 @@ export default function POSPage() {
       {/* Animación de éxito premium centralizada */}
       <SuccessOverlay
         isOpen={!!successSaleId}
-        onAnimationComplete={() => setSuccessSaleId(null)}
+        onAnimationComplete={handleAnimationComplete}
         message={isOnline ? `Venta #${successSaleId} procesada exitosamente` : `Venta #${successSaleId} almacenada en OFFLINE`}
       />
     </div>

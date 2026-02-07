@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { Check } from "lucide-react"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { cn } from "@/lib/utils"
 
 interface SuccessOverlayProps {
@@ -18,6 +18,11 @@ export function SuccessOverlay({
 }: SuccessOverlayProps) {
     // Generar partículas aleatorias solo una vez al montar o abrir
     const [particles, setParticles] = useState<Array<{ x: number; y: number; color: string; size: number }>>([])
+
+    const onAnimationCompleteRef = useRef(onAnimationComplete)
+    useEffect(() => {
+        onAnimationCompleteRef.current = onAnimationComplete
+    }, [onAnimationComplete])
 
     useEffect(() => {
         if (isOpen) {
@@ -35,11 +40,11 @@ export function SuccessOverlay({
             setParticles(newParticles)
 
             const timer = setTimeout(() => {
-                onAnimationComplete?.()
-            }, 2800) // Un poco más largo para disfrutar la animación
+                onAnimationCompleteRef.current?.()
+            }, 2500) // Reducido un poco para mayor fluidez
             return () => clearTimeout(timer)
         }
-    }, [isOpen, onAnimationComplete])
+    }, [isOpen])
 
     const displayMessage = useMemo(() => {
         if (!message) return 'PROCESADO'

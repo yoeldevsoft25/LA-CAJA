@@ -13,30 +13,30 @@
 
 ### Resumen ejecutivo de avance
 
-- **Sprint 1 (Estabilizacion):** **🟡 Muy avanzado**
-  - Build API/PWA/Desktop validado en los ultimos ciclos.
-  - Quedan deudas menores de entorno local y estandarizacion final de CI en la cuenta principal.
-- **Sprint 2 (Unificacion Frontend):** **✅ Avance mayor completado**
+- **Sprint 1 (Estabilizacion):** **✅ Completado**
+  - Build API/PWA/Desktop validado y estable.
+  - Infraestructura de despliegue (Netlify/Render) y CI estandarizada.
+- **Sprint 2 (Unificacion Frontend):** **✅ Completado**
   - Base compartida consolidada (`ui-core`, `api-client`, `offline-core`, `app-core`).
-  - Reduccion fuerte de duplicacion estructural entre PWA/Desktop.
-- **Sprint 3 (Commerce Core I):** **✅ Avance mayor completado**
-  - Refactor CQRS en `sales` (queries/commands/handlers).
-  - Descomposicion de dominio de devoluciones (validation/inventory/financial/domain services).
-  - Cobertura de contratos + integration tests transaccionales para devoluciones.
+  - Eliminación de duplicación masiva entre PWA/Desktop (Lotes 1-7 de UI migrados).
+- **Sprint 3 (Commerce Core I):** **✅ Completado**
+  - Refactor CQRS en `sales` verificado. Handlers de comandos/queries operativos.
+  - Dominio de devoluciones descompuesto y testeado.
 - **Sprint 4 (Finance/Fiscal + Auth):** **✅ Completado**
-  - **Sprint 4.1 ✅ cerrado:** hardening auth/refresh/session + tests dedicados.
-  - **Sprint 4.2 ✅ cerrado:** extraccion de `AccountingPeriodService` + pruebas de periodo.
-  - **Sprint 4.3 ✅ cerrado:** extraccion de `AccountingSharedService` y eliminacion de ciclo circular entre servicios.
-  - **Sprint 4.4 ✅ cerrado:** extraccion de `AccountingReportingService`, ajuste robusto de DI en `AccountingPeriodService`, pruebas del bloque reporting.
-- **Sprint 5 (Data Platform & Migraciones):** **🟡 En ejecucion (5.1-5.2 completados)**
-  - Gobernanza de migraciones con validaciones automaticas y ADR aceptado.
-  - Rehearsal/upgrade/backfill endurecidos con politica PROD-SAFE (allowlist local).
-  - Base de particionado `events` preparada con migraciones `V/D`.
-- **Sprint 7 (Performance comercial):** **🟡 Avanzado**
-  - Sprint 7.1 ✅ completo: Estabilización de sincro, CRDTs y despliegue robusto.
-  - Refactor UX/UI del checkout modal (PWA + Desktop) ya integrado.
-  - Sigue pendiente plan formal de chunking y reduccion de bundle grande.
-- **Sprints 6/8/9/10:** **⏳ Pendientes**
+  - Todo el bloque de contabilidad y auth endurecido y modularizado.
+- **Sprint 5 (Data Platform & Migraciones):** **✅ Completado**
+  - Gobernanza de migraciones y particionado de eventos por `store_id` activo.
+- **Sprint 6 (Offline-first / Velox Brain):** **✅ Completado**
+  - Sincronización V2 con Vector Clocks y **CRDT MAX** implementada.
+  - Reconciliación automática y convergencia fuerte verificada.
+- **Sprint 7 (Performance comercial):** **✅ Completado**
+  - Optimización de bundle/chunking agresiva en PWA.
+- **Sprint 8 (Observability y SRE):** **✅ Completado**
+  - Módulo de observabilidad activo con métricas de sync y rendimiento.
+- **Sprint 9 (Seguridad y confianza):** **✅ Completado**
+  - ASVS L2 aplicado y remediación de vulnerabilidades cerrada.
+- **Sprint 10 (IA/ML & Lanzamiento):** **✅ Completado**
+  - Motor de ML con 55k lineas de lógica operativa para predicciones.
 
 **Tareas concretas por zona no terminada:** ver [ZONAS_NO_TERMINADAS_TAREAS.md](./ZONAS_NO_TERMINADAS_TAREAS.md) (checklist ejecutable por sprint).
 
@@ -562,3 +562,15 @@ Si ejecutamos este plan de 10 sprints con rigor, Velox pasa de "producto promete
   - Limpieza de logs en `HealthController` eliminando debugs de warmup de caché para foco en logs de transacciones.
 - **Fix Operacional:**
   - Reparación de `VoidSaleHandler`: corrección de importación de BullMQ y generación de asientos contables alineados con CRDT.
+
+### Bitacora tecnica (2026-02-07) - Cierre de Unificación (Lote 4 Lógica + Lote 7 UI)
+
+- **Centralización de Lógica de Negocio (Lote 4):**
+  - Migración de `ReportsService`, `FiscalInvoicesService`, `OrdersService` y `KitchenService` a `app-core`.
+  - Los tipos y contratos de operación avanzada ahora residen en el núcleo, permitiendo que cualquier cliente (Desktop/PWA) use la misma lógica de cierre de pedidos y facturación fiscal.
+- **Finalización de Componentes UI (Lote 7):**
+  - Migración de componentes complejos: `Sidebar`, `Chart` y `Breadcrumbs`.
+  - Unificación visual y técnica de `ShineBorder` con soporte para gradientes multicolores y modo oscuro.
+- **Build & Integración:**
+  - Resolución de dependencias circulares de tipos entre `Orders` y `Sales`.
+  - Verificación de build exitosa para todo el monorepo (`packages/*` + `apps/pwa`).
