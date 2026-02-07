@@ -52,7 +52,7 @@ registerRoute(
             new CacheableResponsePlugin({ statuses: [0, 200] }),
             new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 24 * 60 * 60 }) // 1 día
         ],
-        networkTimeoutSeconds: 5 // increased timeout
+        networkTimeoutSeconds: 15 // Incrementado para manejar latencia de Render/Supabase
     })
 )
 

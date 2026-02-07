@@ -100,8 +100,13 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
             originalRequest.baseURL = nextBaseUrl;
 
             // Timeout balanceado: 10s para producción, 2s para local (que debería ser rápido)
+            // CRÍTICO: No sobreescribir si el request ya tiene un timeout superior (ej: ventas 60s)
             const nextIsPublic = nextBaseUrl.includes('.onrender.com') || nextBaseUrl.includes('veloxpos.app');
-            originalRequest.timeout = nextIsPublic ? 10000 : 2000;
+            const failoverTimeout = nextIsPublic ? 10000 : 2000;
+
+            if (!originalRequest.timeout || originalRequest.timeout < failoverTimeout) {
+                originalRequest.timeout = failoverTimeout;
+            }
 
             return api(originalRequest);
         }

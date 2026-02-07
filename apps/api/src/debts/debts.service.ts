@@ -442,9 +442,6 @@ export class DebtsService {
       .createQueryBuilder('debt')
       .leftJoinAndSelect('debt.payments', 'payments')
       .leftJoinAndSelect('debt.sale', 'sale')
-      .leftJoinAndSelect('sale.items', 'saleItems')
-      .leftJoinAndSelect('saleItems.product', 'saleProduct')
-      .leftJoinAndSelect('saleItems.variant', 'saleVariant')
       .where('debt.store_id = :storeId', { storeId })
       .andWhere('debt.customer_id = :customerId', { customerId })
       .andWhere(
@@ -532,9 +529,6 @@ export class DebtsService {
       .leftJoinAndSelect('debt.customer', 'customer')
       .leftJoinAndSelect('debt.payments', 'payments')
       .leftJoinAndSelect('debt.sale', 'sale')
-      .leftJoinAndSelect('sale.items', 'saleItems')
-      .leftJoinAndSelect('saleItems.product', 'saleProduct')
-      .leftJoinAndSelect('saleItems.variant', 'saleVariant')
       .where('debt.store_id = :storeId', { storeId })
       .andWhere(
         '(debt.sale_id IS NULL OR sale.voided_at IS NULL)',
