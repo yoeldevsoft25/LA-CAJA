@@ -9,7 +9,7 @@
 
 ## Estado de ejecucion real (actualizado)
 
-> Corte de estado: **2026-02-03** (ultimo bloque de trabajo validado en rama `main`).
+> Corte de estado: **2026-02-07** (ultimo bloque de trabajo validado en rama `main`).
 
 ### Resumen ejecutivo de avance
 
@@ -32,7 +32,8 @@
   - Gobernanza de migraciones con validaciones automaticas y ADR aceptado.
   - Rehearsal/upgrade/backfill endurecidos con politica PROD-SAFE (allowlist local).
   - Base de particionado `events` preparada con migraciones `V/D`.
-- **Sprint 7 (Performance comercial):** **🟡 Parcial**
+- **Sprint 7 (Performance comercial):** **🟡 Avanzado**
+  - Sprint 7.1 ✅ completo: Estabilización de sincro, CRDTs y despliegue robusto.
   - Refactor UX/UI del checkout modal (PWA + Desktop) ya integrado.
   - Sigue pendiente plan formal de chunking y reduccion de bundle grande.
 - **Sprints 6/8/9/10:** **⏳ Pendientes**
@@ -52,25 +53,15 @@
 - `a6a70f0` refactor(accounting): extract reporting service and fix period DI wiring
 - `6d5d192` docs(roadmap): close sprint 4 and update execution status
 
-### Trazabilidad de robustez offline-first (2026-02-05)
-
-- **Objetivo:** evitar bloqueos de operacion cuando hay caida de endpoints o desconexion de internet, sin perder ventas ni cerrar sesion.
-- **Deteccion diferenciada implementada:**
-  - `sin internet` via `navigator.onLine=false`.
-  - `internet disponible + endpoints no disponibles` via eventos globales (`api:all_endpoints_down`, `api:endpoint_recovered`) y bandera `localStorage: velox_server_unavailable`.
-- **Cambios tecnicos aplicados (E2E):**
-  - Lock distribuido de push entre foreground/SW para eliminar carrera y doble envio (`apps/pwa/src/services/sync.service.ts`, `apps/pwa/src/sw.ts`).
-  - Filtrado de eventos realmente pendientes en IndexedDB antes de `/sync/push` (fuente de verdad local).
-  - WebSockets (`realtime` y `notifications`) con control de reconexion offline, anti-duplicado de socket y backoff con jitter.
-  - Failover probes deshabilitados cuando no hay internet para evitar ruido/storm.
-  - Señalizacion de backend no disponible desde capa API client y limpieza automatica al recuperar endpoint.
-  - Banner de UX actualizado: **\"Servidor en mantenimiento, tus ventas se guardan localmente\"**.
-  - Sesion protegida en modo offline/mantenimiento: no se fuerza logout por inactividad ni por validacion de licencia mientras backend no este disponible.
-  - Diagnostico de federacion agregado en API: `GET /sync/federation/status` (estado de cola `federation-sync`, endpoint remoto configurado, probe remoto, ultimo error de relay).
-  - Bridge de federacion para ventas online directas: `/sales` ahora genera evento `SaleCreated` y encola `federation-sync` (evita que ventas creadas fuera de `/sync/push` se queden solo en una base).
-  - Ajuste de seguridad en `/sync/push` para federacion: `system-federation` no falla por mismatch entre `actor.user_id` y `authenticatedUserId`.
-  - Hardening CORS para Desktop/Tauri en Render: `http://tauri.localhost` permitido y bloqueo CORS sin excepción (sin 500 en preflight/health).
-- **Validacion tecnica:** build `packages/api-client` y build `apps/pwa` en PASS despues del hardening.
+- **Trazabilidad de robustez offline-first (2026-02-07):**
+  - **Objetivo:** Garantizar la integridad absoluta de los datos (CRDT) y la resiliencia del despliegue público (Netlify/Render).
+  - **Firmas de Integridad (SHA-256):** Implementación de `full_payload_hash` en PWA, Service Worker y Backend para evitar corrupción de datos durante la sincronización eventual.
+  - **Shielding del Service Worker:** Uso de `Web Locks API` para el bloqueo `velox_sync_lock`, evitando condiciones de carrera entre la App y el SW.
+  - **Priorización de Endpoints (Tailscale First):** Refactor de `api.ts` para forzar que el PWA intente siempre conectar al Ryzen (Primary/Tailscale) antes de saltar a Render (Fallback), incluso en dominios públicos.
+  - **Optimización Netlify:** Configuración de `Cache-Control: no-cache, no-store, must-revalidate` para `sw.js` e `index.html`, garantizando actualizaciones instantáneas de la PWA.
+  - **Limpieza de Logs:** Silenciamiento de logs de depuración del HealthCheck para mantener la visibilidad sobre transacciones comerciales en Render.
+  - **Fix Crítico Anulación:** Resolución de error 500 en `VoidSaleHandler` (mismatch DI BullMQ) y generación de payload CRDT para eventos de anulación.
+- **Validacion tecnica:** Build `apps/api` y `apps/pwa` PASS. Sincronización verificada localmente y en Render.
 
 ### KPI operativo (ultimo estado validado)
 
@@ -554,3 +545,20 @@ Si ejecutamos este plan de 10 sprints con rigor, Velox pasa de "producto promete
   - `apps/desktop/src/lib/api.ts` prioriza URLs de failover configuradas tambien en modo dev (evita caer por defecto a `http://localhost:3000` cuando hay `VITE_PRIMARY_API_URL`).
   - `apps/desktop/src/services/connectivity.service.ts` elimina fallback hardcodeado y hace probes sobre la cadena real de endpoints (primary/fallback/tertiary).
   - `apps/desktop/src-tauri/src/sidecar.rs` ahora carga variables desde entorno y `apps/desktop/.env` (`../.env`) para iniciar sidecar de forma consistente en Win/Mac.
+
+### Bitacora tecnica (2026-02-07) - Sprint 7.1
+
+- **Sincronización CRDT Core:**
+  - Implementación de hashing determinista (SHA-256) en `SyncService` y `SyncClient`.
+  - Los eventos `SaleCreated`, `SaleVoided` y `CashLedgerEntryCreated` ahora viajan con firma de integridad.
+  - Backend ahora valida que el `full_payload_hash` coincida con el contenido recibido, bloqueando datos corruptos.
+- **Hardening de PWA & SW:**
+  - Integración de `Web Locks API` para orquestar la sincronización entre pestañas y el Service Worker.
+  - Implementación de `AbortController` con timeout de 25s en peticiones de sync para evitar "zombie loops" en redes inestables.
+  - Refactor de `api.ts` con lógica de "anti-stickiness": el cliente siempre intenta el servidor primario local/Tailscale al recargar, ignorando el fallo anterior a menos que persista.
+- **Infraestructura & Despliegue:**
+  - Creación de `netlify.toml` con optimización de caché para evitar que Netlify sirva versiones viejas del `sw.js` o `index.html`.
+  - Configuración de redirecciones SPA (`/* -> /index.html 200`) para compatibilidad total con React Router.
+  - Limpieza de logs en `HealthController` eliminando debugs de warmup de caché para foco en logs de transacciones.
+- **Fix Operacional:**
+  - Reparación de `VoidSaleHandler`: corrección de importación de BullMQ y generación de asientos contables alineados con CRDT.
