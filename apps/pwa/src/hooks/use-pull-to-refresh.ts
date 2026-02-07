@@ -40,16 +40,21 @@ export function usePullToRefresh({
     if (!enabled) return
 
     const isScrollable = (el: Element) => {
+      // 🚀 Optimización: Evitar getComputedStyle en el camino crítico de touch
+      const element = el as HTMLElement
+      if (element.scrollHeight <= element.clientHeight) return false
+
       const style = window.getComputedStyle(el)
-      const overflowY = style.overflowY
-      const canScroll = overflowY === 'auto' || overflowY === 'scroll'
-      return canScroll && (el as HTMLElement).scrollHeight > (el as HTMLElement).clientHeight
+      return style.overflowY === 'auto' || style.overflowY === 'scroll'
     }
 
     const hasScrollableParent = (start: Element | null, stop: Element | null) => {
       let current = start
       while (current && current !== stop && current !== document.body) {
-        if (isScrollable(current)) return current as HTMLElement
+        // Solo llamar a isScrollable si hay scroll real detectable
+        if ((current as HTMLElement).scrollHeight > (current as HTMLElement).clientHeight) {
+          if (isScrollable(current)) return current as HTMLElement
+        }
         current = current.parentElement
       }
       return null

@@ -53,22 +53,31 @@ export default function SimpleLoader({
 
   useEffect(() => {
     const startTime = Date.now()
-    const interval = setInterval(() => {
+    let frameId: number
+
+    const updateProgress = () => {
       const elapsed = Date.now() - startTime
       const currentProgress = Math.min((elapsed / duration) * 100, 100)
+
+      // Solo actualizar si el cambio es significativo o llegamos al final
       setProgress(currentProgress)
 
-      if (currentProgress >= 100) {
-        clearInterval(interval)
+      if (currentProgress < 100) {
+        // Usar 32ms para ~30fps, suficiente para un loader y ahorra 50% de CPU React
+        setTimeout(() => {
+          frameId = requestAnimationFrame(updateProgress)
+        }, 32)
+      } else {
         setPhase('welcome')
         setTimeout(() => {
           setIsComplete(true)
           onComplete?.()
         }, 3500)
       }
-    }, 16)
+    }
 
-    return () => clearInterval(interval)
+    frameId = requestAnimationFrame(updateProgress)
+    return () => cancelAnimationFrame(frameId)
   }, [duration, onComplete])
 
   return (
