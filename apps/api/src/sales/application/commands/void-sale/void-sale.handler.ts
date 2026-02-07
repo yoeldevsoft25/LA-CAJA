@@ -19,8 +19,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from '../../../../database/entities/event.entity';
 import { FederationSyncService } from '../../../../sync/federation-sync.service';
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import * as crypto from 'crypto';
 
 @CommandHandler(VoidSaleCommand)
 export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
@@ -229,6 +230,19 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
     try {
       const serverDeviceId = '00000000-0000-0000-0000-000000000001';
       const eventSeq = Date.now();
+
+      const voidPayload = {
+        sale_id: saleId,
+        voided_at: new Date().getTime(),
+        voided_by_user_id: userId,
+        reason: reason || null,
+      };
+
+      const hashPayload = (payload: any): string => {
+        const json = JSON.stringify(payload, Object.keys(payload).sort());
+        return crypto.createHash('sha256').update(json).digest('hex');
+      };
+
       const voidEvent = this.eventRepository.create({
         event_id: randomUUID(),
         store_id: storeId,
@@ -239,16 +253,11 @@ export class VoidSaleHandler implements ICommandHandler<VoidSaleCommand> {
         created_at: new Date(),
         actor_user_id: userId || null,
         actor_role: 'owner', // Solo owners pueden anular según controller
-        payload: {
-          sale_id: saleId,
-          voided_at: new Date().getTime(),
-          voided_by_user_id: userId,
-          reason: reason || null,
-        },
+        payload: voidPayload,
         vector_clock: { [serverDeviceId]: eventSeq },
         causal_dependencies: [],
-        delta_payload: null,
-        full_payload_hash: null,
+        delta_payload: voidPayload,
+        full_payload_hash: hashPayload(voidPayload),
       });
 
       await this.eventRepository.save(voidEvent);
