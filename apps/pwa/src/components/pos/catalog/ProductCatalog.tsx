@@ -160,7 +160,7 @@ export function ProductCatalog({
     }
 
     return (
-        <div className="h-full w-full relative bg-background/50 rounded-xl border border-border/50 overflow-hidden shadow-inner">
+        <div className="h-full w-full relative glass-panel rounded-2xl border-white/20 overflow-hidden premium-shadow-md">
             <ScrollArea
                 className="h-full"
                 viewportRef={listViewportRef}
@@ -204,7 +204,7 @@ export function ProductCatalog({
                                         damping: 25,
                                         opacity: { duration: 0.3 }
                                     }}
-                                    className="w-full h-[104px] text-left group relative bg-gradient-to-br from-card/90 to-card/50 hover:from-card hover:to-card/80 backdrop-blur-md rounded-2xl border border-white/10 hover:border-primary/20 shadow-sm hover:shadow-lg overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10"
+                                    className="w-full h-[104px] text-left group relative bg-gradient-to-br from-card/80 to-card/40 hover:from-card hover:to-card/70 backdrop-blur-md rounded-2xl border border-white/10 hover:border-primary/30 premium-shadow-sm hover:premium-shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-300"
                                 >
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-all duration-300" />
 
