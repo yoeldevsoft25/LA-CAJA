@@ -15,6 +15,7 @@ import { realtimeWebSocketService } from './services/realtime-websocket.service'
 import { useActivityTracker } from './hooks/use-activity-tracker'
 import { useLicenseStatus } from './hooks/use-license-status'
 import { Loader2 } from 'lucide-react'
+import { ThemeProvider } from './components/theme-provider'
 
 // Componente de loading para Suspense
 const PageLoader = () => (
@@ -306,7 +307,7 @@ function App() {
   }
 
   return (
-    <>
+    <ThemeProvider defaultTheme="system" storageKey="velox-theme">
       {authShowLoader && (
         <SimpleLoader
           onComplete={handleLoaderComplete}
@@ -319,7 +320,7 @@ function App() {
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
-    </>
+    </ThemeProvider>
   )
 }
 
