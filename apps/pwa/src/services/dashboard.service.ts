@@ -94,11 +94,17 @@ export const dashboardService = {
   /**
    * Obtiene métricas de tendencias (últimos 7 días)
    */
-  async getTrends(): Promise<Trends> {
+  async getTrends(startDate?: string, endDate?: string): Promise<Trends> {
     const startTime = performance.now()
-    const response = await api.get<Trends>('/dashboard/trends')
+    const params: Record<string, string> = {}
+    if (startDate) params.start_date = startDate
+    if (endDate) params.end_date = endDate
+    const response = await api.get<Trends>('/dashboard/trends', { params })
     const endTime = performance.now()
-    logger.debug('Trends loaded', { duration: `${(endTime - startTime).toFixed(2)}ms` })
+    logger.debug('Trends loaded', {
+      duration: `${(endTime - startTime).toFixed(2)}ms`,
+      filtered: startDate || endDate ? `${startDate || 'any'} to ${endDate || 'any'}` : false,
+    })
     return response.data
   },
 }

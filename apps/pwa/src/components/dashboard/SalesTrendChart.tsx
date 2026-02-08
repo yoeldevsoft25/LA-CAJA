@@ -52,16 +52,16 @@ const CustomTooltip = ({ active, payload, currency }: CustomTooltipProps) => {
     // Obtener la fecha original del payload (no usar label que está formateado)
     const firstPayload = payload[0]?.payload
     const dateString = firstPayload?.date
-    
+
     if (!dateString) {
       return null
     }
-    
+
     // Validar y parsear la fecha
     let date: Date
     try {
       date = parseISO(dateString)
-      
+
       // Verificar que la fecha sea válida
       if (isNaN(date.getTime())) {
         console.warn('[SalesTrendChart] Invalid date:', dateString)
@@ -71,7 +71,7 @@ const CustomTooltip = ({ active, payload, currency }: CustomTooltipProps) => {
       console.warn('[SalesTrendChart] Error parsing date:', dateString, error)
       return null
     }
-    
+
     return (
       <div className="bg-popover border border-border rounded-lg shadow-lg p-3 min-w-[180px]">
         <p className="font-semibold text-foreground mb-2">
@@ -113,9 +113,6 @@ export default function SalesTrendChart({ data, currency = 'BS' }: SalesTrendCha
     }))
   }, [data, currency])
 
-  const maxAmount = useMemo(() => {
-    return Math.max(...chartData.map((d) => d.amount), 0)
-  }, [chartData])
 
   if (!data || data.length === 0) {
     return (
@@ -126,8 +123,8 @@ export default function SalesTrendChart({ data, currency = 'BS' }: SalesTrendCha
   }
 
   return (
-    <div className="h-[300px] w-full min-h-0">
-      <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+    <div className="h-full w-full min-h-0">
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={chartData}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
@@ -158,27 +155,33 @@ export default function SalesTrendChart({ data, currency = 'BS' }: SalesTrendCha
             yAxisId="left"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 500 }}
             tickFormatter={(value) =>
               value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value
             }
-            domain={[0, maxAmount * 1.1]}
+            width={45}
+            domain={[0, 'auto']}
+            allowDataOverflow={false}
           />
           <YAxis
             yAxisId="right"
             orientation="right"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 500 }}
+            width={30}
             domain={[0, 'auto']}
           />
           <Tooltip content={<CustomTooltip currency={currency} />} />
           <Legend
             verticalAlign="top"
-            height={36}
+            align="right"
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ paddingBottom: 20, paddingTop: 10, right: 0 }}
             formatter={(value) => (
-              <span className="text-sm text-muted-foreground">
-                {value === 'amount' ? `Monto (${currency})` : 'Cantidad de ventas'}
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+                {value === 'amount' ? `Monto (${currency})` : 'Ventas'}
               </span>
             )}
           />
@@ -187,15 +190,16 @@ export default function SalesTrendChart({ data, currency = 'BS' }: SalesTrendCha
             type="monotone"
             dataKey="amount"
             stroke="hsl(var(--primary))"
-            strokeWidth={2}
+            strokeWidth={3}
             fillOpacity={1}
             fill="url(#colorAmount)"
             activeDot={{
-              r: 6,
+              r: 5,
               stroke: 'hsl(var(--primary))',
               strokeWidth: 2,
               fill: 'hsl(var(--background))',
             }}
+            animationDuration={1500}
           />
           <Area
             yAxisId="right"
@@ -203,14 +207,15 @@ export default function SalesTrendChart({ data, currency = 'BS' }: SalesTrendCha
             dataKey="count"
             stroke="hsl(var(--chart-2))"
             strokeWidth={2}
-            fillOpacity={1}
+            fillOpacity={0.6}
             fill="url(#colorCount)"
             activeDot={{
-              r: 6,
+              r: 4,
               stroke: 'hsl(var(--chart-2))',
               strokeWidth: 2,
               fill: 'hsl(var(--background))',
             }}
+            animationDuration={2000}
           />
         </AreaChart>
       </ResponsiveContainer>
