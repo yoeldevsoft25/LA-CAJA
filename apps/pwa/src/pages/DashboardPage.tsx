@@ -194,8 +194,11 @@ export default function DashboardPage() {
     isFetching: trendsFetching,
     error: trendsError,
   } = useQuery({
-    queryKey: ['dashboard', 'trends'],
-    queryFn: () => dashboardService.getTrends(),
+    queryKey: ['dashboard', 'trends', startDate, endDate],
+    queryFn: () => dashboardService.getTrends(
+      startDate || undefined,
+      endDate || undefined,
+    ),
     enabled: isOwner, // Solo ejecutar si es owner
     staleTime: 1000 * 60 * 2, // 2 minutos
     refetchInterval: 1000 * 60 * 2, // Refrescar cada 2 minutos
@@ -524,16 +527,24 @@ export default function DashboardPage() {
           <>
             {/* KPIs Principales - Ventas - Bento Grid */}
             <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 grid-rows-2 auto-rows-fr gap-4">
+              {/* Tendencia de ventas ahora ocupa el espacio principal (2x2) */}
               <StaggerItem className="lg:col-span-2 lg:row-span-2">
-                <KPICard
-                  title="Ventas del Período"
-                  value={formatNumber(kpis.sales.period_count)}
-                  subtitle={`${formatCurrency(kpis.sales.period_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.period_amount_usd, 'USD')}`}
-                  color="green"
-                  icon={<ShoppingCart className="w-6 h-6" />}
-                  link="/app/sales"
-                  className="h-full bg-gradient-to-br from-green-50 to-white dark:from-green-950/10 dark:to-background"
-                />
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm font-bold flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-primary" />
+                        Tendencia de Ventas
+                      </span>
+                      <Badge variant="outline" className="text-[10px] font-black bg-primary/5 text-primary border-primary/20">
+                        {chartCurrency}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[280px] sm:h-[320px] lg:h-[350px] p-2 pt-0">
+                    <SalesTrendChart data={trends.sales_trend} currency={chartCurrency} />
+                  </CardContent>
+                </Card>
               </StaggerItem>
 
               <StaggerItem>
@@ -557,23 +568,17 @@ export default function DashboardPage() {
                 />
               </StaggerItem>
 
+              {/* Ventas del Período ahora en un slot de 2 columnas simple */}
               <StaggerItem className="lg:col-span-2">
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-primary" />
-                        Tendencia de Ventas
-                      </span>
-                      <Badge variant="outline" className="text-[10px] font-bold">
-                        {chartCurrency}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[180px] p-0">
-                    <SalesTrendChart data={trends.sales_trend} currency={chartCurrency} />
-                  </CardContent>
-                </Card>
+                <KPICard
+                  title="Ventas del Período"
+                  value={formatNumber(kpis.sales.period_count)}
+                  subtitle={`${formatCurrency(kpis.sales.period_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.period_amount_usd, 'USD')}`}
+                  color="green"
+                  icon={<ShoppingCart className="w-5 h-5" />}
+                  link="/app/sales"
+                  className="bg-gradient-to-br from-green-50/50 to-white dark:from-green-950/5 dark:to-background border-green-100/20"
+                />
               </StaggerItem>
 
               <StaggerItem className="lg:col-span-2">
