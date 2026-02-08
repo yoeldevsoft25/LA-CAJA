@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { motion, AnimatePresence } from 'framer-motion'
 import { adminService } from '@/services/admin.service'
 import BlurFade from '@/components/magicui/blur-fade'
+import { ModeToggle } from '../mode-toggle'
 
 
 type NavItem = {
@@ -198,6 +199,7 @@ export default function AdminLayoutEnhanced() {
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-2">
+                        <ModeToggle />
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm" className="gap-2 border-slate-200 bg-white hover:bg-slate-50 rounded-full pl-1 pr-4 py-1 h-9 shadow-sm hover:shadow transition-all duration-300">
