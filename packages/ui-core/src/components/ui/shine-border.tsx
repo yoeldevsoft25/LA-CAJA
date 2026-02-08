@@ -13,10 +13,10 @@ interface ShineBorderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'c
 }
 
 export function ShineBorder({
-    borderRadius = 8,
+    borderRadius,
     borderWidth = 1,
     duration = 14,
-    color = "#000000",
+    color = "hsl(var(--primary))",
     className,
     children,
 }: ShineBorderProps) {
@@ -24,7 +24,7 @@ export function ShineBorder({
         <div
             style={
                 {
-                    "--border-radius": `${borderRadius}px`,
+                    "--border-radius": borderRadius ? `${borderRadius}px` : `var(--radius)`,
                 } as React.CSSProperties
             }
             className={cn(

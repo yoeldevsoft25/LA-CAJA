@@ -363,13 +363,28 @@
     }
   }
 
-  /* Glassmorphism & Premium Utilities */
-  .glass-panel {
-    @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+  .premium-shadow {
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.1), 0 4px 14px -8px rgba(0, 0, 0, 0.05);
   }
 
-  .premium-shadow {
+  .premium-shadow-sm {
+    box-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.05);
+  }
+
+  .premium-shadow-md {
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.1);
+  }
+
+  .premium-shadow-lg {
     box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+  }
+
+  .premium-shadow-xl {
+    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.2);
+  }
+
+  .glass-panel {
+    @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-2xl;
   }
 
   .text-gradient {

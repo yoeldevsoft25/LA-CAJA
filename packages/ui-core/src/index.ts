@@ -9,6 +9,7 @@ export * from "./components/ui/visually-hidden";
 export * from "./components/ui/separator";
 export * from "./components/ui/tabs";
 export * from "./components/ui/skeleton";
+export * from "./components/ui/module-skeletons";
 export * from "./components/ui/label";
 export * from "./components/ui/select";
 export * from "./components/ui/dropdown-menu";
