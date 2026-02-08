@@ -6,7 +6,7 @@ import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNear
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'

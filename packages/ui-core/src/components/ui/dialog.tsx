@@ -16,50 +16,22 @@ const DialogClose = DialogPrimitive.Close
 const DialogOverlay = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Overlay>,
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => {
-    // Detectar mobile para optimizar animaciones
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
-
-    return (
-        <DialogPrimitive.Overlay
-            ref={ref}
-            className={cn(
-                "fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm",
-                // Animaciones más simples en mobile para mejor rendimiento
-                isMobile
-                    ? "data-[state=open]:opacity-100 data-[state=closed]:opacity-0 transition-opacity duration-150"
-                    : "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                className
-            )}
-            style={{ willChange: 'opacity' }}
-            {...props}
-        />
-    )
-})
+>(({ className, ...props }, ref) => (
+    <DialogPrimitive.Overlay
+        ref={ref}
+        className={cn(
+            "fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            className
+        )}
+        {...props}
+    />
+))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const DialogContent = React.forwardRef<
     React.ElementRef<typeof DialogPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-    const ariaDescribedBy = props['aria-describedby']
-    // Detectar mobile para optimizar animaciones
-    const [isMobile, setIsMobile] = React.useState(false)
-
-    React.useEffect(() => {
-        const checkMobile = () => {
-            if (typeof window !== 'undefined') {
-                setIsMobile(window.innerWidth < 640)
-            }
-        }
-        checkMobile()
-        if (typeof window !== 'undefined') {
-            window.addEventListener('resize', checkMobile)
-            return () => window.removeEventListener('resize', checkMobile)
-        }
-        return undefined;
-    }, [])
-
     const isBottomSheet = Boolean(className?.includes('bottom-0') || className?.includes('top-auto'))
 
     return (
@@ -68,40 +40,12 @@ const DialogContent = React.forwardRef<
             <DialogPrimitive.Content
                 ref={ref}
                 className={cn(
-                    // Posicionamiento: centrado por defecto o bottom sheet en mobile
+                    "fixed z-[101] grid w-full gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
                     isBottomSheet
-                        ? "fixed left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-[640px]"
-                        : "fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
-                    // Tamaño y estilos base - z-index igual que overlay (100) para que el orden del DOM determine el apilamiento (Content > Overlay)
-                    isBottomSheet
-                        ? "z-[100] [&>*]:pointer-events-auto [&_*]:pointer-events-auto gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg"
-                        : "z-[100] [&>*]:pointer-events-auto [&_*]:pointer-events-auto w-[calc(100%-1.5rem)] sm:w-full max-w-lg gap-4 border bg-background p-4 sm:p-6 shadow-lg rounded-lg",
-                    // Solo aplicar grid si no hay clases personalizadas
-                    !className?.includes('flex') && "grid",
-                    // Animaciones optimizadas para mobile
-                    isMobile && !className?.includes('bottom-0')
-                        ? "data-[state=open]:opacity-100 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=closed]:scale-95 transition-all duration-150"
-                        : !className?.includes('bottom-0') && "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-                    // Para bottom sheet mobile
-                    isBottomSheet && isMobile && "data-[state=open]:translate-y-0 data-[state=closed]:translate-y-full transition-transform duration-300 ease-out",
+                        ? "left-1/2 bottom-4 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-[640px] translate-y-0"
+                        : "left-[50%] top-[50%] -translate-x-1/2 -translate-y-1/2 max-w-lg",
                     className
                 )}
-                style={{
-                    willChange: isMobile ? 'opacity, transform' : undefined,
-                    pointerEvents: 'auto',
-                    zIndex: 100,
-                    bottom: isBottomSheet ? '1rem' : undefined,
-                    top: isBottomSheet ? 'auto' : undefined,
-                }}
-                onInteractOutside={(e) => {
-                    // Permitir cerrar solo si el click es fuera del contenido
-                    const target = e.target as HTMLElement
-                    const content = e.currentTarget as HTMLElement
-                    if (content.contains(target) && target !== content) {
-                        e.preventDefault()
-                    }
-                }}
-                aria-describedby={ariaDescribedBy ?? undefined}
                 {...props}
             >
                 {children}
