@@ -34,6 +34,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SalesSkeleton } from '@/components/ui/module-skeletons'
 import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
+import { useSmoothLoading } from '@/hooks/use-smooth-loading'
 import { cn } from '@/lib/utils'
 import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
 import { printService } from '@/services/print.service'
@@ -195,9 +196,12 @@ export default function SalesPage() {
         limit: 10000, // Obtener todas las ventas del día
         offset: 0,
       }),
-    enabled: isOwner && isSameDaySelected && !!effectiveDateFrom && !!effectiveDateTo,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    enabled: isOwner && isSameDaySelected && !!effectiveDateFrom && !!user?.store_id,
+    staleTime: 1000 * 60 * 5, // 5 minutos de caché fresca
   })
+
+  // Smooth loading state to prevent skeleton flickering
+  const isSmoothLoading = useSmoothLoading(isLoading)
 
   // Filtrar ventas del día (aplicar mismos filtros que las ventas principales, pero sin anuladas para el gráfico)
   const daySalesForChart = useMemo(() => {
@@ -717,7 +721,7 @@ export default function SalesPage() {
                 </Button>
               </div>
             </div>
-          ) : isLoading ? (
+          ) : isSmoothLoading ? (
             <SalesSkeleton />
           ) : rawSales.length === 0 ? (
             <PremiumEmptyState

@@ -44,6 +44,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { formatQuantity } from '@/lib/weight'
 import { ReportSkeleton } from '@/components/ui/module-skeletons'
 import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
+import { useSmoothLoading } from '@/hooks/use-smooth-loading'
 import { cn } from '@/lib/utils'
 
 type DateRange = 'today' | 'week' | 'month' | 'custom'
@@ -229,6 +230,7 @@ export default function ReportsPage() {
   }, [debtsError])
 
   const isLoading = loadingSales || loadingProducts || loadingDebts
+  const isSmoothLoading = useSmoothLoading(isLoading)
   const hasError = salesError || productsError || debtsError
 
   // Si no es owner, mostrar mensaje
@@ -942,7 +944,7 @@ export default function ReportsPage() {
       )}
 
       {/* Loading State */}
-      {isLoading && <ReportSkeleton />}
+      {isSmoothLoading && <ReportSkeleton />}
     </div>
   )
 }

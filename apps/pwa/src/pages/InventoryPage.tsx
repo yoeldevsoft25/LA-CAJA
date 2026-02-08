@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table'
 import { InventorySkeleton } from '@/components/ui/module-skeletons'
 import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
+import { useSmoothLoading } from '@/hooks/use-smooth-loading'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
@@ -146,6 +147,9 @@ export default function InventoryPage() {
     staleTime: 1000 * 60 * 10, // 10 minutos
     gcTime: Infinity, // Nunca eliminar
   })
+
+  // Smooth loading state to prevent skeleton flickering
+  const isSmoothLoading = useSmoothLoading(isLoading)
 
   const { data: lowStockCountData } = useQuery({
     queryKey: ['inventory', 'low-stock-count', searchQuery, warehouseFilter, user?.store_id],
@@ -529,7 +533,7 @@ export default function InventoryPage() {
                 </Button>
               </div>
             </div>
-          ) : isLoading ? (
+          ) : isSmoothLoading ? (
             <InventorySkeleton />
           ) : (
             <>
