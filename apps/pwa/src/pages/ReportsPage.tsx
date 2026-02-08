@@ -42,7 +42,8 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { formatQuantity } from '@/lib/weight'
-import { Skeleton } from '@/components/ui/skeleton'
+import { ReportSkeleton } from '@/components/ui/module-skeletons'
+import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
 import { cn } from '@/lib/utils'
 
 type DateRange = 'today' | 'week' | 'month' | 'custom'
@@ -933,36 +934,15 @@ export default function ReportsPage() {
 
       {/* Estado vacío */}
       {!isLoading && (!salesReport || (salesReport as any)?.total_sales === 0) && (
-        <Card className="border border-border">
-          <CardContent className="p-8 text-center">
-            <div className="flex flex-col items-center justify-center py-8">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <BarChart3 className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-sm sm:text-base font-medium text-foreground mb-2">No hay datos para mostrar</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                No se encontraron ventas en el período seleccionado. Intenta con un rango de fechas diferente.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <PremiumEmptyState
+          title="No hay datos para mostrar"
+          description="No se encontraron ventas en el período seleccionado. Intenta con un rango de fechas diferente."
+          icon={BarChart3}
+        />
       )}
 
       {/* Loading State */}
-      {isLoading && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="border border-border">
-                <CardContent className="p-4">
-                  <Skeleton className="h-4 w-24 mb-2" />
-                  <Skeleton className="h-8 w-32" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      {isLoading && <ReportSkeleton />}
     </div>
   )
 }

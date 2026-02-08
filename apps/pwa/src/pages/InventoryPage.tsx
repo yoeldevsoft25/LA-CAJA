@@ -26,7 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
+import { InventorySkeleton } from '@/components/ui/module-skeletons'
+import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
@@ -529,179 +530,166 @@ export default function InventoryPage() {
               </div>
             </div>
           ) : isLoading ? (
-            <div className="p-8 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
-          ) : stockItems.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="flex flex-col items-center justify-center py-4">
-                <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-6 ring-8 ring-blue-50/50 dark:ring-blue-900/10">
-                  <Package className="w-10 h-10 text-blue-500/80" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {searchQuery || showLowStockOnly
-                    ? 'No se encontraron productos'
-                    : 'Inventario Vacío'}
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-6">
-                  {searchQuery
+            <InventorySkeleton />
+          ) : (
+            <>
+              {stockItems.length === 0 ? (
+                <PremiumEmptyState
+                  title={searchQuery || showLowStockOnly ? 'No se encontraron productos' : 'Inventario Vacío'}
+                  description={searchQuery
                     ? 'Intenta ajustar tus términos de búsqueda o filtros.'
                     : 'Comienza agregando productos a tu inventario mediante el botón "Recibir Stock".'}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={() => setIsStockReceivedModalOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar Primer Producto
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="w-full sm:table-fixed">
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-muted/60">
-                    <TableHead className="w-[50%] sm:w-[45%] font-semibold pl-4">Producto</TableHead>
-                    <TableHead className="text-center font-semibold">Stock Actual</TableHead>
-                    <TableHead className="text-center hidden sm:table-cell font-semibold">Mínimo</TableHead>
-                    <TableHead className="text-center hidden md:table-cell font-semibold">Estado</TableHead>
-                    <TableHead className="text-right w-32 sm:w-40 font-semibold pr-4"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stockItems.map((item) => {
-                    const stockPercentage = getStockPercentage(item)
-                    const isLowStock = item.is_low_stock
-                    const initial = item.product_name.charAt(0).toUpperCase()
-
-                    return (
-                      <TableRow
-                        key={item.product_id}
-                        className={cn(
-                          'transition-colors hover:bg-muted/40 border-b-muted/40 group',
-                          isLowStock && 'bg-orange-50/30 hover:bg-orange-50/60 dark:bg-orange-950/10'
-                        )}
-                      >
-                        <TableCell className="align-middle w-[50%] sm:w-[45%] py-3 pl-4">
-                          <div className="flex items-center gap-3 min-w-0">
-                            {/* Avatar del producto */}
-                            <div className={cn(
-                              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0 ring-2 ring-background",
-                              isLowStock
-                                ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
-                                : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-                            )}>
-                              {initial}
-                            </div>
-
-                            <div className="flex-1 min-w-0 max-w-full">
-                              <p
-                                className="font-bold text-foreground text-sm sm:text-base break-words leading-tight group-hover:text-primary transition-colors"
-                                title={item.product_name}
-                              >
-                                {item.product_name}
-                              </p>
-                              {isLowStock && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
-                                    Stock Crítico
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center py-3">
-                          <div className="space-y-1.5 flex flex-col items-center">
-                            <span
-                              className={cn(
-                                'text-base sm:text-lg font-bold block tabular-nums',
-                                isLowStock ? 'text-orange-600' : 'text-slate-700 dark:text-slate-200'
-                              )}
-                            >
-                              {formatStockValue(item, item.current_stock)}
-                            </span>
-                            {/* Indicador de progreso visual */}
-                            <div className="w-20 sm:w-24 h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                              <div
-                                className={cn("h-full rounded-full transition-all duration-500", isLowStock ? "bg-orange-500" : "bg-blue-500")}
-                                style={{ width: `${stockPercentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center text-sm text-muted-foreground hidden sm:table-cell tabular-nums">
-                          {formatStockValue(item, item.low_stock_threshold)}
-                        </TableCell>
-                        <TableCell className="text-center hidden md:table-cell">
-                          {isLowStock ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-orange-50 text-orange-700 border-orange-200/60 font-medium px-2.5 py-0.5 rounded-full"
-                            >
-                              Bajo
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-green-50 text-green-700 border-green-200/60 font-medium px-2.5 py-0.5 rounded-full"
-                            >
-                              Normal
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="w-32 sm:w-40 py-3 text-right pr-4">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 sm:opacity-100">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewMovements(item)}
-                              className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 rounded-full"
-                              title="Ver movimientos"
-                            >
-                              <History className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleReceiveStock(item)}
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
-                              title="Recibir stock"
-                            >
-                              <TrendingUp className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleAdjustStock(item)}
-                              className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full"
-                              title="Ajustar stock"
-                            >
-                              <TrendingDown className="w-4 h-4" />
-                            </Button>
-                            {/* Solo owners pueden vaciar stock de un producto */}
-                            {isOwner && item.current_stock > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleResetProductStock(item)}
-                                className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full"
-                                title="Vaciar stock"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                  icon={Package}
+                  action={!searchQuery ? {
+                    label: 'Agregar Primer Producto',
+                    onClick: () => setIsStockReceivedModalOpen(true)
+                  } : undefined}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="w-full sm:table-fixed">
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-muted/60">
+                        <TableHead className="w-[50%] sm:w-[45%] font-semibold pl-4">Producto</TableHead>
+                        <TableHead className="text-center font-semibold">Stock Actual</TableHead>
+                        <TableHead className="text-center hidden sm:table-cell font-semibold">Mínimo</TableHead>
+                        <TableHead className="text-center hidden md:table-cell font-semibold">Estado</TableHead>
+                        <TableHead className="text-right w-32 sm:w-40 font-semibold pr-4"></TableHead>
                       </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {stockItems.map((item) => {
+                        const stockPercentage = getStockPercentage(item)
+                        const isLowStock = item.is_low_stock
+                        const initial = item.product_name.charAt(0).toUpperCase()
+
+                        return (
+                          <TableRow
+                            key={item.product_id}
+                            className={cn(
+                              'transition-colors hover:bg-muted/40 border-b-muted/40 group',
+                              isLowStock && 'bg-orange-50/30 hover:bg-orange-50/60 dark:bg-orange-950/10'
+                            )}
+                          >
+                            <TableCell className="align-middle w-[50%] sm:w-[45%] py-3 pl-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {/* Avatar del producto */}
+                                <div className={cn(
+                                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0 ring-2 ring-background",
+                                  isLowStock
+                                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                                    : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                                )}>
+                                  {initial}
+                                </div>
+
+                                <div className="flex-1 min-w-0 max-w-full">
+                                  <p
+                                    className="font-bold text-foreground text-sm sm:text-base break-words leading-tight group-hover:text-primary transition-colors"
+                                    title={item.product_name}
+                                  >
+                                    {item.product_name}
+                                  </p>
+                                  {isLowStock && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
+                                        Stock Crítico
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center py-3">
+                              <div className="space-y-1.5 flex flex-col items-center">
+                                <span
+                                  className={cn(
+                                    'text-base sm:text-lg font-bold block tabular-nums',
+                                    isLowStock ? 'text-orange-600' : 'text-slate-700 dark:text-slate-200'
+                                  )}
+                                >
+                                  {formatStockValue(item, item.current_stock)}
+                                </span>
+                                {/* Indicador de progreso visual */}
+                                <div className="w-20 sm:w-24 h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                                  <div
+                                    className={cn("h-full rounded-full transition-all duration-500", isLowStock ? "bg-orange-500" : "bg-blue-500")}
+                                    style={{ width: `${stockPercentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center text-sm text-muted-foreground hidden sm:table-cell tabular-nums">
+                              {formatStockValue(item, item.low_stock_threshold)}
+                            </TableCell>
+                            <TableCell className="text-center hidden md:table-cell">
+                              {isLowStock ? (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-orange-50 text-orange-700 border-orange-200/60 font-medium px-2.5 py-0.5 rounded-full"
+                                >
+                                  Bajo
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-green-50 text-green-700 border-green-200/60 font-medium px-2.5 py-0.5 rounded-full"
+                                >
+                                  Normal
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="w-32 sm:w-40 py-3 text-right pr-4">
+                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 sm:opacity-100">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleViewMovements(item)}
+                                  className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 rounded-full"
+                                  title="Ver movimientos"
+                                >
+                                  <History className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleReceiveStock(item)}
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
+                                  title="Recibir stock"
+                                >
+                                  <TrendingUp className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleAdjustStock(item)}
+                                  className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full"
+                                  title="Ajustar stock"
+                                >
+                                  <TrendingDown className="w-4 h-4" />
+                                </Button>
+                                {/* Solo owners pueden vaciar stock de un producto */}
+                                {isOwner && item.current_stock > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleResetProductStock(item)}
+                                    className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full"
+                                    title="Vaciar stock"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

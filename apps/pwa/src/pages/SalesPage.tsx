@@ -32,7 +32,8 @@ import {
 } from '@/components/ui/select'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Skeleton } from '@/components/ui/skeleton'
+import { SalesSkeleton } from '@/components/ui/module-skeletons'
+import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
 import { cn } from '@/lib/utils'
 import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
 import { printService } from '@/services/print.service'
@@ -717,26 +718,13 @@ export default function SalesPage() {
               </div>
             </div>
           ) : isLoading ? (
-            <div className="p-8 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
+            <SalesSkeleton />
           ) : rawSales.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <FileText className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <p className="text-sm sm:text-base font-medium text-foreground mb-1">
-                  No hay ventas
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  No se encontraron ventas en el período seleccionado
-                </p>
-              </div>
-            </div>
+            <PremiumEmptyState
+              title="No hay ventas"
+              description="No se encontraron ventas en el período seleccionado"
+              icon={FileText}
+            />
           ) : sales.length === 0 && activeFiltersCount > 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
