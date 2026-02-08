@@ -444,6 +444,31 @@ export default function DashboardPage() {
                 />
               </div>
             </div>
+
+            {/* Selector de Moneda */}
+            <div className="flex flex-col gap-1 flex-shrink-0">
+              <Label className="text-xs">Moneda Gráficos</Label>
+              <div className="flex bg-muted rounded-md p-1">
+                <button
+                  onClick={() => setChartCurrency('BS')}
+                  className={cn(
+                    "px-3 py-1 text-xs font-bold rounded transition-all",
+                    chartCurrency === 'BS' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  BS
+                </button>
+                <button
+                  onClick={() => setChartCurrency('USD')}
+                  className={cn(
+                    "px-3 py-1 text-xs font-bold rounded transition-all",
+                    chartCurrency === 'USD' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  USD
+                </button>
+              </div>
+            </div>
             {/* Botones de exportar */}
             <div className="flex gap-2 flex-shrink-0">
               <Button
@@ -468,6 +493,12 @@ export default function DashboardPage() {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Global Alerts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ExpiringLotsAlert />
+          <PendingOrdersIndicator />
         </div>
 
         {isLoading ? (
@@ -524,6 +555,25 @@ export default function DashboardPage() {
                   color="purple"
                   icon={<ReceiptText className="w-5 h-5" />}
                 />
+              </StaggerItem>
+
+              <StaggerItem className="lg:col-span-2">
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-semibold flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-primary" />
+                        Tendencia de Ventas
+                      </span>
+                      <Badge variant="outline" className="text-[10px] font-bold">
+                        {chartCurrency}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-[180px] p-0">
+                    <SalesTrendChart data={trends.sales_trend} currency={chartCurrency} />
+                  </CardContent>
+                </Card>
               </StaggerItem>
 
               <StaggerItem className="lg:col-span-2">
