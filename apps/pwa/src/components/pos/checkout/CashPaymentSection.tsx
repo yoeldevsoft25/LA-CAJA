@@ -113,12 +113,12 @@ const CashPaymentSection = memo(function CashPaymentSection({
     const roundingConsentId = `rounding-consent-${mode.toLowerCase()}`
 
     return (
-        <Card className={cn('border-slate-200 bg-white shadow-sm', className)}>
+        <Card className={cn('border-border bg-card shadow-sm', className)}>
             <CardContent className="p-4 space-y-4">
                 <div className="flex items-start justify-between gap-2">
                     <div>
-                        <p className="text-sm font-bold text-slate-900">Cobro en efectivo ({mode})</p>
-                        <p className="text-xs text-slate-500">Total esperado: {formatCurrency(totalAmount, mode)}</p>
+                        <p className="text-sm font-bold text-foreground">Cobro en efectivo ({mode})</p>
+                        <p className="text-xs text-muted-foreground">Total esperado: {formatCurrency(totalAmount, mode)}</p>
                     </div>
                     <Coins className="h-5 w-5 text-primary" />
                 </div>
@@ -133,12 +133,12 @@ const CashPaymentSection = memo(function CashPaymentSection({
                         value={receivedAmount || ''}
                         onChange={handleAmountChange}
                         placeholder={`0.00 ${mode}`}
-                        className="h-11 text-lg font-semibold tabular-nums"
+                        className="h-11 text-lg font-semibold tabular-nums border-border bg-background"
                     />
                 </div>
 
                 {mode === 'USD' && onGiveChangeInBsChange && (
-                    <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <label className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
                         <input
                             type="checkbox"
                             id={giveChangeId}
@@ -147,12 +147,12 @@ const CashPaymentSection = memo(function CashPaymentSection({
                             className="h-4 w-4 rounded border-slate-300"
                             aria-label="Dar cambio en bolívares"
                         />
-                        <span className="text-sm font-medium text-slate-700">Dar cambio en Bs</span>
+                        <span className="text-sm font-medium text-foreground/80">Dar cambio en Bs</span>
                     </label>
                 )}
 
                 {(mode === 'BS' || (mode === 'USD' && giveChangeInBs)) && change > 0 && (
-                    <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
                         <Label htmlFor={roundingModeId}>Politica de redondeo</Label>
                         <select
                             id={roundingModeId}
@@ -173,10 +173,10 @@ const CashPaymentSection = memo(function CashPaymentSection({
                                     id={roundingConsentId}
                                     checked={roundingConsent}
                                     onChange={handleRoundingConsentChange}
-                                    className="h-4 w-4 rounded border-slate-300"
+                                    className="h-4 w-4 rounded border-border"
                                     aria-label="Confirmar que el cliente acepta el redondeo"
                                 />
-                                Cliente acepta el redondeo
+                                <span className="text-muted-foreground">Cliente acepta el redondeo</span>
                             </label>
                         )}
                     </div>
@@ -185,21 +185,21 @@ const CashPaymentSection = memo(function CashPaymentSection({
                 {change > 0 && (
                     <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-3 space-y-2" aria-live="polite">
                         <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-slate-700">Cambio</span>
-                            <span className="text-lg font-bold text-slate-900 tabular-nums">{formatCurrency(change, mode)}</span>
+                            <span className="text-sm font-medium text-foreground/70">Cambio</span>
+                            <span className="text-lg font-bold text-foreground tabular-nums">{formatCurrency(change, mode)}</span>
                         </div>
 
                         {mode === 'USD' && giveChangeInBs && (
-                            <div className="text-sm text-slate-600 space-y-1">
-                                <div>Equivalente exacto: <span className="font-medium text-slate-900">{formatCurrency(exactChangeBs, 'BS')}</span></div>
-                                <div>Cambio en Bs: <span className="font-medium text-slate-900">{formatCurrency(roundedChangeBs, 'BS')}</span></div>
-                                {changeBreakdownFormatted && <div className="text-xs">Denominaciones: {changeBreakdownFormatted}</div>}
+                            <div className="text-sm text-muted-foreground space-y-1">
+                                <div>Equivalente exacto: <span className="font-medium text-foreground">{formatCurrency(exactChangeBs, 'BS')}</span></div>
+                                <div>Cambio en Bs: <span className="font-medium text-foreground">{formatCurrency(roundedChangeBs, 'BS')}</span></div>
+                                {changeBreakdownFormatted && <div className="text-xs italic">Denominaciones: {changeBreakdownFormatted}</div>}
                             </div>
                         )}
 
                         {mode === 'BS' && (
-                            <div className="text-sm text-slate-600">
-                                Cambio en Bs: <span className="font-medium text-slate-900">{formatCurrency(roundedChangeBs, 'BS')}</span>
+                            <div className="text-sm text-muted-foreground">
+                                Cambio en Bs: <span className="font-medium text-foreground">{formatCurrency(roundedChangeBs, 'BS')}</span>
                             </div>
                         )}
 
@@ -217,8 +217,8 @@ const CashPaymentSection = memo(function CashPaymentSection({
                         )}
 
                         {roundedChangeBs === 0 && changeBs > 0 && (
-                            <div className="text-xs text-slate-500">
-                                No se dara cambio (monto menor a la denominacion comun)
+                            <div className="text-xs text-muted-foreground italic">
+                                No se dará cambio (monto menor a la denominación común)
                             </div>
                         )}
                     </div>

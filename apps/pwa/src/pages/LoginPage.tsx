@@ -160,7 +160,7 @@ export default function LoginPage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, type: "spring" }}
           >
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm border border-white/70">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-card shadow-sm border border-white/70 dark:border-border/50">
               <img src="/logo-velox.svg" alt="Velox POS" className="h-8 w-8" />
             </div>
           </motion.div>
@@ -170,10 +170,10 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <h1 className="text-3xl font-heading font-semibold tracking-tight text-slate-900">
+            <h1 className="text-3xl font-heading font-semibold tracking-tight text-foreground">
               Bienvenido de nuevo
             </h1>
-            <p className="text-slate-500 mt-2 text-sm">
+            <p className="text-muted-foreground mt-2 text-sm">
               Accede a tu operación con estilo y precisión.
             </p>
           </motion.div>
@@ -228,7 +228,7 @@ export default function LoginPage() {
           duration={14}
           color={['hsl(var(--primary))', 'hsl(var(--primary) / 0.3)', 'hsl(var(--primary))']}
         >
-          <Card className="overflow-hidden rounded-[26px] bg-white/92 border-0 shadow-[0_25px_60px_hsl(var(--foreground)_/_0.14)] dark:bg-card/90">
+          <Card className="overflow-hidden rounded-[26px] bg-white border-0 shadow-[0_25px_60px_hsl(var(--foreground)_/_0.14)] dark:bg-card dark:shadow-[0_25px_60px_rgba(0,0,0,0.5)]">
             <CardContent className="p-9 space-y-7 bg-gradient-to-b from-white to-background dark:from-card dark:to-background">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
                 {/* Store Selection */}
@@ -261,15 +261,15 @@ export default function LoginPage() {
                       >
                         <SelectTrigger
                           className={cn(
-                            'h-12 text-base border transition-all duration-200 focus:ring-0 focus:ring-offset-0 bg-background/90 shadow-sm',
+                            'h-12 text-base border transition-all duration-200 focus:ring-0 focus:ring-offset-0 bg-background/90 shadow-sm dark:bg-muted/20',
                             errors.store_id
                               ? 'border-destructive focus:border-destructive'
-                              : 'border-border/70 focus:border-primary/80 hover:border-primary/40'
+                              : 'border-border focus:border-primary hover:border-primary/40'
                           )}
                         >
                           <SelectValue placeholder="Selecciona tu tienda" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white border border-slate-200/60">
+                        <SelectContent className="bg-popover border border-border">
                           {stores?.map((store) => {
                             const expired = store.license_expires_at
                               ? new Date(store.license_expires_at).getTime() < Date.now()
@@ -370,7 +370,7 @@ export default function LoginPage() {
                                   >
                                     {cashier.full_name || 'Sin nombre'}
                                   </p>
-                                  <p className="text-xs text-slate-500 capitalize flex items-center gap-1">
+                                  <p className="text-xs text-muted-foreground capitalize flex items-center gap-1">
                                     {cashier.role === 'owner' && (
                                       <Sparkles className="w-3 h-3 text-amber-500" />
                                     )}
@@ -516,12 +516,12 @@ export default function LoginPage() {
 
         {/* Footer hint */}
         <motion.div
-          className="text-center mt-10 space-y-2 text-[#5f6b7a]"
+          className="text-center mt-10 space-y-2 text-muted-foreground"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          <p className="text-sm text-slate-500">
+          <p className="text-sm">
             <Link
               to="/forgot-pin"
               className="font-semibold hover:underline"
@@ -530,7 +530,7 @@ export default function LoginPage() {
               ¿Olvidaste tu PIN?
             </Link>
           </p>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm">
             ¿No tienes una cuenta?{' '}
             <Link
               to="/register"
@@ -551,7 +551,7 @@ export default function LoginPage() {
           <p className="text-[11px] uppercase tracking-[0.32em] text-primary font-semibold">
             Velox POS · Operación elegante
           </p>
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             © {new Date().getFullYear()} Velox POS. Todos los derechos reservados.
           </p>
         </motion.div>

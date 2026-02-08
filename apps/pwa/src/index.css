@@ -127,34 +127,39 @@
   }
 
   .dark {
-    /* ✨ Premium Blue Theme - Dark Mode */
+    /* ✨ Premium Deep Midnight Theme - Dark Mode */
+    /* Away from pure black, towards deep cosmic slate/navy */
 
-    /* Backgrounds - Deep Slate */
-    --background: 222.2 47.4% 1.2%;
+    /* Backgrounds */
+    --background: 230 25% 7%;
+    /* Deep navy base #0D0F14 */
     --foreground: 210 40% 98%;
 
-    /* Cards */
-    --card: 222.2 84% 4.9%;
+    /* Cards - Layered elevation */
+    --card: 230 25% 10%;
+    /* #13161C */
     --card-foreground: 210 40% 98%;
 
     /* Popover */
-    --popover: 222.2 84% 4.9%;
+    --popover: 230 25% 12%;
+    /* #191D25 */
     --popover-foreground: 210 40% 98%;
 
-    /* Primary */
+    /* Primary - More vibrant blue for dark mode */
     --primary: 204 89% 55%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     /* Secondary */
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 230 25% 15%;
+    /* #1F232B */
     --secondary-foreground: 210 40% 98%;
 
     /* Muted */
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 75%;
+    --muted: 230 25% 14%;
+    --muted-foreground: 215 20.2% 70%;
 
     /* Accent */
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 230 25% 18%;
     --accent-foreground: 210 40% 98%;
 
     /* Destructive */
@@ -174,22 +179,22 @@
     --info-foreground: 0 0% 98%;
 
     /* Borders & Rings */
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 230 25% 16%;
+    /* #1F232B */
+    --input: 230 25% 16%;
     --ring: 204 89% 55%;
-    /* Blue Ring */
 
     /* Effects */
-    --glass-opacity: 0.6;
-    --glass-border: 0 0% 100% / 0.1;
-    --sidebar-background: 240 5.9% 10%;
+    --glass-opacity: 0.4;
+    --glass-border: 230 25% 30% / 0.1;
+    --sidebar-background: 230 25% 8%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: 204 89% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 230 25% 12%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 230 25% 14%;
+    --sidebar-ring: 204 89% 55%;
   }
 }
 

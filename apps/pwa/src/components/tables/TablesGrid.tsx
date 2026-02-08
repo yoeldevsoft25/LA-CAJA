@@ -256,7 +256,7 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as TableStatus | 'all')}
           >
-            <SelectTrigger className="w-full sm:w-[200px] h-11 bg-white/60 border-muted/40 font-medium">
+            <SelectTrigger className="w-full sm:w-[200px] h-11 bg-background/60 dark:bg-muted/20 border-border/40 font-medium">
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
@@ -299,13 +299,13 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                     'bg-card shadow-sm group',
                     table.status === 'occupied'
                       ? isLongWait
-                        ? 'border-red-500 bg-red-50/80 dark:bg-red-950/20'
+                        ? 'border-destructive bg-destructive/10'
                         : 'border-primary bg-primary/5'
                       : table.status === 'reserved'
-                        ? 'border-amber-400 bg-amber-50/50'
+                        ? 'border-amber-400 bg-amber-500/10'
                         : table.status === 'out_of_service'
                           ? 'border-muted bg-muted/20 opacity-60 grayscale'
-                          : 'border-border bg-white hover:border-primary/50'
+                          : 'border-border bg-card hover:border-primary/50'
                   )}
                 >
                   {/* Botones de acción - Menú desplegable */}
@@ -407,7 +407,7 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                             {/* Tiempo transcurrido */}
                             {elapsedTime > 0 ? (
                               <div className={cn(
-                                'flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full bg-white/80 shadow-sm border border-border/50',
+                                'flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full bg-background/80 dark:bg-card/80 shadow-sm border border-border/50',
                                 getTimeColor(elapsedTime)
                               )}>
                                 <Clock className="w-3.5 h-3.5" />
