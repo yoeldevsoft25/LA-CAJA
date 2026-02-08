@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect, useState, lazy, Suspense } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from '@/lib/toast'
 import SimpleLoader from './components/loader/SimpleLoader'
@@ -329,330 +330,341 @@ function AppRoutes() {
 
   const { user, isAuthenticated } = useAuth()
   const defaultRoute = getDefaultRoute(user?.role || 'cashier')
+  const location = useLocation()
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <Routes>
-        {/* Public routes */}
-        <Route
-          path="/"
-          element={
-            isAuthenticated ? (
-              <Navigate to={defaultRoute} replace />
-            ) : (window as any).__TAURI__ || (window as any).TAURI ? (
-              <Navigate to="/login" replace />
-            ) : (
-              <LandingPageEnhanced />
-            )
-          }
-        />
-        <Route path="/landing" element={<LandingPageEnhanced />} />
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? <Navigate to={defaultRoute} replace /> : <LoginPage />
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            isAuthenticated ? <Navigate to={defaultRoute} replace /> : <RegisterPage />
-          }
-        />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/forgot-pin" element={<ForgotPinPage />} />
-        <Route path="/reset-pin" element={<ResetPinPage />} />
-        <Route
-          path="/license"
-          element={
-            <ProtectedRoute allowLicenseBlocked>
-              <LicenseBlockedPage />
-            </ProtectedRoute>
-          }
-        />
-        {/* Admin Routes */}
-        <Route element={<AdminLayoutEnhanced />}>
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/license-payments" element={<LicensePaymentsPage />} />
-        </Route>
-        <Route
-          path="/onboarding"
-          element={
-            <ProtectedRoute allowedRoles={['owner']}>
-              <OnboardingPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Public routes - Menú QR para restaurantes */}
-        <Route path="/public/qr/:qrCode" element={<PublicMenuQRPage />} />
-        <Route path="/public/menu/:tableId" element={<PublicMenuPage />} />
-        <Route path="/public/kitchen/:token" element={<PublicKitchenPage />} />
-
-        {/* Protected routes */}
-        <Route
-          path="/app"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="min-h-screen"
         >
-          <Route index element={<Navigate to={defaultRoute} replace />} />
-          <Route
-            path="dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="pos" element={<POSPage />} />
-          <Route
-            path="products"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <ProductsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="inventory"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <InventoryPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="inventory/count"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <InventoryCountPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="sales" element={<SalesPage />} />
-          <Route path="cash" element={<CashPage />} />
-          <Route path="shifts" element={<ShiftsPage />} />
-          <Route
-            path="payments"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <PaymentsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="license"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <LicensePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="security"
-            element={
-              <ProtectedRoute>
-                <SecurityPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="discounts"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <DiscountsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="fast-checkout" element={<FastCheckoutPage />} />
-          <Route
-            path="lots"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <LotsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="invoice-series"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <InvoiceSeriesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="tables" element={<TablesPage />} />
-          <Route
-            path="kitchen"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <KitchenDisplayPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="reservations"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <ReservationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="peripherals"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <PeripheralsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="price-lists"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <PriceListsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="promotions"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <PromotionsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="warehouses"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <WarehousesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="transfers"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <TransfersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="suppliers"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <SuppliersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="purchase-orders"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <PurchaseOrdersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="fiscal-config"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <FiscalConfigPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="whatsapp-config"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <WhatsAppConfigPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="fiscal-invoices" element={<FiscalInvoicesPage />} />
-          <Route path="fiscal-invoices/:id" element={<FiscalInvoiceDetailPage />} />
-          <Route
-            path="ml"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <MLDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="ml/predictions"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <DemandPredictionsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="ml/evaluation"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <DemandEvaluationPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="ml/anomalies"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <AnomaliesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="realtime-analytics"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <RealtimeAnalyticsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="observability"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <ObservabilityPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="debts" element={<DebtsPage />} />
-          <Route
-            path="reports"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <ReportsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="accounting"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <AccountingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="conflicts"
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <ConflictsPage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
+          <Routes location={location} key={location.pathname}>
+            {/* Public routes */}
+            <Route
+              path="/"
+              element={
+                isAuthenticated ? (
+                  <Navigate to={defaultRoute} replace />
+                ) : (window as any).__TAURI__ || (window as any).TAURI ? (
+                  <Navigate to="/login" replace />
+                ) : (
+                  <LandingPageEnhanced />
+                )
+              }
+            />
+            <Route path="/landing" element={<LandingPageEnhanced />} />
+            <Route
+              path="/login"
+              element={
+                isAuthenticated ? <Navigate to={defaultRoute} replace /> : <LoginPage />
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                isAuthenticated ? <Navigate to={defaultRoute} replace /> : <RegisterPage />
+              }
+            />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-pin" element={<ForgotPinPage />} />
+            <Route path="/reset-pin" element={<ResetPinPage />} />
+            <Route
+              path="/license"
+              element={
+                <ProtectedRoute allowLicenseBlocked>
+                  <LicenseBlockedPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Admin Routes */}
+            <Route element={<AdminLayoutEnhanced />}>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/license-payments" element={<LicensePaymentsPage />} />
+            </Route>
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+            {/* Public routes - Menú QR para restaurantes */}
+            <Route path="/public/qr/:qrCode" element={<PublicMenuQRPage />} />
+            <Route path="/public/menu/:tableId" element={<PublicMenuPage />} />
+            <Route path="/public/kitchen/:token" element={<PublicKitchenPage />} />
+
+            {/* Protected routes */}
+            <Route
+              path="/app"
+              element={
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to={defaultRoute} replace />} />
+              <Route
+                path="dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="pos" element={<POSPage />} />
+              <Route
+                path="products"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <ProductsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="inventory"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <InventoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="inventory/count"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <InventoryCountPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="sales" element={<SalesPage />} />
+              <Route path="cash" element={<CashPage />} />
+              <Route path="shifts" element={<ShiftsPage />} />
+              <Route
+                path="payments"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <PaymentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="license"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <LicensePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="security"
+                element={
+                  <ProtectedRoute>
+                    <SecurityPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="discounts"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <DiscountsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="fast-checkout" element={<FastCheckoutPage />} />
+              <Route
+                path="lots"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <LotsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="invoice-series"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <InvoiceSeriesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="tables" element={<TablesPage />} />
+              <Route
+                path="kitchen"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <KitchenDisplayPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="reservations"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <ReservationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="peripherals"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <PeripheralsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="price-lists"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <PriceListsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="promotions"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <PromotionsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="warehouses"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <WarehousesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="transfers"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <TransfersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="suppliers"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <SuppliersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="purchase-orders"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <PurchaseOrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="fiscal-config"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <FiscalConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="whatsapp-config"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <WhatsAppConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="fiscal-invoices" element={<FiscalInvoicesPage />} />
+              <Route path="fiscal-invoices/:id" element={<FiscalInvoiceDetailPage />} />
+              <Route
+                path="ml"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <MLDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="ml/predictions"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <DemandPredictionsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="ml/evaluation"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <DemandEvaluationPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="ml/anomalies"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <AnomaliesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="realtime-analytics"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <RealtimeAnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="observability"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <ObservabilityPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="customers" element={<CustomersPage />} />
+              <Route path="debts" element={<DebtsPage />} />
+              <Route
+                path="reports"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <ReportsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="accounting"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <AccountingPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="conflicts"
+                element={
+                  <ProtectedRoute allowedRoles={['owner']}>
+                    <ConflictsPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+          </Routes>
+        </motion.div>
+      </AnimatePresence>
     </Suspense>
   )
 }

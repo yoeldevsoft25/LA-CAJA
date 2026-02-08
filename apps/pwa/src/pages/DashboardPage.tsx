@@ -44,6 +44,8 @@ import SalesTrendChart from '@/components/dashboard/SalesTrendChart'
 import TopProductsChart from '@/components/dashboard/TopProductsChart'
 import DashboardPrintView from '@/components/dashboard/DashboardPrintView'
 import { useNavigate } from 'react-router-dom'
+import { StaggerContainer, StaggerItem, FadeInUp } from '@/components/ui/motion-wrapper'
+import { cn } from '@/lib/utils'
 
 const formatCurrency = (amount: number, currency: 'BS' | 'USD' = 'BS') => {
   if (currency === 'USD') {
@@ -67,6 +69,7 @@ interface KPICardProps {
   color?: 'blue' | 'green' | 'red' | 'orange' | 'purple'
   icon?: React.ReactNode
   link?: string
+  className?: string
 }
 
 function KPICard({
@@ -77,6 +80,7 @@ function KPICard({
   color = 'blue',
   icon,
   link,
+  className,
 }: KPICardProps) {
   const colorClasses = {
     blue: 'text-blue-600',
@@ -86,52 +90,58 @@ function KPICard({
     purple: 'text-purple-600',
   }
 
-  const content = (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardContent className="p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs sm:text-sm text-muted-foreground font-medium">
-            {title}
-          </h3>
-          {icon && <div className="text-muted-foreground">{icon}</div>}
-        </div>
-        <p className={`text-xl sm:text-2xl font-bold ${colorClasses[color]}`}>
-          {value}
-        </p>
-        {subtitle && (
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            {subtitle}
-          </p>
-        )}
-        {trend && (
-          <div className="flex items-center gap-1 mt-2">
-            {trend.value >= 0 ? (
-              <TrendingUp className="w-4 h-4 text-green-600" />
-            ) : (
-              <TrendingDown className="w-4 h-4 text-red-600" />
-            )}
-            <p
-              className={`text-xs ${trend.value >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}
-            >
-              {trend.value >= 0 ? '+' : ''}
-              {trend.value.toFixed(1)}% {trend.label}
-            </p>
+  return (
+    <Card className={cn(
+      "glass-panel premium-shadow-md hover:premium-shadow-lg transition-all duration-300 border-white/20",
+      className
+    )}>
+      <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider">
+              {title}
+            </h3>
+            {icon && <div className="p-2 rounded-xl bg-primary/5 text-primary">{icon}</div>}
           </div>
-        )}
-        {link && (
-          <Link
-            to={link}
-            className="text-xs text-primary hover:underline mt-2 inline-flex items-center gap-1"
-          >
-            Ver detalles <ArrowUpRight className="w-3 h-3" />
-          </Link>
-        )}
+          <p className={`text-2xl sm:text-3xl font-black tracking-tight ${colorClasses[color]}`}>
+            {value}
+          </p>
+          {subtitle && (
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium italic opacity-80">
+              {subtitle}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4">
+          {trend && (
+            <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-background/50 w-fit">
+              {trend.value >= 0 ? (
+                <TrendingUp className="w-3.5 h-3.5 text-green-600 font-bold" />
+              ) : (
+                <TrendingDown className="w-3.5 h-3.5 text-red-600 font-bold" />
+              )}
+              <p
+                className={`text-xs font-bold ${trend.value >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}
+              >
+                {trend.value >= 0 ? '+' : ''}
+                {trend.value.toFixed(1)}% {trend.label}
+              </p>
+            </div>
+          )}
+          {link && (
+            <Link
+              to={link}
+              className="text-xs font-bold text-primary hover:text-primary/70 mt-3 flex items-center gap-1 group w-fit transition-colors"
+            >
+              Ver detalles <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
-
-  return content
 }
 
 export default function DashboardPage() {
@@ -481,230 +491,256 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <>
-            {/* KPIs Principales - Ventas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <KPICard
-                title="Ventas Hoy"
-                value={formatNumber(kpis.sales.today_count)}
-                subtitle={`${formatCurrency(kpis.sales.today_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.today_amount_usd, 'USD')}`}
-                color="blue"
-                icon={<DollarSign className="w-5 h-5" />}
-                link="/app/sales"
-              />
-              <KPICard
-                title="Ventas del Período"
-                value={formatNumber(kpis.sales.period_count)}
-                subtitle={`${formatCurrency(kpis.sales.period_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.period_amount_usd, 'USD')}`}
-                color="green"
-                icon={<ShoppingCart className="w-5 h-5" />}
-                link="/app/sales"
-              />
-              <KPICard
-                title="Crecimiento"
-                value={`${kpis.sales.growth_percentage >= 0 ? '+' : ''}${kpis.sales.growth_percentage.toFixed(1)}%`}
-                subtitle="vs período anterior"
-                color={kpis.sales.growth_percentage >= 0 ? 'green' : 'red'}
-                icon={
-                  kpis.sales.growth_percentage >= 0 ? (
-                    <TrendingUp className="w-5 h-5" />
-                  ) : (
-                    <TrendingDown className="w-5 h-5" />
-                  )
-                }
-              />
-              <KPICard
-                title="Ticket Promedio"
-                value={formatCurrency(kpis.performance.avg_sale_amount_bs, 'BS')}
-                subtitle={formatCurrency(kpis.performance.avg_sale_amount_usd, 'USD')}
-                color="purple"
-                icon={<ReceiptText className="w-5 h-5" />}
-              />
-            </div>
+            {/* KPIs Principales - Ventas - Bento Grid */}
+            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 grid-rows-2 auto-rows-fr gap-4">
+              <StaggerItem className="lg:col-span-2 lg:row-span-2">
+                <KPICard
+                  title="Ventas del Período"
+                  value={formatNumber(kpis.sales.period_count)}
+                  subtitle={`${formatCurrency(kpis.sales.period_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.period_amount_usd, 'USD')}`}
+                  color="green"
+                  icon={<ShoppingCart className="w-6 h-6" />}
+                  link="/app/sales"
+                  className="h-full bg-gradient-to-br from-green-50 to-white dark:from-green-950/10 dark:to-background"
+                />
+              </StaggerItem>
+
+              <StaggerItem>
+                <KPICard
+                  title="Ventas Hoy"
+                  value={formatNumber(kpis.sales.today_count)}
+                  subtitle={`${formatCurrency(kpis.sales.today_amount_bs, 'BS')} / ${formatCurrency(kpis.sales.today_amount_usd, 'USD')}`}
+                  color="blue"
+                  icon={<DollarSign className="w-5 h-5" />}
+                  link="/app/sales"
+                />
+              </StaggerItem>
+
+              <StaggerItem>
+                <KPICard
+                  title="Ticket Promedio"
+                  value={formatCurrency(kpis.performance.avg_sale_amount_bs, 'BS')}
+                  subtitle={formatCurrency(kpis.performance.avg_sale_amount_usd, 'USD')}
+                  color="purple"
+                  icon={<ReceiptText className="w-5 h-5" />}
+                />
+              </StaggerItem>
+
+              <StaggerItem className="lg:col-span-2">
+                <KPICard
+                  title="Crecimiento Proyectado"
+                  value={`${kpis.sales.growth_percentage >= 0 ? '+' : ''}${kpis.sales.growth_percentage.toFixed(1)}%`}
+                  subtitle="Basado en el período anterior"
+                  color={kpis.sales.growth_percentage >= 0 ? 'green' : 'red'}
+                  icon={
+                    kpis.sales.growth_percentage >= 0 ? (
+                      <TrendingUp className="w-5 h-5" />
+                    ) : (
+                      <TrendingDown className="w-5 h-5" />
+                    )
+                  }
+                  className="bg-gradient-to-r from-background to-primary/5"
+                />
+              </StaggerItem>
+            </StaggerContainer>
 
             {/* KPIs Secundarios */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Inventario */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Inventario
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Total Productos:
-                    </span>
-                    <span className="font-semibold text-sm">
-                      {formatNumber(kpis.inventory.total_products)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Stock Bajo:
-                    </span>
-                    <Badge variant="destructive" className="text-xs">
-                      {formatNumber(kpis.inventory.low_stock_count)}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Por Vencer:
-                    </span>
-                    <Badge variant="destructive" className="text-xs">
-                      {formatNumber(kpis.inventory.expiring_soon_count)}
-                    </Badge>
-                  </div>
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Valor Inventario:
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {formatCurrency(kpis.inventory.total_stock_value_bs, 'BS')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(kpis.inventory.total_stock_value_usd, 'USD')}
-                    </p>
-                  </div>
-                  <Link
-                    to="/app/inventory"
-                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                  >
-                    Ver inventario <ArrowUpRight className="w-3 h-3" />
-                  </Link>
-                </CardContent>
-              </Card>
+              <StaggerItem>
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600">
+                        <Package className="w-4 h-4" />
+                      </div>
+                      Inventario
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Total Productos:
+                      </span>
+                      <span className="font-semibold text-sm">
+                        {formatNumber(kpis.inventory.total_products)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Stock Bajo:
+                      </span>
+                      <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                        {formatNumber(kpis.inventory.low_stock_count)}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Por Vencer:
+                      </span>
+                      <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                        {formatNumber(kpis.inventory.expiring_soon_count)}
+                      </Badge>
+                    </div>
+                    <div className="pt-2 border-t border-border/40">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black opacity-60">
+                        Valor total
+                      </p>
+                      <p className="text-sm font-black text-slate-800 dark:text-slate-200">
+                        {formatCurrency(kpis.inventory.total_stock_value_bs, 'BS')}
+                      </p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {formatCurrency(kpis.inventory.total_stock_value_usd, 'USD')}
+                      </p>
+                    </div>
+                    <Link
+                      to="/app/inventory"
+                      className="text-xs font-bold text-primary hover:text-primary/70 inline-flex items-center gap-1 mt-2 transition-colors"
+                    >
+                      Ver inventario <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                  </CardContent>
+                </Card>
+              </StaggerItem>
 
               {/* Finanzas */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Finanzas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Deuda Total:
-                    </span>
-                    <span className="font-semibold text-sm text-red-600">
-                      {formatCurrency(kpis.finances.total_debt_bs, 'BS')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Cobrado:
-                    </span>
-                    <span className="font-semibold text-sm text-green-600">
-                      {formatCurrency(kpis.finances.total_collected_bs, 'BS')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Pendiente:
-                    </span>
-                    <span className="font-semibold text-sm text-orange-600">
-                      {formatCurrency(kpis.finances.pending_collections_bs, 'BS')}
-                    </span>
-                  </div>
-                  <Link
-                    to="/app/debts"
-                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                  >
-                    Ver detalles <ArrowUpRight className="w-3 h-3" />
-                  </Link>
-                </CardContent>
-              </Card>
+              <StaggerItem>
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-green-500/10 text-green-600">
+                        <DollarSign className="w-4 h-4" />
+                      </div>
+                      Finanzas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Deuda Total:
+                      </span>
+                      <span className="font-semibold text-sm text-red-600">
+                        {formatCurrency(kpis.finances.total_debt_bs, 'BS')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Cobrado:
+                      </span>
+                      <span className="font-semibold text-sm text-green-600">
+                        {formatCurrency(kpis.finances.total_collected_bs, 'BS')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Pendiente:
+                      </span>
+                      <span className="font-semibold text-sm text-orange-600">
+                        {formatCurrency(kpis.finances.pending_collections_bs, 'BS')}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-border/40 opacity-0 h-0 overflow-hidden">
+                      {/* Espaciador para alinear con el de al lado */}
+                    </div>
+                    <Link
+                      to="/app/debts"
+                      className="text-xs font-bold text-primary hover:text-primary/70 inline-flex items-center gap-1 mt-2 transition-colors"
+                    >
+                      Ver detalles <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                  </CardContent>
+                </Card>
+              </StaggerItem>
 
               {/* Compras */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <ShoppingCart className="w-4 h-4" />
-                    Compras
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Pendientes:
-                    </span>
-                    <Badge variant="destructive" className="text-xs">
-                      {formatNumber(kpis.purchases.pending_orders)}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Completadas:
-                    </span>
-                    <Badge variant="default" className="text-xs bg-green-600">
-                      {formatNumber(kpis.purchases.completed_orders)}
-                    </Badge>
-                  </div>
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Total Compras:
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {formatCurrency(kpis.purchases.total_purchases_bs, 'BS')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(kpis.purchases.total_purchases_usd, 'USD')}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <StaggerItem>
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-600">
+                        <ShoppingCart className="w-4 h-4" />
+                      </div>
+                      Compras
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Pendientes:
+                      </span>
+                      <Badge variant="destructive" className="text-[10px] sm:text-xs">
+                        {formatNumber(kpis.purchases.pending_orders)}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Completadas:
+                      </span>
+                      <Badge variant="default" className="text-[10px] sm:text-xs bg-green-600">
+                        {formatNumber(kpis.purchases.completed_orders)}
+                      </Badge>
+                    </div>
+                    <div className="pt-2 border-t border-border/40">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black opacity-60">
+                        Total Compras
+                      </p>
+                      <p className="text-sm font-black text-slate-800 dark:text-slate-200">
+                        {formatCurrency(kpis.purchases.total_purchases_bs, 'BS')}
+                      </p>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {formatCurrency(kpis.purchases.total_purchases_usd, 'USD')}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </StaggerItem>
 
               {/* Fiscal */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <ReceiptText className="w-4 h-4" />
-                    Facturación Fiscal
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      Emitidas:
-                    </span>
-                    <Badge variant="default" className="text-xs bg-green-600">
-                      {formatNumber(kpis.fiscal.issued_invoices)}
-                    </Badge>
-                  </div>
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Total Facturado:
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {formatCurrency(kpis.fiscal.total_fiscal_amount_bs, 'BS')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(kpis.fiscal.total_fiscal_amount_usd, 'USD')}
-                    </p>
-                  </div>
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      Impuestos:
-                    </p>
-                    <p className="text-sm font-semibold text-blue-600">
-                      {formatCurrency(kpis.fiscal.total_tax_collected_bs, 'BS')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(kpis.fiscal.total_tax_collected_usd, 'USD')}
-                    </p>
-                  </div>
-                  <Link
-                    to="/app/fiscal-invoices"
-                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                  >
-                    Ver facturas <ArrowUpRight className="w-3 h-3" />
-                  </Link>
-                </CardContent>
-              </Card>
-            </div>
+              <StaggerItem>
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600">
+                        <ReceiptText className="w-4 h-4" />
+                      </div>
+                      Facturación Fiscal
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        Emitidas:
+                      </span>
+                      <Badge variant="default" className="text-[10px] sm:text-xs bg-green-600">
+                        {formatNumber(kpis.fiscal.issued_invoices)}
+                      </Badge>
+                    </div>
+                    <div className="pt-2 border-t border-border/40">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black opacity-60">
+                        Total Facturado
+                      </p>
+                      <p className="text-sm font-black text-slate-800 dark:text-slate-200">
+                        {formatCurrency(kpis.fiscal.total_fiscal_amount_bs, 'BS')}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {formatCurrency(kpis.fiscal.total_fiscal_amount_usd, 'USD')}
+                        </p>
+                        <p className="text-xs font-black text-blue-600 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                          Tax: {formatCurrency(kpis.fiscal.total_tax_collected_usd, 'USD')}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      to="/app/fiscal-invoices"
+                      className="text-xs font-bold text-primary hover:text-primary/70 inline-flex items-center gap-1 mt-2 transition-colors"
+                    >
+                      Ver facturas <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                  </CardContent>
+                </Card>
+              </StaggerItem>
+            </StaggerContainer>
 
             {/* Performance y Top Productos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
