@@ -213,14 +213,14 @@ export default function DebtsPage() {
 
       {/* Smart Stats Dashboard */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 sm:mb-6">
-        <Card className="border border-indigo-100 bg-indigo-50/50">
+        <Card className="border-indigo-500/20 bg-indigo-500/10 shadow-none">
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Dinero en la Calle</span>
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Dinero en la Calle</span>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold text-foreground">${stats.totalPending.toFixed(2)}</span>
-                <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <TrendingUp className="h-4 w-4 text-indigo-600" />
+                <div className="h-8 w-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -230,34 +230,34 @@ export default function DebtsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-orange-100 bg-orange-50/50">
+        <Card className="border-orange-500/20 bg-orange-500/10 shadow-none">
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-orange-600 uppercase tracking-wider">Vencido {'>'} 30 Días</span>
+              <span className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Vencido {'>'} 30 Días</span>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-orange-700">${stats.overdueAmount.toFixed(2)}</span>
-                <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
-                  <AlertCircle className="h-4 w-4 text-orange-600" />
+                <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">${stats.overdueAmount.toFixed(2)}</span>
+                <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                  <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                 </div>
               </div>
-              <p className="text-xs text-orange-600/80 mt-1 font-medium">
+              <p className="text-xs text-orange-600/80 dark:text-orange-400/80 mt-1 font-medium">
                 {stats.overdueCount} facturas críticas
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-emerald-100 bg-emerald-50/50">
+        <Card className="border-emerald-500/20 bg-emerald-500/10 shadow-none">
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Recuperado Hoy</span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Recuperado Hoy</span>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-emerald-700">$0.00</span>
-                <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">$0.00</span>
+                <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
               </div>
-              <p className="text-xs text-emerald-600/80 mt-1">
+              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1">
                 0 pagos recibidos
               </p>
             </div>
@@ -293,7 +293,7 @@ export default function DebtsPage() {
             variant={statusFilter === 'open' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setStatusFilter('open')}
-            className={cn("rounded-full h-8", statusFilter === 'open' ? 'bg-orange-600 hover:bg-orange-700' : 'text-orange-600 border-orange-200')}
+            className={cn("rounded-full h-8", statusFilter === 'open' ? 'bg-orange-600 hover:bg-orange-700' : 'text-orange-600 dark:text-orange-400 border-orange-500/20')}
           >
             Pendientes
           </Button>
@@ -301,7 +301,7 @@ export default function DebtsPage() {
             variant={statusFilter === 'paid' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setStatusFilter('paid')}
-            className={cn("rounded-full h-8", statusFilter === 'paid' ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-emerald-600 border-emerald-200')}
+            className={cn("rounded-full h-8", statusFilter === 'paid' ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-emerald-600 dark:text-emerald-400 border-emerald-500/20')}
           >
             Pagados
           </Button>
@@ -417,9 +417,9 @@ export default function DebtsPage() {
                               const calc = calculateDebtTotals(debt)
                               const paymentPercentage = getPaymentPercentage(debt)
                               const statusConfig = {
-                                open: { label: 'Pendiente', variant: 'outline' as const, className: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100' },
-                                partial: { label: 'Parcial', variant: 'outline' as const, className: 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100' },
-                                paid: { label: 'Pagado', variant: 'outline' as const, className: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100' },
+                                open: { label: 'Pendiente', variant: 'outline' as const, className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 hover:bg-orange-500/20' },
+                                partial: { label: 'Parcial', variant: 'outline' as const, className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20 hover:bg-yellow-500/20' },
+                                paid: { label: 'Pagado', variant: 'outline' as const, className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' },
                               }
                               const status = statusConfig[debt.status] || statusConfig.open
 
@@ -444,7 +444,7 @@ export default function DebtsPage() {
                                     </p>
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    <p className="font-semibold text-green-600">
+                                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">
                                       ${calc.total_paid_usd.toFixed(2)}
                                     </p>
                                   </TableCell>

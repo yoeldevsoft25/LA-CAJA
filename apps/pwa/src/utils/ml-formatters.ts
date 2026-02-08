@@ -21,23 +21,23 @@ export function formatAnomalySeverity(severity: AnomalySeverity): {
   > = {
     low: {
       label: 'Baja',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100',
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted',
     },
     medium: {
       label: 'Media',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
+      color: 'text-yellow-600 dark:text-yellow-400',
+      bgColor: 'bg-yellow-500/10',
     },
     high: {
       label: 'Alta',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-500/10',
     },
     critical: {
       label: 'Crítica',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
+      color: 'text-red-600 dark:text-red-400',
+      bgColor: 'bg-red-500/10',
     },
   }
 
@@ -92,19 +92,19 @@ export function formatModelMetrics(metrics: {
  * Obtiene el color para un score de confianza
  */
 export function getConfidenceColor(score: number): string {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-yellow-600'
-  if (score >= 40) return 'text-orange-600'
-  return 'text-red-600'
+  if (score >= 80) return 'text-emerald-600 dark:text-emerald-400'
+  if (score >= 60) return 'text-yellow-600 dark:text-yellow-400'
+  if (score >= 40) return 'text-orange-600 dark:text-orange-400'
+  return 'text-red-600 dark:text-red-400'
 }
 
 /**
  * Obtiene el color para un score de recomendación
  */
 export function getRecommendationScoreColor(score: number): string {
-  if (score >= 70) return 'text-green-600 bg-green-100'
-  if (score >= 50) return 'text-yellow-600 bg-yellow-100'
-  return 'text-gray-600 bg-gray-100'
+  if (score >= 70) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+  if (score >= 50) return 'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10'
+  return 'text-muted-foreground bg-muted'
 }
 
 

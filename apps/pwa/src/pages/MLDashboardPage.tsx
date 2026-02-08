@@ -47,9 +47,9 @@ export default function MLDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Anomalías Críticas</p>
-                <p className="text-2xl font-bold text-red-600">{anomalies.length}</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{anomalies.length}</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
             <Link to="/ml/anomalies">
               <Button variant="ghost" size="sm" className="mt-2 w-full">
@@ -64,11 +64,11 @@ export default function MLDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Recomendaciones</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   {topRecommendations.length}
                 </p>
               </div>
-              <Package className="w-8 h-8 text-blue-600" />
+              <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
             <Link to="/app/ml">
               <Button variant="ghost" size="sm" className="mt-2 w-full">
@@ -83,9 +83,9 @@ export default function MLDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Predicciones</p>
-                <p className="text-2xl font-bold text-green-600">Activas</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">Activas</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-green-600" />
+              <TrendingUp className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <Link to="/ml/predictions">
               <Button variant="ghost" size="sm" className="mt-2 w-full">
@@ -102,7 +102,7 @@ export default function MLDashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
                 Anomalías Críticas Recientes
               </CardTitle>
               <Link to="/ml/anomalies">

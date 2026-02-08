@@ -158,7 +158,7 @@ export default function CustomerSearchSection({
 
                     {showResults && trimmedSearch.length > 0 && !canSearch && (
                         <div className="absolute z-50 mt-1 w-full rounded-xl border bg-background p-3 shadow-lg">
-                            <p className="text-center text-sm text-slate-500">
+                            <p className="text-center text-sm text-muted-foreground">
                                 Escribe al menos {MIN_SEARCH_LENGTH} caracteres
                             </p>
                         </div>
@@ -166,7 +166,7 @@ export default function CustomerSearchSection({
 
                     {showResults && canSearch && filteredCustomers.length === 0 && (
                         <div className="absolute z-50 mt-1 w-full rounded-xl border bg-background p-3 shadow-lg">
-                            <p className="text-center text-sm text-slate-500">No se encontraron clientes</p>
+                            <p className="text-center text-sm text-muted-foreground">No se encontraron clientes</p>
                         </div>
                     )}
                 </div>
@@ -174,14 +174,14 @@ export default function CustomerSearchSection({
                 {selectedCustomer && (
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
                         <div className="flex items-start gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5" />
                             <div className="min-w-0">
-                                <p className="text-sm font-semibold text-emerald-500">{selectedCustomer.name}</p>
-                                <p className="text-xs text-emerald-500/80">
+                                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{selectedCustomer.name}</p>
+                                <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">
                                     {selectedCustomer.document_id ? `CI: ${selectedCustomer.document_id}` : 'Sin documento'}
                                     {selectedCustomer.phone ? ` - ${selectedCustomer.phone}` : ''}
                                 </p>
-                                {selectedCustomer.note && <p className="mt-1 text-xs text-emerald-500/80">{selectedCustomer.note}</p>}
+                                {selectedCustomer.note && <p className="mt-1 text-xs text-emerald-600/80 dark:text-emerald-400/80">{selectedCustomer.note}</p>}
                             </div>
                         </div>
                     </div>

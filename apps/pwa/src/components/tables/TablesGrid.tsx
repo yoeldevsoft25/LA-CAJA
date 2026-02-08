@@ -208,9 +208,9 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
   }
 
   const getTimeColor = (minutes: number) => {
-    if (minutes < 15) return 'text-green-600'
-    if (minutes < 30) return 'text-yellow-600'
-    return 'text-red-600'
+    if (minutes < 15) return 'text-emerald-600 dark:text-emerald-400'
+    if (minutes < 30) return 'text-yellow-600 dark:text-yellow-400'
+    return 'text-red-600 dark:text-red-400'
   }
 
   const getOrderProgress = (order: Order): OrderProgressData => {

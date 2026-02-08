@@ -66,18 +66,18 @@ const formatStockValue = (product: Product, item?: StockStatus) => {
 
 const getCategoryColor = (category: string): [string, string, string] => {
   const colorPalette: Array<[string, string, string]> = [
-    ['bg-blue-100', 'text-blue-700', 'border-blue-300'],
-    ['bg-green-100', 'text-green-700', 'border-green-300'],
-    ['bg-purple-100', 'text-purple-700', 'border-purple-300'],
-    ['bg-orange-100', 'text-orange-700', 'border-orange-300'],
-    ['bg-pink-100', 'text-pink-700', 'border-pink-300'],
-    ['bg-cyan-100', 'text-cyan-700', 'border-cyan-300'],
-    ['bg-amber-100', 'text-amber-700', 'border-amber-300'],
-    ['bg-indigo-100', 'text-indigo-700', 'border-indigo-300'],
-    ['bg-teal-100', 'text-teal-700', 'border-teal-300'],
-    ['bg-rose-100', 'text-rose-700', 'border-rose-300'],
-    ['bg-violet-100', 'text-violet-700', 'border-violet-300'],
-    ['bg-emerald-100', 'text-emerald-700', 'border-emerald-300'],
+    ['bg-blue-500/10', 'text-blue-500 dark:text-blue-400', 'border-blue-500/20'],
+    ['bg-green-500/10', 'text-green-500 dark:text-green-400', 'border-green-500/20'],
+    ['bg-purple-500/10', 'text-purple-500 dark:text-purple-400', 'border-purple-500/20'],
+    ['bg-orange-500/10', 'text-orange-500 dark:text-orange-400', 'border-orange-500/20'],
+    ['bg-pink-500/10', 'text-pink-500 dark:text-pink-400', 'border-pink-500/20'],
+    ['bg-cyan-500/10', 'text-cyan-500 dark:text-cyan-400', 'border-cyan-500/20'],
+    ['bg-amber-500/10', 'text-amber-500 dark:text-amber-400', 'border-amber-500/20'],
+    ['bg-indigo-500/10', 'text-indigo-500 dark:text-indigo-400', 'border-indigo-500/20'],
+    ['bg-teal-500/10', 'text-teal-500 dark:text-teal-400', 'border-teal-500/20'],
+    ['bg-rose-500/10', 'text-rose-500 dark:text-rose-400', 'border-rose-500/20'],
+    ['bg-violet-500/10', 'text-violet-500 dark:text-violet-400', 'border-violet-500/20'],
+    ['bg-emerald-500/10', 'text-emerald-500 dark:text-emerald-400', 'border-emerald-500/20'],
   ]
 
   let hash = 0
@@ -590,7 +590,7 @@ export default function ProductsPage() {
               placeholder="Buscar por nombre, SKU o código de barras..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 h-11 sm:h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm focus:ring-primary/20"
+              className="pl-10 pr-4 h-11 sm:h-12 text-base border-muted/40 bg-muted/50 focus:bg-background transition-all shadow-sm focus:ring-primary/20"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -599,7 +599,7 @@ export default function ProductsPage() {
               <Input
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                className="mt-1 border-muted/40 bg-white/60"
+                className="mt-1 border-muted/40 bg-muted/50"
                 placeholder="Todas"
               />
             </div>
@@ -611,7 +611,7 @@ export default function ProductsPage() {
                   setStatusFilter(value as 'all' | 'active' | 'inactive')
                 }
               >
-                <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                <SelectTrigger className="mt-1 border-muted/40 bg-muted/50">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -629,7 +629,7 @@ export default function ProductsPage() {
                   setProductTypeFilter(value as 'all' | 'sale_item' | 'ingredient' | 'prepared')
                 }
               >
-                <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                <SelectTrigger className="mt-1 border-muted/40 bg-muted/50">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -642,7 +642,7 @@ export default function ProductsPage() {
             </div>
             <div className="w-full sm:max-w-sm">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Catálogo público</Label>
-              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-white/60 px-3 py-2">
+              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-muted/50 px-3 py-2">
                 <span className="text-sm text-muted-foreground">
                   Solo visibles
                 </span>
@@ -656,7 +656,7 @@ export default function ProductsPage() {
               <div className="w-full sm:max-w-sm">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Stock por bodega</Label>
                 <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                  <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                  <SelectTrigger className="mt-1 border-muted/40 bg-muted/50 dark:bg-muted/20">
                     <SelectValue placeholder="Todas las bodegas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -678,11 +678,11 @@ export default function ProductsPage() {
                 className="w-auto"
               >
                 <TabsList className="h-10 bg-muted/40">
-                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                     <LayoutGrid className="w-4 h-4" />
                     <span className="hidden sm:inline">Cards</span>
                   </TabsTrigger>
-                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                     <LayoutList className="w-4 h-4" />
                     <span className="hidden sm:inline">Tabla</span>
                   </TabsTrigger>
@@ -699,7 +699,7 @@ export default function ProductsPage() {
           {isError ? (
             <div className="p-12 text-center">
               <div className="flex flex-col items-center justify-center">
-                <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-destructive" />
+                <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-destructive dark:text-red-400" />
                 <p className="text-muted-foreground">Error al cargar productos</p>
                 <Button variant="outline" className="mt-4" onClick={() => refetch()}>
                   Reintentar
@@ -875,7 +875,7 @@ export default function ProductsPage() {
                             <div className="flex flex-col items-center gap-1">
                               <span className={cn(
                                 "text-sm font-bold tabular-nums",
-                                isLowStock ? "text-orange-600" : "text-slate-700 dark:text-slate-300"
+                                isLowStock ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-300"
                               )}>
                                 {formatStockValue(product, stockItem)}
                               </span>
@@ -902,7 +902,7 @@ export default function ProductsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleManageVariants(product)}
-                              className="h-8 w-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full"
+                              className="h-8 w-8 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 dark:hover:bg-slate-800 rounded-full"
                               title="Gestionar Variantes"
                             >
                               <Layers className="w-4 h-4" />
@@ -911,7 +911,7 @@ export default function ProductsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleChangePrice(product)}
-                              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-full"
+                              className="h-8 w-8 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-500/10 rounded-full"
                               title="Cambiar Precio"
                             >
                               <DollarSign className="w-4 h-4" />
@@ -920,7 +920,7 @@ export default function ProductsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleEdit(product)}
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-full"
+                              className="h-8 w-8 text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:bg-sky-500/10 rounded-full"
                               title="Editar"
                             >
                               <Edit className="w-4 h-4" />
@@ -944,11 +944,11 @@ export default function ProductsPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 {product.is_active ? (
-                                  <DropdownMenuItem onClick={() => handleDeactivate(product)} className="text-destructive focus:text-destructive">
+                                  <DropdownMenuItem onClick={() => handleDeactivate(product)} className="text-destructive dark:text-red-400 focus:text-destructive">
                                     <Trash2 className="w-4 h-4 mr-2" /> Desactivar
                                   </DropdownMenuItem>
                                 ) : (
-                                  <DropdownMenuItem onClick={() => handleActivate(product)} className="text-green-600 focus:text-green-600">
+                                  <DropdownMenuItem onClick={() => handleActivate(product)} className="text-emerald-600 dark:text-emerald-400 focus:text-emerald-600">
                                     <CheckCircle className="w-4 h-4 mr-2" /> Activar
                                   </DropdownMenuItem>
                                 )}

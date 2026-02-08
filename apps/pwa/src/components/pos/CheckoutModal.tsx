@@ -287,7 +287,7 @@ export default function CheckoutModal({
   const summaryPanel = (
     <div className="space-y-4">
       <section className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
-        <h3 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+        <h3 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
           <ShoppingBag className="h-3.5 w-3.5" />
           Detalle del pedido
         </h3>

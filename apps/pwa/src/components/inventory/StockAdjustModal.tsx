@@ -391,7 +391,7 @@ export default function StockAdjustModal({
                         className={cn(
                           'ml-2 font-bold',
                           resultingStock < 0
-                            ? 'text-destructive'
+                            ? 'text-destructive dark:text-red-400'
                             : resultingStock === product.current_stock
                               ? 'text-muted-foreground'
                               : 'text-primary'
@@ -403,7 +403,7 @@ export default function StockAdjustModal({
                   </div>
                   {resultingStock < 0 && (
                     <Alert className="mt-2 bg-destructive/10 border-destructive/50">
-                      <AlertDescription className="text-xs text-destructive">
+                      <AlertDescription className="text-xs text-destructive dark:text-red-400">
                         ⚠️ El stock resultante será negativo
                       </AlertDescription>
                     </Alert>
@@ -413,9 +413,9 @@ export default function StockAdjustModal({
 
               {/* Alerta de ventas recientes */}
               {hasRecentSales && (
-                <Alert className="bg-orange-50 dark:bg-orange-950/20 border-orange-500/50">
-                  <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                  <AlertDescription className="text-xs text-orange-800 dark:text-orange-200">
+                <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-500/50">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <AlertDescription className="text-xs text-amber-800 dark:text-amber-200">
                     <strong>⚠️ Ajuste bloqueado:</strong> Hay {recentSalesCount} venta(s) reciente(s) que incluyen este producto.
                     Para evitar inconsistencias, espera al menos 2 horas después de la última venta antes de ajustar el stock.
                   </AlertDescription>
@@ -425,7 +425,7 @@ export default function StockAdjustModal({
               {/* Cantidad delta */}
               <div>
                 <Label htmlFor="qty_delta" className="mb-2">
-                  Ajuste de Cantidad <span className="text-destructive">*</span>
+                  Ajuste de Cantidad <span className="text-destructive dark:text-red-400">*</span>
                 </Label>
                 <Input
                   id="qty_delta"
@@ -436,7 +436,7 @@ export default function StockAdjustModal({
                   placeholder="Ej: -0.5 (reducir) o +3 (aumentar)"
                 />
                 {errors.qty_delta && (
-                  <p className="mt-1 text-sm text-destructive">{errors.qty_delta.message}</p>
+                  <p className="mt-1 text-sm text-destructive dark:text-red-400">{errors.qty_delta.message}</p>
                 )}
                 <p className="mt-1 text-xs text-muted-foreground">
                   Usa valores positivos para aumentar y negativos para reducir el stock
@@ -478,7 +478,7 @@ export default function StockAdjustModal({
               {/* Razón */}
               <div>
                 <Label htmlFor="reason" className="mb-2">
-                  Razón del Ajuste <span className="text-destructive">*</span>
+                  Razón del Ajuste <span className="text-destructive dark:text-red-400">*</span>
                 </Label>
                 <Select
                   value={watch('reason')}
@@ -500,7 +500,7 @@ export default function StockAdjustModal({
               {/* Nota */}
               <div>
                 <Label htmlFor="note">
-                  Nota {watch('reason') === 'other' && <span className="text-destructive">*</span>}
+                  Nota {watch('reason') === 'other' && <span className="text-destructive dark:text-red-400">*</span>}
                 </Label>
                 <Textarea
                   id="note"
@@ -512,10 +512,10 @@ export default function StockAdjustModal({
                     : "Descripción del ajuste (opcional)"}
                 />
                 {errors.note && (
-                  <p className="mt-1 text-sm text-destructive">{errors.note.message}</p>
+                  <p className="mt-1 text-sm text-destructive dark:text-red-400">{errors.note.message}</p>
                 )}
                 {watch('reason') === 'other' && (
-                  <p className="mt-1 text-xs text-amber-600">
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                     La nota es obligatoria cuando seleccionas "Otro" como razón
                   </p>
                 )}
@@ -551,7 +551,7 @@ export default function StockAdjustModal({
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="w-5 h-5" />
               Confirmar ajuste grande
             </AlertDialogTitle>
@@ -583,7 +583,7 @@ export default function StockAdjustModal({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmLargeAdjustment}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               Sí, ajustar stock
             </AlertDialogAction>

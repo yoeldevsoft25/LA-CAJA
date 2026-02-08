@@ -35,7 +35,7 @@ export function CartSummary({
     return (
         <div className="flex-none p-4 sm:p-5 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-background/50 backdrop-blur-sm space-y-4">
             {!hasOpenCash && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 font-medium flex items-center justify-center shadow-sm">
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center justify-center shadow-sm">
                     ⚠️ Debes abrir caja para procesar ventas
                 </div>
             )}
@@ -103,7 +103,7 @@ export function CartSummary({
                 disabled={itemsCount === 0 || !hasOpenCash || invalidCartProductIds.length > 0}
                 className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all rounded-xl relative overflow-hidden group"
             >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[100%] group-hover:animate-shine" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/10 to-transparent -translate-x-[100%] group-hover:animate-shine" />
                 <ShoppingCart className="w-5 h-5 mr-2.5" />
                 Procesar Venta
             </Button>

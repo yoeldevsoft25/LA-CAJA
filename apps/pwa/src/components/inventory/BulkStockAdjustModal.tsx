@@ -102,9 +102,9 @@ export default function BulkStockAdjustModal({
       category === 'TODAS'
         ? stockItems
         : stockItems.filter((item) => {
-            const product = productsData?.products?.find((p) => p.id === item.product_id)
-            return product?.category === category
-          })
+          const product = productsData?.products?.find((p) => p.id === item.product_id)
+          return product?.category === category
+        })
 
     const preview = productsInCategory.map((item) => {
       const current = item.current_stock
@@ -245,7 +245,7 @@ export default function BulkStockAdjustModal({
             {/* Categoría */}
             <div>
               <Label htmlFor="category" className="mb-2">
-                Categoría <span className="text-destructive">*</span>
+                Categoría <span className="text-destructive dark:text-red-400">*</span>
               </Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger id="category">
@@ -280,7 +280,7 @@ export default function BulkStockAdjustModal({
             {mode === 'fixed' && (
               <div>
                 <Label htmlFor="fixedAdjustment" className="mb-2">
-                  Cantidad a ajustar <span className="text-destructive">*</span>
+                  Cantidad a ajustar <span className="text-destructive dark:text-red-400">*</span>
                 </Label>
                 <Input
                   id="fixedAdjustment"
@@ -301,7 +301,7 @@ export default function BulkStockAdjustModal({
             {mode === 'percentage' && (
               <div>
                 <Label htmlFor="percentageAdjustment" className="mb-2">
-                  Porcentaje a ajustar <span className="text-destructive">*</span>
+                  Porcentaje a ajustar <span className="text-destructive dark:text-red-400">*</span>
                 </Label>
                 <Input
                   id="percentageAdjustment"
@@ -343,7 +343,7 @@ export default function BulkStockAdjustModal({
             {/* Razón */}
             <div>
               <Label htmlFor="reason" className="mb-2">
-                Razón del ajuste <span className="text-destructive">*</span>
+                Razón del ajuste <span className="text-destructive dark:text-red-400">*</span>
               </Label>
               <Select value={reason} onValueChange={(v) => setReason(v as AdjustmentReason)}>
                 <SelectTrigger id="reason">
@@ -362,7 +362,7 @@ export default function BulkStockAdjustModal({
             {/* Nota */}
             <div>
               <Label htmlFor="note">
-                Nota {reason === 'other' && <span className="text-destructive">*</span>}
+                Nota {reason === 'other' && <span className="text-destructive dark:text-red-400">*</span>}
               </Label>
               <Textarea
                 id="note"

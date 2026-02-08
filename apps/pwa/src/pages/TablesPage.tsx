@@ -118,7 +118,7 @@ export default function TablesPage() {
                 onClick={() => setViewMode('grid')}
                 className={cn(
                   "h-8 sm:h-9 px-3 sm:px-4 rounded-lg font-semibold transition-all",
-                  viewMode === 'grid' && "shadow-sm bg-white text-primary hover:bg-white"
+                  viewMode === 'grid' && "shadow-sm bg-background text-primary hover:bg-background"
                 )}
               >
                 <LayoutGrid className="w-4 h-4 mr-2" />
@@ -130,7 +130,7 @@ export default function TablesPage() {
                 onClick={() => setViewMode('floor')}
                 className={cn(
                   "h-8 sm:h-9 px-3 sm:px-4 rounded-lg font-semibold transition-all",
-                  viewMode === 'floor' && "shadow-sm bg-white text-primary hover:bg-white"
+                  viewMode === 'floor' && "shadow-sm bg-background text-primary hover:bg-background"
                 )}
               >
                 <Grid3x3 className="w-4 h-4 mr-2" />

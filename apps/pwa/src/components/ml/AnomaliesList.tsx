@@ -243,7 +243,7 @@ export default function AnomaliesList({
                               Resolver
                             </Button>
                           ) : (
-                            <Badge variant="outline" className="bg-green-100">
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
                               Resuelta
                             </Badge>
                           )}

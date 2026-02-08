@@ -237,21 +237,21 @@ export default function FloorPlanView({
   }
 
   return (
-    <div className="relative w-full h-[650px] border rounded-2xl overflow-hidden bg-slate-50/50">
+    <div className="relative w-full h-[650px] border rounded-2xl overflow-hidden bg-background">
       {/* Grid Pattern Sutil */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}
       />
 
       {/* Controles Flotantes */}
-      <div className="absolute bottom-6 right-6 z-20 flex flex-col gap-2 shadow-2xl rounded-2xl overflow-hidden bg-white border border-slate-100 p-1.5">
-        <Button variant="ghost" size="icon" onClick={() => handleZoom(ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="h-10 w-10 text-slate-600 rounded-xl hover:bg-slate-50">
+      <div className="absolute bottom-6 right-6 z-20 flex flex-col gap-2 shadow-2xl rounded-2xl overflow-hidden bg-card border border-border p-1.5">
+        <Button variant="ghost" size="icon" onClick={() => handleZoom(ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-muted">
           <ZoomIn className="w-5 h-5" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => handleZoom(-ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="h-10 w-10 text-slate-600 rounded-xl hover:bg-slate-50">
+        <Button variant="ghost" size="icon" onClick={() => handleZoom(-ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-muted">
           <ZoomOut className="w-5 h-5" />
         </Button>
-        <div className="w-full h-px bg-slate-100 my-0.5" />
+        <div className="w-full h-px bg-border my-0.5" />
         <Button variant="ghost" size="icon" onClick={resetView} className="h-10 w-10 text-primary rounded-xl hover:bg-primary/5">
           <RotateCcw className="w-5 h-5" />
         </Button>
@@ -303,21 +303,21 @@ export default function FloorPlanView({
                   onMouseDown={(e) => handleTableMouseDown(e, table)}
                   onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
 
-                  {/* Stools (White as requested) */}
+                  {/* Stools (Themed as requested) */}
                   {stools.map((chair, i) => (
-                    <circle key={i} cx={chair.x} cy={chair.y} r={7} className="fill-white stroke-slate-300 stroke-1 shadow-sm" />
+                    <circle key={i} cx={chair.x} cy={chair.y} r={7} className="fill-card stroke-border stroke-1 shadow-sm" />
                   ))}
 
-                  {/* Bar Counter (Blanca Blanca as requested) */}
+                  {/* Bar Counter (Themed as requested) */}
                   <rect x={-barWidth / 2} y={-barHeight / 2} width={barWidth} height={barHeight} rx={8}
-                    className="fill-white stroke-slate-200 stroke-2 drop-shadow-xl" />
+                    className="fill-card stroke-border stroke-2 drop-shadow-xl" />
 
                   {/* Inner Detail - Subtle differentiation */}
                   <rect x={-barWidth / 2 + 5} y={-barHeight / 2 + 5} width={barWidth - 10} height={barHeight - 10} rx={4}
-                    className="fill-slate-50/50 stroke-none" />
+                    className="fill-muted/50 stroke-none" />
 
                   <foreignObject x={-barWidth / 2} y={-barHeight / 2} width={barWidth} height={barHeight} className="pointer-events-none">
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-700">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-foreground">
                       <span className="text-xs font-black uppercase tracking-widest">{table.table_number}</span>
                     </div>
                   </foreignObject>
@@ -332,11 +332,11 @@ export default function FloorPlanView({
                   onMouseDown={(e) => handleTableMouseDown(e, table)}
                   onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
                   <rect x={-TABLE_SIZE / 2} y={-TABLE_SIZE / 2} width={TABLE_SIZE} height={TABLE_SIZE} rx={12}
-                    className="fill-slate-100/40 stroke-slate-300 stroke-2" strokeDasharray="6 4" />
+                    className="fill-muted/40 stroke-border stroke-2" strokeDasharray="6 4" />
                   <foreignObject x={-TABLE_SIZE / 2} y={-TABLE_SIZE / 2} width={TABLE_SIZE} height={TABLE_SIZE} className="pointer-events-none">
                     <div className="w-full h-full flex flex-col items-center justify-center opacity-30">
-                      <Footprints className="w-8 h-8 text-slate-400" />
-                      <span className="text-[10px] font-black text-slate-500 mt-1 uppercase tracking-tighter">Pasillo</span>
+                      <Footprints className="w-8 h-8 text-muted-foreground" />
+                      <span className="text-[10px] font-black text-muted-foreground mt-1 uppercase tracking-tighter">Pasillo</span>
                     </div>
                   </foreignObject>
                 </g>
@@ -350,8 +350,8 @@ export default function FloorPlanView({
                   onMouseDown={(e) => handleTableMouseDown(e, table)}
                   onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
                   <rect x={-TABLE_SIZE / 2} y={-6} width={TABLE_SIZE} height={12} rx={6}
-                    className="fill-slate-400/80 stroke-slate-500 stroke-1" />
-                  <text y={24} textAnchor="middle" className="fill-slate-400 text-[9px] font-black uppercase tracking-widest">{table.table_number}</text>
+                    className="fill-muted-foreground/80 stroke-border stroke-1" />
+                  <text y={24} textAnchor="middle" className="fill-muted-foreground text-[9px] font-black uppercase tracking-widest">{table.table_number}</text>
                 </g>
               )
             }
@@ -363,10 +363,10 @@ export default function FloorPlanView({
                   onMouseDown={(e) => handleTableMouseDown(e, table)}
                   onClick={(e) => { e.stopPropagation(); if (dragging !== table.id) onTableClick(table); }}>
                   <rect x={-TABLE_SIZE / 2} y={-18} width={TABLE_SIZE} height={36} rx={18}
-                    className="fill-primary/5 stroke-primary/30 stroke-1" strokeDasharray="3 3" />
+                    className="fill-primary/10 stroke-primary/40 stroke-1" strokeDasharray="3 3" />
                   <foreignObject x={-TABLE_SIZE / 2} y={-18} width={TABLE_SIZE} height={36} className="pointer-events-none">
                     <div className="w-full h-full flex items-center justify-center">
-                      <Info className="w-3 h-3 text-primary/40 mr-1" />
+                      <Info className="w-3 h-3 text-primary/60 mr-1" />
                       <span className="fill-primary/60 font-black text-[11px] uppercase tracking-widest">
                         {table.table_number}
                       </span>
@@ -376,10 +376,9 @@ export default function FloorPlanView({
               )
             }
 
-            // Default: Table
-            // Unified 'White White' Aesthetic
-            let tableFill = "fill-white"
-            let tableStroke = "stroke-slate-200"
+            // Unified 'Themed' Aesthetic
+            let tableFill = "fill-card"
+            let tableStroke = "stroke-border"
             let tableShadow = "drop-shadow-xl"
             let statusIcon = null
 
@@ -393,10 +392,10 @@ export default function FloorPlanView({
               tableStroke = "stroke-blue-400"
               statusIcon = <SprayCan className="w-6 h-6 text-blue-500" />
             } else if (table.status === 'out_of_service') {
-              // Slight differentiation for out of service, but keeping it very light/white
-              tableFill = "fill-slate-50"
-              tableStroke = "stroke-slate-200"
-              statusIcon = <Ban className="w-6 h-6 text-slate-300" />
+              // Slight differentiation for out of service, but keeping it light
+              tableFill = "fill-muted"
+              tableStroke = "stroke-border"
+              statusIcon = <Ban className="w-6 h-6 text-muted-foreground" />
             }
 
             return (
@@ -427,7 +426,7 @@ export default function FloorPlanView({
                   className="fill-black/5 stroke-none"
                 />
 
-                {/* Sillas (Unified White Style) */}
+                {/* Sillas (Unified Themed Style) */}
                 {chairs.map((chair, i) => (
                   <circle
                     key={i}
@@ -436,7 +435,7 @@ export default function FloorPlanView({
                     r={6}
                     className={cn(
                       "stroke-1 transition-colors shadow-sm",
-                      order ? "fill-white stroke-primary" : "fill-white stroke-slate-300"
+                      order ? "fill-card stroke-primary" : "fill-card stroke-border"
                     )}
                   />
                 ))}
@@ -484,7 +483,7 @@ export default function FloorPlanView({
                 {/* Badge de Orden Activa */}
                 {order && (
                   <g transform={`translate(${TABLE_SIZE / 2 - 12}, ${-TABLE_SIZE / 2 + 12})`}>
-                    <circle r={10} className="fill-red-500 stroke-white stroke-2" />
+                    <circle r={10} className="fill-red-500 stroke-card stroke-2" />
                     <text textAnchor="middle" dy={3} className="fill-white text-[10px] font-black pointer-events-none">
                       $
                     </text>
@@ -495,41 +494,41 @@ export default function FloorPlanView({
           })}
         </g>
       </svg>
-      <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 shadow-xl">
-        <div className="flex flex-col gap-3 text-xs font-bold text-slate-600">
+      <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-md rounded-2xl p-4 border border-border shadow-xl">
+        <div className="flex flex-col gap-3 text-xs font-bold text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center">
-              <User className="w-3 h-3 text-slate-400" />
+            <div className="w-6 h-6 rounded-full bg-card border border-border flex items-center justify-center">
+              <User className="w-3 h-3 text-muted-foreground" />
             </div>
             <span>Disponible</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-white border border-primary flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-card border border-primary flex items-center justify-center">
               <UtensilsCrossed className="w-3 h-3 text-primary" />
             </div>
             <span>Ocupada</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-amber-50 border border-amber-400 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-400 flex items-center justify-center">
               <Clock className="w-3 h-3 text-amber-500" />
             </div>
             <span>Reservada</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-400 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-blue-500/10 border border-blue-400 flex items-center justify-center">
               <SprayCan className="w-3 h-3 text-blue-500" />
             </div>
             <span>Limpieza</span>
           </div>
-          <div className="w-full h-px bg-slate-100 my-1" />
+          <div className="w-full h-px bg-border my-1" />
           <div className="flex items-center gap-2 opacity-60">
-            <div className="w-6 h-6 rounded-lg bg-slate-50 border border-slate-300 border-dashed flex items-center justify-center">
-              <Footprints className="w-3 h-3 text-slate-400" />
+            <div className="w-6 h-6 rounded-lg bg-muted border border-border border-dashed flex items-center justify-center">
+              <Footprints className="w-3 h-3 text-muted-foreground" />
             </div>
             <span>Pasillo</span>
           </div>
           <div className="flex items-center gap-2 opacity-60">
-            <div className="w-6 h-6 rounded-sm bg-slate-400 flex items-center justify-center" />
+            <div className="w-6 h-6 rounded-sm bg-muted-foreground flex items-center justify-center" />
             <span>Muro</span>
           </div>
         </div>

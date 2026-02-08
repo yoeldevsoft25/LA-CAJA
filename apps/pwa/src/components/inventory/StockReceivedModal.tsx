@@ -710,7 +710,7 @@ export default function StockReceivedModal({
                           variant="ghost"
                           size="icon"
                           onClick={() => removeProduct(item.id)}
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="h-8 w-8 text-destructive dark:text-red-400 hover:text-destructive hover:bg-destructive/10"
                           title="Eliminar"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -724,7 +724,7 @@ export default function StockReceivedModal({
                             {item.is_weight_product && item.weight_unit
                               ? `Cant. (${item.weight_unit})`
                               : 'Cantidad'}{' '}
-                            <span className="text-destructive">*</span>
+                            <span className="text-destructive dark:text-red-400">*</span>
                           </Label>
                           <Input
                             type="number"
@@ -929,7 +929,7 @@ export default function StockReceivedModal({
 
             {/* Resumen total */}
             {productItems.length > 0 && (
-              <Card className="bg-primary/5 border-primary/20">
+              <Card className="bg-primary/5 dark:bg-primary/10 border-primary/20">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Resumen</CardTitle>
                 </CardHeader>

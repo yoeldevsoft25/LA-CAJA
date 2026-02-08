@@ -207,8 +207,8 @@ const CashPaymentSection = memo(function CashPaymentSection({
                             <div className={cn(
                                 'rounded-md border px-2 py-1 text-xs',
                                 roundingMode === 'MERCHANT'
-                                    ? 'border-amber-300 bg-amber-50 text-amber-800'
-                                    : 'border-sky-300 bg-sky-50 text-sky-800',
+                                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    : 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400',
                             )}>
                                 {roundingMode === 'MERCHANT'
                                     ? `Saldo a favor de la tienda: ${formatCurrency(excessBs, 'BS')}.`
@@ -232,7 +232,7 @@ const CashPaymentSection = memo(function CashPaymentSection({
                 )}
 
                 {receivedAmount >= totalAmount && (
-                    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
+                    <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-600 dark:text-emerald-400">
                         <HandCoins className="h-4 w-4" />
                         Monto suficiente para completar la venta
                     </div>

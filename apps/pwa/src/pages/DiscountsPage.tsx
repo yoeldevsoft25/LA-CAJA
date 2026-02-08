@@ -59,17 +59,17 @@ export default function DiscountsPage() {
             </h1>
             {/* Indicador de descuentos activos */}
             {config ? (
-              <Badge 
-                variant="default" 
-                className="bg-green-600/10 text-green-600 border-green-600/20 hover:bg-green-600/20 flex items-center gap-1.5"
+              <Badge
+                variant="default"
+                className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 flex items-center gap-1.5"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Descuentos Activos</span>
                 <span className="sm:hidden">Activo</span>
               </Badge>
             ) : (
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className="flex items-center gap-1.5"
               >
                 <AlertCircle className="w-3.5 h-3.5" />
@@ -79,7 +79,7 @@ export default function DiscountsPage() {
             )}
           </div>
           <p className="text-sm sm:text-base text-muted-foreground">
-            {config 
+            {config
               ? 'Los descuentos están configurados y activos en el sistema'
               : 'Gestiona límites, autorizaciones y reglas de descuentos'}
           </p>

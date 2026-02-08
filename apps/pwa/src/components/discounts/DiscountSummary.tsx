@@ -45,52 +45,52 @@ export default function DiscountSummary({ startDate, endDate }: DiscountSummaryP
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Total descuentos Bs */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-blue-500/10 border-blue-500/20 shadow-none">
             <CardContent className="p-4">
               <div className="flex items-center mb-2">
-                <Percent className="w-4 h-4 text-blue-600 mr-2" />
-                <span className="text-sm font-medium text-blue-900">Total Descuentos Bs</span>
+                <Percent className="w-4 h-4 text-blue-500 dark:text-blue-400 mr-2" />
+                <span className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Total Descuentos Bs</span>
               </div>
-              <p className="text-lg font-bold text-blue-900">
+              <p className="text-lg font-bold text-foreground">
                 {Number(summary.total_discounts_bs).toFixed(2)} Bs
               </p>
             </CardContent>
           </Card>
 
           {/* Total descuentos USD */}
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-emerald-500/10 border-emerald-500/20 shadow-none">
             <CardContent className="p-4">
               <div className="flex items-center mb-2">
-                <Percent className="w-4 h-4 text-green-600 mr-2" />
-                <span className="text-sm font-medium text-green-900">Total Descuentos USD</span>
+                <Percent className="w-4 h-4 text-emerald-500 dark:text-emerald-400 mr-2" />
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Descuentos USD</span>
               </div>
-              <p className="text-lg font-bold text-green-900">
+              <p className="text-lg font-bold text-foreground">
                 ${Number(summary.total_discounts_usd).toFixed(2)}
               </p>
             </CardContent>
           </Card>
 
           {/* Promedio porcentaje */}
-          <Card className="bg-purple-50 border-purple-200">
+          <Card className="bg-purple-500/10 border-purple-500/20 shadow-none">
             <CardContent className="p-4">
               <div className="flex items-center mb-2">
-                <TrendingUp className="w-4 h-4 text-purple-600 mr-2" />
-                <span className="text-sm font-medium text-purple-900">Promedio %</span>
+                <TrendingUp className="w-4 h-4 text-purple-500 dark:text-purple-400 mr-2" />
+                <span className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Promedio %</span>
               </div>
-              <p className="text-lg font-bold text-purple-900">
+              <p className="text-lg font-bold text-foreground">
                 {Number(summary.average_percentage).toFixed(2)}%
               </p>
             </CardContent>
           </Card>
 
           {/* Total autorizaciones */}
-          <Card className="bg-orange-50 border-orange-200">
+          <Card className="bg-orange-500/10 border-orange-500/20 shadow-none">
             <CardContent className="p-4">
               <div className="flex items-center mb-2">
-                <Users className="w-4 h-4 text-orange-600 mr-2" />
-                <span className="text-sm font-medium text-orange-900">Total Autorizaciones</span>
+                <Users className="w-4 h-4 text-orange-500 dark:text-orange-400 mr-2" />
+                <span className="text-sm font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Total Autorizaciones</span>
               </div>
-              <p className="text-lg font-bold text-orange-900">{summary.total_authorizations}</p>
+              <p className="text-lg font-bold text-foreground">{summary.total_authorizations}</p>
             </CardContent>
           </Card>
         </div>

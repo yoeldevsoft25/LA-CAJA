@@ -107,7 +107,7 @@ export function QuickActionsBar({
                                 size="sm"
                                 className={cn(
                                     'h-10 justify-start gap-2 rounded-xl border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
-                                    selectedPromotionId && 'border-amber-300/50 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20',
+                                    selectedPromotionId && 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20',
                                 )}
                             >
                                 <Tag className="h-4 w-4" />
@@ -142,7 +142,7 @@ export function QuickActionsBar({
                             size="sm"
                             className={cn(
                                 'h-10 justify-start gap-2 rounded-xl border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
-                                selectedCustomerId && 'border-emerald-300/50 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20',
+                                selectedCustomerId && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20',
                             )}
                         >
                             <Users className="h-4 w-4" />

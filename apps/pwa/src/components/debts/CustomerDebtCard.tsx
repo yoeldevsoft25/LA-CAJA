@@ -143,17 +143,17 @@ export default function CustomerDebtCard({
       creditHealth.status = 'Límite Excedido'
       creditHealth.textColor = 'text-destructive font-bold'
     } else if (percent > 80) {
-      creditHealth.color = 'bg-orange-500'
+      creditHealth.color = 'bg-orange-600'
       creditHealth.status = 'Crítico'
-      creditHealth.textColor = 'text-orange-600 font-bold'
+      creditHealth.textColor = 'text-orange-600 dark:text-orange-400 font-bold'
     } else if (percent > 50) {
-      creditHealth.color = 'bg-yellow-500'
+      creditHealth.color = 'bg-yellow-600'
       creditHealth.status = 'Moderado'
-      creditHealth.textColor = 'text-yellow-600'
+      creditHealth.textColor = 'text-yellow-600 dark:text-yellow-400'
     } else {
-      creditHealth.color = 'bg-green-500'
+      creditHealth.color = 'bg-emerald-600'
       creditHealth.status = 'Saludable'
-      creditHealth.textColor = 'text-green-600'
+      creditHealth.textColor = 'text-emerald-600 dark:text-emerald-400'
     }
   }
 
@@ -254,7 +254,7 @@ export default function CustomerDebtCard({
                             variant="outline"
                             size="icon"
                             onClick={() => setIsSelectDebtsWhatsAppOpen(true)}
-                            className="h-10 w-10 rounded-full border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
+                            className="h-10 w-10 rounded-full border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-500/30 transition-colors"
                           >
                             <div role="button">
                               <MessageCircle className="w-5 h-5" />
@@ -297,21 +297,21 @@ export default function CustomerDebtCard({
 
               {/* Grid de KPIs */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
-                <div className="bg-background p-3 rounded-md border border-border/50">
-                  <p className="text-muted-foreground text-xs uppercase tracking-wider">Total Fiado</p>
-                  <p className="font-semibold text-foreground text-lg">${summary?.total_debt_usd.toFixed(2) ?? '0.00'}</p>
+                <div className="bg-background p-3 rounded-md border border-border">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Total Fiado</p>
+                  <p className="font-bold text-foreground text-lg">${summary?.total_debt_usd.toFixed(2) ?? '0.00'}</p>
                 </div>
-                <div className="bg-background p-3 rounded-md border border-border/50">
-                  <p className="text-muted-foreground text-xs uppercase tracking-wider">Total Pagado</p>
-                  <p className="font-semibold text-success text-lg">${summary?.total_paid_usd.toFixed(2) ?? '0.00'}</p>
+                <div className="bg-background p-3 rounded-md border border-border">
+                  <p className="text-emerald-600 dark:text-emerald-400 text-[10px] uppercase tracking-wider font-bold">Total Pagado</p>
+                  <p className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">${summary?.total_paid_usd.toFixed(2) ?? '0.00'}</p>
                 </div>
-                <div className="bg-background p-3 rounded-md border border-border/50">
-                  <p className="text-muted-foreground text-xs uppercase tracking-wider">Pendiente</p>
-                  <p className="font-semibold text-warning text-lg">${totalRemainingUsd.toFixed(2)}</p>
+                <div className="bg-background p-3 rounded-md border border-border">
+                  <p className="text-orange-600 dark:text-orange-400 text-[10px] uppercase tracking-wider font-bold">Pendiente</p>
+                  <p className="font-bold text-orange-600 dark:text-orange-400 text-lg">${totalRemainingUsd.toFixed(2)}</p>
                 </div>
-                <div className="bg-background p-3 rounded-md border border-border/50">
-                  <p className="text-muted-foreground text-xs uppercase tracking-wider">Facturas</p>
-                  <p className="font-semibold text-foreground text-lg">{summary?.open_debts_count ?? 0} <span className="text-xs font-normal text-muted-foreground">abiertas</span></p>
+                <div className="bg-background p-3 rounded-md border border-border">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-bold">Facturas</p>
+                  <p className="font-bold text-foreground text-lg">{summary?.open_debts_count ?? 0} <span className="text-xs font-normal text-muted-foreground">abiertas</span></p>
                 </div>
               </div>
 
@@ -331,7 +331,7 @@ export default function CustomerDebtCard({
                 {hasOpenDebts && totalRemainingUsd > 0 && (
                   <Button
                     onClick={() => setIsPayAllModalOpen(true)}
-                    className="w-full bg-success hover:bg-success/90 text-white font-semibold h-11 shadow-sm"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-11 shadow-sm"
                   >
                     <Receipt className="w-4 h-4 mr-2" />
                     Pagar Saldo Total (${totalRemainingUsd.toFixed(2)})
@@ -360,15 +360,15 @@ export default function CustomerDebtCard({
                     const chainStatus = chain.items.find((i: any) => i.type === 'debt' && i.data.status !== 'paid') ? 'Activo' : 'Completado';
 
                     return (
-                      <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-blue-200 ring-1 ring-blue-50')}>
+                      <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-muted/30 border-border opacity-75' : 'bg-card border-blue-500/20 ring-1 ring-blue-500/5')}>
 
                         {/* Chain Header */}
-                        <div className={cn("px-4 py-2 border-b flex justify-between items-center", chainStatus === 'Completado' ? 'bg-slate-100' : 'bg-blue-50/50')}>
+                        <div className={cn("px-4 py-2 border-b flex justify-between items-center", chainStatus === 'Completado' ? 'bg-muted/50' : 'bg-blue-500/10')}>
                           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Ciclo iniciado el {format(firstItemDate, "d MMM yyyy", { locale: es })}
                           </span>
-                          <Badge variant={chainStatus === 'Completado' ? 'secondary' : 'default'} className={chainStatus === 'Completado' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 shadow-none'}>
+                          <Badge variant={chainStatus === 'Completado' ? 'secondary' : 'default'} className={chainStatus === 'Completado' ? 'bg-muted text-muted-foreground' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 shadow-none'}>
                             {chainStatus}
                           </Badge>
                         </div>
@@ -379,8 +379,8 @@ export default function CustomerDebtCard({
                             const date = new Date(item.data.created_at || item.data.paid_at)
                             const isLast = itemIndex === chain.items.length - 1
                             // Determine styling based on type
-                            const iconBg = isDebt ? 'bg-orange-100 text-orange-600 border-orange-200' :
-                              (item.data.method === 'ROLLOVER' ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-green-100 text-green-600 border-green-200')
+                            const iconBg = isDebt ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' :
+                              (item.data.method === 'ROLLOVER' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20')
                             const Icon = isDebt ? CreditCard : (item.data.method === 'ROLLOVER' ? Clock : CheckCircle)
 
                             return (
@@ -407,8 +407,8 @@ export default function CustomerDebtCard({
                                     </div>
                                     <Badge variant="outline" className={cn(
                                       "font-bold tabular-nums",
-                                      isDebt ? 'bg-orange-50 border-orange-200 text-orange-700' :
-                                        (item.data.method === 'ROLLOVER' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-green-50 border-green-200 text-green-700')
+                                      isDebt ? 'bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400' :
+                                        (item.data.method === 'ROLLOVER' ? 'bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400')
                                     )}>
                                       ${Number(item.data.amount_usd).toFixed(2)}
                                     </Badge>
@@ -417,16 +417,16 @@ export default function CustomerDebtCard({
                                   {/* Details Box */}
                                   <div className="mt-3">
                                     {isDebt && (
-                                      <div className="text-xs bg-slate-50 p-3 rounded-md border border-slate-100 shadow-sm">
+                                      <div className="text-xs bg-muted/30 p-3 rounded-md border border-border shadow-sm">
                                         <div className="flex justify-between items-center mb-1">
-                                          <span className="text-muted-foreground">Estado: <span className="font-medium text-foreground">{item.data.status === 'open' ? 'Pendiente' : (item.data.status === 'paid' ? 'Pagada' : 'Parcial')}</span></span>
+                                          <span className="text-muted-foreground font-medium">Estado: <span className="text-foreground">{item.data.status === 'open' ? 'Pendiente' : (item.data.status === 'paid' ? 'Pagada' : 'Parcial')}</span></span>
                                           {item.data.status !== 'paid' && (
-                                            <span className="text-orange-600 font-bold bg-orange-50 px-2 py-0.5 rounded border border-orange-100">
+                                            <span className="text-orange-600 dark:text-orange-400 font-bold bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
                                               Saldo: ${(Number(item.data.amount_usd) - (item.data.payments?.reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0) || 0)).toFixed(2)}
                                             </span>
                                           )}
                                         </div>
-                                        {item.data.note && <p className="italic text-slate-600 border-l-2 border-slate-300 pl-2 py-1 mt-2">"{item.data.note}"</p>}
+                                        {item.data.note && <p className="italic text-muted-foreground border-l-2 border-muted pl-2 py-1 mt-2">"{item.data.note}"</p>}
 
                                         {/* Acciones Deuda: Abonar | Ver Artículos */}
                                         <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end gap-2">
@@ -443,7 +443,7 @@ export default function CustomerDebtCard({
                                           {item.data.status !== 'paid' && (
                                             <Button
                                               size="sm"
-                                              className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                              className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                                               onClick={() => onAddPayment(item.data)}
                                             >
                                               <Receipt className="w-3 h-3 mr-1.5" />
@@ -456,9 +456,9 @@ export default function CustomerDebtCard({
 
                                     {!isDebt && (
                                       <div className="text-xs text-muted-foreground">
-                                        {item.data.note && <p className="italic border-l-2 border-slate-300 pl-2 mb-2">"{item.data.note}"</p>}
+                                        {item.data.note && <p className="italic border-l-2 border-muted pl-2 mb-2">"{item.data.note}"</p>}
                                         {item.data.method === 'ROLLOVER' && (
-                                          <div className="flex items-center gap-2 mt-2 text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
+                                          <div className="flex items-center gap-2 mt-2 text-blue-600 dark:text-blue-400 bg-blue-500/10 p-2 rounded border border-blue-500/20">
                                             <ArrowDown className="w-3 h-3" />
                                             <span>Saldo trasladado a nueva deuda superior.</span>
                                           </div>

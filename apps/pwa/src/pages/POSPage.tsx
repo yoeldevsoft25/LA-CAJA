@@ -936,9 +936,9 @@ export default function POSPage() {
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0 flex-1">
-                                <div className="text-sm font-bold truncate text-slate-800">{product.name}</div>
+                                <div className="text-sm font-bold truncate text-foreground">{product.name}</div>
                                 {product.barcode && (
-                                  <div className="text-[10px] font-medium text-slate-400 truncate tracking-tight">{product.barcode}</div>
+                                  <div className="text-[10px] font-medium text-muted-foreground truncate tracking-tight">{product.barcode}</div>
                                 )}
                               </div>
                               <div className="text-sm font-black text-primary tabular-nums">

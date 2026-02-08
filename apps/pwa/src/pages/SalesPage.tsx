@@ -491,7 +491,7 @@ export default function SalesPage() {
               variant="outline"
               size="sm"
               onClick={handleExportExcel}
-              className="col-span-2 sm:col-auto h-10 sm:h-12 border-muted/40 hover:bg-white shadow-sm font-semibold"
+              className="col-span-2 sm:col-auto h-10 sm:h-12 border-muted/40 hover:bg-muted shadow-sm font-semibold"
               disabled={sales.length === 0}
             >
               <Download className="w-4 h-4 mr-2" />
@@ -532,7 +532,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
                     onClick={() => setDatePreset('today')}
                   >
                     Hoy
@@ -540,7 +540,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
                     onClick={() => setDatePreset('yesterday')}
                   >
                     Ayer
@@ -548,7 +548,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
                     onClick={() => setDatePreset('week')}
                   >
                     7 días
@@ -608,7 +608,7 @@ export default function SalesPage() {
                       value={paymentMethodFilter}
                       onValueChange={setPaymentMethodFilter}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
+                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -631,7 +631,7 @@ export default function SalesPage() {
                       value={statusFilter}
                       onValueChange={(v) => setStatusFilter(v as 'all' | 'completed' | 'voided')}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
+                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -651,7 +651,7 @@ export default function SalesPage() {
                       value={debtFilter}
                       onValueChange={(v) => setDebtFilter(v as 'all' | 'with_debt' | 'without_debt' | 'paid')}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
+                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -681,7 +681,7 @@ export default function SalesPage() {
                         value={customerSearch}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
                         placeholder="Ej: Juan Perez o 12345678"
-                        className="h-11 border-muted/40 bg-white/60 pr-10"
+                        className="h-11 border-muted/40 bg-muted/50 pr-10"
                       />
                     </div>
                   </div>
@@ -788,9 +788,9 @@ export default function SalesPage() {
                             className={cn(
                               'transition-all duration-200 cursor-pointer active:scale-[0.98]',
                               isVoided && 'bg-muted/30 border-muted opacity-80',
-                              isPending && 'bg-orange-50/50 border-orange-200 border-l-4 border-l-orange-500 shadow-sm',
-                              isPaid && 'bg-emerald-50/50 border-emerald-200 border-l-4 border-l-emerald-500 shadow-sm',
-                              !isVoided && !isPending && !isPaid && 'bg-white hover:border-primary/30'
+                              isPending && 'bg-orange-500/10 border-orange-500/20 border-l-4 border-l-orange-500 shadow-sm',
+                              isPaid && 'bg-emerald-500/10 border-emerald-500/20 border-l-4 border-l-emerald-500 shadow-sm',
+                              !isVoided && !isPending && !isPaid && 'bg-card hover:border-primary/40'
                             )}
                             onClick={() => handleViewDetail(sale)}
                           >
@@ -849,9 +849,9 @@ export default function SalesPage() {
 
                                 <div className="flex items-center gap-1.5">
                                   {sale.sync_status === 'pending' ? (
-                                    <CloudOff className="w-3.5 h-3.5 text-amber-500" />
+                                    <CloudOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                                   ) : (
-                                    <Cloud className="w-3.5 h-3.5 text-emerald-500/50" />
+                                    <Cloud className="w-3.5 h-3.5 text-emerald-600/50 dark:text-emerald-400/50" />
                                   )}
                                   <Eye className="w-4 h-4 text-primary/40" />
                                 </div>
@@ -876,10 +876,10 @@ export default function SalesPage() {
                 </StaggerContainer>
               ) : (
                 /* Vista de tabla para desktop - Premium Grid */
-                <div className="rounded-xl overflow-x-auto border border-white/10 bg-background/50 backdrop-blur-md shadow-inner">
+                <div className="rounded-xl overflow-x-auto border border-border/50 bg-background/50 backdrop-blur-md shadow-inner">
                   <Table>
                     <TableHeader className="bg-muted/30">
-                      <TableRow className="hover:bg-transparent border-white/5">
+                      <TableRow className="hover:bg-transparent border-border/50">
                         <TableHead className="w-[180px]">
                           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             <CalendarIcon className="w-3.5 h-3.5" />
@@ -942,8 +942,8 @@ export default function SalesPage() {
                           <TableRow
                             key={sale.id}
                             className={cn(
-                              'group transition-all duration-200 border-white/5',
-                              isVoided ? 'bg-red-500/5 hover:bg-red-500/10' : 'hover:bg-primary/5'
+                              'group transition-all duration-200 border-border/50',
+                              isVoided ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-primary/5'
                             )}
                           >
                             <TableCell className="font-medium">
@@ -951,7 +951,7 @@ export default function SalesPage() {
                                 <span className="text-sm font-semibold tracking-tight">{format(new Date(sale.sold_at), 'dd MMM yyyy')}</span>
                                 <span className="text-xs text-muted-foreground font-mono">{format(new Date(sale.sold_at), 'HH:mm')}</span>
                                 {isVoided && (
-                                  <Badge variant="outline" className="mt-1 w-fit bg-red-500/10 text-red-500 border-red-500/20 text-[10px] h-5 px-1.5">
+                                  <Badge variant="outline" className="mt-1 w-fit bg-destructive/10 text-destructive dark:text-red-400 border-destructive/20 text-[10px] h-5 px-1.5">
                                     Anulada
                                   </Badge>
                                 )}
@@ -997,7 +997,7 @@ export default function SalesPage() {
                                   Mi Moneda: {Number(sale.totals.total_bs).toFixed(2)} Bs
                                 </span>
                                 {isFIAO && sale.debt && isPending && (
-                                  <Badge variant="outline" className="mt-1 bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] h-5 px-2 ml-auto whitespace-nowrap">
+                                  <Badge variant="outline" className="mt-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] h-5 px-2 ml-auto whitespace-nowrap">
                                     Debe: ${Number(sale.debt.remaining_usd || 0).toFixed(2)}
                                   </Badge>
                                 )}
@@ -1030,7 +1030,7 @@ export default function SalesPage() {
                                   <span className="text-[10px] text-muted-foreground font-mono">{sale.customer.document_id}</span>
                                 </div>
                               ) : isFIAO ? (
-                                <span className="text-xs font-bold text-orange-500">Sin cliente asignado</span>
+                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Sin cliente asignado</span>
                               ) : (
                                 <span className="text-muted-foreground/30 text-xs">-</span>
                               )}
