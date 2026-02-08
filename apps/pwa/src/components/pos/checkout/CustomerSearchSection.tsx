@@ -85,14 +85,14 @@ export default function CustomerSearchSection({
     const listId = 'customer-search-results'
 
     return (
-        <Card className={cn('border-slate-200 bg-white shadow-sm', className)}>
+        <Card className={cn('border-border bg-card shadow-sm', className)}>
             <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                     <div>
-                        <Label htmlFor={searchId} className="text-sm font-bold text-slate-900">
+                        <Label htmlFor={searchId} className="text-sm font-bold text-foreground">
                             Cliente {required && <span className="text-destructive">*</span>}
                         </Label>
-                        <p className="text-xs text-slate-500">Asocia la venta para historico y credito</p>
+                        <p className="text-xs text-muted-foreground">Asocia la venta para historico y credito</p>
                     </div>
                     {selectedCustomer && (
                         <Button
@@ -100,7 +100,7 @@ export default function CustomerSearchSection({
                             variant="ghost"
                             size="sm"
                             onClick={handleClearCustomer}
-                            className="h-8 px-2 text-slate-600"
+                            className="h-8 px-2 text-muted-foreground hover:text-foreground"
                         >
                             <X className="h-3.5 w-3.5 mr-1" />
                             Limpiar
@@ -109,7 +109,7 @@ export default function CustomerSearchSection({
                 </div>
 
                 <div className="relative" ref={searchRef}>
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
                     <Input
                         id={searchId}
                         type="text"
@@ -124,7 +124,7 @@ export default function CustomerSearchSection({
                             setShowResults(true)
                         }}
                         onFocus={() => setShowResults(true)}
-                        className="pl-9 h-10"
+                        className="pl-9 h-10 border-border bg-background"
                     />
 
                     {showResults && canSearch && filteredCustomers.length > 0 && (
@@ -137,15 +137,15 @@ export default function CustomerSearchSection({
                                     aria-selected={selectedCustomerId === customer.id}
                                     onClick={() => handleSelectCustomer(customer)}
                                     className={cn(
-                                        'w-full border-b border-slate-100 px-3 py-2 text-left transition-colors last:border-b-0',
-                                        'hover:bg-slate-50 focus-visible:bg-slate-50',
+                                        'w-full border-b border-border/50 px-3 py-2 text-left transition-colors last:border-b-0',
+                                        'hover:bg-muted focus-visible:bg-muted',
                                     )}
                                 >
                                     <div className="flex items-start gap-2">
-                                        <User className="mt-0.5 h-4 w-4 text-slate-400" />
+                                        <User className="mt-0.5 h-4 w-4 text-muted-foreground/60" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-semibold text-slate-900">{customer.name}</p>
-                                            <p className="truncate text-xs text-slate-500">
+                                            <p className="truncate text-sm font-semibold text-foreground">{customer.name}</p>
+                                            <p className="truncate text-xs text-muted-foreground">
                                                 {customer.document_id ? `CI: ${customer.document_id}` : 'Sin documento'}
                                                 {customer.phone ? ` - ${customer.phone}` : ''}
                                             </p>
@@ -172,16 +172,16 @@ export default function CustomerSearchSection({
                 </div>
 
                 {selectedCustomer && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
                         <div className="flex items-start gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" />
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
                             <div className="min-w-0">
-                                <p className="text-sm font-semibold text-emerald-900">{selectedCustomer.name}</p>
-                                <p className="text-xs text-emerald-700">
+                                <p className="text-sm font-semibold text-emerald-500">{selectedCustomer.name}</p>
+                                <p className="text-xs text-emerald-500/80">
                                     {selectedCustomer.document_id ? `CI: ${selectedCustomer.document_id}` : 'Sin documento'}
                                     {selectedCustomer.phone ? ` - ${selectedCustomer.phone}` : ''}
                                 </p>
-                                {selectedCustomer.note && <p className="mt-1 text-xs text-emerald-700">{selectedCustomer.note}</p>}
+                                {selectedCustomer.note && <p className="mt-1 text-xs text-emerald-500/80">{selectedCustomer.note}</p>}
                             </div>
                         </div>
                     </div>

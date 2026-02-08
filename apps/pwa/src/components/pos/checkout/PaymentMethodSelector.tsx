@@ -33,11 +33,11 @@ const PaymentMethodSelector = memo(function PaymentMethodSelector({
     className,
 }: PaymentMethodSelectorProps) {
     return (
-        <Card className={cn('border-slate-200 bg-white shadow-sm', className)}>
+        <Card className={cn('border-border bg-card shadow-sm', className)}>
             <CardContent className="p-4 space-y-3">
                 <div>
-                    <h3 className="text-sm font-bold text-slate-900">Metodo de pago</h3>
-                    <p className="text-xs text-slate-500">Selecciona como va a pagar el cliente</p>
+                    <h3 className="text-sm font-bold text-foreground">Metodo de pago</h3>
+                    <p className="text-xs text-muted-foreground">Selecciona como va a pagar el cliente</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Metodo de pago">
@@ -52,21 +52,21 @@ const PaymentMethodSelector = memo(function PaymentMethodSelector({
                                 aria-checked={isActive}
                                 className={cn(
                                     'h-auto min-h-14 justify-start gap-3 rounded-xl border px-3 py-2 text-left transition-all',
-                                    'hover:bg-slate-50 hover:border-slate-300',
-                                    isActive && 'border-primary bg-primary/5 text-primary shadow-sm hover:bg-primary/10',
+                                    'hover:bg-muted/40 hover:border-border/80',
+                                    isActive && 'border-primary bg-primary/10 text-primary shadow-sm hover:bg-primary/20',
                                 )}
                                 onClick={() => onChange(method.value)}
                                 disabled={disabled}
                             >
                                 <span className={cn(
                                     'flex h-8 w-8 items-center justify-center rounded-lg border',
-                                    isActive ? 'border-primary/40 bg-primary/10' : 'border-slate-200 bg-slate-50 text-slate-600',
+                                    isActive ? 'border-primary/40 bg-primary/20' : 'border-border bg-muted/30 text-muted-foreground',
                                 )}>
                                     {method.icon}
                                 </span>
                                 <span className="min-w-0">
-                                    <span className="block truncate text-sm font-semibold">{method.label}</span>
-                                    <span className="block truncate text-[11px] text-slate-500">{method.hint}</span>
+                                    <span className="block truncate text-sm font-semibold text-foreground">{method.label}</span>
+                                    <span className="block truncate text-[11px] text-muted-foreground">{method.hint}</span>
                                 </span>
                             </Button>
                         )

@@ -57,8 +57,8 @@ export function QuickActionsBar({
     const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId)
 
     return (
-        <div className={cn('rounded-2xl border border-slate-200 bg-white p-3 shadow-sm', className)}>
-            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+        <div className={cn('rounded-2xl border border-border bg-card p-3 shadow-sm', className)}>
+            <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
                 Acciones rapidas
             </div>
@@ -71,7 +71,7 @@ export function QuickActionsBar({
                     onClick={onToggleSplitPayment}
                     className={cn(
                         'h-10 justify-start gap-2 rounded-xl',
-                        !isSplitPayment && 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
+                        !isSplitPayment && 'border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
                     )}
                     aria-pressed={isSplitPayment}
                 >
@@ -87,7 +87,7 @@ export function QuickActionsBar({
                         onClick={() => onToggleFiscalInvoice(!generateFiscalInvoice)}
                         className={cn(
                             'h-10 justify-start gap-2 rounded-xl',
-                            !generateFiscalInvoice && 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
+                            !generateFiscalInvoice && 'border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
                         )}
                         aria-pressed={generateFiscalInvoice}
                     >
@@ -106,8 +106,8 @@ export function QuickActionsBar({
                                 variant="outline"
                                 size="sm"
                                 className={cn(
-                                    'h-10 justify-start gap-2 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
-                                    selectedPromotionId && 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100',
+                                    'h-10 justify-start gap-2 rounded-xl border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
+                                    selectedPromotionId && 'border-amber-300/50 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20',
                                 )}
                             >
                                 <Tag className="h-4 w-4" />
@@ -125,7 +125,7 @@ export function QuickActionsBar({
                                     className="justify-between"
                                 >
                                     <span>{promo.name}</span>
-                                    {promo.code && <span className="rounded bg-slate-100 px-1.5 text-[11px] text-slate-500">{promo.code}</span>}
+                                    {promo.code && <span className="rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{promo.code}</span>}
                                 </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
@@ -141,8 +141,8 @@ export function QuickActionsBar({
                             variant="outline"
                             size="sm"
                             className={cn(
-                                'h-10 justify-start gap-2 rounded-xl border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
-                                selectedCustomerId && 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100',
+                                'h-10 justify-start gap-2 rounded-xl border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
+                                selectedCustomerId && 'border-emerald-300/50 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20',
                             )}
                         >
                             <Users className="h-4 w-4" />
@@ -157,7 +157,7 @@ export function QuickActionsBar({
                             <DropdownMenuItem key={customer.id} onClick={() => onCustomerChange(customer.id)}>
                                 <div className="min-w-0">
                                     <p className="truncate text-sm font-medium">{customer.name}</p>
-                                    <p className="truncate text-xs text-slate-500">{customer.document_id || 'Sin documento'}</p>
+                                    <p className="truncate text-xs text-muted-foreground">{customer.document_id || 'Sin documento'}</p>
                                 </div>
                             </DropdownMenuItem>
                         ))}
