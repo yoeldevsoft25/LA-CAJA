@@ -77,6 +77,7 @@ import { QuotaBanner } from '@/components/license/QuotaTracker'
 import { UpgradeModal } from '@/components/license/UpgradeModal'
 import { licenseService } from '@/services/license.service'
 import toast from '@/lib/toast'
+import { ModeToggle } from '../mode-toggle'
 
 type NavItem = {
   path: string
@@ -728,6 +729,7 @@ export default function MainLayout() {
             {/* Exchange Rate Indicator */}
             <ExchangeRateIndicator className="hidden sm:flex" />
             <ExchangeRateIndicator compact className="sm:hidden" />
+            <ModeToggle />
 
             {/* Notifications */}
             <div className="hidden sm:block">
