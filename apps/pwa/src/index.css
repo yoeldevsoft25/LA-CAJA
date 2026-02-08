@@ -2,36 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos para impresión de facturas fiscales */
+/* -------------------------------------------------------------------------- */
+/* PRINT STYLES (Facturación)                                                 */
+/* -------------------------------------------------------------------------- */
 @media print {
 
-  /* Ocultar elementos no deseados */
-  .no-print {
-    display: none !important;
-  }
-
-  /* Ocultar header, nav, footer, sidebar del layout */
+  /* Ocultar elementos de interfaz */
+  .no-print,
   header,
   nav,
   aside,
-  footer {
-    display: none !important;
-  }
-
-  /* Ocultar el wrapper del layout y sidebar */
+  footer,
   body>div>div>div:first-child,
   body>div>div>aside {
     display: none !important;
   }
 
-  /* Ocultar el wrapper del layout */
+  /* Reset de layout */
   main {
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
   }
 
-  /* Ocultar animaciones y transiciones */
+  /* Sin animaciones */
   [class*="motion"] {
     opacity: 1 !important;
     transform: none !important;
@@ -59,63 +53,53 @@
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* VARIABLES DE TEMA                                                          */
+/* -------------------------------------------------------------------------- */
 @layer base {
   :root {
-    /* ✨ Premium Indigo Theme - Light Mode */
-
-    /* Backgrounds - Subtle Off-White/Gray instead of harsh white */
+    /* ✨ Light Mode (Tu configuración original) */
     --background: 220 14% 96%;
     --foreground: 224 71% 4%;
 
-    /* Cards - White with shadow depth */
     --card: 0 0% 100%;
     --card-foreground: 224 71% 4%;
 
-    /* Popover */
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
 
-    /* Primary - Vibrant Indigo */
-    /* Primary - User Requested Blue (rgb(12, 129, 207)) */
+    /* Brand Blue (Velox POS) */
     --primary: 204 89% 43%;
     --primary-foreground: 210 40% 98%;
 
-    /* Secondary - Soft Blue/Gray */
     --secondary: 210 20% 96%;
     --secondary-foreground: 224 71% 4%;
 
-    /* Muted */
     --muted: 210 20% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Accent - Light Blue Wash */
     --accent: 204 90% 97%;
     --accent-foreground: 204 89% 43%;
 
-    /* Destructive - Rose */
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    /* Success - Emerald */
     --success: 151 65% 52%;
     --success-foreground: 0 0% 98%;
 
-    /* Warning - Amber */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 98%;
 
-    /* Info - Sky */
     --info: 199 89% 48%;
     --info-foreground: 0 0% 98%;
 
-    /* Borders & Inputs */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 204 89% 43%;
-    /* Blue Ring */
 
-    /* Radius - More modern rounded */
     --radius: 0.75rem;
+
+    /* Sidebar Light */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -127,93 +111,92 @@
   }
 
   .dark {
-    /* ✨ Premium Blue Theme - Dark Mode */
+    /* ✨ Dark Mode "Gunmetal Matte" (Estilo Dashboard Pro) */
 
-    /* Backgrounds - Deep Slate */
-    --background: 222.2 47.4% 1.2%;
-    --foreground: 210 40% 98%;
+    /* Fondo: Gris carbón profundo mate (H:227 S:18% L:10%) */
+    --background: 227 18% 10%;
+    --foreground: 210 20% 98%;
 
-    /* Cards */
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    /* Card: Ligeramente más clara para crear capas sin bordes (L:14%) */
+    --card: 227 18% 14%;
+    --card-foreground: 210 20% 98%;
 
-    /* Popover */
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    /* Popover: Igual que card */
+    --popover: 227 18% 14%;
+    --popover-foreground: 210 20% 98%;
 
-    /* Primary */
+    /* Primary: Tu AZUL original, ajustado levemente para brillar en oscuro */
     --primary: 204 89% 55%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary-foreground: 222 47.4% 11.2%;
 
-    /* Secondary */
-    --secondary: 217.2 32.6% 17.5%;
+    /* Secondary: Elementos de soporte */
+    --secondary: 227 15% 18%;
     --secondary-foreground: 210 40% 98%;
 
-    /* Muted */
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 75%;
+    /* Muted: Textos deshabilitados o secundarios */
+    --muted: 227 15% 25%;
+    --muted-foreground: 215 18% 65%;
 
-    /* Accent */
-    --accent: 217.2 32.6% 17.5%;
+    /* Accent: Hovers en listas/menús */
+    --accent: 227 15% 20%;
     --accent-foreground: 210 40% 98%;
 
-    /* Destructive */
+    /* Estados Semánticos (Iguales a tu original) */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
-    /* Success */
     --success: 151 55% 42%;
     --success-foreground: 0 0% 98%;
-
-    /* Warning */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 98%;
-
-    /* Info */
     --info: 199 89% 48%;
     --info-foreground: 0 0% 98%;
 
-    /* Borders & Rings */
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    /* Borders: Casi invisibles, se usa el contraste de fondo para separar */
+    --border: 227 18% 18%;
+    --input: 227 18% 18%;
     --ring: 204 89% 55%;
-    /* Blue Ring */
+    /* Anillo de foco azul */
 
-    /* Effects */
-    --glass-opacity: 0.6;
-    --glass-border: 0 0% 100% / 0.1;
-    --sidebar-background: 240 5.9% 10%;
+    /* Sidebar Dark */
+    --sidebar-background: 227 18% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: 204 89% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 227 18% 14%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 227 18% 18%;
+    --sidebar-ring: 204 89% 55%;
+
+    /* Efectos Glass más sutiles */
+    --glass-opacity: 0.4;
+    --glass-border: 255 255% 255% / 0.05;
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* GLOBAL RESETS                                                              */
+/* -------------------------------------------------------------------------- */
 @layer base {
   * {
-    @apply border-border/0;
+    @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground;
   }
 
-  /* A11Y-04: Focus visible en todos los elementos interactivos */
+  /* A11Y: Focus visible */
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Estilos específicos para botones */
+  /* Botones específicos */
   button:focus-visible,
   [role="button"]:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Estilos para inputs */
+  /* Inputs */
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
@@ -225,7 +208,7 @@
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background rounded-sm;
   }
 
-  /* A11Y-07: Soporte para reduced motion ya existente en Tailwind */
+  /* Reduced Motion */
   @media (prefers-reduced-motion: reduce) {
 
     *,
@@ -239,12 +222,15 @@
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* UTILITIES                                                                  */
+/* -------------------------------------------------------------------------- */
 @layer utilities {
   .bg-gradient-radial {
     background-image: radial-gradient(circle, var(--tw-gradient-stops));
   }
 
-  /* A11Y-05: Screen reader only - ocultar visualmente pero mantener accesible */
+  /* A11Y Screen Reader */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -257,21 +243,16 @@
     border-width: 0;
   }
 
-  /* A11Y-03: Utilidades para asegurar contraste WCAG AA */
-  /* WCAG AA requiere mínimo 4.5:1 para texto normal y 3:1 para texto grande (18pt+) */
-
-  /* Texto sobre fondos de color - asegurar contraste suficiente */
+  /* Contraste WCAG */
   .text-wcag-safe {
     color: hsl(var(--foreground));
   }
 
-  /* Badges y etiquetas con contraste mejorado */
   .badge-wcag-safe {
     background-color: hsl(var(--muted));
     color: hsl(var(--foreground));
   }
 
-  /* Link con contraste mejorado cuando tiene hover */
   .link-wcag-safe {
     color: hsl(var(--primary));
     text-decoration: underline;
@@ -283,7 +264,7 @@
     opacity: 0.8;
   }
 
-  /* Custom Scrollbar for Enterprise Pro feel */
+  /* Scrollbar Personalizado */
   @media (min-width: 768px) {
     ::-webkit-scrollbar {
       width: 8px;
@@ -303,30 +284,28 @@
 
     ::-webkit-scrollbar-thumb:hover {
       background: hsl(var(--muted-foreground) / 0.4);
-      border-radius: 10px;
-      border: 2px solid transparent;
-      background-clip: content-box;
     }
   }
 
+  /* Sombras Premium (Ajustadas para funcionar bien en ambos modos) */
   .premium-shadow {
-    box-shadow: 0 10px 30px -12px hsl(var(--foreground) / 0.1), 0 4px 14px -8px hsl(var(--foreground) / 0.05);
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.4), 0 4px 14px -8px rgba(0, 0, 0, 0.2);
   }
 
   .premium-shadow-sm {
-    box-shadow: 0 4px 14px -8px hsl(var(--foreground) / 0.05);
+    box-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.2);
   }
 
   .premium-shadow-md {
-    box-shadow: 0 10px 30px -12px hsl(var(--foreground) / 0.1);
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.4);
   }
 
   .premium-shadow-lg {
-    box-shadow: 0 20px 50px -12px hsl(var(--foreground) / 0.15);
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
   }
 
   .premium-shadow-xl {
-    box-shadow: 0 30px 60px -15px hsl(var(--foreground) / 0.2);
+    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
   }
 
   .glass-panel {
@@ -342,9 +321,9 @@
     box-shadow: 0 8px 25px -5px hsl(var(--primary) / 0.4);
   }
 
-  /* ✨ New Premium Effects */
+  /* Efectos visuales adicionales */
   .card-hover-effect {
-    @apply transition-all duration-300 hover:shadow-[0_20px_40px_-15px_hsl(var(--foreground)_/_0.2)] hover:-translate-y-1;
+    @apply transition-all duration-300 hover:shadow-[0_20px_40px_-15px_rgba(0, 0, 0, 0.3)] hover:-translate-y-1;
   }
 
   .border-beam-effect {
@@ -356,7 +335,7 @@
     background-size: 24px 24px;
   }
 
-  /* Magic UI - Shining Gradient */
+  /* Animación Gradient */
   @keyframes shining-gradient {
     0% {
       background-position: 0% 50%;
@@ -376,20 +355,7 @@
     animation: shining-gradient var(--duration) ease infinite;
   }
 
-  /* Layout refinements */
   .main-content-area {
     @apply transition-all duration-300 ease-in-out;
-  }
-}
-
-
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }
