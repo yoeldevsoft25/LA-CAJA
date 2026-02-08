@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { memo, useRef, useEffect, useState, useMemo } from 'react'
 import { Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Scale, Search, WifiOff } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -32,7 +32,7 @@ interface ProductCatalogProps {
     exchangeRate: number
 }
 
-export function ProductCatalog({
+export const ProductCatalog = memo(function ProductCatalog({
     products,
     isLoading,
     isError,
@@ -199,10 +199,8 @@ export function ProductCatalog({
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{
-                                        type: "spring",
-                                        stiffness: 400,
-                                        damping: 25,
-                                        opacity: { duration: 0.3 }
+                                        duration: 0.2, // Simplificado
+                                        opacity: { duration: 0.2 }
                                     }}
                                     className="w-full h-[104px] text-left group relative bg-gradient-to-br from-card/80 to-card/40 hover:from-card hover:to-card/70 backdrop-blur-md rounded-2xl border border-white/10 hover:border-primary/30 premium-shadow-sm hover:premium-shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-300"
                                 >
@@ -273,4 +271,4 @@ export function ProductCatalog({
             </ScrollArea>
         </div>
     )
-}
+})

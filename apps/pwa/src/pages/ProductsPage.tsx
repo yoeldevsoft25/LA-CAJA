@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList, Download, Copy, MoreHorizontal, AlertCircle } from 'lucide-react'
-import { productsService, Product, ProductSearchResponse } from '@la-caja/app-core'
-import { productsCacheService } from '@la-caja/app-core'
+import { productsService, Product } from '@la-caja/app-core'
 import { warehousesService } from '@/services/warehouses.service'
 import { useAuth } from '@/stores/auth.store'
 import { useOnline } from '@/hooks/use-online'
@@ -29,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
 import { PullToRefreshIndicator } from '@/components/ui/pull-to-refresh-indicator'
+import { useDebounce } from '@/hooks/use-debounce'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
 import { cn } from '@/lib/utils'
 import {
@@ -125,11 +125,10 @@ export default function ProductsPage() {
     }
   }, [isMobile])
 
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, categoryFilter, statusFilter, publicOnly, productTypeFilter])
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
-  const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined)
+  // Cache offline persistente ya no se maneja manualmente con useEffect,
+  // useQuery lo hace de forma más eficiente.
   const { isOnline } = useOnline()
 
   const { data: lowStockCountData } = useQuery({
@@ -191,31 +190,13 @@ export default function ProductsPage() {
     [stockStatusData?.items]
   )
 
-  useEffect(() => {
-    if (user?.store_id) {
-      productsCacheService.getProductsFromCache(user.store_id, {
-        search: searchQuery || undefined,
-        category: categoryFilter || undefined,
-        is_active: isActiveFilter,
-        is_visible_public: isVisiblePublicFilter,
-        product_type: productTypeValue,
-        limit: pageSize,
-      }).then(cached => {
-        if (cached.length > 0) {
-          setInitialData({
-            products: cached,
-            total: cached.length,
-          })
-        }
-      }).catch(() => { })
-    }
-  }, [user?.store_id, searchQuery, categoryFilter, isActiveFilter, isVisiblePublicFilter, productTypeValue, pageSize])
+  // PERF: Se eliminó useEffect de productsCacheService.getProductsFromCache redundante
 
   const { data: productsData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['products', 'list', searchQuery, categoryFilter, statusFilter, publicOnly, productTypeFilter, currentPage, pageSize, user?.store_id],
+    queryKey: ['products', 'list', debouncedSearchQuery, categoryFilter, statusFilter, publicOnly, productTypeFilter, currentPage, pageSize, user?.store_id],
     queryFn: () =>
       productsService.search({
-        q: searchQuery || undefined,
+        q: debouncedSearchQuery || undefined,
         category: categoryFilter || undefined,
         is_active: isActiveFilter,
         is_visible_public: isVisiblePublicFilter,
@@ -227,8 +208,8 @@ export default function ProductsPage() {
     staleTime: 1000 * 60 * 5,
     gcTime: Infinity,
     retry: false,
-    initialData: !isOnline ? initialData : undefined,
-    placeholderData: !isOnline ? initialData : undefined,
+    initialData: undefined,
+    placeholderData: undefined,
   })
 
   const { data: warehouses = [] } = useQuery({

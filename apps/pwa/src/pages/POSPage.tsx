@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CatalogHeader } from '@/components/pos/catalog/CatalogHeader'
 import { ProductCatalog } from '@/components/pos/catalog/ProductCatalog'
 import { QuickActions } from '@/components/pos/catalog/QuickActions'
-import { productsService, ProductSearchResponse } from '@la-caja/app-core'
+import { productsService } from '@la-caja/app-core'
 import { realtimeWebSocketService } from '@/services/realtime-websocket.service'
 import { useOnline } from '@/hooks/use-online'
 import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.service'
@@ -28,6 +28,7 @@ import toast from '@/lib/toast'
 import { usePOSCartActions } from '@/hooks/pos/usePOSCartActions'
 import { usePOSScanner } from '@/hooks/pos/usePOSScanner'
 import { usePOSHotkeys } from '@/hooks/pos/usePOSHotkeys'
+import { useDebounce } from '@/hooks/use-debounce'
 
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import VariantSelector from '@/components/variants/VariantSelector'
@@ -258,30 +259,11 @@ export default function POSPage() {
     }
   })
 
-  const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined)
-  // Cargar desde IndexedDB al montar o cuando cambia la búsqueda
-  useEffect(() => {
-    if (user?.store_id && (searchQuery.length >= 2 || searchQuery.length === 0)) {
-      productsCacheService.getProductsFromCache(user.store_id, {
-        search: searchQuery || undefined,
-        is_active: true,
-        limit: 50,
-      }).then(cached => {
-        if (cached.length > 0) {
-          setInitialData({
-            products: cached,
-            total: cached.length,
-          });
-        }
-      }).catch(() => {
-        // Silenciar errores
-      });
-    }
-  }, [user?.store_id, searchQuery]);
+  const debouncedSearchQuery = useDebounce(searchQuery, 250)
 
   // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading, isError: isProductsError } = useQuery({
-    queryKey: ['products', 'search', searchQuery, user?.store_id],
+    queryKey: ['products', 'search', debouncedSearchQuery, user?.store_id],
     queryFn: () =>
       Promise.race([
         productsService.search(
@@ -306,8 +288,8 @@ export default function POSPage() {
       return false
     },
     retryDelay: 1200,
-    initialData: !isOnline ? initialData : undefined,
-    placeholderData: !isOnline ? initialData : undefined,
+    initialData: undefined,
+    placeholderData: undefined,
   })
 
   const products = productsData?.products || []

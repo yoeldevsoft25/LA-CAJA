@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { CartItem } from '@/stores/cart.store'
@@ -37,7 +37,7 @@ interface POSCartProps {
     exchangeRate: number
 }
 
-export default function POSCart({
+const POSCart = memo(function POSCart({
     items,
     cartSummaries,
     activeCartId,
@@ -150,7 +150,9 @@ export default function POSCart({
             </AlertDialog>
         </div>
     )
-}
+})
+
+export default POSCart;
 
 function ShoppingCartIcon(props: any) {
     return (

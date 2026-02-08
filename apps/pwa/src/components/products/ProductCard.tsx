@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Product } from '@la-caja/app-core'
 import { StockStatus } from '@/services/inventory.service'
 import { Card, CardContent } from '@/components/ui/card'
@@ -97,7 +98,7 @@ interface ProductCardProps {
   isActivating?: boolean
 }
 
-export default function ProductCard({
+const ProductCard = memo(function ProductCard({
   product,
   stock,
   onEdit,
@@ -142,8 +143,8 @@ export default function ProductCard({
                 {product.name}
               </h3>
               {product.category && (
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className={cn(
                     getCategoryColor(product.category),
                     "border font-medium text-[10px] mt-0.5 w-fit"
@@ -275,4 +276,6 @@ export default function ProductCard({
       </CardContent>
     </Card>
   )
-}
+})
+
+export default ProductCard

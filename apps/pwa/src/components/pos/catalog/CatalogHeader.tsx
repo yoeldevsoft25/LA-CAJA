@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Search, RotateCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -13,7 +14,7 @@ interface CatalogHeaderProps {
     isRefetching: boolean
 }
 
-export function CatalogHeader({
+export const CatalogHeader = memo(function CatalogHeader({
     searchQuery,
     onSearchChange,
     scannerStatus,
@@ -60,4 +61,4 @@ export function CatalogHeader({
             </div>
         </div>
     )
-}
+})
