@@ -98,7 +98,7 @@ export function RecipeIngredientManager({
                 </div>
 
                 {searchResults.length > 0 && (
-                    <Card className="absolute z-10 w-full mt-1 shadow-lg max-h-60 overflow-auto">
+                    <Card className="absolute z-10 w-full mt-1 shadow-lg max-h-60 overflow-auto bg-card border-border border">
                         <CardContent className="p-0">
                             {searchResults.map((product) => (
                                 <button

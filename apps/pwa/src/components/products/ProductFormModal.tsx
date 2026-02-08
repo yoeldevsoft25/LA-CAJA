@@ -1247,10 +1247,10 @@ export default function ProductFormModal({
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Utilidad</span>
                       <div className="flex flex-col items-end">
-                        <span className={`font-semibold ${profitUsd >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        <span className={`font-semibold ${profitUsd >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive dark:text-red-400'}`}>
                           ${profitUsd.toFixed(2)} USD
                         </span>
-                        <span className={`text-[10px] leading-tight ${profitBs >= 0 ? 'text-success/80' : 'text-destructive/80'}`}>
+                        <span className={`text-[10px] leading-tight ${profitBs >= 0 ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-destructive/80 dark:text-red-400/80'}`}>
                           {profitBs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
                         </span>
                       </div>
@@ -1258,10 +1258,10 @@ export default function ProductFormModal({
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Rentabilidad</span>
                       <div className="flex flex-col items-end">
-                        <span className={`font-semibold ${profitUsd >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        <span className={`font-semibold ${profitUsd >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive dark:text-red-400'}`}>
                           {marginPercent.toFixed(1)}% (Margen)
                         </span>
-                        <span className={`text-[10px] leading-tight ${profitUsd >= 0 ? 'text-success/80' : 'text-destructive/80'}`}>
+                        <span className={`text-[10px] leading-tight ${profitUsd >= 0 ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-destructive/80 dark:text-red-400/80'}`}>
                           {markupPercent.toFixed(1)}% (Markup)
                         </span>
                       </div>
@@ -1272,10 +1272,10 @@ export default function ProductFormModal({
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Util. por peso</span>
                         <div className="flex flex-col items-end">
-                          <span className={`font-semibold ${weightProfitUsd >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          <span className={`font-semibold ${weightProfitUsd >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive dark:text-red-400'}`}>
                             ${weightProfitUsd.toFixed(2)} USD
                           </span>
-                          <span className={`text-[10px] leading-tight ${weightProfitBs >= 0 ? 'text-success/80' : 'text-destructive/80'}`}>
+                          <span className={`text-[10px] leading-tight ${weightProfitBs >= 0 ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-destructive/80 dark:text-red-400/80'}`}>
                             {weightProfitBs.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
                           </span>
                         </div>
@@ -1283,10 +1283,10 @@ export default function ProductFormModal({
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Rent. por peso</span>
                         <div className="flex flex-col items-end">
-                          <span className={`font-semibold ${weightProfitUsd >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          <span className={`font-semibold ${weightProfitUsd >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive dark:text-red-400'}`}>
                             {weightMarginPercent.toFixed(1)}% (M)
                           </span>
-                          <span className={`text-[10px] leading-tight ${weightProfitUsd >= 0 ? 'text-success/80' : 'text-destructive/80'}`}>
+                          <span className={`text-[10px] leading-tight ${weightProfitUsd >= 0 ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-destructive/80 dark:text-red-400/80'}`}>
                             {weightMarkupPercent.toFixed(1)}% (U)
                           </span>
                         </div>

@@ -298,7 +298,7 @@ export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: Cle
 
           {step === 'complete' && (
             <div className="text-center py-8 space-y-4">
-              <CheckCircle2 className="w-12 h-12 mx-auto text-green-600" />
+              <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="font-medium text-lg">¡Limpieza completada!</p>
                 <p className="text-sm text-muted-foreground mt-1">

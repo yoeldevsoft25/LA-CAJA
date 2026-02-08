@@ -527,7 +527,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
           {step === 'preview' && (
             <>
               <Alert>
-                <CheckCircle2 className="h-4 w-4 text-success" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <AlertDescription>
                   <p className="font-medium">
                     {parsedProducts.length} productos listos para importar
@@ -605,7 +605,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
           {step === 'complete' && (
             <>
               <Alert>
-                <CheckCircle2 className="h-4 w-4 text-success" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <AlertDescription>
                   <p className="font-medium text-lg">¡Importación completada!</p>
                   <p className="text-sm text-muted-foreground mt-1">

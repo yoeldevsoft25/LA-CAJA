@@ -271,7 +271,7 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setSerialToMarkDamaged(serial)}
-                                className="text-warning hover:text-warning hover:bg-warning/10"
+                                className="text-amber-600 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10"
                                 title="Marcar como dañado"
                               >
                                 <AlertTriangle className="w-4 h-4" />

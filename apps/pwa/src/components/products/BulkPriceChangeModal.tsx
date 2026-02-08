@@ -130,7 +130,7 @@ export default function BulkPriceChangeModal({
       // Calcular nuevos precios en Bs basados en USD * tasa BCV
       const items = productsInCategory.map((product) => {
         let newPriceBs = Number(product.price_usd) * rate
-        
+
         // Aplicar redondeo si es necesario
         if (rounding === '0.1') {
           newPriceBs = Math.round(newPriceBs * 10) / 10
@@ -142,7 +142,7 @@ export default function BulkPriceChangeModal({
           // Redondear a 2 decimales por defecto
           newPriceBs = Math.round(newPriceBs * 100) / 100
         }
-        
+
         return {
           product_id: product.id,
           price_bs: newPriceBs,
@@ -216,21 +216,21 @@ export default function BulkPriceChangeModal({
 
           {/* Info según modo */}
           {mode === 'percentage' ? (
-            <Card className="bg-info/5 border border-info/50">
+            <Card className="bg-sky-500/10 border border-sky-500/20">
               <CardContent className="p-3 sm:p-4">
                 <p className="text-sm text-foreground">
-                Aplica un cambio porcentual a todos los productos activos de una categoría.
-                Ejemplo: +10 para aumentar 10%, -5 para reducir 5%
-              </p>
+                  Aplica un cambio porcentual a todos los productos activos de una categoría.
+                  Ejemplo: +10 para aumentar 10%, -5 para reducir 5%
+                </p>
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-success/5 border border-success/50">
+            <Card className="bg-emerald-500/10 border border-emerald-500/20">
               <CardContent className="p-3 sm:p-4">
                 <p className="text-sm text-foreground">
-                Actualiza los precios en Bs usando la tasa del Banco Central de Venezuela.
-                Los precios en USD se mantienen iguales, los precios en Bs se calculan como: USD × Tasa BCV
-              </p>
+                  Actualiza los precios en Bs usando la tasa del Banco Central de Venezuela.
+                  Los precios en USD se mantienen iguales, los precios en Bs se calculan como: USD × Tasa BCV
+                </p>
               </CardContent>
             </Card>
           )}
@@ -252,18 +252,18 @@ export default function BulkPriceChangeModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="TODAS">
-                Todas ({products.filter((p) => p.is_active).length} productos activos)
+                  Todas ({products.filter((p) => p.is_active).length} productos activos)
                 </SelectItem>
-              {categories.map((cat) => {
-                const count = products.filter(
-                  (p) => p.category === cat && p.is_active
-                ).length
-                return (
+                {categories.map((cat) => {
+                  const count = products.filter(
+                    (p) => p.category === cat && p.is_active
+                  ).length
+                  return (
                     <SelectItem key={cat} value={cat}>
-                    {cat} ({count} productos activos)
+                      {cat} ({count} productos activos)
                     </SelectItem>
-                )
-              })}
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -316,7 +316,7 @@ export default function BulkPriceChangeModal({
                 )}
                 {!isLoadingBCV && bcvData?.available && bcvData.rate && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <span className="text-xs text-success font-medium">✓ {bcvData.rate}</span>
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ {bcvData.rate}</span>
                   </div>
                 )}
               </div>
@@ -375,42 +375,42 @@ export default function BulkPriceChangeModal({
               <Card className="bg-muted/50 border border-border">
                 <CardContent className="p-3 sm:p-4">
                   <p className="text-sm font-semibold text-foreground mb-2">
-                  Vista previa:
-                </p>
+                    Vista previa:
+                  </p>
                   <p className="text-sm text-foreground">
-                  Se actualizarán{' '}
-                  <span className="font-semibold">
-                    {
-                      category === 'TODAS'
-                        ? products.filter((p) => p.is_active).length
-                        : products.filter(
+                    Se actualizarán{' '}
+                    <span className="font-semibold">
+                      {
+                        category === 'TODAS'
+                          ? products.filter((p) => p.is_active).length
+                          : products.filter(
                             (p) => p.category === category && p.is_active
                           ).length
-                    }{' '}
-                    productos
-                  </span>{' '}
-                  {category === 'TODAS' ? (
-                    '(todos los productos activos)'
-                  ) : (
-                    <>de la categoría "{category}"</>
-                  )}
-                  {mode === 'percentage' ? (
-                    <>
-                      {' '}con un cambio del{' '}
-                      <span className="font-semibold">{percentageChange}%</span>
-                    </>
-                  ) : (
-                    <>
-                      {' '}actualizando precios en Bs usando la tasa BCV:{' '}
-                      <span className="font-semibold">{bcvRate}</span>
-                      <br />
+                      }{' '}
+                      productos
+                    </span>{' '}
+                    {category === 'TODAS' ? (
+                      '(todos los productos activos)'
+                    ) : (
+                      <>de la categoría "{category}"</>
+                    )}
+                    {mode === 'percentage' ? (
+                      <>
+                        {' '}con un cambio del{' '}
+                        <span className="font-semibold">{percentageChange}%</span>
+                      </>
+                    ) : (
+                      <>
+                        {' '}actualizando precios en Bs usando la tasa BCV:{' '}
+                        <span className="font-semibold">{bcvRate}</span>
+                        <br />
                         <span className="text-xs text-muted-foreground mt-1 block">
-                        Ejemplo: Producto con precio USD $1.00 → Nuevo precio Bs:{' '}
-                        {(1 * parseFloat(bcvRate)).toFixed(2)}
-                      </span>
-                    </>
-                  )}
-                </p>
+                          Ejemplo: Producto con precio USD $1.00 → Nuevo precio Bs:{' '}
+                          {(1 * parseFloat(bcvRate)).toFixed(2)}
+                        </span>
+                      </>
+                    )}
+                  </p>
                 </CardContent>
               </Card>
             )}
