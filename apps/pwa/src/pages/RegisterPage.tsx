@@ -167,11 +167,11 @@ export default function RegisterPage() {
   // Si el registro fue exitoso, mostrar información de licencia
   if (registrationSuccess) {
     return (
-      <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-[#fbfaf8] relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
+      <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-background relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.14),transparent_40%)]" />
+          <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)_/_0.12),transparent_45%),radial-gradient(circle_at_80%_0%,hsl(var(--primary)_/_0.14),transparent_40%)]" />
         </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -234,10 +234,10 @@ export default function RegisterPage() {
             borderRadius={24}
             borderWidth={1.5}
             duration={14}
-            color={["#0C81CF", "#9ad4fb", "#0C81CF"]}
+            color={['hsl(var(--primary))', 'hsl(var(--primary) / 0.3)', 'hsl(var(--primary))']}
           >
-            <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
-              <CardContent className="p-6 space-y-6 bg-gradient-to-b from-white to-[#fbfaf8]">
+            <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_hsl(var(--foreground)_/_0.14)] dark:bg-card/90">
+              <CardContent className="p-6 space-y-6 bg-gradient-to-b from-white to-background dark:from-card dark:to-background">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -321,11 +321,11 @@ export default function RegisterPage() {
 
   // Formulario de registro
   return (
-    <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-[#fbfaf8] relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
+    <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-background relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
-        <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.14),transparent_40%)]" />
+        <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)_/_0.12),transparent_45%),radial-gradient(circle_at_80%_0%,hsl(var(--primary)_/_0.14),transparent_40%)]" />
       </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -393,10 +393,10 @@ export default function RegisterPage() {
           borderRadius={24}
           borderWidth={1.5}
           duration={14}
-          color={["#0C81CF", "#9ad4fb", "#0C81CF"]}
+          color={['hsl(var(--primary))', 'hsl(var(--primary) / 0.3)', 'hsl(var(--primary))']}
         >
-          <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
-            <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-[#fbfaf8]">
+          <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_hsl(var(--foreground)_/_0.14)] dark:bg-card/90">
+            <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-background dark:from-card dark:to-background">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Store Name */}
                 <motion.div
@@ -407,11 +407,10 @@ export default function RegisterPage() {
                 >
                   <Label
                     htmlFor="store_name"
-                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                    className="text-sm font-semibold text-foreground flex items-center gap-2"
                   >
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: colors.brand.primary }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary"
                     />
                     Nombre de la Tienda
                   </Label>
@@ -421,11 +420,11 @@ export default function RegisterPage() {
                     type="text"
                     placeholder="Ej: Mi Tienda"
                     className={cn(
-                      'h-12 text-base border-2 transition-all duration-200',
+                      'h-12 text-base border-2 transition-all duration-200 bg-background/50',
                       'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
                       errors.store_name
                         ? 'border-destructive focus:border-destructive'
-                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                        : 'border-border/50 focus:border-primary hover:border-primary/50'
                     )}
                     {...register('store_name')}
                     autoFocus
@@ -454,11 +453,10 @@ export default function RegisterPage() {
                 >
                   <Label
                     htmlFor="owner_name"
-                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                    className="text-sm font-semibold text-foreground flex items-center gap-2"
                   >
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: colors.brand.primary }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary"
                     />
                     Nombre del Dueño
                   </Label>
@@ -468,11 +466,11 @@ export default function RegisterPage() {
                     type="text"
                     placeholder="Ej: Juan Pérez"
                     className={cn(
-                      'h-12 text-base border-2 transition-all duration-200',
+                      'h-12 text-base border-2 transition-all duration-200 bg-background/50',
                       'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
                       errors.owner_name
                         ? 'border-destructive focus:border-destructive'
-                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                        : 'border-border/50 focus:border-primary hover:border-primary/50'
                     )}
                     {...register('owner_name')}
                   />
@@ -500,11 +498,10 @@ export default function RegisterPage() {
                 >
                   <Label
                     htmlFor="owner_email"
-                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                    className="text-sm font-semibold text-foreground flex items-center gap-2"
                   >
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: colors.brand.primary }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary"
                     />
                     Email del Dueño
                   </Label>
@@ -514,11 +511,11 @@ export default function RegisterPage() {
                     type="email"
                     placeholder="Ej: juan@example.com"
                     className={cn(
-                      'h-12 text-base border-2 transition-all duration-200',
+                      'h-12 text-base border-2 transition-all duration-200 bg-background/50',
                       'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
                       errors.owner_email
                         ? 'border-destructive focus:border-destructive'
-                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                        : 'border-border/50 focus:border-primary hover:border-primary/50'
                     )}
                     {...register('owner_email')}
                   />
@@ -549,11 +546,10 @@ export default function RegisterPage() {
                 >
                   <Label
                     htmlFor="owner_pin"
-                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                    className="text-sm font-semibold text-foreground flex items-center gap-2"
                   >
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: colors.brand.primary }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary"
                     />
                     PIN del Administrador
                   </Label>
@@ -564,11 +560,11 @@ export default function RegisterPage() {
                     placeholder="••••"
                     maxLength={8}
                     className={cn(
-                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
+                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200 bg-background/50',
                       'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
                       errors.owner_pin
                         ? 'border-destructive focus:border-destructive'
-                        : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'
+                        : 'border-border/50 hover:border-primary/50 focus:border-primary'
                     )}
                     {...register('owner_pin')}
                   />
@@ -599,11 +595,10 @@ export default function RegisterPage() {
                 >
                   <Label
                     htmlFor="cashier_name"
-                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                    className="text-sm font-semibold text-foreground flex items-center gap-2"
                   >
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: colors.brand.primary }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary"
                     />
                     Nombre del Cajero
                   </Label>
@@ -613,11 +608,11 @@ export default function RegisterPage() {
                     type="text"
                     placeholder="Ej: María González"
                     className={cn(
-                      'h-12 text-base border-2 transition-all duration-200',
+                      'h-12 text-base border-2 transition-all duration-200 bg-background/50',
                       'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
                       errors.cashier_name
                         ? 'border-destructive focus:border-destructive'
-                        : 'border-slate-200 focus:border-[rgb(13,129,206)] hover:border-[rgba(13,129,206,0.5)]'
+                        : 'border-border/50 focus:border-primary hover:border-primary/50'
                     )}
                     {...register('cashier_name')}
                   />
@@ -645,11 +640,10 @@ export default function RegisterPage() {
                 >
                   <Label
                     htmlFor="cashier_pin"
-                    className="text-sm font-semibold text-slate-700 flex items-center gap-2"
+                    className="text-sm font-semibold text-foreground flex items-center gap-2"
                   >
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: colors.brand.primary }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary"
                     />
                     PIN del Cajero
                   </Label>
@@ -660,11 +654,11 @@ export default function RegisterPage() {
                     placeholder="••••"
                     maxLength={8}
                     className={cn(
-                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200',
+                      'h-14 text-center text-2xl tracking-[0.5em] font-semibold border-2 transition-all duration-200 bg-background/50',
                       'focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0',
                       errors.cashier_pin
                         ? 'border-destructive focus:border-destructive'
-                        : 'border-slate-200 hover:border-[rgba(13,129,206,0.5)] focus:border-[rgb(13,129,206)]'
+                        : 'border-border/50 hover:border-primary/50 focus:border-primary'
                     )}
                     {...register('cashier_pin')}
                   />

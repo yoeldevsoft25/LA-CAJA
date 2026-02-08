@@ -37,79 +37,25 @@
     transform: none !important;
   }
 
-  /* Estilos para el contenedor de factura */
+  /* Contenedor de factura */
   .invoice-print-container {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 20px !important;
-    background: white !important;
+    padding: 2.5rem !important;
+    background: hsl(0 0% 100%) !important;
     position: relative !important;
-  }
-
-  /* Asegurar que las tablas se muestren correctamente */
-  .invoice-print-container table {
-    display: table !important;
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .invoice-print-container tr {
-    display: table-row !important;
-  }
-
-  .invoice-print-container td,
-  .invoice-print-container th {
-    display: table-cell !important;
-  }
-
-  .print-break {
-    page-break-after: always;
-  }
-
-  body {
-    background: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .bg-white {
-    background: white !important;
-  }
-
-  .print\\:shadow-none {
-    box-shadow: none !important;
-  }
-
-  .print\\:border-0 {
-    border: 0 !important;
-  }
-
-  /* Asegurar que las tablas se impriman correctamente */
-  .invoice-print-container table {
-    page-break-inside: avoid;
-  }
-
-  /* Evitar cortes de página en elementos importantes */
-  .invoice-print-container>* {
-    page-break-inside: avoid;
-  }
-
-  /* Asegurar que el QR se imprima correctamente */
-  .invoice-print-container img {
-    max-width: 100%;
-    height: auto;
-    display: block !important;
-  }
-
-  /* Asegurar que los textos se impriman en negro */
-  .invoice-print-container {
-    color: black !important;
+    color: hsl(0 0% 0%) !important;
   }
 
   .invoice-print-container * {
-    color: black !important;
+    color: hsl(0 0% 0%) !important;
+    border-color: hsl(0 0% 0% / 0.2) !important;
+  }
+
+  body {
+    background: hsl(0 0% 100%) !important;
   }
 }
 
@@ -235,7 +181,7 @@
 
     /* Effects */
     --glass-opacity: 0.6;
-    --glass-border: 255 255 255 / 0.1;
+    --glass-border: 0 0% 100% / 0.1;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -364,27 +310,27 @@
   }
 
   .premium-shadow {
-    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.1), 0 4px 14px -8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 30px -12px hsl(var(--foreground) / 0.1), 0 4px 14px -8px hsl(var(--foreground) / 0.05);
   }
 
   .premium-shadow-sm {
-    box-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 14px -8px hsl(var(--foreground) / 0.05);
   }
 
   .premium-shadow-md {
-    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px -12px hsl(var(--foreground) / 0.1);
   }
 
   .premium-shadow-lg {
-    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 20px 50px -12px hsl(var(--foreground) / 0.15);
   }
 
   .premium-shadow-xl {
-    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 30px 60px -15px hsl(var(--foreground) / 0.2);
   }
 
   .glass-panel {
-    @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+    @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-2xl dark:border-white/5;
   }
 
   .text-gradient {
@@ -398,7 +344,7 @@
 
   /* ✨ New Premium Effects */
   .card-hover-effect {
-    @apply transition-all duration-300 hover:shadow-[0_20px_40px_-15px_rgba(0, 0, 0, 0.3)] hover:-translate-y-1;
+    @apply transition-all duration-300 hover:shadow-[0_20px_40px_-15px_hsl(var(--foreground)_/_0.2)] hover:-translate-y-1;
   }
 
   .border-beam-effect {

@@ -32,17 +32,17 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					'50': '#f0f7fe',
-					'100': '#e0effd',
-					'200': '#bae0fb',
-					'300': '#7cc8f8',
-					'400': '#38acf1',
-					'500': '#0C81CF',
-					'600': '#0967a9',
-					'700': '#085289',
-					'800': '#0a4671',
-					'900': '#0e3b5e',
-					'950': '#09263f',
+					'50': 'hsl(204 89% 97%)',
+					'100': 'hsl(204 89% 94%)',
+					'200': 'hsl(204 89% 86%)',
+					'300': 'hsl(204 89% 73%)',
+					'400': 'hsl(204 89% 58%)',
+					'500': 'hsl(204 89% 43%)',
+					'600': 'hsl(204 89% 35%)',
+					'700': 'hsl(204 89% 28%)',
+					'800': 'hsl(204 89% 22%)',
+					'900': 'hsl(204 89% 18%)',
+					'950': 'hsl(204 89% 12%)',
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
@@ -207,11 +207,11 @@ export default {
 				'pulse-glow': {
 					'0%, 100%': {
 						opacity: '1',
-						boxShadow: '0 0 20px rgba(13, 129, 206, 0.4)'
+						boxShadow: '0 0 20px hsl(var(--primary) / 0.4)'
 					},
 					'50%': {
 						opacity: '0.8',
-						boxShadow: '0 0 40px rgba(13, 129, 206, 0.6)'
+						boxShadow: '0 0 40px hsl(var(--primary) / 0.6)'
 					}
 				},
 				float: {

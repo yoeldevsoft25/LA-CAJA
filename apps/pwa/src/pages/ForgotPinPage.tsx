@@ -67,11 +67,11 @@ export default function ForgotPinPage() {
 
   if (emailSent) {
     return (
-      <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-[#fbfaf8] relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
+      <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-background relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.14),transparent_40%)]" />
+          <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)_/_0.12),transparent_45%),radial-gradient(circle_at_80%_0%,hsl(var(--primary)_/_0.14),transparent_40%)]" />
         </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -86,10 +86,10 @@ export default function ForgotPinPage() {
             borderRadius={24}
             borderWidth={1.5}
             duration={14}
-            color={["#0C81CF", "#9ad4fb", "#0C81CF"]}
+            color={['hsl(var(--primary))', 'hsl(var(--primary) / 0.3)', 'hsl(var(--primary))']}
           >
-            <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
-              <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-[#fbfaf8]">
+            <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_hsl(var(--foreground)_/_0.14)] dark:bg-card/90">
+              <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-background dark:from-card dark:to-background">
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -136,11 +136,11 @@ export default function ForgotPinPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-[#fbfaf8] relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
+    <div className="min-h-[100dvh] w-full flex items-start sm:items-center justify-center bg-background relative overflow-x-hidden overflow-y-auto touch-pan-y px-6 py-10">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-[#d9ecfb] blur-3xl" />
-        <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-[#e1f2ff] blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.14),transparent_40%)]" />
+        <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsl(var(--primary)_/_0.12),transparent_45%),radial-gradient(circle_at_80%_0%,hsl(var(--primary)_/_0.14),transparent_40%)]" />
       </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -164,113 +164,113 @@ export default function ForgotPinPage() {
           borderRadius={24}
           borderWidth={1.5}
           duration={14}
-          color={["#0C81CF", "#9ad4fb", "#0C81CF"]}
+          color={['hsl(var(--primary))', 'hsl(var(--primary) / 0.3)', 'hsl(var(--primary))']}
         >
-          <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_rgba(15,23,42,0.14)]">
-            <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-[#fbfaf8]">
+          <Card className="overflow-hidden rounded-[22px] bg-white/92 border-0 shadow-[0_25px_60px_hsl(var(--foreground)_/_0.14)] dark:bg-card/90">
+            <CardContent className="p-8 space-y-6 bg-gradient-to-b from-white to-background dark:from-card dark:to-background">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Store Selection */}
-            <div className="space-y-3">
-              <Label
-                htmlFor="store_id"
-                className="text-xs font-semibold tracking-[0.2em] text-slate-500 flex items-center gap-2 uppercase"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0C81CF]" />
-                Tienda
-              </Label>
-
-              <select
-                id="store_id"
-                {...register('store_id')}
-                className={cn(
-                  'w-full h-12 px-4 text-base border rounded-lg transition-all duration-200 bg-white/90 shadow-sm',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none',
-                  errors.store_id
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200/70 focus:border-[rgba(12,129,207,0.8)]'
-                )}
-              >
-                <option value="">Selecciona una tienda</option>
-                {stores?.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </select>
-
-              <AnimatePresence>
-                {errors.store_id && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
+                {/* Store Selection */}
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="store_id"
+                    className="text-xs font-semibold tracking-[0.2em] text-muted-foreground flex items-center gap-2 uppercase"
                   >
-                    {errors.store_id.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Tienda
+                  </Label>
 
-            {/* Email */}
-            <div className="space-y-3">
-              <Label
-                htmlFor="email"
-                className="text-xs font-semibold tracking-[0.2em] text-slate-500 flex items-center gap-2 uppercase"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0C81CF]" />
-                Email
-              </Label>
-
-              <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                className={cn(
-                  'h-12 text-base border transition-all duration-200 bg-white/90 shadow-sm',
-                  'focus:ring-0 focus:ring-offset-0 focus:outline-none',
-                  errors.email
-                    ? 'border-destructive focus:border-destructive'
-                    : 'border-slate-200/70 focus:border-[rgba(12,129,207,0.8)]'
-                )}
-                {...register('email')}
-              />
-
-              <AnimatePresence>
-                {errors.email && (
-                  <motion.p
-                    className="text-xs text-destructive font-medium"
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
+                  <select
+                    id="store_id"
+                    {...register('store_id')}
+                    className={cn(
+                      'w-full h-12 px-4 text-base border rounded-lg transition-all duration-200 bg-background/90 shadow-sm',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none',
+                      errors.store_id
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-border/70 focus:border-primary/80'
+                    )}
                   >
-                    {errors.email.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
+                    <option value="">Selecciona una tienda</option>
+                    {stores?.map((store) => (
+                      <option key={store.id} value={store.id}>
+                        {store.name}
+                      </option>
+                    ))}
+                  </select>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={mutation.isPending || !selectedStoreId}
-              className="w-full h-12"
-              style={{
-                background: colors.gradients.primary,
-              }}
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Mail className="w-5 h-5 mr-2" />
-                  Enviar Enlace de Recuperación
-                </>
-              )}
-            </Button>
+                  <AnimatePresence>
+                    {errors.store_id && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.store_id.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Email */}
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="email"
+                    className="text-xs font-semibold tracking-[0.2em] text-muted-foreground flex items-center gap-2 uppercase"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Email
+                  </Label>
+
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    className={cn(
+                      'h-12 text-base border transition-all duration-200 bg-background/90 shadow-sm',
+                      'focus:ring-0 focus:ring-offset-0 focus:outline-none',
+                      errors.email
+                        ? 'border-destructive focus:border-destructive'
+                        : 'border-border/70 focus:border-primary/80'
+                    )}
+                    {...register('email')}
+                  />
+
+                  <AnimatePresence>
+                    {errors.email && (
+                      <motion.p
+                        className="text-xs text-destructive font-medium"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                      >
+                        {errors.email.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={mutation.isPending || !selectedStoreId}
+                  className="w-full h-12"
+                  style={{
+                    background: colors.gradients.primary,
+                  }}
+                >
+                  {mutation.isPending ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-5 h-5 mr-2" />
+                      Enviar Enlace de Recuperación
+                    </>
+                  )}
+                </Button>
               </form>
 
               <div className="text-center">

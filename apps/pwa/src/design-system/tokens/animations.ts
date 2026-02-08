@@ -116,7 +116,7 @@ export const hoverTapEffects = {
   },
 
   hoverGlow: {
-    boxShadow: '0 0 20px rgba(13, 129, 206, 0.4)',
+    boxShadow: '0 0 20px hsl(var(--primary) / 0.4)',
     transition: { duration: durations.normal },
   },
 } as const
