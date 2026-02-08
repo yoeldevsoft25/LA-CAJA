@@ -988,20 +988,16 @@ export default function POSPage() {
       />
 
       {/* Selector de variantes */}
-      {
-        selectedProductForVariant && (
-          <VariantSelector
-            isOpen={showVariantSelector}
-            onClose={() => {
-              setShowVariantSelector(false)
-              setSelectedProductForVariant(null)
-            }}
-            productId={selectedProductForVariant.id}
-            productName={selectedProductForVariant.name}
-            onSelect={handleVariantSelect}
-          />
-        )
-      }
+      <VariantSelector
+        isOpen={showVariantSelector}
+        onClose={() => {
+          setShowVariantSelector(false)
+          setSelectedProductForVariant(null)
+        }}
+        productId={selectedProductForVariant?.id}
+        productName={selectedProductForVariant?.name || ''}
+        onSelect={handleVariantSelect}
+      />
 
       {/* Modal de entrada de peso */}
       <WeightInputModal

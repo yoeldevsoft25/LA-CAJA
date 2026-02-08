@@ -92,11 +92,10 @@ export default function WeightInputModal({
     setWeightInput(String(w))
   }, [])
 
-  if (!product) return null
 
   const nW = parseFloat(weightInput)
   const weightValue = Number.isFinite(nW) ? nW : 0
-  const unit = product.weight_unit || 'kg'
+  const unit = product?.weight_unit || 'kg'
   const unitPriceDecimals = unit === 'g' || unit === 'oz' ? 4 : 2
 
   const totalUsd = weightValue * pricePerWeightUsd
@@ -104,8 +103,9 @@ export default function WeightInputModal({
 
   const validateWeight = (value: number): string | null => {
     if (value <= 0) return 'El peso debe ser mayor a 0'
-    if (product.min_weight != null && value < product.min_weight) return `Peso mínimo: ${product.min_weight} ${UNIT_SHORT[unit]}`
-    if (product.max_weight != null && value > product.max_weight) return `Peso máximo: ${product.max_weight} ${UNIT_SHORT[unit]}`
+    const p = product
+    if (p?.min_weight != null && value < p.min_weight) return `Peso mínimo: ${p.min_weight} ${UNIT_SHORT[unit]}`
+    if (p?.max_weight != null && value > p.max_weight) return `Peso máximo: ${p.max_weight} ${UNIT_SHORT[unit]}`
     return null
   }
 
@@ -153,12 +153,14 @@ export default function WeightInputModal({
 
         <div className="space-y-4 py-4">
           {/* Nombre del producto */}
-          <div className="bg-muted/50 rounded-lg p-3">
-            <p className="font-medium text-foreground">{product.name}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              ${pricePerWeightUsd.toFixed(unitPriceDecimals)} / {UNIT_SHORT[unit]} • Bs. {pricePerWeightBs.toFixed(unitPriceDecimals)} / {UNIT_SHORT[unit]}
-            </p>
-          </div>
+          {product && (
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="font-medium text-foreground">{product.name}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                ${pricePerWeightUsd.toFixed(unitPriceDecimals)} / {UNIT_SHORT[unit]} • Bs. {pricePerWeightBs.toFixed(unitPriceDecimals)} / {UNIT_SHORT[unit]}
+              </p>
+            </div>
+          )}
 
           {/* Input de peso */}
           <div className="space-y-2">
@@ -189,7 +191,7 @@ export default function WeightInputModal({
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            {product.min_weight || product.max_weight ? (
+            {product && (product.min_weight || product.max_weight) ? (
               <p className="text-xs text-muted-foreground">
                 {product.min_weight && `Mín: ${product.min_weight} ${UNIT_SHORT[unit]}`}
                 {product.min_weight && product.max_weight && ' • '}
@@ -262,7 +264,7 @@ export default function WeightInputModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={weightValue <= 0 || !!error || (pricePerWeightUsd <= 0 && pricePerWeightBs <= 0)}
+            disabled={!product || weightValue <= 0 || !!error || (pricePerWeightUsd <= 0 && pricePerWeightBs <= 0)}
           >
             Agregar al Carrito
           </Button>

@@ -26,8 +26,8 @@ export default function VariantSelector({
 
   const { data: groupedVariants, isLoading } = useQuery({
     queryKey: ['product-variants', 'grouped', productId],
-    queryFn: () => productVariantsService.getVariantsGroupedByType(productId),
-    enabled: isOpen,
+    queryFn: () => productVariantsService.getVariantsGroupedByType(productId!),
+    enabled: !!productId && isOpen,
     staleTime: 1000 * 60 * 5, // 5 minutos
   })
 
@@ -51,8 +51,6 @@ export default function VariantSelector({
     onClose()
   }
 
-  if (!isOpen) return null
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
@@ -62,13 +60,13 @@ export default function VariantSelector({
             Seleccionar Variante
           </DialogTitle>
           <div className="text-sm text-muted-foreground mt-1">
-            <DialogDescription>{productName}</DialogDescription>
+            <DialogDescription>{productName || 'Cargando...'}</DialogDescription>
           </div>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-            {isLoading ? (
+            {!productId ? null : isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-20 w-full" />
