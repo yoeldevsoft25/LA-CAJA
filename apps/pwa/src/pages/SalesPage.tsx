@@ -154,7 +154,7 @@ export default function SalesPage() {
   const prefetchedSales = queryClient.getQueryData<{ sales: Sale[]; total: number }>(['sales', 'list', effectiveStoreId, { limit: 10 }])
 
   // Obtener ventas
-  const { data: salesData, isLoading, isError, error, refetch } = useQuery<{ sales: Sale[]; total: number }>({
+  const { data: salesData, isLoading, isFetching, isError, error, refetch } = useQuery<{ sales: Sale[]; total: number }>({
     queryKey: ['sales', 'list', effectiveDateFrom, effectiveDateTo, effectiveStoreId, currentPage],
     queryFn: () =>
       salesService.list({
