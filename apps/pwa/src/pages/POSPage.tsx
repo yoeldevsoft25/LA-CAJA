@@ -34,6 +34,7 @@ import VariantSelector from '@/components/variants/VariantSelector'
 import WeightInputModal from '@/components/pos/WeightInputModal'
 import POSCart from '@/components/pos/cart/POSCart'
 import { SuccessOverlay } from '@/components/pos/SuccessOverlay'
+import { FadeInUp } from '@/components/ui/motion-wrapper'
 import { cn } from '@/lib/utils'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
 import { useOrientation } from '@/hooks/use-orientation'
@@ -839,7 +840,7 @@ export default function POSPage() {
   }, [])
 
   return (
-    <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4" data-pull-to-refresh>
+    <FadeInUp className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4" data-pull-to-refresh>
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
       <div className={cn(
         "grid gap-3 sm:gap-4 flex-1 min-h-0 grid-rows-[minmax(0,1fr)]",
@@ -848,7 +849,7 @@ export default function POSPage() {
         {/* Búsqueda y Lista de Productos */}
         {!isMobile && (
           <div className={cn(
-            "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border-2 border-border shadow-md p-3"
+            "flex flex-col h-full overflow-hidden glass-panel rounded-2xl border-white/20 premium-shadow-md p-3"
           )}>
             <CatalogHeader
               searchQuery={searchQuery}
@@ -1016,6 +1017,6 @@ export default function POSPage() {
         onAnimationComplete={handleAnimationComplete}
         message={isOnline ? `Venta #${successSaleId} procesada exitosamente` : `Venta #${successSaleId} almacenada en OFFLINE`}
       />
-    </div>
+    </FadeInUp>
   )
 }

@@ -745,161 +745,149 @@ export default function DashboardPage() {
             {/* Performance y Top Productos */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Producto */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg">
-                    Producto Más Vendido
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {kpis.performance.top_selling_product ? (
-                    <div>
-                      <p className="text-lg sm:text-xl font-bold text-primary">
-                        {kpis.performance.top_selling_product.name}
+              <FadeInUp>
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full overflow-hidden">
+                  <CardHeader className="bg-primary/5 border-b border-border/40">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-primary" />
+                      Producto Más Vendido
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    {kpis.performance.top_selling_product ? (
+                      <div className="flex flex-col h-full">
+                        <p className="text-xl sm:text-2xl font-black text-primary tracking-tight">
+                          {kpis.performance.top_selling_product.name}
+                        </p>
+                        <div className="mt-4 p-3 rounded-xl bg-background/50 border border-border/40">
+                          <p className="text-xs text-muted-foreground uppercase font-black opacity-60">
+                            Cantidad vendida
+                          </p>
+                          <p className="text-lg font-bold">
+                            {formatQuantity(
+                              kpis.performance.top_selling_product.quantity_sold,
+                              kpis.performance.top_selling_product.is_weight_product,
+                              kpis.performance.top_selling_product.weight_unit,
+                            )}
+                          </p>
+                        </div>
+                        <Link
+                          to="/app/products"
+                          className="text-xs font-bold text-primary hover:text-primary/70 inline-flex items-center gap-1 mt-6 transition-colors"
+                        >
+                          Ver producto <ArrowUpRight className="w-4 h-4" />
+                        </Link>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground py-10 text-center">
+                        No hay datos disponibles
                       </p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Cantidad vendida:{' '}
-                        <span className="font-semibold">
-                          {formatQuantity(
-                            kpis.performance.top_selling_product.quantity_sold,
-                            kpis.performance.top_selling_product.is_weight_product,
-                            kpis.performance.top_selling_product.weight_unit,
-                          )}
-                        </span>
-                      </p>
-                      <Link
-                        to="/app/products"
-                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-2"
-                      >
-                        Ver producto <ArrowUpRight className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No hay datos disponibles
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              </FadeInUp>
 
               {/* Categoría Más Vendida */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg">
-                    Categoría Más Vendida
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {kpis.performance.best_selling_category ? (
-                    <div>
-                      <p className="text-lg sm:text-xl font-bold text-green-600">
-                        {kpis.performance.best_selling_category}
+              <FadeInUp>
+                <Card className="glass-panel premium-shadow-md border-white/20 h-full overflow-hidden">
+                  <CardHeader className="bg-green-500/5 border-b border-border/40">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-green-600" />
+                      Categoría Más Vendida
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    {kpis.performance.best_selling_category ? (
+                      <div className="flex flex-col h-full items-center justify-center py-6">
+                        <div className="p-4 rounded-full bg-green-500/10 mb-4">
+                          <TrendingUp className="w-8 h-8 text-green-600" />
+                        </div>
+                        <p className="text-2xl sm:text-3xl font-black text-green-600 tracking-tight text-center">
+                          {kpis.performance.best_selling_category}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 font-medium">
+                          Liderando el volumen del período
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground py-10 text-center">
+                        No hay datos disponibles
                       </p>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No hay datos disponibles
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                    )}
+                  </CardContent>
+                </Card>
+              </FadeInUp>
             </div>
 
-            {/* Alertas y Indicadores */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-              <ExpiringLotsAlert variant="card" />
-              <PendingOrdersIndicator variant="card" />
-            </div>
-
-            {/* Gráfico de Tendencias de Ventas - Interactivo */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base sm:text-lg">
-                  Tendencias de Ventas (Últimos 7 Días)
-                </CardTitle>
-                <Tabs
-                  value={chartCurrency}
-                  onValueChange={(v) => setChartCurrency(v as 'BS' | 'USD')}
-                  className="w-auto"
-                >
-                  <TabsList className="h-8">
-                    <TabsTrigger value="BS" className="text-xs px-3 h-7">
-                      Bs.
-                    </TabsTrigger>
-                    <TabsTrigger value="USD" className="text-xs px-3 h-7">
-                      USD
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </CardHeader>
-              <CardContent>
-                <SalesTrendChart data={trends.sales_trend} currency={chartCurrency} />
-              </CardContent>
-            </Card>
-
-            {/* Top 10 Productos de la Semana - Grid con Gráficos Separados */}
+            {/* Top 10 Productos de la Semana - Bento Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               {/* Gráfico: Productos por Peso */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-base sm:text-lg">
-                    Top Productos por Peso
-                  </CardTitle>
-                  <Badge variant="outline" className="text-xs">
-                    {chartCurrency}
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  <TopProductsChart
-                    data={trends.top_products_trend.filter(p => p.is_weight_product)}
-                    currency={chartCurrency}
-                    limit={10}
-                    sortBy="revenue"
-                  />
-                </CardContent>
-              </Card>
+              <FadeInUp>
+                <Card className="glass-panel premium-shadow-md border-white/20">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-base sm:text-lg font-black flex items-center gap-2">
+                      <Package className="w-4 h-4 text-primary" />
+                      Top Productos por Peso
+                    </CardTitle>
+                    <Badge variant="outline" className="text-[10px] font-bold">
+                      {chartCurrency}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <TopProductsChart
+                      data={trends.top_products_trend.filter(p => p.is_weight_product)}
+                      currency={chartCurrency}
+                      limit={10}
+                      sortBy="revenue"
+                    />
+                  </CardContent>
+                </Card>
+              </FadeInUp>
 
               {/* Gráfico: Productos por Cantidad */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-base sm:text-lg">
-                    Top Productos por Cantidad
-                  </CardTitle>
-                  <Badge variant="outline" className="text-xs">
-                    {chartCurrency}
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  <TopProductsChart
-                    data={trends.top_products_trend.filter(p => !p.is_weight_product)}
-                    currency={chartCurrency}
-                    limit={10}
-                    sortBy="revenue"
-                  />
-                </CardContent>
-              </Card>
+              <FadeInUp>
+                <Card className="glass-panel premium-shadow-md border-white/20">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-base sm:text-lg font-black flex items-center gap-2">
+                      <ShoppingCart className="w-4 h-4 text-green-600" />
+                      Top Productos por Unidades
+                    </CardTitle>
+                    <Badge variant="outline" className="text-[10px] font-bold">
+                      {chartCurrency}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <TopProductsChart
+                      data={trends.top_products_trend.filter(p => !p.is_weight_product)}
+                      currency={chartCurrency}
+                      limit={10}
+                      sortBy="revenue"
+                    />
+                  </CardContent>
+                </Card>
+              </FadeInUp>
             </div>
 
             {/* Tabla Detallada */}
-            <div className="grid grid-cols-1 gap-6 mt-6">
-              <Card>
+            <FadeInUp>
+              <Card className="glass-panel premium-shadow-md border-white/20">
                 <CardHeader>
-                  <CardTitle className="text-base sm:text-lg">
+                  <CardTitle className="text-base sm:text-lg font-black">
                     Detalle Top 10 Productos
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="weight" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
-                      <TabsTrigger value="weight">Por Peso</TabsTrigger>
-                      <TabsTrigger value="units">Por Cantidad</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-background/50">
+                      <TabsTrigger value="weight" className="font-bold">Por Peso</TabsTrigger>
+                      <TabsTrigger value="units" className="font-bold">Por Unidades</TabsTrigger>
                     </TabsList>
 
                     {/* Tab: Productos por Peso */}
                     <TabsContent value="weight" className="mt-0">
-                      <div className="overflow-x-auto overflow-y-auto max-h-[280px] sm:max-h-[380px] min-h-0 [-webkit-overflow-scrolling:touch]">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[380px] [-webkit-overflow-scrolling:touch]">
                         <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10">
+                          <TableHeader className="sticky top-0 bg-background/80 backdrop-blur-md z-10">
                             <TableRow>
                               <TableHead className="w-12">#</TableHead>
                               <TableHead>Producto</TableHead>
@@ -914,32 +902,26 @@ export default function DashboardPage() {
                                 .sort((a, b) => {
                                   const revenueA = chartCurrency === 'BS' ? a.revenue_bs : a.revenue_usd
                                   const revenueB = chartCurrency === 'BS' ? b.revenue_bs : b.revenue_usd
-                                  return revenueB - revenueA // Orden descendente
+                                  return revenueB - revenueA
                                 })
                                 .slice(0, 10)
                               return weightProducts.length > 0 ? (
                                 weightProducts.map((product, index) => (
-                                  <TableRow key={product.product_id} className="hover:bg-muted/50">
+                                  <TableRow key={product.product_id} className="hover:bg-primary/5 transition-colors">
                                     <TableCell>
-                                      <Badge
-                                        variant={index < 3 ? 'default' : 'secondary'}
-                                        className={
-                                          index === 0
-                                            ? 'bg-amber-500 hover:bg-amber-600'
-                                            : index === 1
-                                              ? 'bg-slate-400 hover:bg-slate-500'
-                                              : index === 2
-                                                ? 'bg-orange-600 hover:bg-orange-700'
-                                                : ''
-                                        }
-                                      >
+                                      <div className={cn(
+                                        "w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold",
+                                        index === 0 ? "bg-amber-500 text-white" :
+                                          index === 1 ? "bg-slate-400 text-white" :
+                                            index === 2 ? "bg-orange-600 text-white" : "bg-muted text-muted-foreground"
+                                      )}>
                                         {index + 1}
-                                      </Badge>
+                                      </div>
                                     </TableCell>
-                                    <TableCell className="font-medium max-w-[150px] truncate" title={product.product_name}>
+                                    <TableCell className="font-bold max-w-[200px] truncate">
                                       {product.product_name}
                                     </TableCell>
-                                    <TableCell className="text-right text-sm">
+                                    <TableCell className="text-right font-medium tabular-nums">
                                       {formatQuantity(
                                         product.quantity_sold,
                                         product.is_weight_product,
@@ -948,10 +930,10 @@ export default function DashboardPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div>
-                                        <span className="font-semibold text-sm">
+                                        <p className="font-bold text-sm">
                                           {formatCurrency(product.revenue_bs, 'BS')}
-                                        </span>
-                                        <p className="text-xs text-muted-foreground">
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground font-medium">
                                           {formatCurrency(product.revenue_usd, 'USD')}
                                         </p>
                                       </div>
@@ -960,8 +942,8 @@ export default function DashboardPage() {
                                 ))
                               ) : (
                                 <TableRow>
-                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                    No hay productos por peso disponibles
+                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                                    No hay datos disponibles
                                   </TableCell>
                                 </TableRow>
                               )
@@ -971,11 +953,11 @@ export default function DashboardPage() {
                       </div>
                     </TabsContent>
 
-                    {/* Tab: Productos por Cantidad/Unidades */}
+                    {/* Tab: Productos por Unidades */}
                     <TabsContent value="units" className="mt-0">
-                      <div className="overflow-x-auto overflow-y-auto max-h-[280px] sm:max-h-[380px] min-h-0 [-webkit-overflow-scrolling:touch]">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[380px] [-webkit-overflow-scrolling:touch]">
                         <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10">
+                          <TableHeader className="sticky top-0 bg-background/80 backdrop-blur-md z-10">
                             <TableRow>
                               <TableHead className="w-12">#</TableHead>
                               <TableHead>Producto</TableHead>
@@ -990,32 +972,26 @@ export default function DashboardPage() {
                                 .sort((a, b) => {
                                   const revenueA = chartCurrency === 'BS' ? a.revenue_bs : a.revenue_usd
                                   const revenueB = chartCurrency === 'BS' ? b.revenue_bs : b.revenue_usd
-                                  return revenueB - revenueA // Orden descendente
+                                  return revenueB - revenueA
                                 })
                                 .slice(0, 10)
                               return unitProducts.length > 0 ? (
                                 unitProducts.map((product, index) => (
-                                  <TableRow key={product.product_id} className="hover:bg-muted/50">
+                                  <TableRow key={product.product_id} className="hover:bg-primary/5 transition-colors">
                                     <TableCell>
-                                      <Badge
-                                        variant={index < 3 ? 'default' : 'secondary'}
-                                        className={
-                                          index === 0
-                                            ? 'bg-amber-500 hover:bg-amber-600'
-                                            : index === 1
-                                              ? 'bg-slate-400 hover:bg-slate-500'
-                                              : index === 2
-                                                ? 'bg-orange-600 hover:bg-orange-700'
-                                                : ''
-                                        }
-                                      >
+                                      <div className={cn(
+                                        "w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold",
+                                        index === 0 ? "bg-amber-500 text-white" :
+                                          index === 1 ? "bg-slate-400 text-white" :
+                                            index === 2 ? "bg-orange-600 text-white" : "bg-muted text-muted-foreground"
+                                      )}>
                                         {index + 1}
-                                      </Badge>
+                                      </div>
                                     </TableCell>
-                                    <TableCell className="font-medium max-w-[150px] truncate" title={product.product_name}>
+                                    <TableCell className="font-bold max-w-[200px] truncate">
                                       {product.product_name}
                                     </TableCell>
-                                    <TableCell className="text-right text-sm">
+                                    <TableCell className="text-right font-medium tabular-nums">
                                       {formatQuantity(
                                         product.quantity_sold,
                                         product.is_weight_product,
@@ -1024,10 +1000,10 @@ export default function DashboardPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                       <div>
-                                        <span className="font-semibold text-sm">
+                                        <p className="font-bold text-sm">
                                           {formatCurrency(product.revenue_bs, 'BS')}
-                                        </span>
-                                        <p className="text-xs text-muted-foreground">
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground font-medium">
                                           {formatCurrency(product.revenue_usd, 'USD')}
                                         </p>
                                       </div>
@@ -1036,8 +1012,8 @@ export default function DashboardPage() {
                                 ))
                               ) : (
                                 <TableRow>
-                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                                    No hay productos por cantidad disponibles
+                                  <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                                    No hay datos disponibles
                                   </TableCell>
                                 </TableRow>
                               )
@@ -1049,13 +1025,12 @@ export default function DashboardPage() {
                   </Tabs>
                 </CardContent>
               </Card>
-            </div>
+            </FadeInUp>
           </>
         )}
-
       </div>
 
-      {/* Vista de Impresión (solo visible al imprimir) */}
+      {/* Vista de Impresión */}
       {kpis && trends && (
         <DashboardPrintView
           ref={printRef}
