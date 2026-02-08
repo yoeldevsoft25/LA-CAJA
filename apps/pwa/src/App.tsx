@@ -34,7 +34,7 @@ const ResetPinPage = lazy(() => import('./pages/ResetPinPage'))
 const LandingPageEnhanced = lazy(() => import('./pages/LandingPageEnhanced'))
 
 // POS Page - eager load to prevent blank screen on navigation
-import POSPage from './pages/POSPage'
+const POSPage = lazy(() => import('./pages/POSPage'))
 
 // Preload de rutas críticas para mejor rendimiento
 const preloadCriticalRoutes = () => {

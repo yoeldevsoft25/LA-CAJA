@@ -4,6 +4,7 @@ export default {
 	content: [
 		"./index.html",
 		"./src/**/*.{js,ts,jsx,tsx}",
+		"../../packages/ui-core/src/**/*.{js,ts,jsx,tsx}",
 	],
 	theme: {
 		container: {

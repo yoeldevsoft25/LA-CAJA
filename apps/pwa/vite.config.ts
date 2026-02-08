@@ -279,19 +279,39 @@ export default defineConfig(({ mode }) => ({
             return undefined;
           }
 
-          // Date-fns: biblioteca de fechas que NO depende de React (puede ir separada)
-          if (id.includes('node_modules/date-fns')) {
-            return 'date-fns-vendor';
+          // Agrupación de dependencias por dominio funcional
+          // UI y Componentes (Pesado)
+          if (id.includes('node_modules/lucide-react')) return 'ui-icons';
+          if (id.includes('node_modules/@radix-ui')) return 'ui-core-primitives';
+          if (id.includes('node_modules/framer-motion')) return 'ui-animations';
+
+          // Visualización de Datos (Muy Pesado)
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3')) {
+            return 'data-viz';
+          }
+          if (id.includes('node_modules/chart.js') || id.includes('node_modules/react-chartjs-2')) {
+            return 'data-viz';
           }
 
-          // react-is debe estar en react-vendor para que recharts lo encuentre
-          if (id.includes('react-is')) {
+          // Utilidades y Framework
+          if (id.includes('node_modules/date-fns')) return 'date-utils';
+          if (id.includes('node_modules/dexie')) return 'db-core';
+          if (id.includes('node_modules/axios')) return 'network-utils';
+
+          // react-is debe estar en react-vendor para que recharts lo encuentre (si se usa)
+          // Pero intentamos aislar lo máximo posible el core de React
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router') ||
+            id.includes('node_modules/scheduler') ||
+            id.includes('node_modules/react-is')
+          ) {
             return 'react-vendor';
           }
 
-          // CRÍTICO: Todo lo demás (incluyendo React y todas sus dependencias) va a react-vendor
-          // Esto evita errores de inicialización y garantiza que React esté disponible
-          return 'react-vendor';
+          // Resto de dependencias pequeñas
+          return 'vendor-libs';
         },
         // Optimizar nombres de chunks para mejor cacheo
         chunkFileNames: 'assets/[name]-[hash].js',
