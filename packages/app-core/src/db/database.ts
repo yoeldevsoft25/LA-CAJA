@@ -385,35 +385,53 @@ export class LaCajaDB extends Dexie {
     product_type?: 'sale_item' | 'ingredient' | 'prepared';
     limit?: number;
   }): Promise<LocalProduct[]> {
-    let query = this.products.where('store_id').equals(storeId);
+    // 🚀 PERF: START WITH THE MOST SELECTIVE INDEX
+    let collection: Dexie.Collection<LocalProduct, string>;
 
     if (options?.is_active !== undefined) {
-      query = query.filter(p => p.is_active === options.is_active);
+      // Usar índice compuesto [store_id+is_active]
+      collection = this.products
+        .where('[store_id+is_active]')
+        .equals([storeId, options.is_active ? 1 as any : 0 as any]);
+    } else if (options?.category) {
+      // Usar índice compuesto [store_id+category]
+      collection = this.products
+        .where('[store_id+category]')
+        .equals([storeId, options.category]);
+    } else {
+      // Fallback a store_id
+      collection = this.products.where('store_id').equals(storeId);
     }
 
+    // Filtros secundarios en memoria (solo sobre el subset indexado)
     if (options?.is_visible_public !== undefined) {
-      query = query.filter(p => p.is_visible_public === options.is_visible_public);
+      collection = collection.filter(p => p.is_visible_public === options.is_visible_public);
     }
 
     if (options?.product_type) {
-      query = query.filter(p => p.product_type === options.product_type);
+      collection = collection.filter(p => p.product_type === options.product_type);
     }
 
-    if (options?.category) {
-      query = query.filter(p => p.category === options.category);
+    // Si ya usamos category en el index, no filtramos de nuevo
+    if (options?.category && options?.is_active === undefined) {
+      // Ya filtrado por index
+    } else if (options?.category) {
+      collection = collection.filter(p => p.category === options.category);
     }
 
     if (options?.search) {
       const searchLower = options.search.toLowerCase();
-      query = query.filter(p => {
-        const nameMatch = p.name.toLowerCase().includes(searchLower);
-        const skuMatch = p.sku?.toLowerCase().includes(searchLower) ?? false;
-        const barcodeMatch = p.barcode?.toLowerCase().includes(searchLower) ?? false;
-        return nameMatch || skuMatch || barcodeMatch;
+      collection = collection.filter(p => {
+        // Búsqueda rápida por prefijo o inclusión
+        return !!(p.name.toLowerCase().includes(searchLower) ||
+          (p.sku && p.sku.toLowerCase().includes(searchLower)) ||
+          (p.barcode && p.barcode.includes(searchLower)));
       });
     }
 
-    const products = await query.toArray();
+    // Limitar antes de cargar TODO a memoria si es posible
+    // Pero Dexie necesita cargar para ordenar por nombre si no hay índice
+    const products = await collection.toArray();
 
     // Ordenar por nombre
     products.sort((a, b) => a.name.localeCompare(b.name));
@@ -441,19 +459,32 @@ export class LaCajaDB extends Dexie {
    * CLIENTES - Read Model Local
    */
   async getCustomers(storeId: string, search?: string): Promise<LocalCustomer[]> {
-    let query = this.customers.where('store_id').equals(storeId);
+    const searchLower = search?.toLowerCase();
 
-    if (search) {
-      const searchLower = search.toLowerCase();
-      query = query.filter(c => {
-        const nameMatch = c.name.toLowerCase().includes(searchLower);
-        const docMatch = c.document_id?.toLowerCase().includes(searchLower) ?? false;
-        const phoneMatch = c.phone?.toLowerCase().includes(searchLower) ?? false;
-        return nameMatch || docMatch || phoneMatch;
+    // 🚀 PERF: Si hay búsqueda por documento, usar índice compuesto
+    if (searchLower && /^[0-9]+$/.test(searchLower)) {
+      const byDoc = await this.customers
+        .where('[store_id+document_id]')
+        .between([storeId, searchLower], [storeId, searchLower + '\uffff'])
+        .limit(20)
+        .toArray();
+      if (byDoc.length > 0) return byDoc;
+    }
+
+    // Fallback a búsqueda general por store_id
+    let collection = this.customers.where('store_id').equals(storeId);
+
+    if (searchLower) {
+      collection = collection.filter(c => {
+        return !!(c.name.toLowerCase().includes(searchLower) ||
+          (c.document_id && c.document_id.toLowerCase().includes(searchLower)) ||
+          (c.phone && c.phone.includes(searchLower)));
       });
     }
 
-    return query.toArray();
+    const customers = await collection.toArray();
+    customers.sort((a, b) => a.name.localeCompare(b.name));
+    return customers;
   }
 
   async getCustomerById(id: string): Promise<LocalCustomer | undefined> {

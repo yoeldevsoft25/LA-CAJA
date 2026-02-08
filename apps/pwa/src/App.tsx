@@ -146,20 +146,11 @@ function App() {
 
     // Callback cuando se completa la sincronización
     const unsubscribeComplete = syncService.onSyncComplete((syncedCount) => {
-      console.log('[App] 🔄 Sincronización completada, invalidando cache...', syncedCount, 'eventos');
-
-      // Invalidar cache de React Query para ventas y otros recursos
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['cash'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-
-      // Mostrar notificación al usuario
-      toast.success(`✅ ${syncedCount} ${syncedCount === 1 ? 'venta sincronizada' : 'ventas sincronizadas'}`, {
-        duration: 3000,
-        icon: '🔄',
-      });
+      // PERF: Evitar doble invalidación si el evento global también se dispara
+      // Delegamos la invalidación masiva al evento global 'sync:completed' que es más rico en data
+      if (syncedCount > 0) {
+        console.log('[App] 🔄 Sync service callback: delegating invalidation to global event');
+      }
     });
 
     // Callback cuando hay error de sincronización
@@ -183,24 +174,31 @@ function App() {
         source: string;
       }>;
 
-      const { syncedCount, queueDepthAfter, duration, source } = customEvent.detail;
+      const { syncedCount, queueDepthAfter } = customEvent.detail;
 
-      console.log(`[App] 🎉 Evento global sync:completed recibido`, {
-        syncedCount,
-        queueDepthAfter,
-        duration,
-        source
-      });
-
-      // Invalidar caches críticos
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['cash'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-
-      // Notificar al usuario solo si hay eventos sincronizados
+      // PERF: Solo invalidar si realmente hubo cambios y de forma priorizada
       if (syncedCount > 0) {
+        console.log(`[App] ⚡ Invalidation priority: HIGH (Sales/Cash)`);
+
+        // Prioridad 1: UI Inmediata (Ventas y Sesión de Caja)
+        queryClient.invalidateQueries({ queryKey: ['sales'] });
+        queryClient.invalidateQueries({ queryKey: ['cash'] });
+
+        // Prioridad 2: Datos pesados (dejar para el siguiente frame idle para no bloquear la UI)
+        const invalidateLowPriority = () => {
+          console.log(`[App] ⏳ Invalidation priority: LOW (Products/Inventory/Dashboard)`);
+          queryClient.invalidateQueries({ queryKey: ['products'] });
+          queryClient.invalidateQueries({ queryKey: ['inventory'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        };
+
+        if ('requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(invalidateLowPriority);
+        } else {
+          setTimeout(invalidateLowPriority, 1200);
+        }
+
+        // Notificar al usuario
         toast.success(
           `✅ ${syncedCount} ${syncedCount === 1 ? 'evento sincronizado' : 'eventos sincronizados'}`,
           {
@@ -274,17 +272,17 @@ function App() {
   // PERF-06: Preload de rutas críticas cuando el usuario se autentica
   useEffect(() => {
     if (isAuthenticated && isLoaderComplete) {
-      // Precargar rutas críticas para todos los usuarios
+      // Precargar rutas críticas con mayor delay para no saturar al inicio
       const criticalTimeout = setTimeout(() => {
         preloadCriticalRoutes()
-      }, 1000)
+      }, 3000) // Antes 1000
 
       // Precargar rutas de owner si corresponde
       let ownerTimeout: NodeJS.Timeout | null = null
       if (user?.role === 'owner') {
         ownerTimeout = setTimeout(() => {
           preloadOwnerRoutes()
-        }, 2000)
+        }, 6000) // Antes 2000
       }
 
       return () => {

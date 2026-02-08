@@ -16,7 +16,7 @@ interface SimpleLoaderProps {
  */
 export default function SimpleLoader({
   onComplete,
-  duration = 3500,
+  duration = 1500,
   userName,
   className,
 }: SimpleLoaderProps) {
@@ -72,7 +72,7 @@ export default function SimpleLoader({
         setTimeout(() => {
           setIsComplete(true)
           onComplete?.()
-        }, 3500)
+        }, 500)
       }
     }
 
