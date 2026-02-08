@@ -4,9 +4,9 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  AccessibleDialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -142,10 +142,10 @@ export default function WeightInputModal({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <AccessibleDialogTitle className="flex items-center gap-2">
             <Scale className="w-5 h-5 text-primary" />
             Producto por Peso
-          </DialogTitle>
+          </AccessibleDialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Introduce el peso del producto para calcular el precio final.
           </DialogDescription>

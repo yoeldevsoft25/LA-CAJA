@@ -10,4 +10,5 @@ export {
   DialogTitle,
   DialogDescription,
   VisuallyHidden,
+  AccessibleDialogTitle,
 } from "@la-caja/ui-core"

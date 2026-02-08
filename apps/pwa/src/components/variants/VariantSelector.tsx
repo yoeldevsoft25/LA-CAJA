@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Layers } from 'lucide-react'
 import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogDescription } from '@/components/ui/dialog'
+import { AccessibleDialogTitle } from '@la-caja/ui-core'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -55,10 +56,10 @@ export default function VariantSelector({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
+          <AccessibleDialogTitle className="text-lg sm:text-xl flex items-center">
             <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
             Seleccionar Variante
-          </DialogTitle>
+          </AccessibleDialogTitle>
           <div className="text-sm text-muted-foreground mt-1">
             <DialogDescription>{productName || 'Cargando...'}</DialogDescription>
           </div>

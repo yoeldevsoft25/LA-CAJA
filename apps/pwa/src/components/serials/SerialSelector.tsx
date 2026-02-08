@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Hash, X, Check } from 'lucide-react'
 import { productSerialsService } from '@/services/product-serials.service'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -72,8 +72,6 @@ export default function SerialSelector({
     onClose()
   }
 
-  if (!isOpen) return null
-
   const isComplete = selectedSerials.length === quantity
   const canSelectMore = selectedSerials.length < quantity
 
@@ -81,10 +79,10 @@ export default function SerialSelector({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
+          <AccessibleDialogTitle className="text-lg sm:text-xl flex items-center">
             <Hash className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
-            Seleccionar Seriales - {productName}
-          </DialogTitle>
+            Seleccionar Seriales - {productName || 'Cargando...'}
+          </AccessibleDialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Selecciona los números de serie para este producto.
           </DialogDescription>

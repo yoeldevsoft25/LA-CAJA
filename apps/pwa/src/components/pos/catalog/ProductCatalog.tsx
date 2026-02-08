@@ -48,14 +48,27 @@ export function ProductCatalog({
     // Lógica de virtualización
     useEffect(() => {
         if (!listViewportRef.current) return
-        const updateHeight = () => {
-            setListViewportHeight(listViewportRef.current?.clientHeight || 0)
-        }
-        updateHeight()
 
-        const observer = new ResizeObserver(updateHeight)
+        const updateHeight = () => {
+            if (listViewportRef.current) {
+                setListViewportHeight(listViewportRef.current.clientHeight || 0)
+            }
+        }
+
+        // 🚀 Optimización: Usar requestAnimationFrame para evitar Forced Reflow
+        // durante el mount inicial o re-renders pesados (ej. post-sync)
+        const frameId = requestAnimationFrame(updateHeight)
+
+        const observer = new ResizeObserver(() => {
+            // ResizeObserver ya corre desacoplado del flujo principal de layout,
+            // pero lo envolvemos en rAF por consistencia si es necesario o simplemente lo llamamos.
+            updateHeight()
+        })
         observer.observe(listViewportRef.current)
-        return () => observer.disconnect()
+        return () => {
+            cancelAnimationFrame(frameId)
+            observer.disconnect()
+        }
     }, [])
 
     const PRODUCT_ROW_HEIGHT = 112 // Aumentado para dar espacio y evitar cortes (104px card + 8px gap)

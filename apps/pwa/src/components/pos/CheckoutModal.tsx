@@ -6,7 +6,7 @@ import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNear
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'
@@ -465,9 +465,9 @@ export default function CheckoutModal({
                 <CheckCircle2 className="h-5 w-5" />
               </span>
               <div className="min-w-0">
-                <DialogTitle className="truncate text-lg font-black tracking-tight text-slate-900 sm:text-xl">
+                <AccessibleDialogTitle className="truncate text-lg font-black tracking-tight text-slate-900 sm:text-xl">
                   Finalizar venta
-                </DialogTitle>
+                </AccessibleDialogTitle>
                 <DialogDescription className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                   Confirma el pago y genera el comprobante
                 </DialogDescription>
@@ -543,16 +543,14 @@ export default function CheckoutModal({
           </div>
         </footer>
 
-        {serialSelectorItem && (
-          <SerialSelector
-            isOpen={!!serialSelectorItem}
-            onClose={() => setSerialSelectorItem(null)}
-            productId={serialSelectorItem.productId}
-            productName={serialSelectorItem.productName}
-            quantity={serialSelectorItem.quantity}
-            onSelect={handleSerialSelect}
-          />
-        )}
+        <SerialSelector
+          isOpen={!!serialSelectorItem}
+          onClose={() => setSerialSelectorItem(null)}
+          productId={serialSelectorItem?.productId || ''}
+          productName={serialSelectorItem?.productName || ''}
+          quantity={serialSelectorItem?.quantity || 0}
+          onSelect={handleSerialSelect}
+        />
       </DialogContent>
     </Dialog>
   )
