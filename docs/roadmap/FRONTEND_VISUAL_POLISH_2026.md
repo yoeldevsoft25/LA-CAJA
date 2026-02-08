@@ -19,12 +19,12 @@ Este roadmap se enfoca exclusivamente en elevar la calidad visual de Velox POS, 
 - [x] **Buttons & Actions:**
   - [x] Revisión de `Button` variants (Primary, Secondary, Ghost, Outline).
   - [x] Agregar micro-animaciones (Framer Motion) a los clicks y hovers.
-- [ ] **Empty & Loading States:**
-  - [ ] Crear una librería de Skeletons para cada sección (Inventory, Sales, Reports).
-  - [ ] Implementar ilustraciones premium (SVG) para estados vacíos.
-- [ ] **Feedback Sistémico:**
-  - [ ] Estandarizar Toasts (Sonner) con iconos y colores del tema.
-  - [ ] Unificar indicadores de carga (Spinners, Pull-to-refresh).
+- [x] **Empty & Loading States:**
+  - [x] Crear una librería de Skeletons para cada sección (Inventory, Sales, Reports).
+  - [x] Implementar ilustraciones premium (SVG) para estados vacíos.
+- [x] **Feedback Sistémico:**
+  - [x] Estandarizar Toasts (Sonner) con iconos y colores del tema.
+  - [x] Unificar indicadores de carga (Spinners, Pull-to-refresh).
 
 ## Sprint 13: Experiencia de Página (Layouts de Alto Impacto)
 > **Objetivo:** Optimizar las vistas donde los usuarios pasan el 90% del tiempo.
@@ -41,12 +41,12 @@ Este roadmap se enfoca exclusivamente en elevar la calidad visual de Velox POS, 
 ## Sprint 14: Modo Oscuro & Accesibilidad (A11Y)
 > **Objetivo:** Un sistema inclusivo y visualmente descansado.
 
-- [ ] **Dark Mode Audit:**
-  - [ ] Corregir contrastes en tablas y reportes bajo modo oscuro.
-  - [ ] Asegurar que los gradientes de `ShineBorder` no "quemen" la vista en la noche.
-- [ ] **Accesibilidad Pro:**
-  - [ ] Focus states visibles en navegación por teclado.
-  - [ ] Soporte completo de Screen Readers en flujos de pago.
+- [x] **Dark Mode Audit:**
+  - [x] Corregir contrastes en tablas y reportes bajo modo oscuro.
+  - [x] Asegurar que los gradientes de `ShineBorder` no "quemen" la vista en la noche.
+- [x] **Accesibilidad Pro:**
+  - [x] Focus states visibles en navegación por teclado.
+  - [x] Soporte completo de Screen Readers en flujos de pago.
 
 ---
 **Estado Actual:** � *Sprint 13 completado. Iniciando auditoría para Sprint 14.*

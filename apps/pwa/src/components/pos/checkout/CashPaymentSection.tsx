@@ -145,6 +145,7 @@ const CashPaymentSection = memo(function CashPaymentSection({
                             checked={giveChangeInBs}
                             onChange={handleCheckboxChange}
                             className="h-4 w-4 rounded border-slate-300"
+                            aria-label="Dar cambio en bolívares"
                         />
                         <span className="text-sm font-medium text-slate-700">Dar cambio en Bs</span>
                     </label>
@@ -158,6 +159,7 @@ const CashPaymentSection = memo(function CashPaymentSection({
                             value={roundingMode}
                             onChange={handleRoundingModeChange}
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            aria-label="Política de redondeo para el vuelto"
                         >
                             <option value="EXACT">Vuelto exacto</option>
                             <option value="CUSTOMER">A favor del cliente</option>
@@ -172,6 +174,7 @@ const CashPaymentSection = memo(function CashPaymentSection({
                                     checked={roundingConsent}
                                     onChange={handleRoundingConsentChange}
                                     className="h-4 w-4 rounded border-slate-300"
+                                    aria-label="Confirmar que el cliente acepta el redondeo"
                                 />
                                 Cliente acepta el redondeo
                             </label>

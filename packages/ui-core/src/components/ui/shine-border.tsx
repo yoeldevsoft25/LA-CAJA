@@ -42,7 +42,7 @@ export function ShineBorder({
                             },transparent,transparent)`,
                     } as React.CSSProperties
                 }
-                className={`before:bg-shining-gradient pointer-events-none before:absolute before:inset-0 before:size-full before:rounded-[var(--border-radius)] before:p-[var(--border-width)] before:will-change-[background-position] before:content-[""] before:![-webkit-mask-composite:xor] before:![mask-composite:exclude] before:[-webkit-mask:var(--mask-linear-gradient)] before:[mask:var(--mask-linear-gradient)]`}
+                className={`before:bg-shining-gradient pointer-events-none before:absolute before:inset-0 before:size-full before:rounded-[var(--border-radius)] before:p-[var(--border-width)] before:will-change-[background-position] before:content-[""] before:![-webkit-mask-composite:xor] before:![mask-composite:exclude] before:[-webkit-mask:var(--mask-linear-gradient)] before:[mask:var(--mask-linear-gradient)] before:opacity-100 dark:before:opacity-40`}
             ></div>
             {children}
         </div>

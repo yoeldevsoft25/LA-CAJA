@@ -248,7 +248,7 @@ export default function ReportsPage() {
               Esta página requiere permisos de owner. Tu rol actual es: <strong>{user?.role || 'desconocido'}</strong>
             </p>
             <Link to="/app/pos">
-              <Button>Ir al POS</Button>
+              <Button aria-label="Volver al punto de venta">Ir al POS</Button>
             </Link>
           </CardContent>
         </Card>
@@ -287,13 +287,13 @@ export default function ReportsPage() {
               </ul>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => window.location.reload()}>
+              <Button onClick={() => window.location.reload()} aria-label="Recargar la página de reportes">
                 Recargar Página
               </Button>
               <Button variant="outline" onClick={() => {
                 localStorage.removeItem('auth_token')
                 window.location.href = '/login'
-              }}>
+              }} aria-label="Cerrar sesión actual">
                 Cerrar Sesión
               </Button>
             </div>

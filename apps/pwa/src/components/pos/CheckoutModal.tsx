@@ -520,6 +520,7 @@ export default function CheckoutModal({
               onClick={onClose}
               disabled={isLoading}
               className="h-11 flex-1 rounded-xl border-slate-300"
+              aria-label="Cancelar y volver al carrito"
             >
               Cancelar
             </Button>
@@ -527,6 +528,7 @@ export default function CheckoutModal({
               onClick={handleConfirm}
               disabled={isLoading || items.length === 0}
               className="h-11 flex-[1.25] rounded-xl font-bold"
+              aria-label="Confirmar pago y finalizar venta"
             >
               {isLoading ? (
                 <>
