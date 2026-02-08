@@ -121,6 +121,7 @@ export default function InventoryPage() {
   const {
     data: stockStatusData,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
@@ -149,7 +150,7 @@ export default function InventoryPage() {
   })
 
   // Smooth loading state to prevent skeleton flickering
-  const isSmoothLoading = useSmoothLoading(isLoading)
+  const isSmoothLoading = useSmoothLoading(isLoading || isFetching)
 
   const { data: lowStockCountData } = useQuery({
     queryKey: ['inventory', 'low-stock-count', searchQuery, warehouseFilter, user?.store_id],

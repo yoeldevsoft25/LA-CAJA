@@ -141,6 +141,7 @@ export default function ReportsPage() {
   const {
     data: salesReport,
     isLoading: loadingSales,
+    isFetching: fetchingSales,
     refetch: refetchSales,
     error: salesError,
   } = useQuery({
@@ -160,6 +161,7 @@ export default function ReportsPage() {
   const {
     data: topProducts,
     isLoading: loadingProducts,
+    isFetching: fetchingProducts,
     error: productsError,
   } = useQuery({
     queryKey: ['reports', 'top-products', startDate, endDate],
@@ -230,7 +232,8 @@ export default function ReportsPage() {
   }, [debtsError])
 
   const isLoading = loadingSales || loadingProducts || loadingDebts
-  const isSmoothLoading = useSmoothLoading(isLoading)
+  const isFetching = fetchingSales || fetchingProducts
+  const isSmoothLoading = useSmoothLoading(isLoading || isFetching)
   const hasError = salesError || productsError || debtsError
 
   // Si no es owner, mostrar mensaje

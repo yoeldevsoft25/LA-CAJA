@@ -201,7 +201,7 @@ export default function SalesPage() {
   })
 
   // Smooth loading state to prevent skeleton flickering
-  const isSmoothLoading = useSmoothLoading(isLoading)
+  const isSmoothLoading = useSmoothLoading(isLoading || isFetching)
 
   // Filtrar ventas del día (aplicar mismos filtros que las ventas principales, pero sin anuladas para el gráfico)
   const daySalesForChart = useMemo(() => {
