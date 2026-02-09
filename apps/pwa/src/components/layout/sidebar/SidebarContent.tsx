@@ -10,18 +10,18 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ChevronLeft } from 'lucide-react'
 
 type NavItem = {
-    path: string
-    label: string
-    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-    badge: string | null
+    readonly path: string
+    readonly label: string
+    readonly icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+    readonly badge: string | null
 }
 
 type NavSection = {
-    id: string
-    label: string
-    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-    items: NavItem[]
-    defaultOpen?: boolean
+    readonly id: string
+    readonly label: string
+    readonly icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+    readonly items: readonly NavItem[]
+    readonly defaultOpen?: boolean
 }
 
 interface SidebarContentProps {
@@ -29,7 +29,7 @@ interface SidebarContentProps {
     sidebarCollapsed: boolean
     setSidebarCollapsed: (collapsed: boolean) => void
     setMobileOpen: (open: boolean) => void
-    filteredNavSections: NavSection[]
+    filteredNavSections: readonly NavSection[]
     isActive: (path: string) => boolean
     openSections: string[]
     setOpenSections: (sections: string[]) => void
