@@ -5,7 +5,7 @@ import { DataSource } from 'typeorm';
 export class DbRepairService implements OnModuleInit {
   private readonly logger = new Logger(DbRepairService.name);
 
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) { }
 
   async onModuleInit() {
     this.logger.log(
@@ -150,6 +150,27 @@ export class DbRepairService implements OnModuleInit {
           );
         }
       }
+
+      // 6. Crear tabla fiscal_sequence_ranges (Phase 3)
+      this.logger.log('Verificando tabla fiscal_sequence_ranges...');
+      await queryRunner.query(`
+        CREATE TABLE IF NOT EXISTS fiscal_sequence_ranges (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          store_id UUID NOT NULL,
+          series_id UUID NOT NULL,
+          device_id VARCHAR(100) NOT NULL,
+          range_start BIGINT NOT NULL,
+          range_end BIGINT NOT NULL,
+          used_up_to BIGINT NOT NULL,
+          status VARCHAR(20) NOT NULL DEFAULT 'active',
+          granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          expires_at TIMESTAMPTZ NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_fiscal_sequence_ranges_device ON fiscal_sequence_ranges(store_id, series_id, device_id, status);
+        CREATE INDEX IF NOT EXISTS idx_fiscal_sequence_ranges_expire ON fiscal_sequence_ranges(expires_at) WHERE status = 'active';
+      `);
     } finally {
       await queryRunner.release();
     }

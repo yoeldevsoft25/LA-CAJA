@@ -243,7 +243,9 @@ export interface SaleCreatedPayload {
   };
   note?: string;
   invoice_series_id?: string;
-  fiscal_number?: number;
+  invoice_number?: string;
+  fiscal_number?: number | string;
+  warehouse_id?: string;
   fiscal_metadata?: {
     authorization_number?: string;
     control_code?: string;

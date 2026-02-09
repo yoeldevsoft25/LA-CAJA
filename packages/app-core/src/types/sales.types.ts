@@ -66,7 +66,7 @@ export interface CreateSaleRequest {
     note?: string | null;
     invoice_series_id?: string | null;
     invoice_number?: string | null;
-    fiscal_number?: number | null;
+    fiscal_number?: string | number | null;
     price_list_id?: string | null;
     promotion_id?: string | null;
     warehouse_id?: string | null;

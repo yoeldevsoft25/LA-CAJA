@@ -43,6 +43,7 @@ import { PromotionsService } from '../../../../promotions/promotions.service';
 import { WarehousesService } from '../../../../warehouses/warehouses.service';
 import { FiscalInvoicesService } from '../../../../fiscal-invoices/fiscal-invoices.service';
 import { AccountingService } from '../../../../accounting/accounting.service';
+import { FiscalSequenceService } from '../../../../fiscal/fiscal-sequence.service';
 
 import { SaleReturn } from '../../../../database/entities/sale-return.entity';
 import { SaleReturnItem } from '../../../../database/entities/sale-return-item.entity';
@@ -537,6 +538,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     private usageService: UsageService,
     private validator: CreateSaleValidator,
     private federationSyncService: FederationSyncService,
+    private fiscalSequenceService: FiscalSequenceService,
     @InjectQueue('sales-post-processing')
     private salesPostProcessingQueue: Queue,
     @InjectQueue('federation-sync')
@@ -1201,7 +1203,24 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         let invoiceSeriesId: string | null = dto.invoice_series_id || null;
         let invoiceNumber: string | null = dto.invoice_number || null;
         let invoiceFullNumber: string | null = null;
-        const fiscalNumber = dto.fiscal_number?.toString() || null;
+        let fiscalNumber = dto.fiscal_number?.toString() || null;
+
+        // 🛡️ Phase 3: Si no hay número fiscal pero se requiere factura, intentar consumir uno
+        if (!fiscalNumber && dto.generate_fiscal_invoice && invoiceSeriesId && dto.device_id) {
+          try {
+            const consumedNumber = await this.fiscalSequenceService.consumeNext(
+              storeId,
+              invoiceSeriesId,
+              dto.device_id,
+            );
+            if (consumedNumber) {
+              fiscalNumber = consumedNumber.toString();
+              this.logger.log(`[Phase 3] Fiscal number consumed for online sale: ${fiscalNumber}`);
+            }
+          } catch (error) {
+            this.logger.warn(`No se pudo consumir número fiscal preventivo: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
 
         try {
           if (invoiceNumber && invoiceSeriesId) {
