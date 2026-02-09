@@ -1637,4 +1637,99 @@ export class ProjectionsService {
 
     this.logger.log(`Venta ${payload.sale_id} anulada por proyección.`);
   }
+
+  /**
+   * healFailedProjections - Re-proyecta eventos que fallaron anteriormente
+   * 
+   * Esto soluciona el bug donde eventos (ej: DebtCreated) no se proyectaban correctamente
+   * y quedaban con projection_status='failed' o sin proyección.
+   * 
+   * @param storeId - Opcional, filtrar por tienda
+   * @param limit - Máximo número de eventos a procesar (default: 100)
+   * @returns Estadísticas de eventos curados
+   */
+  async healFailedProjections(
+    storeId?: string,
+    limit = 100,
+  ): Promise<{
+    processed: number;
+    healed: number;
+    stillFailing: number;
+    errors: Array<{ eventId: string; type: string; error: string }>;
+  }> {
+    this.logger.log(
+      `🔧 Iniciando heal de proyecciones fallidas${storeId ? ` para store ${storeId}` : ''}...`,
+    );
+
+    // Buscar eventos con projection_status = 'failed' o NULL (nunca proyectados)
+    let query = this.dataSource
+      .getRepository(Event)
+      .createQueryBuilder('e')
+      .where(
+        "(e.projection_status = 'failed' OR e.projection_status IS NULL)",
+      )
+      .orderBy('e.created_at', 'ASC')
+      .limit(limit);
+
+    if (storeId) {
+      query = query.andWhere('e.store_id = :storeId', { storeId });
+    }
+
+    const failedEvents = await query.getMany();
+
+    if (failedEvents.length === 0) {
+      this.logger.log('✅ No hay proyecciones fallidas para curar.');
+      return { processed: 0, healed: 0, stillFailing: 0, errors: [] };
+    }
+
+    this.logger.log(`Encontrados ${failedEvents.length} eventos para curar.`);
+
+    let healed = 0;
+    let stillFailing = 0;
+    const errors: Array<{ eventId: string; type: string; error: string }> = [];
+
+    for (const event of failedEvents) {
+      try {
+        await this.projectEvent(event);
+
+        // Marcar como curado
+        await this.dataSource.getRepository(Event).update(event.event_id, {
+          projection_status: 'processed',
+          projection_error: null,
+        });
+
+        healed++;
+        this.logger.debug(`✅ Curado: ${event.type} (${event.event_id})`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        stillFailing++;
+        errors.push({
+          eventId: event.event_id,
+          type: event.type,
+          error: errorMsg,
+        });
+
+        // Actualizar error message
+        await this.dataSource.getRepository(Event).update(event.event_id, {
+          projection_status: 'failed',
+          projection_error: errorMsg,
+        });
+
+        this.logger.warn(
+          `❌ Sigue fallando: ${event.type} (${event.event_id}): ${errorMsg}`,
+        );
+      }
+    }
+
+    this.logger.log(
+      `🔧 Heal completado: ${healed} curados, ${stillFailing} siguen fallando de ${failedEvents.length} procesados.`,
+    );
+
+    return {
+      processed: failedEvents.length,
+      healed,
+      stillFailing,
+      errors,
+    };
+  }
 }

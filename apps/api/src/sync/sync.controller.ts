@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { SyncService } from './sync.service';
 import { ConflictResolutionService } from './conflict-resolution.service';
+import { ProjectionsService } from '../projections/projections.service';
 import {
   FederationSyncService,
   FederationStatus,
@@ -35,6 +36,7 @@ export class SyncController {
     private readonly syncService: SyncService,
     private readonly conflictResolutionService: ConflictResolutionService,
     private readonly federationSyncService: FederationSyncService,
+    private readonly projectionsService: ProjectionsService,
   ) { }
 
   @Post('push')
@@ -369,5 +371,24 @@ export class SyncController {
         error instanceof Error ? error.message : 'Error resolviendo conflicto',
       );
     }
+  }
+
+  /**
+   * Heal failed projections - Re-proyecta eventos que fallaron
+   * Útil para reparar deudas y otros eventos que no se proyectaron correctamente
+   */
+  @Post('heal-projections')
+  @HttpCode(HttpStatus.OK)
+  async healProjections(
+    @Body('store_id') storeId: string,
+    @Body('limit') limitRaw: string,
+  ): Promise<{
+    processed: number;
+    healed: number;
+    stillFailing: number;
+    errors: Array<{ eventId: string; type: string; error: string }>;
+  }> {
+    const limit = limitRaw ? parseInt(limitRaw, 10) : 100;
+    return this.projectionsService.healFailedProjections(storeId, limit);
   }
 }

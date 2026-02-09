@@ -588,15 +588,27 @@ export class SyncService {
       }
 
       // Procesar otros eventos síncronamente (son más rápidos y no bloquean tanto)
+      // 🐛 FIX 2025-02-09: Ahora también actualizamos projection_status para poder detectar
+      // y re-proyectar eventos que fallaron silenciosamente (ej: DebtCreated, DebtPaymentRecorded)
       for (const event of otherEvents) {
         try {
           await this.projectionsService.projectEvent(event);
+          // ✅ Marcar como procesado exitosamente
+          await this.eventRepository.update(event.event_id, {
+            projection_status: 'processed',
+            projection_error: null,
+          });
         } catch (error) {
-          // Log error pero no fallar el sync
+          // ⚠️ FIX: Ahora marcamos como failed para poder detectar y reparar después
           this.logger.error(
-            `Error procesando evento ${event.event_id}:`,
+            `Error procesando evento ${event.event_id} (${event.type}):`,
             error instanceof Error ? error.stack : String(error),
           );
+          await this.eventRepository.update(event.event_id, {
+            projection_status: 'failed',
+            projection_error:
+              error instanceof Error ? error.message : String(error),
+          });
         }
       }
     }
