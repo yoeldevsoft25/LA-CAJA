@@ -270,7 +270,7 @@ export default function POSPage() {
           {
             q: searchQuery || undefined,
             is_active: true,
-            limit: 50,
+            limit: searchQuery ? 50 : 10,
           },
           user?.store_id
         ),
