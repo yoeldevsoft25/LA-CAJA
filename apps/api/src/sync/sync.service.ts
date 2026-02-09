@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -156,6 +156,7 @@ export class SyncService {
     private outboxService: OutboxService,
     @InjectRepository(WarehouseStock)
     private warehouseStockRepository: Repository<WarehouseStock>,
+    @Inject(forwardRef(() => OversellAlertService))
     private oversellAlertService: OversellAlertService,
     private fiscalSequenceService: FiscalSequenceService,
   ) { }

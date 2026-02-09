@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, EntityManager } from 'typeorm';
@@ -119,6 +121,7 @@ export class InventoryService {
     private eventRepository: Repository<Event>,
     private warehousesService: WarehousesService,
     private accountingService: AccountingService,
+    @Inject(forwardRef(() => FederationSyncService))
     private federationSyncService: FederationSyncService,
     private dataSource: DataSource,
   ) { }
