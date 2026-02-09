@@ -5,15 +5,81 @@
 /* Escaneo de paquetes externos */
 @source "../../packages/ui-core/src/**/*.{js,ts,jsx,tsx}";
 
-/* Estilos para impresión de facturas fiscales */
-@media print {
+/* ═══════════════════════════════════════════════════════════════════════
+   ✨ OBSIDIAN — The Most Elegant Dark Mode
+   
+   Design Principles:
+   1. NO pure black (#000) — Deep charcoal-navy base (228° 18% 6%)
+   2. NO pure white (#fff) — Warm off-white foreground (220° 15% 92%)  
+   3. Layered elevation via lightness steps, not opacity
+   4. Borders that whisper — barely visible structural lines
+   5. Desaturated, muted accent colors — nothing screams
+   6. Ambient glow instead of harsh shadows in dark mode
+   7. Anti-aliased text rendering for dark backgrounds
+   ═══════════════════════════════════════════════════════════════════════ */
 
-  /* Ocultar elementos no deseados */
+/* ── Tailwind v4 Theme Token Registration ────────────────────────────── */
+@theme {
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-sidebar-background: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PRINT STYLES — Fiscal Invoice Printing
+   ═══════════════════════════════════════════════════════════════════════ */
+@media print {
   .no-print {
     display: none !important;
   }
 
-  /* Ocultar header, nav, footer, sidebar del layout */
   header,
   nav,
   aside,
@@ -21,26 +87,22 @@
     display: none !important;
   }
 
-  /* Ocultar el wrapper del layout y sidebar */
   body>div>div>div:first-child,
   body>div>div>aside {
     display: none !important;
   }
 
-  /* Ocultar el wrapper del layout */
   main {
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
   }
 
-  /* Ocultar animaciones y transiciones */
   [class*="motion"] {
     opacity: 1 !important;
     transform: none !important;
   }
 
-  /* Contenedor de factura */
   .invoice-print-container {
     display: block !important;
     width: 100% !important;
@@ -62,178 +124,183 @@
   }
 }
 
-@layer base {
-  :root {
-    /* ✨ Premium Indigo Theme - Light Mode */
+/* ═══════════════════════════════════════════════════════════════════════
+   LIGHT MODE — Premium Blue Theme
+   ═══════════════════════════════════════════════════════════════════════ */
+:root {
+  --background: 220 14% 96%;
+  --foreground: 224 71% 4%;
 
-    /* Backgrounds - Subtle Off-White/Gray instead of harsh white */
-    --background: 220 14% 96%;
-    --foreground: 224 71% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 4%;
 
-    /* Cards - White with shadow depth */
-    --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
 
-    /* Popover */
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+  --primary: 204 89% 43%;
+  --primary-foreground: 210 40% 98%;
 
-    /* Primary - Vibrant Indigo */
-    /* Primary - User Requested Blue (rgb(12, 129, 207)) */
-    --primary: 204 89% 43%;
-    --primary-foreground: 210 40% 98%;
+  --secondary: 210 20% 96%;
+  --secondary-foreground: 224 71% 4%;
 
-    /* Secondary - Soft Blue/Gray */
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 224 71% 4%;
+  --muted: 210 20% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Muted */
-    --muted: 210 20% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 204 90% 97%;
+  --accent-foreground: 204 89% 43%;
 
-    /* Accent - Light Blue Wash */
-    --accent: 204 90% 97%;
-    --accent-foreground: 204 89% 43%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
 
-    /* Destructive - Rose */
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+  --success: 151 65% 52%;
+  --success-foreground: 0 0% 98%;
 
-    /* Success - Emerald */
-    --success: 151 65% 52%;
-    --success-foreground: 0 0% 98%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 98%;
 
-    /* Warning - Amber */
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
+  --info: 199 89% 48%;
+  --info-foreground: 0 0% 98%;
 
-    /* Info - Sky */
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 204 89% 43%;
+  --radius: 0.75rem;
 
-    /* Borders & Inputs */
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 204 89% 43%;
-    /* Blue Ring */
-
-    /* Radius - More modern rounded */
-    --radius: 0.75rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    /* ✨ Premium Deep Midnight Theme - Dark Mode */
-    /* Away from pure black, towards deep cosmic slate/navy */
-
-    /* Backgrounds */
-    --background: 230 25% 7%;
-    /* Deep navy base #0D0F14 */
-    --foreground: 210 40% 98%;
-
-    /* Cards - Layered elevation */
-    --card: 230 25% 10%;
-    /* #13161C */
-    --card-foreground: 210 40% 98%;
-
-    /* Popover */
-    --popover: 230 25% 12%;
-    /* #191D25 */
-    --popover-foreground: 210 40% 98%;
-
-    /* Primary - More vibrant blue for dark mode */
-    --primary: 204 89% 55%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    /* Secondary */
-    --secondary: 230 25% 15%;
-    /* #1F232B */
-    --secondary-foreground: 210 40% 98%;
-
-    /* Muted */
-    --muted: 230 25% 14%;
-    --muted-foreground: 215 20.2% 70%;
-
-    /* Accent */
-    --accent: 230 25% 18%;
-    --accent-foreground: 210 40% 98%;
-
-    /* Destructive */
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    /* Success */
-    --success: 151 55% 42%;
-    --success-foreground: 0 0% 98%;
-
-    /* Warning */
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 98%;
-
-    /* Info */
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 98%;
-
-    /* Borders & Rings */
-    --border: 230 25% 16%;
-    /* #1F232B */
-    --input: 230 25% 16%;
-    --ring: 204 89% 55%;
-
-    /* Effects */
-    --glass-opacity: 0.4;
-    --glass-border: 230 25% 30% / 0.1;
-    --sidebar-background: 230 25% 8%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 204 89% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 25% 12%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 230 25% 14%;
-    --sidebar-ring: 204 89% 55%;
-  }
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   ✨ DARK MODE — OBSIDIAN DEEP
+   
+   Color Architecture:
+   ├── Background  6% ─── The void (warm charcoal-navy)
+   ├── Sidebar     5% ─── Deeper than void (recedes)
+   ├── Card        9% ─── First elevation layer
+   ├── Popover    11% ─── Second elevation layer
+   ├── Secondary  13% ─── Grouped surfaces
+   ├── Muted      14% ─── Subtle containers
+   ├── Accent     16% ─── Interactive surface hover
+   ├── Border     15% ─── Ghostly structure lines
+   └── Input      17% ─── Slightly brighter field areas
+   
+   Text Hierarchy:
+   ├── Foreground   92% ─── Primary text (warm off-white)
+   ├── Card-fg      92% ─── Same as primary
+   ├── Secondary-fg 80% ─── Supporting text
+   ├── Accent-fg    85% ─── Readable labels
+   └── Muted-fg     55% ─── Metadata, timestamps, hints
+   
+   Accent Colors (all desaturated for sobriety):
+   ├── Primary:     210° 55% 55% ─── Refined steel blue
+   ├── Destructive:   0° 45% 50% ─── Muted wine red
+   ├── Success:     152° 35% 45% ─── Sage green
+   ├── Warning:      38° 60% 52% ─── Warm amber
+   └── Info:        199° 50% 52% ─── Quiet teal
+   ═══════════════════════════════════════════════════════════════════════ */
+.dark {
+  /* ── Backgrounds ────────────────────────────────────────────── */
+  --background: 228 18% 6%;
+  --foreground: 220 15% 92%;
+
+  /* ── Cards — Floating surface ───────────────────────────────── */
+  --card: 228 16% 9%;
+  --card-foreground: 220 15% 92%;
+
+  /* ── Popovers — Above cards ─────────────────────────────────── */
+  --popover: 228 16% 11%;
+  --popover-foreground: 220 15% 92%;
+
+  /* ── Primary — Dignified steel blue ─────────────────────────── */
+  --primary: 210 55% 55%;
+  --primary-foreground: 220 20% 98%;
+
+  /* ── Secondary — Subtle grouping surface ────────────────────── */
+  --secondary: 228 14% 13%;
+  --secondary-foreground: 220 12% 80%;
+
+  /* ── Muted — For metadata, timestamps, hints ────────────────── */
+  --muted: 228 12% 14%;
+  --muted-foreground: 220 10% 55%;
+
+  /* ── Accent — Interactive hover surface ─────────────────────── */
+  --accent: 228 14% 16%;
+  --accent-foreground: 220 12% 85%;
+
+  /* ── Destructive — Muted wine, alarming but composed ────────── */
+  --destructive: 0 45% 50%;
+  --destructive-foreground: 0 0% 95%;
+
+  /* ── Success — Sage green, calm professionalism ─────────────── */
+  --success: 152 35% 45%;
+  --success-foreground: 0 0% 95%;
+
+  /* ── Warning — Warm amber, visible but restrained ───────────── */
+  --warning: 38 60% 52%;
+  --warning-foreground: 0 0% 8%;
+
+  /* ── Info — Quiet teal ──────────────────────────────────────── */
+  --info: 199 50% 52%;
+  --info-foreground: 0 0% 95%;
+
+  /* ── Borders & Inputs ───────────────────────────────────────── */
+  --border: 228 12% 15%;
+  --input: 228 12% 17%;
+  --ring: 210 55% 55%;
+
+  /* ── Sidebar — Darker than main for depth illusion ──────────── */
+  --sidebar-background: 228 20% 5%;
+  --sidebar-foreground: 220 12% 75%;
+  --sidebar-primary: 210 55% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 228 16% 10%;
+  --sidebar-accent-foreground: 220 12% 80%;
+  --sidebar-border: 228 14% 12%;
+  --sidebar-ring: 210 55% 55%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BASE LAYER
+   ═══════════════════════════════════════════════════════════════════════ */
 @layer base {
   * {
-    @apply border-border/0;
+    @apply border-border;
   }
 
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
-  /* A11Y-04: Focus visible en todos los elementos interactivos */
+  /* ── Focus States (Accessibility) ───────────────────────────── */
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Estilos específicos para botones */
   button:focus-visible,
   [role="button"]:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Estilos para inputs */
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
     @apply outline-none ring-2 ring-ring;
   }
 
-  /* Links */
   a:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background rounded-sm;
   }
 
-  /* A11Y-07: Soporte para reduced motion ya existente en Tailwind */
+  /* ── Reduced Motion ─────────────────────────────────────────── */
   @media (prefers-reduced-motion: reduce) {
 
     *,
@@ -247,12 +314,12 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   UTILITIES LAYER
+   ═══════════════════════════════════════════════════════════════════════ */
 @layer utilities {
-  .bg-gradient-radial {
-    background-image: radial-gradient(circle, var(--tw-gradient-stops));
-  }
 
-  /* A11Y-05: Screen reader only - ocultar visualmente pero mantener accesible */
+  /* ── Screen Reader Only ─────────────────────────────────────── */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -265,21 +332,21 @@
     border-width: 0;
   }
 
-  /* A11Y-03: Utilidades para asegurar contraste WCAG AA */
-  /* WCAG AA requiere mínimo 4.5:1 para texto normal y 3:1 para texto grande (18pt+) */
+  /* ── Radial Gradient ────────────────────────────────────────── */
+  .bg-gradient-radial {
+    background-image: radial-gradient(circle, var(--tw-gradient-stops));
+  }
 
-  /* Texto sobre fondos de color - asegurar contraste suficiente */
+  /* ── WCAG Contrast Utilities ────────────────────────────────── */
   .text-wcag-safe {
     color: hsl(var(--foreground));
   }
 
-  /* Badges y etiquetas con contraste mejorado */
   .badge-wcag-safe {
     background-color: hsl(var(--muted));
     color: hsl(var(--foreground));
   }
 
-  /* Link con contraste mejorado cuando tiene hover */
   .link-wcag-safe {
     color: hsl(var(--primary));
     text-decoration: underline;
@@ -291,11 +358,13 @@
     opacity: 0.8;
   }
 
-  /* Custom Scrollbar for Enterprise Pro feel */
+  /* ═════════════════════════════════════════════════════════════
+     CUSTOM SCROLLBAR — Refined, Dark-Mode Aware
+     ═════════════════════════════════════════════════════════════ */
   @media (min-width: 768px) {
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
 
     ::-webkit-scrollbar-track {
@@ -303,76 +372,181 @@
     }
 
     ::-webkit-scrollbar-thumb {
-      background: hsl(var(--muted-foreground) / 0.2);
-      border-radius: 10px;
-      border: 2px solid transparent;
-      background-clip: content-box;
+      background: hsl(var(--muted-foreground) / 0.15);
+      border-radius: 999px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: hsl(var(--muted-foreground) / 0.4);
-      border-radius: 10px;
-      border: 2px solid transparent;
-      background-clip: content-box;
+      background: hsl(var(--muted-foreground) / 0.3);
+    }
+
+    /* Dark mode: softer, cooler scrollbar */
+    .dark ::-webkit-scrollbar-thumb {
+      background: hsl(220 10% 28% / 0.5);
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: hsl(220 10% 38% / 0.6);
     }
   }
 
+  /* ═════════════════════════════════════════════════════════════
+     PREMIUM SHADOWS
+     Light: Traditional soft shadows
+     Dark:  Inset ring border + deep void shadow + optional 
+            ambient primary glow on larger sizes
+     ═════════════════════════════════════════════════════════════ */
   .premium-shadow {
-    box-shadow: 0 10px 30px -12px hsl(var(--foreground) / 0.1), 0 4px 14px -8px hsl(var(--foreground) / 0.05);
+    box-shadow:
+      0 1px 2px hsl(var(--foreground) / 0.04),
+      0 4px 12px hsl(var(--foreground) / 0.06),
+      0 16px 32px -8px hsl(var(--foreground) / 0.08);
+  }
+
+  .dark .premium-shadow {
+    box-shadow:
+      0 0 0 1px hsl(var(--border)),
+      0 4px 16px hsl(0 0% 0% / 0.5),
+      0 16px 48px -8px hsl(0 0% 0% / 0.6);
   }
 
   .premium-shadow-sm {
-    box-shadow: 0 4px 14px -8px hsl(var(--foreground) / 0.05);
+    box-shadow:
+      0 1px 3px hsl(var(--foreground) / 0.04),
+      0 4px 8px -2px hsl(var(--foreground) / 0.06);
+  }
+
+  .dark .premium-shadow-sm {
+    box-shadow:
+      0 0 0 1px hsl(var(--border)),
+      0 2px 8px hsl(0 0% 0% / 0.35);
   }
 
   .premium-shadow-md {
-    box-shadow: 0 10px 30px -12px hsl(var(--foreground) / 0.1);
+    box-shadow:
+      0 4px 12px -2px hsl(var(--foreground) / 0.08),
+      0 12px 24px -4px hsl(var(--foreground) / 0.06);
+  }
+
+  .dark .premium-shadow-md {
+    box-shadow:
+      0 0 0 1px hsl(var(--border)),
+      0 8px 24px hsl(0 0% 0% / 0.45);
   }
 
   .premium-shadow-lg {
-    box-shadow: 0 20px 50px -12px hsl(var(--foreground) / 0.15);
+    box-shadow:
+      0 8px 24px -4px hsl(var(--foreground) / 0.1),
+      0 24px 48px -8px hsl(var(--foreground) / 0.08);
+  }
+
+  .dark .premium-shadow-lg {
+    box-shadow:
+      0 0 0 1px hsl(var(--border)),
+      0 16px 48px hsl(0 0% 0% / 0.55),
+      0 0 80px -24px hsl(var(--primary) / 0.05);
   }
 
   .premium-shadow-xl {
-    box-shadow: 0 30px 60px -15px hsl(var(--foreground) / 0.2);
+    box-shadow:
+      0 16px 48px -8px hsl(var(--foreground) / 0.12),
+      0 32px 64px -16px hsl(var(--foreground) / 0.1);
   }
 
+  .dark .premium-shadow-xl {
+    box-shadow:
+      0 0 0 1px hsl(var(--border)),
+      0 24px 64px hsl(0 0% 0% / 0.65),
+      0 0 120px -32px hsl(var(--primary) / 0.07);
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     GLASS PANEL — Frosted glass effect
+     ═════════════════════════════════════════════════════════════ */
   .glass-panel {
-    @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-2xl dark:border-white/5;
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(24px) saturate(1.2);
+    border: 1px solid hsl(var(--border) / 0.5);
   }
 
+  .dark .glass-panel {
+    background: hsl(var(--card) / 0.45);
+    backdrop-filter: blur(32px) saturate(1.4);
+    border: 1px solid hsl(220 14% 20% / 0.25);
+    box-shadow:
+      inset 0 1px 0 hsl(220 14% 30% / 0.05),
+      0 8px 32px hsl(0 0% 0% / 0.35);
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     TEXT GRADIENT
+     ═════════════════════════════════════════════════════════════ */
   .text-gradient {
-
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--foreground) / 0.6));
   }
 
+  .dark .text-gradient {
+    background-image: linear-gradient(135deg, hsl(220 15% 95%), hsl(220 12% 58%));
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     ACTIVE NAVIGATION ITEM
+     ═════════════════════════════════════════════════════════════ */
   .active-nav-item {
-    @apply bg-primary text-primary-foreground;
-    box-shadow: 0 8px 25px -5px hsl(var(--primary) / 0.4);
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 4px 16px -4px hsl(var(--primary) / 0.35);
   }
 
-  /* ✨ New Premium Effects */
+  .dark .active-nav-item {
+    box-shadow:
+      0 4px 20px -4px hsl(var(--primary) / 0.3),
+      inset 0 1px 0 hsl(0 0% 100% / 0.08);
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     CARD HOVER EFFECT — Lift + ambient glow on dark
+     ═════════════════════════════════════════════════════════════ */
   .card-hover-effect {
-    @apply transition-all duration-300 hover:shadow-[0_20px_40px_-15px_hsl(var(--foreground)_/_0.2)] hover:-translate-y-1;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .border-beam-effect {
-    @apply relative after:absolute after:inset-0 after:rounded-[inherit] after:p-[1px] after:bg-gradient-to-r after:from-primary/50 after:to-transparent after:-z-10;
-
-    &::after {
-      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      mask-composite: xor;
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-    }
+  .card-hover-effect:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 32px -8px hsl(var(--foreground) / 0.12),
+      0 4px 12px hsl(var(--foreground) / 0.06);
   }
 
+  .dark .card-hover-effect:hover {
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.1),
+      0 16px 48px -12px hsl(0 0% 0% / 0.55),
+      0 0 40px -12px hsl(var(--primary) / 0.06);
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     SUBTLE DOT GRID BACKGROUND
+     ═════════════════════════════════════════════════════════════ */
   .subtle-grid {
-    background-image: radial-gradient(circle at 2px 2px, hsl(var(--muted-foreground) / 0.1) 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px,
+        hsl(var(--muted-foreground) / 0.08) 1px,
+        transparent 0);
     background-size: 24px 24px;
   }
 
-  /* Magic UI - Shining Gradient */
+  .dark .subtle-grid {
+    background-image: radial-gradient(circle at 1px 1px,
+        hsl(220 14% 22% / 0.2) 1px,
+        transparent 0);
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     SHINING GRADIENT ANIMATION
+     ═════════════════════════════════════════════════════════════ */
   @keyframes shining-gradient {
     0% {
       background-position: 0% 50%;
@@ -389,23 +563,73 @@
 
   .bg-shining-gradient {
     background-size: 300% 300%;
-    animation: shining-gradient var(--duration) ease infinite;
+    animation: shining-gradient var(--duration, 6s) ease infinite;
   }
 
-  /* Layout refinements */
+  /* ═════════════════════════════════════════════════════════════
+     DARK GLOW — Subtle gradient border on cards in dark mode
+     Creates a premium "edge lit" effect
+     ═════════════════════════════════════════════════════════════ */
+  .dark-glow {
+    position: relative;
+  }
+
+  .dark .dark-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(145deg,
+        hsl(var(--primary) / 0.12),
+        transparent 35%,
+        transparent 65%,
+        hsl(var(--primary) / 0.06));
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    pointer-events: none;
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     DARK SURFACE NOISE — Adds microscopic texture
+     ═════════════════════════════════════════════════════════════ */
+  .dark-surface-texture {
+    position: relative;
+  }
+
+  .dark .dark-surface-texture::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0.012;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     THEME TRANSITION — Smooth dark/light toggle
+     400ms ease on bg, borders, text, shadows
+     ═════════════════════════════════════════════════════════════ */
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    transition:
+      background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      fill 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     LAYOUT UTILITIES
+     ═════════════════════════════════════════════════════════════ */
   .main-content-area {
-    @apply transition-all duration-300 ease-in-out;
-  }
-}
-
-
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
+    transition: all 0.3s ease-in-out;
   }
 }
