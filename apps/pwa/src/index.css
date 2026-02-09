@@ -205,64 +205,71 @@
    └── Info:        199° 50% 52% ─── Quiet teal
    ═══════════════════════════════════════════════════════════════════════ */
 .dark {
-  /* ── Backgrounds ────────────────────────────────────────────── */
-  --background: 228 18% 6%;
-  --foreground: 220 15% 92%;
+  /* ── Backgrounds — Deep Midnight Blue ───────────────────────── */
+  --background: 222 47% 6%;
+  /* Deepest midnight (Rich #050b14) */
+  --foreground: 210 40% 98%;
+  /* Bright white-blue */
 
-  /* ── Cards — Floating surface ───────────────────────────────── */
-  --card: 228 16% 9%;
-  --card-foreground: 220 15% 92%;
+  /* ── Cards — Floating midnight surface ──────────────────────── */
+  --card: 222 47% 8%;
+  /* Slightly lighter midnight */
+  --card-foreground: 210 40% 98%;
 
-  /* ── Popovers — Above cards ─────────────────────────────────── */
-  --popover: 228 16% 11%;
-  --popover-foreground: 220 15% 92%;
+  /* ── Popovers — Elevated surface ────────────────────────────── */
+  --popover: 222 47% 9%;
+  --popover-foreground: 210 40% 98%;
 
-  /* ── Primary — Dignified steel blue ─────────────────────────── */
-  --primary: 210 55% 55%;
-  --primary-foreground: 220 20% 98%;
+  /* ── Primary — VIBRANT Electric Blue ────────────────────────── */
+  --primary: 221 83% 53%;
+  /* Electric Blue (#2563EB) */
+  --primary-foreground: 210 40% 98%;
 
-  /* ── Secondary — Subtle grouping surface ────────────────────── */
-  --secondary: 228 14% 13%;
-  --secondary-foreground: 220 12% 80%;
+  /* ── Secondary — Muted Midnight ─────────────────────────────── */
+  --secondary: 217 33% 15%;
+  /* Cool charcoal-blue */
+  --secondary-foreground: 210 40% 98%;
 
-  /* ── Muted — For metadata, timestamps, hints ────────────────── */
-  --muted: 228 12% 14%;
-  --muted-foreground: 220 10% 55%;
+  /* ── Muted — Subtle backgrounds ─────────────────────────────── */
+  --muted: 217 33% 12%;
+  --muted-foreground: 215 20% 65%;
 
-  /* ── Accent — Interactive hover surface ─────────────────────── */
-  --accent: 228 14% 16%;
-  --accent-foreground: 220 12% 85%;
+  /* ── Accent — Hover states (Electric glow) ──────────────────── */
+  --accent: 217 33% 14%;
+  --accent-foreground: 210 40% 98%;
 
-  /* ── Destructive — Muted wine, alarming but composed ────────── */
-  --destructive: 0 45% 50%;
-  --destructive-foreground: 0 0% 95%;
+  /* ── Destructive — Vibrant Red ──────────────────────────────── */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
 
-  /* ── Success — Sage green, calm professionalism ─────────────── */
-  --success: 152 35% 45%;
-  --success-foreground: 0 0% 95%;
+  /* ── Success — Neon Green ───────────────────────────────────── */
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
 
-  /* ── Warning — Warm amber, visible but restrained ───────────── */
-  --warning: 38 60% 52%;
-  --warning-foreground: 0 0% 8%;
+  /* ── Warning — Bright Amber ─────────────────────────────────── */
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
 
-  /* ── Info — Quiet teal ──────────────────────────────────────── */
-  --info: 199 50% 52%;
-  --info-foreground: 0 0% 95%;
+  /* ── Info — Cyan ────────────────────────────────────────────── */
+  --info: 199 89% 48%;
+  --info-foreground: 0 0% 100%;
 
-  /* ── Borders & Inputs ───────────────────────────────────────── */
-  --border: 228 12% 15%;
-  --input: 228 12% 17%;
-  --ring: 210 55% 55%;
+  /* ── Borders & Inputs — Glassy ──────────────────────────────── */
+  --border: 217 33% 18%;
+  /* Subtle blue-grey border */
+  --input: 217 33% 18%;
+  --ring: 221 83% 53%;
+  /* Matches Primary */
 
-  /* ── Sidebar — Darker than main for depth illusion ──────────── */
-  --sidebar-background: 228 20% 5%;
-  --sidebar-foreground: 220 12% 75%;
-  --sidebar-primary: 210 55% 55%;
+  /* ── Sidebar — Distinct deep panel ──────────────────────────── */
+  --sidebar-background: 222 47% 5%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 221 83% 53%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 228 16% 10%;
-  --sidebar-accent-foreground: 220 12% 80%;
-  --sidebar-border: 228 14% 12%;
-  --sidebar-ring: 210 55% 55%;
+  --sidebar-accent: 217 33% 12%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 12%;
+  --sidebar-ring: 221 83% 53%;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -382,11 +389,11 @@
 
     /* Dark mode: softer, cooler scrollbar */
     .dark ::-webkit-scrollbar-thumb {
-      background: hsl(220 10% 28% / 0.5);
+      background: hsl(217 33% 30% / 0.5);
     }
 
     .dark ::-webkit-scrollbar-thumb:hover {
-      background: hsl(220 10% 38% / 0.6);
+      background: hsl(217 33% 40% / 0.6);
     }
   }
 
@@ -472,9 +479,9 @@
   .dark .glass-panel {
     background: hsl(var(--card) / 0.45);
     backdrop-filter: blur(32px) saturate(1.4);
-    border: 1px solid hsl(220 14% 20% / 0.25);
+    border: 1px solid hsl(var(--border) / 0.4);
     box-shadow:
-      inset 0 1px 0 hsl(220 14% 30% / 0.05),
+      inset 0 1px 0 hsl(var(--primary) / 0.1),
       0 8px 32px hsl(0 0% 0% / 0.35);
   }
 
