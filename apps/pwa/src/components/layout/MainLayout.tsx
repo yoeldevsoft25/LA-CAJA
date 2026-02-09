@@ -13,7 +13,6 @@ import {
   FileText,
   BarChart3,
   Menu,
-  ChevronLeft,
   Settings,
   Bell,
   AlertTriangle,
@@ -43,9 +42,9 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
+// import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
+// import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import {
   DropdownMenu,
@@ -55,15 +54,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { motion } from 'framer-motion'
+// import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+// import { motion } from 'framer-motion'
 import { useNotifications } from '@/stores/notifications.store'
 import { useOnline } from '@/hooks/use-online'
 import { inventoryService } from '@/services/inventory.service'
 import { cashService } from '@/services/cash.service'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+// import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+// import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useNotificationsSync } from '@/hooks/useNotificationsSync'
 import { isRouteAllowed, type Role } from '@/lib/permissions'
 import ExchangeRateIndicator from '@/components/exchange/ExchangeRateIndicator'
