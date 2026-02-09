@@ -660,7 +660,9 @@
 
   /* ⚡ PERF: Optimized Glass Effects */
   .glass-panel {
-    @apply bg-background/var(--glass-opacity) backdrop-blur-var(--glass-blur);
+    background-color: hsl(var(--background) / var(--glass-opacity));
+    backdrop-filter: blur(calc(var(--glass-blur) * 1px));
+    /* Assuming it's a number, or just var if it has units */
     border: 1px solid hsl(var(--border) / 0.4);
   }
 
