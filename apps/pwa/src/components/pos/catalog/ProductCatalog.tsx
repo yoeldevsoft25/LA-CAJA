@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
+
 
 // Definición de tipos mínimos necesarios si no se importan de /services
 interface Product {
@@ -192,17 +192,9 @@ export const ProductCatalog = memo(function ProductCatalog({
                                     height: PRODUCT_ROW_HEIGHT
                                 }}
                             >
-                                <motion.button
+                                <button
                                     onClick={() => onProductClick(product)}
-                                    whileHover={{ scale: 1.01, translateY: -2 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{
-                                        duration: 0.2, // Simplificado
-                                        opacity: { duration: 0.2 }
-                                    }}
-                                    className="w-full h-[104px] text-left group relative bg-gradient-to-br from-card/80 to-card/40 hover:from-card hover:to-card/70 backdrop-blur-md rounded-2xl border border-white/10 hover:border-primary/30 premium-shadow-sm hover:premium-shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-300"
+                                    className="w-full h-[104px] text-left group relative bg-card/60 hover:bg-card/90 rounded-2xl border border-white/10 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200"
                                 >
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-all duration-300" />
 
@@ -263,7 +255,7 @@ export const ProductCatalog = memo(function ProductCatalog({
                                             </span>
                                         </div>
                                     </div>
-                                </motion.button>
+                                </button>
                             </div>
                         )
                     })}

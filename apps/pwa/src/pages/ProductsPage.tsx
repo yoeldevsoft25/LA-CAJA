@@ -562,7 +562,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filtros Flotantes */}
-      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/95 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300">
+      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/95 backdrop-blur-md sticky top-0 z-50 transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-5 h-5 z-10" />
