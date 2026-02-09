@@ -16,6 +16,7 @@ function Skeleton({
                 ease: "easeInOut",
             }}
             className={cn("rounded-md bg-muted", className)}
+            style={{ willChange: "opacity" }}
             {...props}
         />
     )

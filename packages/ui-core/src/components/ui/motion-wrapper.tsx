@@ -53,6 +53,7 @@ export const StaggerItem = ({ children, className, ...props }: MotionWrapperProp
         }}
         transition={{ duration: 0.3 }}
         className={className}
+        style={{ willChange: "transform, opacity" }}
         {...props}
     >
         {children}

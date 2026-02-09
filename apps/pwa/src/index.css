@@ -477,12 +477,15 @@
   }
 
   .dark .glass-panel {
-    background: hsl(var(--card) / 0.45);
-    backdrop-filter: blur(32px) saturate(1.4);
+    background: hsl(var(--card) / 0.6);
+    /* Slightly more opaque for better perf */
+    backdrop-filter: blur(16px) saturate(1.4);
+    /* Reduced blur radius */
     border: 1px solid hsl(var(--border) / 0.4);
     box-shadow:
       inset 0 1px 0 hsl(var(--primary) / 0.1),
-      0 8px 32px hsl(0 0% 0% / 0.35);
+      0 4px 16px hsl(0 0% 0% / 0.35);
+    /* Reduced shadow spread */
   }
 
   /* ═════════════════════════════════════════════════════════════
@@ -620,23 +623,30 @@
      THEME TRANSITION — Smooth dark/light toggle
      400ms ease on bg, borders, text, shadows
      ═════════════════════════════════════════════════════════════ */
-  .theme-transition,
-  .theme-transition *,
-  .theme-transition *::before,
-  .theme-transition *::after {
-    transition:
-      background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-      color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-      fill 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-      stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* ═════════════════════════════════════════════════════════════
+     THEME TRANSITION — Optimized
+     Only animate specific properties on specific elements.
+     Avoid universal selector * which kills performance.
+     ═════════════════════════════════════════════════════════════ */
+  body {
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .theme-transition {
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* ═════════════════════════════════════════════════════════════
-     LAYOUT UTILITIES
+     PERFORMANCE UTILITIES
      ═════════════════════════════════════════════════════════════ */
-  .main-content-area {
-    transition: all 0.3s ease-in-out;
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 1000px;
+    /* Estimate height */
+  }
+
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
   }
 }

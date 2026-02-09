@@ -176,7 +176,7 @@ export function SwipeableItem({
                 dragElastic={0.2}
                 onDragStart={!requireHandle ? handleDragStart : undefined}
                 onDragEnd={!requireHandle ? handleDragEnd : undefined}
-                style={{ x: contentX, touchAction: 'pan-y' }}
+                style={{ x: contentX, touchAction: 'pan-y', willChange: 'transform' }}
                 className={cn(
                     'relative bg-background touch-pan-y',
                     isDragging && 'cursor-grabbing',
