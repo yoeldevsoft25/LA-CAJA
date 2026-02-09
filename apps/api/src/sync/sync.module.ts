@@ -22,6 +22,10 @@ import {
   FederationSyncProcessor,
 } from './federation-sync.service';
 import { InventoryEscrowModule } from '../inventory/escrow/inventory-escrow.module';
+import { OrphanHealerService } from './orphan-healer.service';
+import { OutboxService } from './outbox.service';
+import { DistributedLockService } from '../common/distributed-lock.service';
+import { ConflictAuditService } from './conflict-audit.service';
 
 @Module({
   imports: [
@@ -49,12 +53,19 @@ import { InventoryEscrowModule } from '../inventory/escrow/inventory-escrow.modu
     FederationSyncProcessor,
     CrdtSnapshotService,
     CrdtVerifyService,
+    OrphanHealerService,
+    OutboxService,
+    DistributedLockService,
+    ConflictAuditService,
   ],
   exports: [
     SyncService,
     FederationSyncService,
     CrdtSnapshotService,
     CrdtVerifyService,
+    OutboxService,
+    DistributedLockService,
+    ConflictAuditService,
   ],
 })
-export class SyncModule {}
+export class SyncModule { }

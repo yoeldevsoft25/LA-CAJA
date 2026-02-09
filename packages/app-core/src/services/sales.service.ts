@@ -12,6 +12,7 @@ import {
 import { createLogger } from '../lib/logger';
 import { randomUUID } from '../lib/uuid';
 import { db } from '../db/database';
+import { fiscalSequenceService } from './fiscal-sequence.service';
 import { Product } from './products.service';
 import {
     CreateSaleRequest,
@@ -245,6 +246,17 @@ export const salesService = {
                 total_usd: subtotalUsd - discountUsd,
             };
 
+            // 🛡️ Phase 3: Fiscal Safety - Consume fiscal number offline if requested
+            let fiscalNumber: number | undefined;
+            if (data.generate_fiscal_invoice && data.invoice_series_id) {
+                try {
+                    fiscalNumber = await fiscalSequenceService.consumeNext(data.invoice_series_id);
+                } catch (err: any) {
+                    logger.error('Error consumiendo número fiscal offline:', err);
+                    throw new Error(`Seguridad Fiscal: ${err.message}`);
+                }
+            }
+
             const payload: SaleCreatedPayload = {
                 sale_id: saleId,
                 cash_session_id: data.cash_session_id || '',
@@ -266,6 +278,8 @@ export const salesService = {
                 },
                 customer: data.customer_id ? { customer_id: data.customer_id } : undefined,
                 note: data.note || undefined,
+                invoice_series_id: data.invoice_series_id || undefined,
+                fiscal_number: fiscalNumber,
                 request_id: requestId,
             };
 

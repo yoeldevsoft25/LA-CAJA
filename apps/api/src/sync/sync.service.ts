@@ -24,6 +24,7 @@ import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { UsageService } from '../licenses/usage.service';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
 import { FederationSyncService } from './federation-sync.service';
+import { OutboxService } from './outbox.service';
 
 interface SyncEventActor {
   user_id: string;
@@ -78,6 +79,8 @@ interface SaleCreatedPayload {
     customer_id: string | null;
   };
   note?: string;
+  invoice_series_id?: string;
+  fiscal_number?: number;
 }
 
 /**
@@ -146,6 +149,7 @@ export class SyncService {
     private salesProjectionQueue: Queue,
     private metricsService: SyncMetricsService,
     private federationSyncService: FederationSyncService,
+    private outboxService: OutboxService,
   ) { }
 
   async push(
@@ -484,134 +488,26 @@ export class SyncService {
             manager,
           );
         }
+
+        // 🚀 CRITICAL FIX Phase 1: Outbox Pattern for Atomic Process & Relay
+        // Instead of firing async side-effects that can be lost if process crashes,
+        // we persist the intent to project and relay in the same transaction.
+        const shouldRelay = authenticatedUserId !== 'system-federation';
+        await this.outboxService.writeOutboxEntries(
+          manager,
+          eventsToSave,
+          shouldRelay,
+        );
       });
 
-      // 🌐 FEDERATION RELAY: Forward events to remote server
-      // Avoid infinite loops by not relaying events that came from federation
-      if (authenticatedUserId !== 'system-federation') {
-        for (const event of eventsToSave) {
-          await this.federationSyncService.queueRelay(event);
-        }
-      }
-
-      // 8. Encolar proyecciones de forma asíncrona (no bloquear respuesta)
-      // ⚡ OPTIMIZACIÓN 2025: Batch processing para mejor performance
-      // Agrupar eventos por tipo y procesar en batches
-      const saleEvents = eventsToSave.filter((e) => e.type === 'SaleCreated');
-      const otherEvents = eventsToSave.filter((e) => e.type !== 'SaleCreated');
-
-      // Batch processing para eventos de venta (más eficiente que individual)
-      if (saleEvents.length > 0) {
-        try {
-          if (queuesEnabled) {
-            // Usar addBulk para encolar múltiples jobs de una vez (mejor performance)
-            const jobs = saleEvents.map((event) => ({
-              name: 'project-sale-event',
-              data: { event },
-              opts: {
-                priority: 10, // Alta prioridad para ventas
-                jobId: `projection-${event.event_id}`, // Evitar duplicados
-                attempts: 3, // Reintentar hasta 3 veces
-                backoff: {
-                  type: 'exponential',
-                  delay: 2000, // 2s, 4s, 8s
-                },
-                removeOnComplete: {
-                  age: 3600, // Mantener jobs completados por 1 hora
-                  count: 1000, // Mantener últimos 1000 jobs
-                },
-                removeOnFail: {
-                  age: 86400, // Mantener jobs fallidos por 24 horas para debugging
-                },
-              },
-            }));
-
-            await this.salesProjectionQueue.addBulk(jobs);
-            this.logger.debug(
-              `✅ ${saleEvents.length} proyecciones de venta encoladas en batch para procesamiento asíncrono`,
-            );
-          } else {
-            for (const event of saleEvents) {
-              try {
-                await this.projectionsService.projectEvent(event);
-                await this.eventRepository.update(event.event_id, {
-                  projection_status: 'processed',
-                  projection_error: null,
-                });
-              } catch (err) {
-                this.logger.error(
-                  `Error proyectando evento ${event.event_id} sin colas:`,
-                  err instanceof Error ? err.stack : String(err),
-                );
-                await this.eventRepository.update(event.event_id, {
-                  projection_status: 'failed',
-                  projection_error:
-                    err instanceof Error ? err.message : String(err),
-                });
-              }
-            }
-          }
-        } catch (error) {
-          // Fallback: encolar individualmente si addBulk falla
-          this.logger.warn(
-            `Error en batch processing, encolando individualmente:`,
-            error instanceof Error ? error.message : String(error),
-          );
-          for (const event of saleEvents) {
-            try {
-              if (queuesEnabled) {
-                await this.salesProjectionQueue.add('project-sale-event', {
-                  event,
-                });
-              } else {
-                await this.projectionsService.projectEvent(event);
-                await this.eventRepository.update(event.event_id, {
-                  projection_status: 'processed',
-                  projection_error: null,
-                });
-              }
-            } catch (err) {
-              this.logger.error(
-                `Error procesando evento ${event.event_id}:`,
-                err instanceof Error ? err.stack : String(err),
-              );
-              if (!queuesEnabled) {
-                await this.eventRepository.update(event.event_id, {
-                  projection_status: 'failed',
-                  projection_error:
-                    err instanceof Error ? err.message : String(err),
-                });
-              }
-            }
-          }
-        }
-      }
-
-      // Procesar otros eventos síncronamente (son más rápidos y no bloquean tanto)
-      // 🐛 FIX 2025-02-09: Ahora también actualizamos projection_status para poder detectar
-      // y re-proyectar eventos que fallaron silenciosamente (ej: DebtCreated, DebtPaymentRecorded)
-      for (const event of otherEvents) {
-        try {
-          await this.projectionsService.projectEvent(event);
-          // ✅ Marcar como procesado exitosamente
-          await this.eventRepository.update(event.event_id, {
-            projection_status: 'processed',
-            projection_error: null,
-          });
-        } catch (error) {
-          // ⚠️ FIX: Ahora marcamos como failed para poder detectar y reparar después
-          this.logger.error(
-            `Error procesando evento ${event.event_id} (${event.type}):`,
-            error instanceof Error ? error.stack : String(error),
-          );
-          await this.eventRepository.update(event.event_id, {
-            projection_status: 'failed',
-            projection_error:
-              error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
+      // NOTE: With Outbox, we don't need to manually queue relay or projection here.
+      // The OutboxProcessor (Cron) picks them up reliably.
+      // For immediate feedback in local-first, the client relies on optimistic UI.
+      // However, we could trigger the processor immediately if we wanted faster cloud sync,
+      // but let's stick to the robust cron design for now.
     }
+
+
 
     const durationMs = Date.now() - startTime;
 
@@ -701,6 +597,15 @@ export class SyncService {
         valid: false,
         code: 'SECURITY_ERROR',
         message: 'La venta no está asociada a una sesión de caja.',
+      };
+    }
+
+    // 🛡️ Phase 3: Fiscal Safety Validation
+    if (payload.fiscal_number && !payload.invoice_series_id) {
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'El evento tiene número fiscal pero falta el ID de la serie.',
       };
     }
 
@@ -1182,6 +1087,7 @@ export class SyncService {
             },
           ],
           detection.strategy,
+          { storeId, entityType, entityId },
         );
 
         if (resolution.resolved) {

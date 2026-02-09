@@ -171,6 +171,14 @@ export class CreateSaleDto {
   @IsOptional()
   note?: string;
 
+  @IsNumber()
+  @IsOptional()
+  fiscal_number?: number;
+
+  @IsString()
+  @IsOptional()
+  invoice_number?: string;
+
   @IsUUID()
   @IsOptional()
   invoice_series_id?: string; // Serie de factura a usar (opcional, usa la por defecto si no se especifica)

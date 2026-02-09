@@ -23,6 +23,7 @@ import { usePOSStore } from '@/stores/pos.store'
 import { inventoryService } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
 import toast from '@/lib/toast'
+import { stockValidatorService } from '@/services/stock-validator.service'
 
 // Hooks POS Modularizados
 import { usePOSCartActions } from '@/hooks/pos/usePOSCartActions'
@@ -581,6 +582,11 @@ export default function POSPage() {
 
       // Activar animación de éxito premium central y evitar toast duplicado en online
       setSuccessSaleId(sale.id.slice(0, 8))
+
+      // Decrementar stock local optimísticamente (Phase 2 Defensiva)
+      void stockValidatorService.decrementLocalStock(
+        saleItemsForCache.map((i) => ({ product_id: i.product_id, qty: i.qty }))
+      )
 
       // Cerrar y limpiar inmediato para no bloquear UI
       clear()

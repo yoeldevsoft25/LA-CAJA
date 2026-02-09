@@ -16,3 +16,4 @@ export * from './reports.service';
 export * from './fiscal-invoices.service';
 export * from './orders.service';
 export * from './kitchen.service';
+export * from './fiscal-sequence.service';

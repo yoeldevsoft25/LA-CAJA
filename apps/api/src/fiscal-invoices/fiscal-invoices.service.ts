@@ -151,11 +151,14 @@ export class FiscalInvoicesService {
     }
 
     return this.dataSource.transaction(async (manager) => {
-      // Generar número de factura
-      const invoiceNumber = await this.generateInvoiceNumber(
-        storeId,
-        sale.invoice_series_id || undefined,
-      );
+      // Generar número de factura (o usar el ya asignado a la venta en Phase 3)
+      let invoiceNumber = sale.invoice_full_number;
+      if (!invoiceNumber) {
+        invoiceNumber = await this.generateInvoiceNumber(
+          storeId,
+          sale.invoice_series_id || undefined,
+        );
+      }
 
       // Obtener información del cliente
       let customerName: string | null = null;
@@ -217,6 +220,7 @@ export class FiscalInvoicesService {
         currency: sale.currency,
         fiscal_authorization_number: fiscalConfig.fiscal_authorization_number,
         payment_method: sale.payment.method,
+        fiscal_number: sale.fiscal_number, // Phase 3: Preserve pre-assigned fiscal number
         created_by: userId || null,
       });
 

@@ -150,6 +150,19 @@ export interface LocalEscrow {
   updated_at: number;
 }
 
+export interface LocalFiscalRange {
+  id: string; // id del servidor
+  store_id: string;
+  series_id: string;
+  device_id: string;
+  range_start: number;
+  range_end: number;
+  used_up_to: number;
+  status: 'active' | 'exhausted' | 'expired';
+  granted_at: number;
+  expires_at: number;
+}
+
 export class LaCajaDB extends Dexie {
   localEvents!: Table<LocalEvent, number>;
   products!: Table<LocalProduct, string>;
@@ -161,6 +174,7 @@ export class LaCajaDB extends Dexie {
   kv!: Table<{ key: string; value: any }, string>;
   localStock!: Table<LocalStock, string>;
   localEscrow!: Table<LocalEscrow, string>;
+  fiscalRanges!: Table<LocalFiscalRange, string>;
 
   constructor() {
     super('LaCajaDB');
@@ -288,9 +302,25 @@ export class LaCajaDB extends Dexie {
       conflicts: 'id, event_id, status, created_at, [status+created_at]',
       whatsappConfigs: 'id, store_id, [store_id+sync_status]',
       debts: 'id, store_id, customer_id, status, [store_id+customer_id], [store_id+status]',
+      localStock: 'id, store_id, product_id, variant_id',
+      localEscrow: 'id, store_id, product_id, variant_id',
+    });
+
+    // Versión 9: Tablas para seguridad fiscal (Phase 3)
+    this.version(9).stores({
+      localEvents:
+        '++id, &event_id, [store_id+device_id+seq], seq, type, sync_status, created_at, [sync_status+created_at], [sync_status+next_retry_at], [store_id+device_id+sync_status]',
+      products:
+        'id, store_id, name, category, barcode, sku, is_active, [store_id+is_active], [store_id+category]',
+      customers: 'id, store_id, name, document_id, [store_id+document_id]',
+      sales: 'id, store_id, sold_at, customer_id, [store_id+sold_at]',
+      conflicts: 'id, event_id, status, created_at, [status+created_at]',
+      whatsappConfigs: 'id, store_id, [store_id+sync_status]',
+      debts: 'id, store_id, customer_id, status, [store_id+customer_id], [store_id+status]',
       kv: 'key',
       localStock: 'id, store_id, product_id, variant_id',
       localEscrow: 'id, store_id, product_id, variant_id',
+      fiscalRanges: 'id, store_id, series_id, device_id, status, [store_id+series_id+device_id+status]',
     });
   }
 

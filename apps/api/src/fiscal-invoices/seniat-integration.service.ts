@@ -107,7 +107,7 @@ export class SeniatIntegrationService {
       const invoiceData = this.prepareInvoiceData(invoice, fiscalConfig);
 
       if (this.isMockMode) {
-        return await this.issueInvoiceMock(invoiceData);
+        return await this.issueInvoiceMock(invoiceData, invoice);
       }
 
       return await this.issueInvoiceReal(invoiceData, fiscalConfig);
@@ -167,18 +167,22 @@ export class SeniatIntegrationService {
    */
   private async issueInvoiceMock(
     invoiceData: SeniatInvoiceData,
+    invoice: FiscalInvoice,
   ): Promise<SeniatIssueInvoiceResponse> {
     this.logger.debug('Generando factura fiscal en modo MOCK');
 
-    // Generar número fiscal único (formato: YYYYMMDD-XXXXXX)
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 999999)
-      .toString()
-      .padStart(6, '0');
-    const fiscalNumber = `${year}${month}${day}-${random}`;
+    // Phase 3: Usar el número fiscal provisto si existe (escenario offline-safe)
+    let fiscalNumber = (invoice as any).fiscal_number;
+    if (!fiscalNumber) {
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const random = Math.floor(Math.random() * 999999)
+        .toString()
+        .padStart(6, '0');
+      fiscalNumber = `${year}${month}${day}-${random}`;
+    }
 
     // Generar código de control fiscal (algoritmo simplificado)
     const controlCode = this.generateControlCode(invoiceData);

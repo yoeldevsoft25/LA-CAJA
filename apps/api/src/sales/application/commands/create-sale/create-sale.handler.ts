@@ -541,7 +541,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
     private salesPostProcessingQueue: Queue,
     @InjectQueue('federation-sync')
     private federationSyncQueue: Queue,
-  ) {}
+  ) { }
 
   async execute(command: CreateSaleCommand): Promise<Sale> {
     const { storeId, dto, userId, userRole, returnMode } = command;
@@ -589,8 +589,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
             : Number(item.qty ?? 0);
           const price = isWeightProduct
             ? Number(
-                item.price_per_weight_usd ?? product.price_per_weight_usd ?? 0,
-              )
+              item.price_per_weight_usd ?? product.price_per_weight_usd ?? 0,
+            )
             : Number(product.price_usd ?? 0);
           const discountUsd = item.discount_usd || 0;
           totalUsd += price * qty - discountUsd;
@@ -617,8 +617,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
       debt?: DetailedDebt | null;
       items?: SaleItem[];
       fiscal_invoice?:
-        | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
-        | null;
+      | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
+      | null;
     };
 
     const result = await this.transactionWithRetry<SaleResponse>(
@@ -685,8 +685,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         const [allSerials, allLots] = await Promise.all([
           productsWithSerials.length > 0
             ? manager.find(ProductSerial, {
-                where: { product_id: In(productsWithSerials) },
-              })
+              where: { product_id: In(productsWithSerials) },
+            })
             : Promise.resolve([]),
           manager.find(ProductLot, {
             where: { product_id: In(productIds) },
@@ -860,20 +860,20 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
 
             const currentStock = warehouseId
               ? await this.validator.validateAndLockStock(
-                  manager,
-                  storeId,
-                  warehouseId,
-                  product.id,
-                  variant?.id || null,
-                  requestedQty,
-                )
+                manager,
+                storeId,
+                warehouseId,
+                product.id,
+                variant?.id || null,
+                requestedQty,
+              )
               : await this.validator.validateAndLockTotalStock(
-                  manager,
-                  storeId,
-                  product.id,
-                  variant?.id || null,
-                  requestedQty,
-                );
+                manager,
+                storeId,
+                product.id,
+                variant?.id || null,
+                requestedQty,
+              );
 
             if (currentStock < requestedQty) {
               const variantInfo = variant
@@ -1154,7 +1154,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         const splitSummary =
           dto.payment_method === 'SPLIT'
             ? dto.split ||
-              this.buildSplitSummary(dto.split_payments, dto.exchange_rate)
+            this.buildSplitSummary(dto.split_payments, dto.exchange_rate)
             : dto.split;
 
         // Validar método de pago según configuración de topes
@@ -1197,27 +1197,37 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         }
 
         await this.validatePaymentAuthorization(storeId, dto, userRole);
-
-        // Generar número de factura automáticamente
-
-        let invoiceSeriesId: string | null = null;
-        let invoiceNumber: string | null = null;
+        // Generar número de factura automáticamente (o usar el provisto)
+        let invoiceSeriesId: string | null = dto.invoice_series_id || null;
+        let invoiceNumber: string | null = dto.invoice_number || null;
         let invoiceFullNumber: string | null = null;
+        const fiscalNumber = dto.fiscal_number?.toString() || null;
 
         try {
-          const invoiceData =
-            await this.invoiceSeriesService.generateNextInvoiceNumber(
+          if (invoiceNumber && invoiceSeriesId) {
+            const series = await this.invoiceSeriesService.getSeriesById(
               storeId,
-              dto.invoice_series_id,
+              invoiceSeriesId,
             );
-          invoiceSeriesId = invoiceData.series.id;
-          invoiceNumber = invoiceData.invoice_number;
-          invoiceFullNumber = invoiceData.invoice_full_number;
+            const prefix = series.prefix || null;
+            const seriesCode = series.series_code || 'FAC';
+            invoiceFullNumber = prefix
+              ? `${prefix}-${seriesCode}-${invoiceNumber}`
+              : `${seriesCode}-${invoiceNumber}`;
+          } else {
+            const invoiceData =
+              await this.invoiceSeriesService.generateNextInvoiceNumber(
+                storeId,
+                dto.invoice_series_id,
+              );
+            invoiceSeriesId = invoiceData.series.id;
+            invoiceNumber = invoiceData.invoice_number;
+            invoiceFullNumber = invoiceData.invoice_full_number;
+          }
         } catch (error) {
           // Si no hay series configuradas, la venta se crea sin número de factura
-          // Esto permite que el sistema funcione aunque no se hayan configurado series
           this.logger.warn(
-            'No se pudo generar número de factura',
+            'No se pudo generar o resolver número de factura',
             error instanceof Error ? error.stack : String(error),
           );
         }
@@ -1256,6 +1266,7 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           note: dto.note || null,
           invoice_series_id: invoiceSeriesId,
           invoice_number: invoiceNumber,
+          fiscal_number: fiscalNumber,
           invoice_full_number: invoiceFullNumber,
         });
 
@@ -1423,15 +1434,15 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           minimalSale.items = items;
           minimalSale.debt = debt
             ? {
-                id: debt.id,
-                status: debt.status,
-                amount_bs: Number(debt.amount_bs || 0),
-                amount_usd: Number(debt.amount_usd || 0),
-                total_paid_bs: 0,
-                total_paid_usd: 0,
-                remaining_bs: Number(debt.amount_bs || 0),
-                remaining_usd: Number(debt.amount_usd || 0),
-              }
+              id: debt.id,
+              status: debt.status,
+              amount_bs: Number(debt.amount_bs || 0),
+              amount_usd: Number(debt.amount_usd || 0),
+              total_paid_bs: 0,
+              total_paid_usd: 0,
+              remaining_bs: Number(debt.amount_bs || 0),
+              remaining_usd: Number(debt.amount_usd || 0),
+            }
             : null;
           minimalSale.fiscal_invoice = null;
           return minimalSale;
@@ -1478,8 +1489,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
         type SaleWithDetailedDebt = Sale & {
           debt?: DetailedDebt | null;
           fiscal_invoice?:
-            | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
-            | null;
+          | import('../../../../database/entities/fiscal-invoice.entity').FiscalInvoice
+          | null;
         };
 
         const saleWithDetailedDebt = savedSaleWithItems as SaleWithDetailedDebt;
@@ -1634,12 +1645,12 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
                 : Number(item.weight_value),
             price_per_weight_bs:
               item.price_per_weight_bs === null ||
-              item.price_per_weight_bs === undefined
+                item.price_per_weight_bs === undefined
                 ? null
                 : Number(item.price_per_weight_bs),
             price_per_weight_usd:
               item.price_per_weight_usd === null ||
-              item.price_per_weight_usd === undefined
+                item.price_per_weight_usd === undefined
                 ? null
                 : Number(item.price_per_weight_usd),
           })),
@@ -1658,8 +1669,8 @@ export class CreateSaleHandler implements ICommandHandler<CreateSaleCommand> {
           payment: saleWithDetailedDebt.payment,
           customer: saleWithDetailedDebt.customer_id
             ? {
-                customer_id: saleWithDetailedDebt.customer_id,
-              }
+              customer_id: saleWithDetailedDebt.customer_id,
+            }
             : undefined,
           note: saleWithDetailedDebt.note || undefined,
         },

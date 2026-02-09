@@ -65,6 +65,8 @@ export interface CreateSaleRequest {
     cash_session_id?: string;
     note?: string | null;
     invoice_series_id?: string | null;
+    invoice_number?: string | null;
+    fiscal_number?: number | null;
     price_list_id?: string | null;
     promotion_id?: string | null;
     warehouse_id?: string | null;
@@ -162,6 +164,7 @@ export interface Sale {
     note: string | null;
     invoice_series_id?: string | null;
     invoice_number?: string | null;
+    fiscal_number?: string | null;
     invoice_full_number?: string | null;
     fiscal_invoice?: {
         id: string;

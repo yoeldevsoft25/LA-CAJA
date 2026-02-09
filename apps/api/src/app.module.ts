@@ -55,6 +55,7 @@ import { KitchenDisplayModule } from './kitchen/kitchen-display.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { FiscalModule } from './fiscal/fiscal.module';
 import { AdminController } from './admin/admin.controller';
 import { AdminApiGuard } from './admin/admin-api.guard';
 import { LicenseWatcherService } from './admin/license-watcher.service';
@@ -384,6 +385,7 @@ const QUEUES_ENABLED =
     PurchaseOrdersModule,
     FiscalConfigsModule,
     FiscalInvoicesModule,
+    FiscalModule, // ✅ Módulo de secuencias fiscales
     DashboardModule,
     MLModule,
     RealTimeAnalyticsModule,

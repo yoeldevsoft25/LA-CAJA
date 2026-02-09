@@ -242,6 +242,13 @@ export interface SaleCreatedPayload {
     customer_id: string | null;
   };
   note?: string;
+  invoice_series_id?: string;
+  fiscal_number?: number;
+  fiscal_metadata?: {
+    authorization_number?: string;
+    control_code?: string;
+    expiry_date?: number;
+  };
   metadata?: Record<string, any>;
 }
 

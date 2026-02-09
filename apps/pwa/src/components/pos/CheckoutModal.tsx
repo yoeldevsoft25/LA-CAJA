@@ -21,6 +21,17 @@ import { useCheckoutState } from '@/hooks/pos/useCheckoutState'
 import { useCheckoutData } from '@/hooks/pos/useCheckoutData'
 import { useCheckoutValidation } from '@/hooks/pos/useCheckoutValidation'
 import { Badge } from '@/components/ui/badge'
+import { stockValidatorService, StockWarning } from '@/services/stock-validator.service'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface SplitPaymentForBackend {
   method: PaymentMethod
@@ -117,6 +128,11 @@ export default function CheckoutModal({
   const [selectedSerials, setSelectedSerials] = useState<Record<string, string[]>>({})
   const [serialSelectorItem, setSerialSelectorItem] = useState<{ productId: string; productName: string; quantity: number } | null>(null)
 
+  // Stock Validation State
+  const [stockWarnings, setStockWarnings] = useState<StockWarning[]>([])
+  const [showStockWarningDialog, setShowStockWarningDialog] = useState(false)
+  const [isValidatingStock, setIsValidatingStock] = useState(false)
+
   useEffect(() => {
     if (!isOpen) return
     actions.reset()
@@ -164,7 +180,7 @@ export default function CheckoutModal({
     }
   }, [serialSelectorItem])
 
-  const handleConfirm = () => {
+  const handleConfirm = async (confirmedWarnings = false) => {
     if (state.paymentMode === 'SINGLE') {
       const methodValidation = validation.validatePaymentMethod(state.selectedMethod, state.customerData.selectedId)
       if (!methodValidation.valid) {
@@ -192,6 +208,44 @@ export default function CheckoutModal({
         return
       }
     }
+
+    // ---------------------------------------------------------
+    // STOCK VALIDATION (Phase 2 Defensiva)
+    // ---------------------------------------------------------
+    if (!confirmedWarnings) {
+      setIsValidatingStock(true)
+      try {
+        const validationItems = items.map(i => ({
+          product_id: i.product_id,
+          qty: i.qty,
+          name: i.product_name
+        }))
+        const isOnline = navigator.onLine
+
+        const stockResult = await stockValidatorService.validateBeforeSale(validationItems, isOnline)
+
+        if (!stockResult.valid) {
+          // Bloqueo total (Error offline con stock <= 0)
+          const errorMsg = stockResult.errors.map(e => `• ${e.product_name}: ${e.message}`).join('\n')
+          actions.setError(`STOCK INSUFICIENTE (OFFLINE):\n${errorMsg}`)
+          setIsValidatingStock(false)
+          return
+        }
+
+        if (stockResult.warnings.length > 0) {
+          // Mostrar warnings y pedir confirmación
+          setStockWarnings(stockResult.warnings)
+          setShowStockWarningDialog(true)
+          setIsValidatingStock(false)
+          return
+        }
+      } catch (err) {
+        console.warn('Stock validation failed, fail-open', err)
+      } finally {
+        setIsValidatingStock(false)
+      }
+    }
+    // ---------------------------------------------------------
 
     if (
       state.paymentMode === 'SINGLE'
@@ -456,104 +510,136 @@ export default function CheckoutModal({
   )
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose() }}>
-      <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
-        <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-                <CheckCircle2 className="h-5 w-5" />
-              </span>
-              <div className="min-w-0">
-                <AccessibleDialogTitle className="truncate text-lg font-black tracking-tight text-foreground sm:text-xl">
-                  Finalizar venta
-                </AccessibleDialogTitle>
-                <DialogDescription className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Confirma el pago y genera el comprobante
-                </DialogDescription>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose() }}>
+        <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
+          <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                  <CheckCircle2 className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <AccessibleDialogTitle className="truncate text-lg font-black tracking-tight text-foreground sm:text-xl">
+                    Finalizar venta
+                  </AccessibleDialogTitle>
+                  <DialogDescription className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Confirma el pago y genera el comprobante
+                  </DialogDescription>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                disabled={isLoading}
+                className="h-8 w-8 rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Cerrar checkout"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+
+          <div className="min-h-0 overflow-hidden">
+            <div className="h-full overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4 lg:hidden">
+              <div className="space-y-4">
+                {summaryPanel}
+                {checkoutControls}
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              disabled={isLoading}
-              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-              aria-label="Cerrar checkout"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogHeader>
-
-        <div className="min-h-0 overflow-hidden">
-          <div className="h-full overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4 lg:hidden">
-            <div className="space-y-4">
-              {summaryPanel}
-              {checkoutControls}
+            <div className="hidden h-full lg:grid lg:grid-cols-[minmax(320px,38%)_1fr] lg:divide-x lg:divide-border">
+              <aside className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
+                {summaryPanel}
+              </aside>
+              <section className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
+                {checkoutControls}
+              </section>
             </div>
           </div>
 
-          <div className="hidden h-full lg:grid lg:grid-cols-[minmax(320px,38%)_1fr] lg:divide-x lg:divide-border">
-            <aside className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
-              {summaryPanel}
-            </aside>
-            <section className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
-              {checkoutControls}
-            </section>
-          </div>
-        </div>
+          <footer className="border-t border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
+            {state.error && (
+              <div className="mb-3 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive" role="alert" aria-live="assertive">
+                <X className="h-4 w-4" />
+                {state.error}
+              </div>
+            )}
 
-        <footer className="border-t border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
-          {state.error && (
-            <div className="mb-3 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive" role="alert" aria-live="assertive">
-              <X className="h-4 w-4" />
-              {state.error}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isLoading}
+                className="h-11 flex-1 rounded-xl border-border"
+                aria-label="Cancelar y volver al carrito"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => handleConfirm()}
+                disabled={isLoading || isValidatingStock || items.length === 0}
+                className="h-11 flex-[1.25] rounded-xl font-bold"
+                aria-label="Confirmar pago y finalizar venta"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    Confirmar pago
+                    <Receipt className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
             </div>
-          )}
+          </footer>
 
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-              className="h-11 flex-1 rounded-xl border-border"
-              aria-label="Cancelar y volver al carrito"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={isLoading || items.length === 0}
-              className="h-11 flex-[1.25] rounded-xl font-bold"
-              aria-label="Confirmar pago y finalizar venta"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  Confirmar pago
-                  <Receipt className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
-        </footer>
+          <SerialSelector
+            isOpen={!!serialSelectorItem}
+            onClose={() => setSerialSelectorItem(null)}
+            productId={serialSelectorItem?.productId || ''}
+            productName={serialSelectorItem?.productName || ''}
+            quantity={serialSelectorItem?.quantity || 0}
+            onSelect={handleSerialSelect}
+          />
+        </DialogContent>
+      </Dialog>
 
-        <SerialSelector
-          isOpen={!!serialSelectorItem}
-          onClose={() => setSerialSelectorItem(null)}
-          productId={serialSelectorItem?.productId || ''}
-          productName={serialSelectorItem?.productName || ''}
-          quantity={serialSelectorItem?.quantity || 0}
-          onSelect={handleSerialSelect}
-        />
-      </DialogContent>
-    </Dialog>
+      <AlertDialog open={showStockWarningDialog} onOpenChange={setShowStockWarningDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Advertencia de Stock</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se detectaron los siguientes problemas de inventario:
+              <ul className="mt-2 text-sm text-yellow-600 dark:text-yellow-400 list-disc pl-5">
+                {stockWarnings.map((w, idx) => (
+                  <li key={idx}>
+                    <strong>{w.product_name}:</strong> {w.message}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 font-bold">
+                ¿Deseas continuar de todos modos?
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowStockWarningDialog(false)
+              handleConfirm(true) // Re-run confirm skipping validation
+            }}>
+              Continuar (Overselling)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

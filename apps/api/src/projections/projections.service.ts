@@ -569,28 +569,41 @@ export class ProjectionsService {
         throw new Error('No se pudo generar el número de venta');
       }
 
-      // ✅ FIX OFFLINE-FIRST: Generar número de factura usando InvoiceSeriesService
-      // Esto asegura que las ventas sincronizadas desde offline tengan invoice_full_number
-      let invoiceSeriesId: string | null = null;
-      let invoiceNumber: string | null = null;
+      // ✅ FIX OFFLINE-FIRST: Resolver número de factura
+      // Phase 3: Si el cliente ya proveyó el número (offline-safe), lo usamos.
+      let invoiceSeriesId: string | null = payload.invoice_series_id || null;
+      let invoiceNumber: string | null = payload.invoice_number || null;
       let invoiceFullNumber: string | null = null;
+      const fiscalNumber = payload.fiscal_number?.toString() || null;
 
       try {
-        const invoiceData =
-          await this.invoiceSeriesService.generateNextInvoiceNumber(
+        if (invoiceNumber && invoiceSeriesId) {
+          const series = await this.invoiceSeriesService.getSeriesById(
             event.store_id,
-            undefined, // Usar serie por defecto
+            invoiceSeriesId,
           );
-        invoiceSeriesId = invoiceData.series.id;
-        invoiceNumber = invoiceData.invoice_number;
-        invoiceFullNumber = invoiceData.invoice_full_number;
+          const prefix = series.prefix || null;
+          const seriesCode = series.series_code || 'FAC';
+          invoiceFullNumber = prefix
+            ? `${prefix}-${seriesCode}-${invoiceNumber}`
+            : `${seriesCode}-${invoiceNumber}`;
+        } else {
+          const invoiceData =
+            await this.invoiceSeriesService.generateNextInvoiceNumber(
+              event.store_id,
+              invoiceSeriesId || undefined,
+            );
+          invoiceSeriesId = invoiceData.series.id;
+          invoiceNumber = invoiceData.invoice_number;
+          invoiceFullNumber = invoiceData.invoice_full_number;
+        }
+
         this.logger.debug(
-          `[PROJECTION] Número de factura generado: ${invoiceFullNumber} para venta ${payload.sale_id}`,
+          `[PROJECTION] Número de factura resuelto: ${invoiceFullNumber} para venta ${payload.sale_id}`,
         );
       } catch (error) {
-        // Si no hay series configuradas, la venta se crea sin número de factura
         this.logger.warn(
-          `[PROJECTION] No se pudo generar número de factura para venta ${payload.sale_id}: ${error instanceof Error ? error.message : String(error)}`,
+          `[PROJECTION] No se pudo resolver número de factura para venta ${payload.sale_id}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
 
@@ -609,9 +622,10 @@ export class ProjectionsService {
           payload.customer?.customer_id || payload.customer_id || null,
         sold_by_user_id: event.actor_user_id,
         note: payload.note || null,
-        // ✅ FIX: Asignar invoice_full_number a ventas sincronizadas
+        // ✅ FIX: Asignar invoice_full_number y fiscal_number a ventas sincronizadas
         invoice_series_id: invoiceSeriesId,
         invoice_number: invoiceNumber,
+        fiscal_number: fiscalNumber,
         invoice_full_number: invoiceFullNumber,
       });
 

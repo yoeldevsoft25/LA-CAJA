@@ -141,6 +141,9 @@ export class Sale {
   invoice_number: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
+  fiscal_number: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
   invoice_full_number: string | null;
 
   @OneToMany(() => SaleItem, (item) => item.sale, { cascade: true })

@@ -9,6 +9,8 @@ import {
 import { CRDTService, LWWRegister, AWSet, MVRegister } from './crdt.service';
 import { Event } from '../database/entities/event.entity';
 
+import { ConflictAuditService } from './conflict-audit.service';
+
 /**
  * Conflict Resolution Service
  *
@@ -31,6 +33,8 @@ export interface ConflictResolutionResult {
   resolvedValue: any;
   requiresManualReview: boolean;
   conflictId?: string;
+  winnerEventId?: string;
+  loserEventIds?: string[];
 }
 
 @Injectable()
@@ -43,7 +47,8 @@ export class ConflictResolutionService {
     @InjectRepository(Event)
     private readonly eventRepository: Repository<Event>,
     private readonly dataSource: DataSource,
-  ) {}
+    private readonly conflictAudit: ConflictAuditService,
+  ) { }
 
   /**
    * Detecta si dos eventos están en conflicto
@@ -129,6 +134,11 @@ export class ConflictResolutionService {
       vector_clock: VectorClock;
     }>,
     strategy?: 'lww' | 'awset' | 'mvr' | 'gcounter' | 'manual',
+    meta?: {
+      storeId: string;
+      entityType: string;
+      entityId: string;
+    },
   ): Promise<ConflictResolutionResult> {
     if (conflictingEvents.length < 2) {
       throw new Error('Need at least 2 events to resolve conflict');
@@ -140,26 +150,48 @@ export class ConflictResolutionService {
     }
 
     try {
+      let result: ConflictResolutionResult;
       switch (strategy) {
         case 'lww':
-          return this.resolveWithLWW(conflictingEvents);
+          result = this.resolveWithLWW(conflictingEvents);
+          break;
 
         case 'awset':
-          return this.resolveWithAWSet(conflictingEvents);
+          result = this.resolveWithAWSet(conflictingEvents);
+          break;
 
         case 'mvr':
-          return this.resolveWithMVR(conflictingEvents);
+          result = this.resolveWithMVR(conflictingEvents);
+          break;
 
         case 'gcounter':
           // Para G-Counter, usar AWSet ya que es similar (acumulativo)
-          return this.resolveWithAWSet(conflictingEvents);
+          result = this.resolveWithAWSet(conflictingEvents);
+          break;
 
         case 'manual':
-          return this.createManualConflict(conflictingEvents);
+          result = this.createManualConflict(conflictingEvents);
+          break;
 
         default:
           throw new Error(`Unknown strategy: ${strategy}`);
       }
+
+      // 🛡️ Log audit if resolved and we have sufficient info
+      if (result.resolved && meta && result.winnerEventId) {
+        await this.conflictAudit.logConflict({
+          store_id: meta.storeId,
+          entity_type: meta.entityType,
+          entity_id: meta.entityId,
+          winner_event_id: result.winnerEventId,
+          loser_event_ids: result.loserEventIds || [],
+          strategy: result.strategy,
+          winner_payload: result.resolvedValue,
+          resolved_by: 'auto-reconcile',
+        });
+      }
+
+      return result;
     } catch (error) {
       this.logger.error(
         `Error resolving conflict: ${error.message}`,
@@ -200,17 +232,30 @@ export class ConflictResolutionService {
     );
 
     // Resolver usando CRDT
-    const winner = this.crdtService.resolveLWW(registers);
+    const winnerCrdt = this.crdtService.resolveLWW(registers);
+
+    // Identificar el evento ganador por sus atributos (device_id y timestamp coinciden)
+    const winnerEvent = events.find(e =>
+      e.device_id === winnerCrdt.device_id &&
+      e.timestamp === winnerCrdt.timestamp
+    );
+
+    const winnerEventId = winnerEvent?.event_id || 'unknown';
+    const loserEventIds = events
+      .filter(e => e.event_id !== winnerEventId)
+      .map(e => e.event_id);
 
     this.logger.log(
-      `LWW resolved: ${events.length} events, winner device=${winner.device_id}`,
+      `LWW resolved: ${events.length} events, winner=${winnerEventId}`,
     );
 
     return {
       resolved: true,
       strategy: 'lww',
-      resolvedValue: winner.value,
+      resolvedValue: winnerCrdt.value,
       requiresManualReview: false,
+      winnerEventId,
+      loserEventIds,
     };
   }
 
