@@ -9,6 +9,8 @@ import { Event } from '../database/entities/event.entity';
 import { WarehousesModule } from '../warehouses/warehouses.module';
 import { AccountingModule } from '../accounting/accounting.module';
 import { SyncModule } from '../sync/sync.module';
+import { OversellAlertService } from './oversell-alert.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -21,9 +23,10 @@ import { SyncModule } from '../sync/sync.module';
     WarehousesModule,
     AccountingModule,
     SyncModule,
+    NotificationsModule,
   ],
   controllers: [InventoryController],
-  providers: [InventoryService],
-  exports: [InventoryService],
+  providers: [InventoryService, OversellAlertService],
+  exports: [InventoryService, OversellAlertService],
 })
-export class InventoryModule {}
+export class InventoryModule { }

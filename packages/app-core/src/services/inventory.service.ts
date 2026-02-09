@@ -114,6 +114,31 @@ export interface EscrowStatus {
     last_updated_at: string;
 }
 
+export interface BatchGrantItemDto {
+    product_id: string;
+    qty: number;
+    expires_at?: Date | string;
+}
+
+export interface BatchGrantQuotaDto {
+    device_id: string;
+    items: BatchGrantItemDto[];
+    request_id: string;
+}
+
+export interface GrantedStockQuotaItem {
+    product_id: string;
+    qty_granted: number;
+    requested: number;
+}
+
+export interface BatchGrantResponse {
+    success: boolean;
+    request_id: string;
+    granted: GrantedStockQuotaItem[];
+    denied: any[];
+}
+
 export const inventoryService = {
     async getStockStatus(params: StockStatusSearchParams = {}): Promise<StockStatus[]> {
         const response = await api.get<StockStatus[] | StockStatusResponse>(
@@ -358,5 +383,10 @@ export const inventoryService = {
         if (localEscrows.length > 0) {
             await db.localEscrow.bulkPut(localEscrows);
         }
+    },
+
+    async batchGrantQuota(data: BatchGrantQuotaDto): Promise<BatchGrantResponse> {
+        const response = await api.post<BatchGrantResponse>('/inventory/escrow/batch-grant', data);
+        return response.data;
     }
 };

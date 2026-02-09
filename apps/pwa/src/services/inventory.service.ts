@@ -9,5 +9,9 @@ export type {
   ProductStock,
   MovementsResponse,
   MovementsParams,
-  EscrowStatus
+  EscrowStatus,
+  BatchGrantQuotaDto,
+  BatchGrantItemDto,
+  BatchGrantResponse,
+  GrantedStockQuotaItem
 } from "@la-caja/app-core"

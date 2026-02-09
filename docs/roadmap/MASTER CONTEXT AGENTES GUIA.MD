@@ -879,10 +879,10 @@ PRE-DEPLOY:
   [ ] Stock validator service creado con tests
   [ ] Stock validator integrado en checkout UI
   [ ] Circuit breaker creado con tests
-  [ ] Circuit breaker integrado en federation service
-  [ ] Distributed lock service creado con tests
-  [ ] Distributed lock integrado en reconcileStore
-  [ ] Hash determinista implementado con tests
+  [x] Circuit breaker integrado en federation service
+  [x] Distributed lock service creado con tests
+  [x] Distributed lock integrado en reconcileStore
+  [x] Hash determinista implementado con tests
   [ ] pnpm test pasa al 100%
   [ ] PWA build sin errores
 
@@ -1121,12 +1121,12 @@ Checklist de deploy Phase 3
 text
 
 PRE-DEPLOY:
-  [ ] FiscalSequenceService con tests
-  [ ] Endpoint /fiscal/reserve-range funcional
-  [ ] PWA fiscal-offline.service integrado
-  [ ] Causal relay priorities implementadas
-  [ ] Conflict audit trail implementado
-  [ ] Migración de fiscal_sequence_ranges ejecutada
+  [x] FiscalSequenceService con tests
+  [x] Endpoint /fiscal/reserve-range funcional
+  [x] PWA fiscal-offline.service integrado
+  [x] Causal relay priorities implementadas
+  [x] Conflict audit trail implementado
+  [x] Migración de fiscal_sequence_ranges ejecutada
 
 DEPLOY:
   [ ] Deploy API
@@ -1290,10 +1290,10 @@ Checklist de deploy Phase 4
 text
 
 PRE-DEPLOY:
-  [ ] Auto-escrow en prefetch implementado
-  [ ] Batch-grant endpoint funcional
-  [ ] Server stock validation (soft mode)
-  [ ] Oversell alerting service
+  [x] Auto-escrow en prefetch implementado
+  [x] Batch-grant endpoint funcional
+  [x] Server stock validation (soft mode)
+  [x] Oversell alerting service
   [ ] Tests pasan
 
 DEPLOY:

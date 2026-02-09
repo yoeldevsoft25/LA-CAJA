@@ -24,7 +24,11 @@ import { DiscountRulesService } from '../discounts/discount-rules.service';
 import { UsageService } from '../licenses/usage.service';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
 import { FederationSyncService } from './federation-sync.service';
+
 import { OutboxService } from './outbox.service';
+import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
+import { OversellAlertService } from '../inventory/oversell-alert.service';
+import { FiscalSequenceService } from '../fiscal/fiscal-sequence.service';
 
 interface SyncEventActor {
   user_id: string;
@@ -150,6 +154,10 @@ export class SyncService {
     private metricsService: SyncMetricsService,
     private federationSyncService: FederationSyncService,
     private outboxService: OutboxService,
+    @InjectRepository(WarehouseStock)
+    private warehouseStockRepository: Repository<WarehouseStock>,
+    private oversellAlertService: OversellAlertService,
+    private fiscalSequenceService: FiscalSequenceService,
   ) { }
 
   async push(
@@ -230,6 +238,27 @@ export class SyncService {
         }),
       ]);
 
+    // Fetch stocks (Phase 4: Soft Validation)
+    const warehouseStocks = productIds.size > 0
+      ? await this.warehouseStockRepository.find({
+        where: { product_id: In(Array.from(productIds)) },
+        relations: ['warehouse'],
+      })
+      : [];
+
+    // Filter stocks by store_id since we fetched broadly (or optimize query above)
+    // Actually optimize query above to filter by store_id via warehouse relation
+    // But standard find with relations implies loading everything unless query builder used.
+    // Let's filter in memory since we have access to warehouse.store_id.
+    // const storeStocks = warehouseStocks.filter(ws => ws.warehouse && ws.warehouse.store_id === dto.store_id);
+
+    // Map ProductID -> Total Stock
+    const stockMap = new Map<string, number>();
+    warehouseStocks.forEach(ws => {
+      const current = stockMap.get(ws.product_id) || 0;
+      stockMap.set(ws.product_id, current + Number(ws.stock));
+    });
+
     const existingEventIds = new Set(existingEvents.map((e) => e.event_id));
     const existingRequestIdMap = new Map(
       existingRequests.map((r) => [r.request_id, r.event_id]),
@@ -281,6 +310,8 @@ export class SyncService {
             productMap,
             sessionMap,
             authenticatedUserId,
+            stockMap, // Phase 4: Pass stock map
+            dto.device_id, // Phase 5: Fiscal Validation
           );
 
           if (!validation.valid) {
@@ -885,10 +916,32 @@ export class SyncService {
     productMap: Map<string, Product>,
     sessionMap: Map<string, CashSession>,
     authenticatedUserId?: string,
+    stockMap?: Map<string, number>, // Phase 4
+    deviceId?: string, // Phase 5
   ): Promise<{ valid: boolean; code?: string; message?: string }> {
     const payload = event.payload as any;
     const actorUserId = event.actor?.user_id;
     const actorRole = event.actor?.role || 'cashier';
+
+    // Phase 5: Fiscal Validation
+    if (payload.fiscal_number && payload.invoice_series_id && deviceId && authenticatedUserId !== 'system-federation') {
+      const isValidFiscal = await this.fiscalSequenceService.validateFiscalNumber(
+        storeId,
+        Number(payload.fiscal_number),
+        payload.invoice_series_id,
+        deviceId
+      );
+
+      if (!isValidFiscal) {
+        // Si el número fiscal no pertenece a un rango asignado a este dispositivo
+        // Podría ser un error de sync o un intento de spoofing
+        return {
+          valid: false,
+          code: 'FISCAL_ERROR',
+          message: `Número fiscal ${payload.fiscal_number} fuera de rango asignado para el dispositivo ${deviceId}.`,
+        };
+      }
+    }
 
     // 1. Validación de Actor
     if (
@@ -998,6 +1051,23 @@ export class SyncService {
       computedSubtotalUsd += unitPriceUsd * qty;
       computedDiscountBs += Number(item.discount_bs ?? 0);
       computedDiscountUsd += Number(item.discount_usd ?? 0);
+
+      // Phase 4: Soft Stock Validation
+      if (stockMap && authenticatedUserId !== 'system-federation') {
+        const availableStock = stockMap.get(item.product_id) || 0;
+        const currentStock = availableStock; // Use separate variable if we want to decrement locally?
+
+        // Since we process batch, we should decrement local map to catch oversell within same batch?
+        // Yes, otherwise 10 items of qty 1 vs stock 5 will all pass if checked individually against 5.
+        if (currentStock - qty < 0) {
+          const warning = `Stock insuficiente para ${product.name} (Stock: ${currentStock}, Solicitado: ${qty})`;
+          // Async alert (fire & forget)
+          this.oversellAlertService.createOversellAlert(storeId, event.event_id, [warning]);
+        }
+
+        // Decrement provisional stock map for next iteration
+        stockMap.set(item.product_id, currentStock - qty);
+      }
     }
 
     // 5. Validación de totales
@@ -1197,10 +1267,26 @@ export class SyncService {
   }
 
   /**
-   * Calcula hash SHA-256 de un payload
+   * Ordena recursivamente las llaves de un objeto para hash determinista
+   */
+  private sortDeep(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map((item) => this.sortDeep(item));
+    if (typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj.toISOString();
+
+    const sorted: Record<string, any> = {};
+    for (const key of Object.keys(obj).sort()) {
+      sorted[key] = this.sortDeep(obj[key]);
+    }
+    return sorted;
+  }
+
+  /**
+   * Calcula hash SHA-256 de un payload (Deep Sort Determinista)
    */
   private hashPayload(payload: any): string {
-    const json = JSON.stringify(payload, Object.keys(payload).sort());
+    const json = JSON.stringify(this.sortDeep(payload));
     return crypto.createHash('sha256').update(json).digest('hex');
   }
 

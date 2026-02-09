@@ -23,6 +23,7 @@ import {
   FederationAutoReconcileResult,
   InventoryStockReconcileResult,
 } from './federation-sync.service';
+import { SplitBrainMonitorService, FederationHealthReport } from './split-brain-monitor.service';
 import { PushSyncDto, PushSyncResponseDto } from './dto/push-sync.dto';
 import { SyncStatusDto } from './dto/sync-status.dto';
 import { ResolveConflictDto } from './dto/resolve-conflict.dto';
@@ -37,6 +38,7 @@ export class SyncController {
     private readonly conflictResolutionService: ConflictResolutionService,
     private readonly federationSyncService: FederationSyncService,
     private readonly projectionsService: ProjectionsService,
+    private readonly splitBrainMonitorService: SplitBrainMonitorService,
   ) { }
 
   @Post('push')
@@ -104,6 +106,30 @@ export class SyncController {
   @Get('federation/status')
   async getFederationStatus(): Promise<FederationStatus> {
     return this.federationSyncService.getFederationStatus();
+  }
+
+  @Get('federation/health')
+  @UseGuards(FederationAuthGuard)
+  async getFederationHealth(
+    @Query('store_id') storeIdQuery: string,
+    @Request() req: any
+  ): Promise<FederationHealthReport> {
+    const storeId = storeIdQuery || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
+    return this.splitBrainMonitorService.getHealthReport(storeId);
+  }
+
+  @Get('federation/health/history')
+  @UseGuards(FederationAuthGuard)
+  async getFederationHealthHistory(
+    @Query('store_id') storeIdQuery: string,
+    @Query('hours') hoursRaw: string,
+    @Request() req: any
+  ): Promise<FederationHealthReport[]> {
+    const storeId = storeIdQuery || req.user?.store_id;
+    if (!storeId) throw new BadRequestException('store_id is required');
+    const hours = hoursRaw ? parseInt(hoursRaw, 10) : 24;
+    return this.splitBrainMonitorService.getHealthHistory(storeId, hours);
   }
 
   @Get('federation/sales-ids')

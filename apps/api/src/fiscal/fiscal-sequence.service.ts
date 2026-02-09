@@ -282,4 +282,29 @@ export class FiscalSequenceService {
 
         return result as FiscalRange[];
     }
+
+    /**
+     * Validate if a fiscal number belongs to a valid range allocated to the device.
+     */
+    async validateFiscalNumber(
+        storeId: string,
+        number: number,
+        seriesId: string,
+        deviceId: string
+    ): Promise<boolean> {
+        const result = await this.dataSource.query(
+            `
+            SELECT 1 
+            FROM fiscal_sequence_ranges 
+            WHERE store_id = $1 
+              AND series_id = $2
+              AND device_id = $3
+              AND $4 BETWEEN range_start AND range_end
+            LIMIT 1
+            `,
+            [storeId, seriesId, deviceId, number]
+        );
+
+        return result.length > 0;
+    }
 }

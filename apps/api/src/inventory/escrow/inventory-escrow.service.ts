@@ -15,6 +15,7 @@ import { StockEscrow } from '../../database/entities/stock-escrow.entity';
 import { FederationSyncService } from '../../sync/federation-sync.service';
 import { GrantStockQuotaDto } from './dto/grant-stock-quota.dto';
 import { TransferStockQuotaDto } from './dto/transfer-stock-quota.dto';
+import { BatchGrantStockQuotaDto } from './dto/batch-grant-stock-quota.dto';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -31,7 +32,7 @@ export class InventoryEscrowService {
     private stockEscrowRepository: Repository<StockEscrow>,
     private dataSource: DataSource,
     private moduleRef: ModuleRef,
-  ) {}
+  ) { }
 
   private get federationSyncService(): FederationSyncService {
     return this.moduleRef.get(FederationSyncService, { strict: false });
@@ -214,6 +215,108 @@ export class InventoryEscrowService {
       return {
         total_reclaimed: results.length,
         details: results,
+      };
+    });
+  }
+  async batchGrantQuota(
+    storeId: string,
+    userId: string,
+    dto: BatchGrantStockQuotaDto,
+  ): Promise<any> {
+    return await this.dataSource.transaction(async (manager) => {
+      // 0. Idempotency check (simplified for batch: check if any event with request_id exists)
+      if (dto.request_id) {
+        const existingEvent = await manager.findOne(Event, {
+          where: { store_id: storeId, request_id: dto.request_id },
+        });
+        if (existingEvent) {
+          return {
+            success: true,
+            message: 'Batch already processed (idempotent)',
+            request_id: dto.request_id,
+            granted: [],
+            denied: [],
+          };
+        }
+      }
+
+      const results: any[] = [];
+      const denied: any[] = [];
+
+      // 1. Iterar items
+      for (const item of dto.items) {
+        // 1a. Obtener stock actual
+        const stockRecord = await manager.query(
+          `SELECT SUM(ws.stock) as total_stock 
+           FROM warehouse_stock ws
+           JOIN warehouses w ON w.id = ws.warehouse_id
+           WHERE ws.product_id = $1 AND w.store_id = $2`,
+          [item.product_id, storeId],
+        );
+
+        const totalStock = parseFloat(stockRecord[0]?.total_stock || '0');
+
+        if (totalStock <= 0) {
+          denied.push({
+            product_id: item.product_id,
+            requested: item.qty,
+            reason: 'No stock available',
+          });
+          continue;
+        }
+
+        // 1b. Calcular máximo permitido (30% del stock total)
+        const maxGrant = Math.floor(totalStock * 0.30);
+        const qtyToGrant = Math.min(item.qty, maxGrant);
+
+        if (qtyToGrant < 1) { // Changed from <= 0 to < 1 to prevent 0 qty grants
+          denied.push({
+            product_id: item.product_id,
+            requested: item.qty,
+            reason: 'Stock too low for escrow (30% rule)',
+          });
+          continue;
+        }
+
+        // 1c. Emitir evento StockQuotaGranted
+        const eventSeq = Date.now();
+        const event = manager.create(Event, {
+          event_id: randomUUID(),
+          store_id: storeId,
+          device_id: this.serverDeviceId,
+          seq: eventSeq,
+          type: 'StockQuotaGranted',
+          version: 1,
+          created_at: new Date(),
+          actor_user_id: userId,
+          actor_role: 'system',
+          request_id: randomUUID(),
+          payload: {
+            quota_id: randomUUID(),
+            product_id: item.product_id,
+            device_id: dto.device_id,
+            qty_granted: qtyToGrant,
+            expires_at: item.expires_at || null,
+            parent_request_id: dto.request_id,
+          },
+          vector_clock: { [this.serverDeviceId]: eventSeq },
+        });
+
+        const savedEvent = await manager.save(Event, event);
+        await this.federationSyncService.queueRelay(savedEvent);
+
+        results.push({
+          product_id: item.product_id,
+          qty_granted: qtyToGrant,
+          requested: item.qty,
+        });
+      }
+
+      return {
+        success: true,
+        request_id: dto.request_id,
+        granted: results,
+        denied: denied,
       };
     });
   }

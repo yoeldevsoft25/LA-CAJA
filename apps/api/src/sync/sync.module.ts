@@ -12,6 +12,7 @@ import { ProjectionsModule } from '../projections/projections.module';
 import { Product } from '../database/entities/product.entity';
 import { CashSession } from '../database/entities/cash-session.entity';
 import { DiscountsModule } from '../discounts/discounts.module';
+import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
 import { LicensesModule } from '../licenses/licenses.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { QueuesModule } from '../queues/queues.module';
@@ -22,10 +23,15 @@ import {
   FederationSyncProcessor,
 } from './federation-sync.service';
 import { InventoryEscrowModule } from '../inventory/escrow/inventory-escrow.module';
+import { InventoryModule } from '../inventory/inventory.module';
 import { OrphanHealerService } from './orphan-healer.service';
 import { OutboxService } from './outbox.service';
 import { DistributedLockService } from '../common/distributed-lock.service';
 import { ConflictAuditService } from './conflict-audit.service';
+import { FiscalModule } from '../fiscal/fiscal.module';
+import { SplitBrainMonitorService } from './split-brain-monitor.service';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { FederationAlertsService } from './federation-alerts.service';
 
 @Module({
   imports: [
@@ -35,6 +41,7 @@ import { ConflictAuditService } from './conflict-audit.service';
       CashSession,
       Store,
       CrdtSnapshot,
+      WarehouseStock,
     ]),
     ProjectionsModule,
     DiscountsModule,
@@ -42,6 +49,9 @@ import { ConflictAuditService } from './conflict-audit.service';
     LicensesModule,
     ObservabilityModule,
     forwardRef(() => InventoryEscrowModule),
+    forwardRef(() => InventoryModule),
+    FiscalModule,
+    NotificationsModule,
   ],
   controllers: [SyncController],
   providers: [
@@ -57,6 +67,8 @@ import { ConflictAuditService } from './conflict-audit.service';
     OutboxService,
     DistributedLockService,
     ConflictAuditService,
+    SplitBrainMonitorService,
+    FederationAlertsService,
   ],
   exports: [
     SyncService,
@@ -66,6 +78,8 @@ import { ConflictAuditService } from './conflict-audit.service';
     OutboxService,
     DistributedLockService,
     ConflictAuditService,
+    SplitBrainMonitorService,
+    FederationAlertsService,
   ],
 })
 export class SyncModule { }

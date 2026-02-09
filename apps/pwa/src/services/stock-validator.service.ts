@@ -51,12 +51,24 @@ class StockValidatorService {
 
                 // 2. Obtener stock local
                 // ID compuesto product_id:variant_id (variant es null por ahora)
-                const stockEntry = await db.localStock.get(`${item.product_id}:null`);
-                const available = stockEntry ? stockEntry.stock : 0;
+                const id = `${item.product_id}:null`;
+                const [stockEntry, escrowEntry] = await Promise.all([
+                    db.localStock.get(id),
+                    db.localEscrow.get(id)
+                ]);
+
+                let available = stockEntry ? stockEntry.stock : 0;
+                let escrow = 0;
+
+                // Sumar escrow si es válido y no ha expirado
+                if (escrowEntry && (escrowEntry.expires_at === null || escrowEntry.expires_at > Date.now())) {
+                    escrow = escrowEntry.qty_granted || 0;
+                    available += escrow;
+                }
 
                 // 3. Validar
                 if (available < item.qty) {
-                    const msg = `Stock insuficiente: ${available} disponible, ${item.qty} solicitado.`;
+                    const msg = `Stock insuficiente: ${available} disponible (Stock: ${stockEntry?.stock || 0}, Cuota: ${escrow}), ${item.qty} solicitado.`;
 
                     if (isOnline) {
                         // Online: Warning (Fail Open, el server validará final)

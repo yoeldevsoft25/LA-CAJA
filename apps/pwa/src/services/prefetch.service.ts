@@ -11,7 +11,7 @@ import { cashService } from './cash.service'
 import { exchangeService } from '@la-caja/app-core'
 import { salesService } from './sales.service'
 import { debtsService } from './debts.service'
-import { inventoryService } from './inventory.service'
+import { inventoryService, BatchGrantQuotaDto } from './inventory.service'
 import { reportsService } from './reports.service'
 import { productsCacheService } from '@la-caja/app-core'
 import { createLogger } from '@/lib/logger'
@@ -152,6 +152,48 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
         .catch(err => logger.error('Error cacheando escrows', err))
     ]);
 
+    // 7b. Solicitud de Cuotas (Escrow) para productos frecuentes
+    // Basado en las ventas recientes (salesData)
+    if (salesData && salesData.sales && salesData.sales.length > 0) {
+      const recentProductIds = new Set<string>();
+      salesData.sales.forEach(sale => {
+        if (sale.items) {
+          sale.items.forEach(item => recentProductIds.add(item.product_id));
+        }
+      });
+
+      if (recentProductIds.size > 0) {
+        updateProgress('Solicitando cuotas de stock (escrow)...');
+        try {
+          // Validar device_id
+          const deviceId = localStorage.getItem('device_id') || 'unknown';
+
+          // Preparar request
+          const quotaRequest: BatchGrantQuotaDto = {
+            device_id: deviceId,
+            request_id: crypto.randomUUID(),
+            items: Array.from(recentProductIds).map(id => ({
+              product_id: id,
+              qty: 10 // Solicitamos 10 unids por defecto para tener buffer
+            }))
+          };
+
+          // Fire & Forget (no bloqueante, pero logueamos error)
+          inventoryService.batchGrantQuota(quotaRequest)
+            .then(res => {
+              logger.debug(`Cuotas otorgadas: ${res.granted.length}, Denegadas: ${res.denied.length}`);
+              // Una vez otorgadas, actualizamos el estado local de escrows
+              return inventoryService.getEscrowStatus(storeId);
+            })
+            .then(escrows => inventoryService.cacheEscrows(escrows))
+            .catch(err => logger.warn('Error solicitando cuotas de stock', { error: err }));
+
+        } catch (e) {
+          logger.warn('Error preparando solicitud de cuotas', { error: e });
+        }
+      }
+    }
+
     await queryClient.prefetchQuery({
       queryKey: ['inventory', 'status', storeId],
       queryFn: () => Promise.resolve(stockStatusData),
@@ -191,7 +233,7 @@ export async function prefetchAllData({ storeId, queryClient, userRole, onProgre
         logger.debug('Credenciales offline guardadas', { count: offlineHashes.data.length })
       }
     } catch (error) {
-      logger.warn('Error cacheando credenciales offline', { error })
+      logger.warn('Error cacheando credenciales offline', { error: error as any })
     }
 
     // 10. Prefetch reportes (hoy) - SOLO para owners

@@ -32,13 +32,13 @@ SEMANA 0        SEMANA 1        SEMANA 2        SEMANA 3        SEMANA 4        
 ┌─────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌──────────┐
 │TRIAGE   │   │ PHASE 1     │ │ PHASE 2     │ │ PHASE 3     │ │ PHASE 4     │ │ PHASE 5     │ │PHASE 6   │
 │         │   │             │ │             │ │             │ │             │ │             │ │          │
-│• Diagnós│   │• [x]FixFiaos│ │• [x]Stock   │ │• Fiscal     │ │• Escrow     │ │• Observabil │ │• Chaos   │
-│• Queries│   │• [x]Orphan H│ │  Validation │ │  Ranges     │ │  Automático │ │• Dashboard  │ │  Testing │
-│• Backup │   │• [x]Outbox  │ │• [x]Circuit │ │• Causal     │ │• PN-Counter │ │• Alertas    │ │• Hardening│
-│• Hotfix │   │• [x]Reconcil│ │  Breaker    │ │  Relay      │ │• Conflict   │ │• Runbook    │ │• Docs    │
-│  fiaos  │   │     Fix     │ │• [x]Lock    │ │• Hash fix   │ │  Audit UI   │ │• Metrics    │ │• Release │
+│• [x]Diagnós│ │• [x]FixFiaos│ │• [x]Stock   │ │• [x]Fiscal     │ │• [x]Escrow     │ │• [x]Observabil │ │• Chaos   │
+│• [x]Queries│ │• [x]Orphan H│ │  Validation │ │  Ranges     │ │  Automático │ │• Dashboard  │ │  Testing │
+│• [x]Backup │ │• [x]Outbox  │ │• [x]Circuit │ │• [x]Causal     │ │• [x]PN-Counter │ │• [x]Alertas    │ │• [x]Hardening│
+│• [x]Hotfix │ │• [x]Reconcil│ │  Breaker    │ │  Relay      │ │• [x]Conflict   │ │• [x]Runbook    │ │• Docs    │
+│  fiaos  │    │     Fix     │ │• [x]Lock    │ │• [x]Hash fix   │ │• [x]Audit UI   │ │• [x]Metrics    │ │• [x]Release │
 └─────────┘   └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └──────────┘
-    🔴              🔴              🔴              🟡              🟡              🟢              🟢
+    �              �              �              �              �              🟢              �
    CRÍTICO        CRÍTICO         CRÍTICO        IMPORTANTE     IMPORTANTE      MEJORA          CIERRE
 SEMANA 0 — TRIAGE DE EMERGENCIA (Día 0-2)
 Objetivo: Diagnosticar y hotfix el problema de fiaos
