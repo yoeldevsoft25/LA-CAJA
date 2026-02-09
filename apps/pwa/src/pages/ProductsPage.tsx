@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { Search, Plus, Edit, Trash2, Package, CheckCircle, DollarSign, Layers, Boxes, Hash, Upload, AlertTriangle, LayoutGrid, LayoutList, Download, Copy, MoreHorizontal, AlertCircle } from 'lucide-react'
 import { productsService, Product } from '@la-caja/app-core'
 import { warehousesService } from '@/services/warehouses.service'
@@ -98,7 +98,7 @@ export default function ProductsPage() {
   const [publicOnly, setPublicOnly] = useState(false)
   const [productTypeFilter, setProductTypeFilter] = useState<'all' | 'sale_item' | 'ingredient' | 'prepared'>('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize] = useState(10)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [duplicatingProduct, setDuplicatingProduct] = useState<Product | null>(null)
@@ -209,7 +209,7 @@ export default function ProductsPage() {
     gcTime: Infinity,
     retry: false,
     initialData: undefined,
-    placeholderData: undefined,
+    placeholderData: keepPreviousData,
   })
 
   const { data: warehouses = [] } = useQuery({

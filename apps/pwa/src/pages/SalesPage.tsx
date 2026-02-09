@@ -252,59 +252,61 @@ export default function SalesPage() {
 
       return true
     })
-  }, [allDaySalesData, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
+  }, [allDaySalesData?.sales, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
 
   // Aplicar filtros avanzados (filtrado en frontend)
-  const sales = rawSales.filter((sale: Sale) => {
-    // Filtro por método de pago
-    if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
-      return false
-    }
-
-    // Filtro por estado (anulada/no anulada)
-    if (statusFilter === 'voided' && !sale.voided_at) {
-      return false
-    }
-    if (statusFilter === 'completed' && sale.voided_at) {
-      return false
-    }
-
-    // Filtro por deuda
-    if (debtFilter === 'with_debt') {
-      if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
+  const sales = useMemo(() => {
+    return rawSales.filter((sale: Sale) => {
+      // Filtro por método de pago
+      if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
         return false
       }
-    } else if (debtFilter === 'without_debt') {
-      if (sale.debt && (sale.debt.status === 'open' || sale.debt.status === 'partial')) {
+
+      // Filtro por estado (anulada/no anulada)
+      if (statusFilter === 'voided' && !sale.voided_at) {
         return false
       }
-    } else if (debtFilter === 'paid') {
-      if (!sale.debt || sale.debt.status !== 'paid') {
+      if (statusFilter === 'completed' && sale.voided_at) {
         return false
       }
-    }
 
-    // Filtro por rango de montos (USD)
-    const amountUsd = Number(sale.totals.total_usd)
-    if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
-      return false
-    }
-    if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
-      return false
-    }
+      // Filtro por deuda
+      if (debtFilter === 'with_debt') {
+        if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'without_debt') {
+        if (sale.debt && (sale.debt.status === 'open' || sale.debt.status === 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'paid') {
+        if (!sale.debt || sale.debt.status !== 'paid') {
+          return false
+        }
+      }
 
-    // Filtro por búsqueda de cliente
-    if (customerSearch.trim()) {
-      const searchLower = customerSearch.toLowerCase().trim()
-      const customerName = sale.customer?.name?.toLowerCase() || ''
-      const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
-      if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
+      // Filtro por rango de montos (USD)
+      const amountUsd = Number(sale.totals.total_usd)
+      if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
         return false
       }
-    }
+      if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+        return false
+      }
 
-    return true
-  })
+      // Filtro por búsqueda de cliente
+      if (customerSearch.trim()) {
+        const searchLower = customerSearch.toLowerCase().trim()
+        const customerName = sale.customer?.name?.toLowerCase() || ''
+        const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
+        if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [rawSales, paymentMethodFilter, statusFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
 
   const totalPages = Math.ceil(total / limit)
 
@@ -915,7 +917,7 @@ export default function SalesPage() {
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody style={{ contentVisibility: 'auto', contain: 'layout style' }}>
                       {sales.map((sale: Sale) => {
                         const itemCount = sale.items.length
                         const totalUnits = sale.items.reduce(

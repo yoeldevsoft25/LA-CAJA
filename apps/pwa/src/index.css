@@ -174,6 +174,10 @@
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-border: 220 13% 91%;
   --sidebar-ring: 217.2 91.2% 59.8%;
+
+  /* ⚡ PERF: Optimization variables */
+  --glass-blur: 12px;
+  --glass-opacity: 0.8;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -206,24 +210,24 @@
    ═══════════════════════════════════════════════════════════════════════ */
 .dark {
   /* ── Backgrounds — Deep Midnight Blue ───────────────────────── */
-  --background: 222 47% 6%;
+  --background: 220 30% 6%;
   /* Deepest midnight (Rich #050b14) */
   --foreground: 210 40% 98%;
   /* Bright white-blue */
 
   /* ── Cards — Floating midnight surface ──────────────────────── */
-  --card: 222 47% 8%;
+  --card: 220 25% 11%;
   /* Slightly lighter midnight */
   --card-foreground: 210 40% 98%;
 
   /* ── Popovers — Elevated surface ────────────────────────────── */
-  --popover: 222 47% 9%;
+  --popover: 220 25% 11%;
   --popover-foreground: 210 40% 98%;
 
   /* ── Primary — VIBRANT Electric Blue ────────────────────────── */
-  --primary: 221 83% 53%;
+  --primary: 217 91% 60%;
   /* Electric Blue (#2563EB) */
-  --primary-foreground: 210 40% 98%;
+  --primary-foreground: 222 47% 11%;
 
   /* ── Secondary — Muted Midnight ─────────────────────────────── */
   --secondary: 217 33% 15%;
@@ -231,11 +235,11 @@
   --secondary-foreground: 210 40% 98%;
 
   /* ── Muted — Subtle backgrounds ─────────────────────────────── */
-  --muted: 217 33% 12%;
+  --muted: 217 20% 15%;
   --muted-foreground: 215 20% 65%;
 
   /* ── Accent — Hover states (Electric glow) ──────────────────── */
-  --accent: 217 33% 14%;
+  --accent: 217 25% 15%;
   --accent-foreground: 210 40% 98%;
 
   /* ── Destructive — Vibrant Red ──────────────────────────────── */
@@ -255,21 +259,25 @@
   --info-foreground: 0 0% 100%;
 
   /* ── Borders & Inputs — Glassy ──────────────────────────────── */
-  --border: 217 33% 18%;
+  --border: 217 20% 18%;
   /* Subtle blue-grey border */
-  --input: 217 33% 18%;
-  --ring: 221 83% 53%;
+  --input: 217 20% 18%;
+  --ring: 217 91% 60%;
   /* Matches Primary */
 
   /* ── Sidebar — Distinct deep panel ──────────────────────────── */
-  --sidebar-background: 222 47% 5%;
+  --sidebar-background: 220 30% 5%;
   --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 221 83% 53%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217 33% 12%;
+  --sidebar-primary: 217 91% 60%;
+  --sidebar-primary-foreground: 222 47% 11%;
+  --sidebar-accent: 217 25% 15%;
   --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217 33% 12%;
-  --sidebar-ring: 221 83% 53%;
+  --sidebar-border: 217 20% 18%;
+  --sidebar-ring: 217 91% 60%;
+
+  /* ⚡ PERF: Dark mode specific optimizations */
+  --glass-blur: 10px;
+  --glass-opacity: 0.7;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -648,5 +656,51 @@
   .gpu {
     transform: translateZ(0);
     will-change: transform;
+  }
+
+  /* ⚡ PERF: Optimized Glass Effects */
+  .glass-panel {
+    @apply bg-background/var(--glass-opacity) backdrop-blur-var(--glass-blur);
+    border: 1px solid hsl(var(--border) / 0.4);
+  }
+
+  .premium-empty-state-glass {
+    @apply bg-card/60 backdrop-blur-sm border border-white/10;
+  }
+
+  /* ⚡ PERF: Motion Hints */
+  .animate-gpu {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+  }
+
+  /* ⚡ PERF: CSS Containment */
+  .contain-strict {
+    contain: strict;
+  }
+
+  .contain-content {
+    contain: content;
+  }
+
+  .contain-layout {
+    contain: layout;
+  }
+
+  .contain-paint {
+    contain: paint;
+  }
+
+  /* ⚡ PERF: Will Change Utilities */
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  .will-change-scroll {
+    will-change: scroll-position;
+  }
+
+  .will-change-contents {
+    will-change: contents;
   }
 }

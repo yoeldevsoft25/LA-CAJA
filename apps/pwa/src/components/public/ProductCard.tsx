@@ -63,11 +63,12 @@ export default function ProductCard({
       <CardWrapper {...(wrapperProps as any)}>
         <Card
           className={cn(
-            'group relative transition-all duration-500 overflow-hidden w-full h-full',
+            'group relative transition-[transform,shadow,border-color] duration-300 overflow-hidden w-full h-full',
             'bg-background/80 backdrop-blur-sm',
             'border border-border/50',
             'hover:shadow-2xl hover:shadow-primary/10',
             'hover:border-primary/30',
+            'will-change-transform',
             !product.is_available && 'opacity-60 grayscale',
             isHero && 'border-none bg-transparent shadow-none',
             'touch-manipulation',
@@ -91,6 +92,7 @@ export default function ProductCard({
                     alt={product.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
+                    decoding="async"
                     whileHover={{ scale: 1.1 }}
                     transition={{ duration: 0.7, ease: "easeOut" }}
                   />
@@ -191,7 +193,7 @@ export default function ProductCard({
                     }}
                     disabled={!product.is_available}
                     className={cn(
-                      'shrink-0 font-bold transition-all duration-300',
+                      'shrink-0 font-bold transition-[transform,colors,box-shadow] duration-300',
                       'shadow-lg hover:shadow-primary/20',
                       'bg-primary hover:bg-primary/90 active:bg-primary/80',
                       'border-2 border-primary/20 hover:border-primary/40',

@@ -92,7 +92,7 @@ function KPICard({
 
   return (
     <Card className={cn(
-      "glass-panel premium-shadow-md hover:premium-shadow-lg transition-transform duration-300 border-white/20 will-change-transform",
+      "glass-panel premium-shadow-md hover:premium-shadow-lg transition-[transform,box-shadow] duration-300 border-white/20 will-change-transform",
       className
     )}>
       <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-between">

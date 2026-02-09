@@ -186,7 +186,7 @@ export const ProductCatalog = memo(function ProductCatalog({
                         return (
                             <div
                                 key={product.id}
-                                className="absolute left-0 right-0 px-2"
+                                className="absolute left-0 right-0 px-2 contain-layout"
                                 style={{
                                     top: (originalIndex * PRODUCT_ROW_HEIGHT) + LIST_TOP_PADDING,
                                     height: PRODUCT_ROW_HEIGHT
@@ -194,9 +194,9 @@ export const ProductCatalog = memo(function ProductCatalog({
                             >
                                 <button
                                     onClick={() => onProductClick(product)}
-                                    className="w-full h-[104px] text-left group relative bg-card/60 hover:bg-card/90 rounded-2xl border border-white/10 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200"
+                                    className="w-full h-[104px] text-left group relative bg-card/60 hover:bg-card/90 rounded-2xl border border-white/10 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-[background-color,border-color,box-shadow] duration-200 will-change-transform"
                                 >
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-all duration-300" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-[background-color] duration-300" />
 
                                     {/* Icono / Imagen */}
                                     <div className={cn(

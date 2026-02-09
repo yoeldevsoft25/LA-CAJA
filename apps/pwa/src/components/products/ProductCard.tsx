@@ -117,7 +117,7 @@ const ProductCard = memo(function ProductCard({
   return (
     <Card
       className={cn(
-        'transition-all hover:shadow-md',
+        'transition-shadow duration-300 hover:shadow-md',
         !product.is_active && 'opacity-60 bg-muted/30'
       )}
     >

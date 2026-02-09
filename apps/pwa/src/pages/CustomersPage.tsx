@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { randomUUID } from '@/lib/uuid'
 import { Search, Plus, Edit, Users, Phone, CreditCard, FileText, History, Mail, DollarSign, Trash2, AlertTriangle, Printer, MessageCircle } from 'lucide-react'
@@ -54,6 +54,11 @@ export default function CustomersPage() {
     gcTime: Infinity,
     refetchOnMount: false,
   })
+
+  // Aunque el servicio ya filtra, si hiciéramos transformaciones adicionales las memoizaríamos aquí
+  const displayedCustomers = useMemo(() => {
+    return customers
+  }, [customers])
 
   const handleEdit = (customer: Customer) => {
     setEditingCustomer(customer)
@@ -471,8 +476,11 @@ export default function CustomersPage() {
               </div>
 
               {/* Mobile Cards */}
-              <div className="md:hidden divide-y divide-border">
-                {customers.map((customer) => (
+              <div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                style={{ contentVisibility: 'auto', contain: 'layout style' }}
+              >
+                {displayedCustomers.map((customer) => (
                   <div key={customer.id} className="p-4 hover:bg-accent/50 transition-colors">
                     {/* Header: Avatar + Name + Credit Limit */}
                     <div className="flex items-start gap-3 mb-3">
