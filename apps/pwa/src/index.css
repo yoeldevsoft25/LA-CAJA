@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@config "../tailwind.config.js";
+
+/* Escaneo de paquetes externos */
+@source "../../packages/ui-core/src/**/*.{js,ts,jsx,tsx}";
 
 /* Estilos para impresión de facturas fiscales */
 @media print {
@@ -339,6 +342,7 @@
   }
 
   .text-gradient {
+
     @apply bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/60;
   }
 
@@ -353,7 +357,14 @@
   }
 
   .border-beam-effect {
-    @apply relative after:absolute after:inset-0 after:rounded-[inherit] after:p-[1px] after:bg-gradient-to-r after:from-primary/50 after:to-transparent after:[mask:linear-gradient(#fff_0_0)_content-box, linear-gradient(#fff_0_0)] after:-z-10;
+    @apply relative after:absolute after:inset-0 after:rounded-[inherit] after:p-[1px] after:bg-gradient-to-r after:from-primary/50 after:to-transparent after:-z-10;
+
+    &::after {
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: xor;
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
   }
 
   .subtle-grid {
