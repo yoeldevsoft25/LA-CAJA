@@ -13,14 +13,17 @@ const mockDataSource = () => ({
         }
 
         const manager = {
-            findOne: jest.fn(),
-            save: jest.fn().mockImplementation(item => Promise.resolve({ ...item, range_start: 1, range_end: 50 })),
+            findOne: jest.fn().mockResolvedValue(null),
+            save: jest.fn(),
             createQueryBuilder: jest.fn().mockReturnThis(),
             select: jest.fn().mockReturnThis(),
             where: jest.fn().mockReturnThis(),
             setLock: jest.fn().mockReturnThis(),
             getOne: jest.fn(),
-            query: jest.fn().mockResolvedValue([]),
+            query: jest.fn()
+                .mockResolvedValueOnce([]) // 1. Check existing active
+                .mockResolvedValueOnce([{ max_end: 0 }]) // 2. Get highest range_end
+                .mockResolvedValueOnce([{ id: 'r1', range_start: 1, range_end: 50 }]), // 3. INSERT RETURNING
         };
 
         return await callback(manager);

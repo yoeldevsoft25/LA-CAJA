@@ -1,4 +1,19 @@
 
+jest.mock('p-queue', () => {
+    return class MockQueue {
+        add(fn: any) { return fn(); }
+        on() { }
+        start() { }
+    };
+});
+jest.mock('@whiskeysockets/baileys', () => {
+    return {
+        default: jest.fn(),
+        DisconnectReason: {},
+        useMultiFileAuthState: jest.fn().mockReturnValue({ state: {}, saveCreds: jest.fn() }),
+    };
+});
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrphanHealerService } from '../../sync/orphan-healer.service';
 import { ProjectionsService } from '../../projections/projections.service';
@@ -49,7 +64,7 @@ describe('Chaos: Projection Gap Recovery', () => {
         dataSource = module.get(DataSource);
     });
 
-    it('should pass test shell', async () => {
+    it('should be defined', async () => {
         expect(service).toBeDefined();
     });
 });
