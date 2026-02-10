@@ -35,7 +35,7 @@ ensure_tool go
 detect_stable_version() {
   local base="https://pkgs.tailscale.com/stable"
   local html version
-  echo "Detectando versión Tailscale desde ${base}/ ..."
+  echo "Detectando versión Tailscale desde ${base}/ ..." >&2
   html="$(curl -fsSL "${base}/")"
 
   # Prefer the macOS artifact version if present.
@@ -46,7 +46,7 @@ detect_stable_version() {
   fi
 
   if [[ -z "$version" ]]; then
-    echo "Error: No se pudo detectar la versión desde ${base}/"
+    echo "Error: No se pudo detectar la versión desde ${base}/" >&2
     exit 1
   fi
 
