@@ -25,6 +25,9 @@ import {
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
+  // Hard cap to avoid accidentally pulling 100k+ rows into Node (protects prod).
+  // Doesn't change the response shape; only bounds worst-case load.
+  private static readonly MAX_LIST_LIMIT = 5000;
 
   constructor(
     @InjectRepository(Product)
@@ -351,7 +354,16 @@ export class ProductsService {
     const total = await query.getCount();
 
     if (searchDto.limit) {
-      query.limit(searchDto.limit);
+      const safeLimit = Math.min(
+        searchDto.limit,
+        ProductsService.MAX_LIST_LIMIT,
+      );
+      if (safeLimit !== searchDto.limit) {
+        this.logger.warn(
+          `Clamping products list limit from ${searchDto.limit} to ${safeLimit} (store_id=${storeId})`,
+        );
+      }
+      query.limit(safeLimit);
     }
     if (searchDto.offset) {
       query.offset(searchDto.offset);

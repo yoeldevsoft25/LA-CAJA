@@ -66,7 +66,7 @@ export function CartList({
                                     enabled={allowSwipe}
                                     requireHandle={isMobile}
                                     threshold={80}
-                                    className="mb-0 border-b border-border/40"
+                                    className=""
                                 >
                                     <CartItemRow
                                         item={item}
@@ -88,11 +88,11 @@ export function CartList({
     return (
         <div className="flex-1 min-h-0 h-full relative overflow-hidden">
             {isMobile ? (
-                <div className="h-full min-h-0 overflow-y-auto touch-pan-y overscroll-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="h-full min-h-0 overflow-y-auto touch-pan-y overscroll-auto px-3 py-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                     {content}
                 </div>
             ) : (
-                <ScrollArea className="h-full min-h-0">
+                <ScrollArea className="h-full min-h-0 px-3 py-2">
                     {content}
                 </ScrollArea>
             )}

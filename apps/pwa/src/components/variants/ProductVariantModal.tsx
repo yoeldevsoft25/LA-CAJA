@@ -8,7 +8,13 @@ import {
   CreateProductVariantRequest,
   VariantType,
 } from '@/services/product-variants.service'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -114,31 +120,32 @@ export default function ProductVariantModal({
   const variantType = watch('variant_type')
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
-            <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
+
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="w-full sm:max-w-xl flex flex-col p-0 gap-0 border-l border-border shadow-2xl">
+        <SheetHeader className="px-5 py-4 border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <SheetTitle className="text-xl font-semibold flex items-center">
+            <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-3" />
             {variant ? 'Editar Variante' : 'Agregar Variante'}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
+          </SheetTitle>
+          <SheetDescription className="sr-only">
             {variant ? 'Edita los datos de la variante' : 'Crea una nueva variante para el producto'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-            <div className="space-y-4">
-              <Alert className="bg-info/5 border-info/50">
-                <AlertDescription className="text-sm text-foreground">
-                  Las variantes permiten gestionar diferentes versiones de un producto (tallas,
-                  colores, etc.) con precios y stock independientes.
-                </AlertDescription>
-              </Alert>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 bg-background">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-6 space-y-6">
+            <Alert className="bg-primary/5 border-primary/20 p-4">
+              <AlertDescription className="text-sm text-foreground/90 leading-relaxed">
+                Las variantes permiten gestionar diferentes versiones de un producto (tallas,
+                colores, etc.) con precios y stock independientes.
+              </AlertDescription>
+            </Alert>
 
+            <div className="space-y-5">
               {/* Tipo de variante */}
               <div>
-                <Label htmlFor="variant_type">
+                <Label htmlFor="variant_type" className="text-sm font-medium mb-1.5 block">
                   Tipo de Variante <span className="text-destructive">*</span>
                 </Label>
                 <Select
@@ -146,7 +153,7 @@ export default function ProductVariantModal({
                   onValueChange={(value) => setValue('variant_type', value)}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="mt-2">
+                  <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -161,7 +168,7 @@ export default function ProductVariantModal({
                 {variantType === 'custom' && (
                   <Input
                     {...register('variant_type')}
-                    className="mt-2"
+                    className="mt-2 h-10"
                     placeholder="Ej: Modelo, Versión, etc."
                     disabled={isLoading}
                   />
@@ -173,103 +180,116 @@ export default function ProductVariantModal({
 
               {/* Valor de variante */}
               <div>
-                <Label htmlFor="variant_value">
+                <Label htmlFor="variant_value" className="text-sm font-medium mb-1.5 block">
                   Valor de Variante <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="variant_value"
                   {...register('variant_value')}
-                  className="mt-2"
+                  className="h-10"
                   placeholder="Ej: M, L, XL, Rojo, Azul, etc."
                   maxLength={100}
                   disabled={isLoading}
                 />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Separa con comas para crear múltiples (ej: S, M, L)
+                </p>
                 {errors.variant_value && (
                   <p className="mt-1 text-sm text-destructive">{errors.variant_value.message}</p>
                 )}
               </div>
 
-              {/* SKU */}
-              <div>
-                <Label htmlFor="sku">SKU (Opcional)</Label>
-                <Input
-                  id="sku"
-                  {...register('sku')}
-                  className="mt-2"
-                  placeholder="Código SKU único"
-                  disabled={isLoading}
-                />
-                {errors.sku && <p className="mt-1 text-sm text-destructive">{errors.sku.message}</p>}
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {/* SKU */}
+                <div>
+                  <Label htmlFor="sku" className="text-sm font-medium mb-1.5 block">SKU (Opcional)</Label>
+                  <Input
+                    id="sku"
+                    {...register('sku')}
+                    className="h-10 font-mono text-sm"
+                    placeholder="Código SKU"
+                    disabled={isLoading}
+                  />
+                  {errors.sku && <p className="mt-1 text-sm text-destructive">{errors.sku.message}</p>}
+                </div>
 
-              {/* Código de barras */}
-              <div>
-                <Label htmlFor="barcode">Código de Barras (Opcional)</Label>
-                <Input
-                  id="barcode"
-                  {...register('barcode')}
-                  className="mt-2"
-                  placeholder="Código de barras único"
-                  disabled={isLoading}
-                />
-                {errors.barcode && (
-                  <p className="mt-1 text-sm text-destructive">{errors.barcode.message}</p>
-                )}
+                {/* Código de barras */}
+                <div>
+                  <Label htmlFor="barcode" className="text-sm font-medium mb-1.5 block">Código de Barras</Label>
+                  <Input
+                    id="barcode"
+                    {...register('barcode')}
+                    className="h-10 font-mono text-sm"
+                    placeholder="EAN / UPC / Code128"
+                    disabled={isLoading}
+                  />
+                  {errors.barcode && (
+                    <p className="mt-1 text-sm text-destructive">{errors.barcode.message}</p>
+                  )}
+                </div>
               </div>
 
               {/* Precios (opcionales) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
                 <div>
-                  <Label htmlFor="price_bs">Precio Bs (Opcional)</Label>
-                  <Input
-                    id="price_bs"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register('price_bs', {
-                      valueAsNumber: true,
-                      setValueAs: (v) => (v === '' || v === null ? null : Number(v)),
-                    })}
-                    className="mt-2"
-                    placeholder="Usa precio del producto base"
-                    disabled={isLoading}
-                  />
+                  <Label htmlFor="price_bs" className="text-sm font-medium mb-1.5 block">Precio Bs (Opcional)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Bs.</span>
+                    <Input
+                      id="price_bs"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('price_bs', {
+                        valueAsNumber: true,
+                        setValueAs: (v) => (v === '' || v === null ? null : Number(v)),
+                      })}
+                      className="pl-9 h-10"
+                      placeholder="Heredar del producto"
+                      disabled={isLoading}
+                    />
+                  </div>
                   {errors.price_bs && (
                     <p className="mt-1 text-sm text-destructive">{errors.price_bs.message}</p>
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Si no se especifica, se usa el precio del producto base
-                  </p>
                 </div>
                 <div>
-                  <Label htmlFor="price_usd">Precio USD (Opcional)</Label>
-                  <Input
-                    id="price_usd"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register('price_usd', {
-                      valueAsNumber: true,
-                      setValueAs: (v) => (v === '' || v === null ? null : Number(v)),
-                    })}
-                    className="mt-2"
-                    placeholder="Usa precio del producto base"
-                    disabled={isLoading}
-                  />
+                  <Label htmlFor="price_usd" className="text-sm font-medium mb-1.5 block">Precio USD (Opcional)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      id="price_usd"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('price_usd', {
+                        valueAsNumber: true,
+                        setValueAs: (v) => (v === '' || v === null ? null : Number(v)),
+                      })}
+                      className="pl-7 h-10"
+                      placeholder="Heredar del producto"
+                      disabled={isLoading}
+                    />
+                  </div>
                   {errors.price_usd && (
                     <p className="mt-1 text-sm text-destructive">{errors.price_usd.message}</p>
                   )}
                 </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted-foreground bg-muted/30 p-2 rounded border border-border/50">
+                    💡 Si dejas los precios vacíos, se usarán los precios del producto principal.
+                  </p>
+                </div>
               </div>
 
               {/* Activo */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2">
                 <div className="space-y-0.5">
-                  <Label htmlFor="is_active" className="text-base">
+                  <Label htmlFor="is_active" className="text-base font-medium">
                     Variante Activa
                   </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Si está desactivada, no aparecerá en el POS
+                  <p className="text-sm text-muted-foreground max-w-[280px]">
+                    Si está desactivada, no aparecerá en el POS ni en el catálogo
                   </p>
                 </div>
                 <Switch
@@ -283,39 +303,39 @@ export default function ProductVariantModal({
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-muted/10 backdrop-blur-sm">
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1"
+                className="flex-1 h-11"
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
                     Guardando...
                   </>
                 ) : (
                   <>
-                    <Save className="w-5 h-5 mr-2" />
-                    {variant ? 'Actualizar' : 'Crear'} Variante
+                    <Save className="w-4 h-4 mr-2" />
+                    {variant ? 'Guardar Cambios' : 'Crear Variante'}
                   </>
                 )}
               </Button>
             </div>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }
 

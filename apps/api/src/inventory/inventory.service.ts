@@ -522,6 +522,8 @@ export class InventoryService {
     } = queryDto;
     const normalizedSearch = search?.trim();
     const isPaginated = limit !== undefined || offset !== undefined;
+    const safeLimit =
+      limit !== undefined ? Math.min(Math.max(limit, 1), 5000) : undefined;
 
     const stockSubquery = this.buildWarehouseStockSubquery(
       storeId,
@@ -589,14 +591,10 @@ export class InventoryService {
 
     let total = 0;
     if (isPaginated) {
+      // PERF: only join aggregated stock when we actually need it for filtering (low_stock_only).
+      // For normal pagination counts, joining warehouse_stock aggregation is unnecessarily expensive.
       const countQuery = this.productRepository
         .createQueryBuilder('product')
-        .leftJoin(
-          `(${stockSubquery.getQuery()})`,
-          'stock',
-          'stock.product_id = product.id',
-        )
-        .setParameters(stockSubquery.getParameters())
         .where('product.store_id = :storeId', { storeId });
       if (is_active !== undefined) {
         countQuery.andWhere('product.is_active = :isActive', {
@@ -630,6 +628,13 @@ export class InventoryService {
       }
 
       if (low_stock_only) {
+        countQuery
+          .leftJoin(
+            `(${stockSubquery.getQuery()})`,
+            'stock',
+            'stock.product_id = product.id',
+          )
+          .setParameters(stockSubquery.getParameters());
         countQuery.andWhere(
           'COALESCE(stock.current_stock, 0) <= product.low_stock_threshold',
         );
@@ -642,8 +647,8 @@ export class InventoryService {
       total = await countQuery.getCount();
     }
 
-    if (limit !== undefined) {
-      query.limit(limit);
+    if (safeLimit !== undefined) {
+      query.limit(safeLimit);
     }
     if (offset !== undefined) {
       query.offset(offset);
@@ -688,41 +693,47 @@ export class InventoryService {
     endDate?: Date,
     warehouseId?: string,
   ): Promise<{ movements: any[]; total: number }> {
-    const query = this.movementRepository
+    const safeLimit = Math.min(Math.max(limit, 1), 5000);
+    const safeOffset = Math.max(offset || 0, 0);
+
+    const base = this.movementRepository
       .createQueryBuilder('movement')
-      .leftJoinAndSelect('movement.product', 'product')
-      .where('movement.store_id = :storeId', { storeId })
-      .orderBy('movement.happened_at', 'DESC');
+      .where('movement.store_id = :storeId', { storeId });
 
     if (productId) {
-      query.andWhere('movement.product_id = :productId', { productId });
+      base.andWhere('movement.product_id = :productId', { productId });
     }
 
     if (warehouseId) {
-      query.andWhere('movement.warehouse_id = :warehouseId', { warehouseId });
+      base.andWhere('movement.warehouse_id = :warehouseId', { warehouseId });
     }
 
     if (!includePending) {
-      query.andWhere('movement.approved = true');
+      base.andWhere('movement.approved = true');
     }
 
     if (startDate) {
       const start = this.normalizeStartDate(new Date(startDate));
-      query.andWhere('movement.happened_at >= :startDate', {
+      base.andWhere('movement.happened_at >= :startDate', {
         startDate: start,
       });
     }
 
     if (endDate) {
       const end = this.normalizeEndDate(new Date(endDate));
-      query.andWhere('movement.happened_at <= :endDate', { endDate: end });
+      base.andWhere('movement.happened_at <= :endDate', { endDate: end });
     }
 
-    const total = await query.getCount();
+    // PERF: count without joining product (keeps it fast).
+    const total = await base.clone().getCount();
 
-    query.limit(limit).offset(offset);
-
-    const movements = await query.getMany();
+    const movements = await base
+      .clone()
+      .leftJoinAndSelect('movement.product', 'product')
+      .orderBy('movement.happened_at', 'DESC')
+      .limit(safeLimit)
+      .offset(safeOffset)
+      .getMany();
 
     // Mapear para incluir nombre del producto
     return {

@@ -938,10 +938,33 @@ export class ReportsService {
       query.andWhere('shift.closed_at <= :endDate', { endDate: end });
     }
 
+    // Minimiza payload: extrae solo los campos necesarios (incluyendo valores cash_* desde JSONB)
     const shifts = await query
-      .leftJoinAndSelect('shift.cashier', 'cashier')
+      .leftJoin('shift.cashier', 'cashier')
+      .select('shift.id', 'shift_id')
+      .addSelect('shift.cashier_id', 'cashier_id')
+      .addSelect('cashier.full_name', 'cashier_name')
+      .addSelect('shift.closed_at', 'closed_at')
+      .addSelect('shift.difference_bs', 'difference_bs')
+      .addSelect('shift.difference_usd', 'difference_usd')
+      .addSelect(
+        "COALESCE((shift.expected_totals->>'cash_bs')::numeric, 0)",
+        'expected_cash_bs',
+      )
+      .addSelect(
+        "COALESCE((shift.expected_totals->>'cash_usd')::numeric, 0)",
+        'expected_cash_usd',
+      )
+      .addSelect(
+        "COALESCE((shift.counted_totals->>'cash_bs')::numeric, 0)",
+        'counted_cash_bs',
+      )
+      .addSelect(
+        "COALESCE((shift.counted_totals->>'cash_usd')::numeric, 0)",
+        'counted_cash_usd',
+      )
       .orderBy('shift.closed_at', 'DESC')
-      .getMany();
+      .getRawMany();
 
     const cashierMap = new Map<
       string,
@@ -972,22 +995,6 @@ export class ReportsService {
     }> = [];
 
     for (const shift of shifts) {
-      const expected = (shift.expected_totals || {}) as {
-        cash_bs?: number;
-        cash_usd?: number;
-        pago_movil_bs?: number;
-        transfer_bs?: number;
-        other_bs?: number;
-        total_bs?: number;
-        total_usd?: number;
-      };
-      const counted = (shift.counted_totals || {}) as {
-        cash_bs?: number;
-        cash_usd?: number;
-        pago_movil_bs?: number;
-        transfer_bs?: number;
-        other_bs?: number;
-      };
       const diffBs = shift.difference_bs ? Number(shift.difference_bs) : 0;
       const diffUsd = shift.difference_usd ? Number(shift.difference_usd) : 0;
 
@@ -1001,8 +1008,7 @@ export class ReportsService {
       }
 
       const cashierName =
-        shift.cashier?.full_name ||
-        `Cajero ${shift.cashier_id.substring(0, 8)}`;
+        shift.cashier_name || `Cajero ${shift.cashier_id.substring(0, 8)}`;
 
       if (!cashierMap.has(shift.cashier_id)) {
         cashierMap.set(shift.cashier_id, {
@@ -1019,14 +1025,14 @@ export class ReportsService {
       cashierData.total_differences_usd += Math.abs(diffUsd);
 
       arqueosData.push({
-        shift_id: shift.id,
+        shift_id: shift.shift_id,
         cashier_id: shift.cashier_id,
         cashier_name: cashierName,
-        closed_at: shift.closed_at!,
-        expected_bs: Number(expected.cash_bs || 0),
-        expected_usd: Number(expected.cash_usd || 0),
-        counted_bs: Number(counted.cash_bs || 0),
-        counted_usd: Number(counted.cash_usd || 0),
+        closed_at: shift.closed_at,
+        expected_bs: Number(shift.expected_cash_bs || 0),
+        expected_usd: Number(shift.expected_cash_usd || 0),
+        counted_bs: Number(shift.counted_cash_bs || 0),
+        counted_usd: Number(shift.counted_cash_usd || 0),
         difference_bs: diffBs,
         difference_usd: diffUsd,
       });
@@ -1082,9 +1088,10 @@ export class ReportsService {
     const expirationLimit = new Date(now);
     expirationLimit.setDate(expirationLimit.getDate() + daysAhead);
 
+    // Evita N+1: incluye producto en el mismo query.
     const lots = await this.productLotRepository
       .createQueryBuilder('lot')
-      .innerJoin('lot.product', 'product')
+      .innerJoinAndSelect('lot.product', 'product')
       .where('product.store_id = :storeId', { storeId })
       .andWhere('lot.expiration_date IS NOT NULL')
       .andWhere('lot.expiration_date <= :expirationLimit', { expirationLimit })
@@ -1115,12 +1122,8 @@ export class ReportsService {
     let total_value_usd = 0;
 
     for (const lot of lots) {
-      const product = await this.productRepository.findOne({
-        where: { id: lot.product_id },
-        select: ['id', 'name'],
-      });
-
-      if (!product) continue;
+      const productName =
+        lot.product?.name ?? `Producto ${lot.product_id.substring(0, 8)}`;
 
       const daysUntilExpiration = Math.ceil(
         (lot.expiration_date!.getTime() - now.getTime()) /
@@ -1129,7 +1132,7 @@ export class ReportsService {
 
       if (!productMap.has(lot.product_id)) {
         productMap.set(lot.product_id, {
-          product_name: product.name,
+          product_name: productName,
           lots_count: 0,
           total_quantity: 0,
           expiration_dates: [],
@@ -1203,7 +1206,7 @@ export class ReportsService {
 
     const query = this.productSerialRepository
       .createQueryBuilder('serial')
-      .innerJoin('serial.product', 'product')
+      .innerJoinAndSelect('serial.product', 'product')
       .where('product.store_id = :storeId', { storeId });
 
     if (startDate) {
@@ -1215,10 +1218,7 @@ export class ReportsService {
       query.andWhere('serial.sold_at <= :endDate', { endDate: end });
     }
 
-    const serials = await query
-      .leftJoinAndSelect('serial.sale', 'sale')
-      .orderBy('serial.sold_at', 'DESC')
-      .getMany();
+    const serials = await query.orderBy('serial.sold_at', 'DESC').getMany();
 
     const productMap = new Map<
       string,
@@ -1244,16 +1244,12 @@ export class ReportsService {
     }> = [];
 
     for (const serial of serials) {
-      const product = await this.productRepository.findOne({
-        where: { id: serial.product_id },
-        select: ['id', 'name'],
-      });
-
-      if (!product) continue;
+      const productName =
+        serial.product?.name ?? `Producto ${serial.product_id.substring(0, 8)}`;
 
       if (!productMap.has(serial.product_id)) {
         productMap.set(serial.product_id, {
-          product_name: product.name,
+          product_name: productName,
           total_serials: 0,
           sold_serials: 0,
           available_serials: 0,
@@ -1274,7 +1270,7 @@ export class ReportsService {
       serialsData.push({
         serial_id: serial.id,
         product_id: serial.product_id,
-        product_name: product.name,
+        product_name: productName,
         serial_number: serial.serial_number,
         status: serial.status,
         sold_at: serial.sold_at,
@@ -1329,139 +1325,125 @@ export class ReportsService {
     const cached = await this.cache.get<any>(cacheKey);
     if (cached) return cached;
 
-    const query = this.saleItemRepository
+    const start = startDate
+      ? this.normalizeStartDate(new Date(startDate))
+      : undefined;
+    const end = endDate ? this.normalizeEndDate(new Date(endDate)) : undefined;
+
+    // Agregación en DB: evita traer todos los items para agrupar en memoria.
+    const isWeightExpr =
+      '(item.is_weight_product = true OR product.is_weight_product = true)';
+    const isWeightGroupExpr =
+      '(product.is_weight_product = true OR COALESCE(BOOL_OR(item.is_weight_product), false) = true)';
+    const unitExpr = 'COALESCE(item.weight_unit, product.weight_unit)';
+    const kgFactorExpr = `CASE ${unitExpr}
+      WHEN 'g' THEN 0.001
+      WHEN 'lb' THEN 0.45359237
+      WHEN 'oz' THEN 0.028349523125
+      ELSE 1
+    END`;
+
+    const unitCostBsExpr = `CASE
+      WHEN ${isWeightExpr} THEN COALESCE(product.cost_per_weight_bs, product.cost_bs, 0)
+      ELSE COALESCE(product.cost_bs, 0)
+    END`;
+    const unitCostUsdExpr = `CASE
+      WHEN ${isWeightExpr} THEN COALESCE(product.cost_per_weight_usd, product.cost_usd, 0)
+      ELSE COALESCE(product.cost_usd, 0)
+    END`;
+
+    const rows = await this.saleItemRepository
       .createQueryBuilder('item')
       .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
+      .innerJoin(Product, 'product', 'product.id = item.product_id')
+      .select('product.id', 'product_id')
+      .addSelect('product.name', 'product_name')
+      .addSelect(isWeightGroupExpr, 'is_weight_product')
+      .addSelect('product.weight_unit', 'weight_unit')
+      .addSelect('COALESCE(SUM(item.qty), 0)', 'quantity_sold')
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN ${isWeightExpr} THEN (item.qty * ${kgFactorExpr}) ELSE 0 END), 0)`,
+        'quantity_sold_kg',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN NOT ${isWeightExpr} THEN item.qty ELSE 0 END), 0)`,
+        'quantity_sold_units',
+      )
+      .addSelect(
+        "COALESCE(SUM((item.unit_price_bs * item.qty) - COALESCE(item.discount_bs, 0)), 0)",
+        'revenue_bs',
+      )
+      .addSelect(
+        "COALESCE(SUM((item.unit_price_usd * item.qty) - COALESCE(item.discount_usd, 0)), 0)",
+        'revenue_usd',
+      )
+      .addSelect(
+        `COALESCE(SUM((${unitCostBsExpr}) * item.qty), 0)`,
+        'cost_bs',
+      )
+      .addSelect(
+        `COALESCE(SUM((${unitCostUsdExpr}) * item.qty), 0)`,
+        'cost_usd',
+      )
       .where('sale.store_id = :storeId', { storeId })
-      .andWhere('sale.voided_at IS NULL');
-
-    if (startDate) {
-      const start = this.normalizeStartDate(new Date(startDate));
-      query.andWhere('sale.sold_at >= :startDate', { startDate: start });
-    }
-    if (endDate) {
-      const end = this.normalizeEndDate(new Date(endDate));
-      query.andWhere('sale.sold_at <= :endDate', { endDate: end });
-    }
-
-    const items = await query.getMany();
-
-    const productIds = [...new Set(items.map((item) => item.product_id))];
-    const products =
-      productIds.length > 0
-        ? await this.productRepository.find({
-            where: { id: In(productIds), store_id: storeId },
-            select: [
-              'id',
-              'name',
-              'cost_bs',
-              'cost_usd',
-              'cost_per_weight_bs',
-              'cost_per_weight_usd',
-              'is_weight_product',
-              'weight_unit',
-            ],
-          })
-        : [];
-
-    const productsMap = new Map<string, Product>();
-    for (const product of products) {
-      productsMap.set(product.id, product);
-    }
-
-    const productMap = new Map<
-      string,
-      {
-        product_name: string;
-        quantity_sold: number;
-        quantity_sold_kg: number;
-        quantity_sold_units: number;
-        revenue_bs: number;
-        revenue_usd: number;
-        cost_bs: number;
-        cost_usd: number;
-        is_weight_product: boolean;
-        weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
-      }
-    >();
-
-    for (const item of items) {
-      const product = productsMap.get(item.product_id);
-      if (!product) continue;
-
-      const isWeight = Boolean(
-        item.is_weight_product || product.is_weight_product,
-      );
-      const weightUnit = item.weight_unit || product.weight_unit || null;
-      const qty = Number(item.qty) || 0;
-
-      if (!productMap.has(item.product_id)) {
-        productMap.set(item.product_id, {
-          product_name: product.name,
-          quantity_sold: 0,
-          quantity_sold_kg: 0,
-          quantity_sold_units: 0,
-          revenue_bs: 0,
-          revenue_usd: 0,
-          cost_bs: 0,
-          cost_usd: 0,
-          is_weight_product: isWeight,
-          weight_unit: weightUnit,
-        });
-      }
-
-      const productData = productMap.get(item.product_id)!;
-      productData.quantity_sold += qty;
-      if (isWeight) {
-        productData.quantity_sold_kg += this.normalizeWeightToKg(
-          qty,
-          weightUnit,
-        );
-      } else {
-        productData.quantity_sold_units += qty;
-      }
-      productData.revenue_bs +=
-        Number(item.unit_price_bs || 0) * qty - Number(item.discount_bs || 0);
-      productData.revenue_usd +=
-        Number(item.unit_price_usd || 0) * qty - Number(item.discount_usd || 0);
-      const unitCostBs = isWeight
-        ? Number(product.cost_per_weight_bs ?? product.cost_bs ?? 0)
-        : Number(product.cost_bs ?? 0);
-      const unitCostUsd = isWeight
-        ? Number(product.cost_per_weight_usd ?? product.cost_usd ?? 0)
-        : Number(product.cost_usd ?? 0);
-      productData.cost_bs += unitCostBs * qty;
-      productData.cost_usd += unitCostUsd * qty;
-      productData.is_weight_product = isWeight;
-      productData.weight_unit = weightUnit;
-    }
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere(start ? 'sale.sold_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'sale.sold_at <= :end' : '1=1', { end })
+      .groupBy('product.id')
+      .addGroupBy('product.name')
+      .addGroupBy('product.is_weight_product')
+      .addGroupBy('product.weight_unit')
+      .orderBy(
+        `CASE WHEN ${isWeightGroupExpr}
+          THEN SUM(CASE WHEN ${isWeightExpr} THEN (item.qty * ${kgFactorExpr}) ELSE 0 END)
+          ELSE SUM(CASE WHEN NOT ${isWeightExpr} THEN item.qty ELSE 0 END)
+        END`,
+        'DESC',
+      )
+      .getRawMany();
 
     const result = {
-      by_product: Array.from(productMap.entries())
-        .map(([product_id, data]) => {
-          const profit_bs = data.revenue_bs - data.cost_bs;
-          const profit_usd = data.revenue_usd - data.cost_usd;
+      by_product: rows
+        .map((r) => {
+          const revenue_bs = Number(r.revenue_bs || 0);
+          const revenue_usd = Number(r.revenue_usd || 0);
+          const cost_bs = Number(r.cost_bs || 0);
+          const cost_usd = Number(r.cost_usd || 0);
+          const profit_bs = revenue_bs - cost_bs;
+          const profit_usd = revenue_usd - cost_usd;
           const profit_margin =
-            data.revenue_usd > 0 ? (profit_usd / data.revenue_usd) * 100 : 0;
+            revenue_usd > 0 ? (profit_usd / revenue_usd) * 100 : 0;
 
-          const rotation_base = data.is_weight_product
-            ? data.quantity_sold_kg
-            : data.quantity_sold_units;
-          const rotation_unit: 'kg' | 'unid' = data.is_weight_product
-            ? 'kg'
-            : 'unid';
+          const isWeight =
+            r.is_weight_product === true ||
+            r.is_weight_product === 't' ||
+            r.is_weight_product === 1;
+
+          const quantity_sold_kg = Number(r.quantity_sold_kg || 0);
+          const quantity_sold_units = Number(r.quantity_sold_units || 0);
+
+          const rotation_base = isWeight ? quantity_sold_kg : quantity_sold_units;
+          const rotation_unit: 'kg' | 'unid' = isWeight ? 'kg' : 'unid';
           // Rotación aproximada (ventas / 1, asumiendo stock promedio de 1)
-          // En producción, se debería calcular el stock promedio real
           const rotation_rate = rotation_base;
 
           return {
-            product_id,
-            ...data,
+            product_id: r.product_id,
+            product_name: r.product_name,
+            quantity_sold: Number(r.quantity_sold || 0),
+            quantity_sold_kg,
+            quantity_sold_units,
+            revenue_bs,
+            revenue_usd,
+            cost_bs,
+            cost_usd,
             profit_bs,
             profit_usd,
             profit_margin,
             rotation_rate,
             rotation_unit,
+            is_weight_product: isWeight,
+            weight_unit: r.weight_unit ?? null,
           };
         })
         .sort((a, b) => b.rotation_rate - a.rotation_rate),
@@ -1496,80 +1478,64 @@ export class ReportsService {
     const cached = await this.cache.get<any>(cacheKey);
     if (cached) return cached;
 
-    const query = this.purchaseOrderRepository
+    const start = startDate
+      ? this.normalizeStartDate(new Date(startDate))
+      : undefined;
+    const end = endDate ? this.normalizeEndDate(new Date(endDate)) : undefined;
+
+    const statusPending = ['draft', 'sent', 'confirmed', 'partial'];
+
+    const totalsAgg = await this.purchaseOrderRepository
       .createQueryBuilder('order')
-      .leftJoinAndSelect('order.supplier', 'supplier')
-      .where('order.store_id = :storeId', { storeId });
+      .select('COUNT(order.id)', 'total_orders')
+      .addSelect('COALESCE(SUM(order.total_amount_bs), 0)', 'total_amount_bs')
+      .addSelect('COALESCE(SUM(order.total_amount_usd), 0)', 'total_amount_usd')
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere(start ? 'order.created_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'order.created_at <= :end' : '1=1', { end })
+      .getRawOne();
 
-    if (startDate) {
-      const start = this.normalizeStartDate(new Date(startDate));
-      query.andWhere('order.created_at >= :startDate', { startDate: start });
-    }
-    if (endDate) {
-      const end = this.normalizeEndDate(new Date(endDate));
-      query.andWhere('order.created_at <= :endDate', { endDate: end });
-    }
-
-    const orders = await query.getMany();
-
-    const supplierMap = new Map<
-      string,
-      {
-        supplier_id: string;
-        supplier_name: string;
-        supplier_code: string | null;
-        orders_count: number;
-        total_amount_bs: number;
-        total_amount_usd: number;
-        completed_orders: number;
-        pending_orders: number;
-      }
-    >();
-
-    let total_amount_bs = 0;
-    let total_amount_usd = 0;
-
-    for (const order of orders) {
-      const supplierId = order.supplier_id;
-      const supplier = order.supplier;
-
-      if (!supplierMap.has(supplierId)) {
-        supplierMap.set(supplierId, {
-          supplier_id: supplierId,
-          supplier_name: supplier.name,
-          supplier_code: supplier.code,
-          orders_count: 0,
-          total_amount_bs: 0,
-          total_amount_usd: 0,
-          completed_orders: 0,
-          pending_orders: 0,
-        });
-      }
-
-      const supplierData = supplierMap.get(supplierId)!;
-      supplierData.orders_count++;
-      supplierData.total_amount_bs += Number(order.total_amount_bs);
-      supplierData.total_amount_usd += Number(order.total_amount_usd);
-
-      if (order.status === 'completed') {
-        supplierData.completed_orders++;
-      } else if (
-        ['draft', 'sent', 'confirmed', 'partial'].includes(order.status)
-      ) {
-        supplierData.pending_orders++;
-      }
-
-      total_amount_bs += Number(order.total_amount_bs);
-      total_amount_usd += Number(order.total_amount_usd);
-    }
+    const rows = await this.purchaseOrderRepository
+      .createQueryBuilder('order')
+      .innerJoin('order.supplier', 'supplier')
+      .select('supplier.id', 'supplier_id')
+      .addSelect('supplier.name', 'supplier_name')
+      .addSelect('supplier.code', 'supplier_code')
+      .addSelect('COUNT(order.id)', 'orders_count')
+      .addSelect('COALESCE(SUM(order.total_amount_bs), 0)', 'total_amount_bs')
+      .addSelect('COALESCE(SUM(order.total_amount_usd), 0)', 'total_amount_usd')
+      .addSelect(
+        "COALESCE(SUM(CASE WHEN order.status = 'completed' THEN 1 ELSE 0 END), 0)",
+        'completed_orders',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN order.status IN (:...pendingStatuses) THEN 1 ELSE 0 END), 0)`,
+        'pending_orders',
+      )
+      .where('order.store_id = :storeId', { storeId })
+      .andWhere(start ? 'order.created_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'order.created_at <= :end' : '1=1', { end })
+      .setParameter('pendingStatuses', statusPending)
+      .groupBy('supplier.id')
+      .addGroupBy('supplier.name')
+      .addGroupBy('supplier.code')
+      .orderBy('total_amount_bs', 'DESC')
+      .getRawMany();
 
     const result = {
-      total_orders: orders.length,
-      total_amount_bs,
-      total_amount_usd,
-      by_supplier: Array.from(supplierMap.values()).sort(
-        (a, b) => b.total_amount_bs - a.total_amount_bs,
-      ),
+      total_orders: Number(totalsAgg?.total_orders || 0),
+      total_amount_bs: Number(totalsAgg?.total_amount_bs || 0),
+      total_amount_usd: Number(totalsAgg?.total_amount_usd || 0),
+      by_supplier: rows.map((r) => ({
+        supplier_id: r.supplier_id,
+        supplier_name: r.supplier_name,
+        supplier_code: r.supplier_code ?? null,
+        orders_count: Number(r.orders_count || 0),
+        total_amount_bs: Number(r.total_amount_bs || 0),
+        total_amount_usd: Number(r.total_amount_usd || 0),
+        completed_orders: Number(r.completed_orders || 0),
+        pending_orders: Number(r.pending_orders || 0),
+      })),
     };
     await this.cache.set(cacheKey, result, 60);
     return result;
@@ -1604,85 +1570,87 @@ export class ReportsService {
       .createQueryBuilder('invoice')
       .where('invoice.store_id = :storeId', { storeId });
 
-    if (startDate) {
-      const start = this.normalizeStartDate(new Date(startDate));
-      query.andWhere('invoice.issued_at >= :startDate', { startDate: start });
+    const start = startDate
+      ? this.normalizeStartDate(new Date(startDate))
+      : undefined;
+    const end = endDate ? this.normalizeEndDate(new Date(endDate)) : undefined;
+
+    if (start) {
+      query.andWhere('invoice.issued_at >= :start', { start });
     }
-    if (endDate) {
-      const end = this.normalizeEndDate(new Date(endDate));
-      query.andWhere('invoice.issued_at <= :endDate', { endDate: end });
+    if (end) {
+      query.andWhere('invoice.issued_at <= :end', { end });
     }
+    // Mantener compatibilidad: aunque se pase status, este endpoint históricamente filtra emitidas.
+    query.andWhere('invoice.status = :issuedStatus', { issuedStatus: 'issued' });
     if (status) {
+      // No rompe prod: mantiene el filtro extra si alguien lo usa igual.
       query.andWhere('invoice.status = :status', { status });
     }
 
-    // Solo facturas emitidas
-    query.andWhere('invoice.status = :issuedStatus', {
-      issuedStatus: 'issued',
-    });
+    const dayExpr =
+      "to_char((invoice.issued_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD')";
 
-    const invoices = await query.getMany();
+    const totalsAgg = await query
+      .clone()
+      .select('COUNT(invoice.id)', 'total_invoices')
+      .addSelect('COALESCE(SUM(invoice.total_bs), 0)', 'total_amount_bs')
+      .addSelect('COALESCE(SUM(invoice.total_usd), 0)', 'total_amount_usd')
+      .addSelect('COALESCE(SUM(invoice.tax_amount_bs), 0)', 'total_tax_bs')
+      .addSelect('COALESCE(SUM(invoice.tax_amount_usd), 0)', 'total_tax_usd')
+      .getRawOne();
 
-    let total_amount_bs = 0;
-    let total_amount_usd = 0;
-    let total_tax_bs = 0;
-    let total_tax_usd = 0;
+    const byStatusRows = await query
+      .clone()
+      .select('invoice.status', 'status')
+      .addSelect('COUNT(invoice.id)', 'count')
+      .groupBy('invoice.status')
+      .getRawMany();
+
+    const byTypeRows = await query
+      .clone()
+      .select('invoice.invoice_type', 'invoice_type')
+      .addSelect('COUNT(invoice.id)', 'count')
+      .groupBy('invoice.invoice_type')
+      .getRawMany();
+
+    const dailyRows = await query
+      .clone()
+      .select(dayExpr, 'date')
+      .addSelect('COUNT(invoice.id)', 'invoices_count')
+      .addSelect('COALESCE(SUM(invoice.total_bs), 0)', 'total_bs')
+      .addSelect('COALESCE(SUM(invoice.total_usd), 0)', 'total_usd')
+      .addSelect('COALESCE(SUM(invoice.tax_amount_bs), 0)', 'tax_bs')
+      .addSelect('COALESCE(SUM(invoice.tax_amount_usd), 0)', 'tax_usd')
+      .groupBy(dayExpr)
+      .orderBy(dayExpr, 'ASC')
+      .getRawMany();
+
     const by_status: Record<string, number> = {};
-    const by_type: Record<string, number> = {};
-    const dailyMap = new Map<
-      string,
-      {
-        invoices_count: number;
-        total_bs: number;
-        total_usd: number;
-        tax_bs: number;
-        tax_usd: number;
-      }
-    >();
-
-    for (const invoice of invoices) {
-      total_amount_bs += Number(invoice.total_bs);
-      total_amount_usd += Number(invoice.total_usd);
-      total_tax_bs += Number(invoice.tax_amount_bs);
-      total_tax_usd += Number(invoice.tax_amount_usd);
-
-      by_status[invoice.status] = (by_status[invoice.status] || 0) + 1;
-      by_type[invoice.invoice_type] = (by_type[invoice.invoice_type] || 0) + 1;
-
-      if (invoice.issued_at) {
-        const dateKey = invoice.issued_at.toISOString().split('T')[0];
-        if (!dailyMap.has(dateKey)) {
-          dailyMap.set(dateKey, {
-            invoices_count: 0,
-            total_bs: 0,
-            total_usd: 0,
-            tax_bs: 0,
-            tax_usd: 0,
-          });
-        }
-
-        const dayData = dailyMap.get(dateKey)!;
-        dayData.invoices_count++;
-        dayData.total_bs += Number(invoice.total_bs);
-        dayData.total_usd += Number(invoice.total_usd);
-        dayData.tax_bs += Number(invoice.tax_amount_bs);
-        dayData.tax_usd += Number(invoice.tax_amount_usd);
-      }
+    for (const row of byStatusRows) {
+      by_status[row.status] = Number(row.count || 0);
     }
 
-    const daily = Array.from(dailyMap.entries())
-      .map(([date, data]) => ({
-        date,
-        ...data,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const by_type: Record<string, number> = {};
+    for (const row of byTypeRows) {
+      by_type[row.invoice_type] = Number(row.count || 0);
+    }
+
+    const daily = dailyRows.map((row) => ({
+      date: row.date,
+      invoices_count: Number(row.invoices_count || 0),
+      total_bs: Number(row.total_bs || 0),
+      total_usd: Number(row.total_usd || 0),
+      tax_bs: Number(row.tax_bs || 0),
+      tax_usd: Number(row.tax_usd || 0),
+    }));
 
     return {
-      total_invoices: invoices.length,
-      total_amount_bs,
-      total_amount_usd,
-      total_tax_bs,
-      total_tax_usd,
+      total_invoices: Number(totalsAgg?.total_invoices || 0),
+      total_amount_bs: Number(totalsAgg?.total_amount_bs || 0),
+      total_amount_usd: Number(totalsAgg?.total_amount_usd || 0),
+      total_tax_bs: Number(totalsAgg?.total_tax_bs || 0),
+      total_tax_usd: Number(totalsAgg?.total_tax_usd || 0),
       by_status,
       by_type,
       daily,

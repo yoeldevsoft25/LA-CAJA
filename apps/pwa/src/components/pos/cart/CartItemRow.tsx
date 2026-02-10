@@ -32,9 +32,9 @@ export function CartItemRow({
     return (
         <div
             className={cn(
-                "group p-3 border-b !border-border hover:bg-muted/30 relative transition-colors duration-200",
+                "group p-3 mb-2 rounded-xl bg-card/40 border border-white/5 shadow-sm hover:shadow-md hover:bg-card/60 relative transition-all duration-200",
                 isMobile && "pr-12",
-                isInvalid && "bg-destructive/5"
+                isInvalid && "bg-destructive/5 border-destructive/20"
             )}>
             {isMobile && (
                 <div
