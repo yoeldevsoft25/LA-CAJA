@@ -86,7 +86,14 @@ export default function MainLayout() {
   // RENDER — Estructura plana y limpia
   // =============================================
   return (
-    <div className="min-h-screen bg-muted/30 bg-[radial-gradient(circle_at_12%_-10%,hsl(var(--primary)_/_0.10),transparent_55%),radial-gradient(circle_at_88%_0%,hsl(var(--info)_/_0.08),transparent_50%)]">
+    <div
+      className={cn(
+        'min-h-screen bg-muted/30',
+        // Add texture + depth without introducing new colors.
+        'bg-[radial-gradient(circle_at_1px_1px,hsl(var(--muted-foreground)_/_0.06)_1px,transparent_0),radial-gradient(circle_at_12%_-10%,hsl(var(--primary)_/_0.10),transparent_55%),radial-gradient(circle_at_88%_0%,hsl(var(--info)_/_0.08),transparent_50%)]',
+        '[background-size:24px_24px,auto,auto]'
+      )}
+    >
       {/* Accessibility */}
       <SkipLinks />
 
@@ -124,7 +131,10 @@ export default function MainLayout() {
         <aside
           id="main-navigation"
           className={cn(
-            'hidden lg:flex flex-col border-r border-sidebar-border/70 bg-sidebar-background/85 h-full',
+            'hidden lg:flex flex-col border-r border-sidebar-border/70 bg-sidebar-background/85 h-full relative',
+            // Subtle tint + soft separation from the canvas.
+            "after:content-[''] after:absolute after:inset-0 after:pointer-events-none after:bg-[radial-gradient(circle_at_30%_0%,hsl(var(--primary)_/_0.06),transparent_55%)]",
+            'shadow-[0_1px_0_hsl(var(--sidebar-border)_/_0.25),0_24px_60px_-56px_hsl(var(--foreground)_/_0.22)]',
             'transition-[width] duration-300 will-change-[width]',
             sidebarCollapsed ? 'w-20' : 'w-64'
           )}
