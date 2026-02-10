@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
+import Redis from 'ioredis';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DbRepairService } from './database/repair-db.service';
@@ -63,6 +64,7 @@ import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { RedisCacheModule } from './common/cache/redis-cache.module';
+import { RedisModule, REDIS_CLIENT, REDIS_SUBSCRIBER } from './common/redis/redis.module';
 // Nota: LicenseWatcherService necesita NotificationsGateway, que está en NotificationsModule
 // Importar todas las entidades desde el índice centralizado
 // Esto reduce el tamaño del objeto serializado y mejora el rendimiento del bootstrap
@@ -121,8 +123,13 @@ const QUEUES_ENABLED =
     ...(QUEUES_ENABLED
       ? [
         BullModule.forRootAsync({
-          imports: [ConfigModule],
-          useFactory: async (configService: ConfigService) => {
+          imports: [ConfigModule, RedisModule],
+          inject: [ConfigService, REDIS_CLIENT, REDIS_SUBSCRIBER],
+          useFactory: async (
+            configService: ConfigService,
+            sharedClient: Redis,
+            sharedSubscriber: Redis,
+          ) => {
             const redisUrl = configService.get<string>('REDIS_URL');
             let connectionOpts: any = {};
 
@@ -131,7 +138,7 @@ const QUEUES_ENABLED =
                 url: redisUrl,
                 maxRetriesPerRequest: null,
                 enableOfflineQueue: true,
-                connectTimeout: 5000, // 5s timeout to avoid hanging
+                connectTimeout: 5000,
               };
             } else {
               connectionOpts = {
@@ -140,61 +147,12 @@ const QUEUES_ENABLED =
                 password: configService.get<string>('REDIS_PASSWORD'),
                 maxRetriesPerRequest: null,
                 enableOfflineQueue: true,
-                connectTimeout: 5000, // 5s timeout to avoid hanging
+                connectTimeout: 5000,
               };
             }
 
-            // ⚡ OPTIMIZACIÓN: Crear instancias compartidas para clientes y suscriptores
-            // Esto reduce drásticamente el número de conexiones (ahorra 2 conexiones por cola)
-            const Redis = require('ioredis');
-
-            // Habilitar offline queue para mayor resiliencia ante desconexiones temporales
-            // BullMQ requiere maxRetriesPerRequest: null
-            const clientOptions = {
-              ...connectionOpts,
-              maxRetriesPerRequest: null,
-              enableOfflineQueue: true,
-              connectTimeout: 5000,
-            };
-
-            // Cliente compartido para publicar trabajos (puede ser usado por todas las colas)
-            const sharedClient = redisUrl
-              ? new Redis(redisUrl, clientOptions)
-              : new Redis(
-                connectionOpts.port,
-                connectionOpts.host,
-                clientOptions,
-              );
-
-            // Cliente compartido para suscripciones (puede ser usado por todas las colas)
-            const sharedSubscriber = sharedClient.duplicate();
-
-            // Manejo de errores en conexiones compartidas
-            sharedClient.on('error', (err: any) => {
-              if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
-                console.error(
-                  `❌ Redis Connection Error: ${err.message}. Is Redis installed and running? (brew services start redis)`,
-                );
-              } else {
-                console.error('Redis Shared Client Error:', err.message);
-              }
-            });
-            sharedSubscriber.on('error', (err: any) => {
-              if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
-                // Silenciar duplicados del suscriptor para no inundar el log
-              } else {
-                console.error('Redis Shared Subscriber Error:', err.message);
-              }
-            });
-
-            // Poner un límite máximo de listeners para evitar advertencias
-            sharedClient.setMaxListeners(100);
-            sharedSubscriber.setMaxListeners(100);
-
             return {
-              // Dummy connection para satisfacer el tipo QueueOptions
               connection: connectionOpts,
-              // Usar la fábrica createClient para reutilizar conexiones
               createClient: (type) => {
                 switch (type) {
                   case 'client':
@@ -203,13 +161,7 @@ const QUEUES_ENABLED =
                     return sharedSubscriber;
                   case 'bclient':
                     // bclient (blocking client) NO puede ser compartido entre workers
-                    // porque usa comandos bloqueantes como BRPOP
-                    const bclient = sharedClient.duplicate();
-                    // Importante: Manejar errores en bclient para evitar crashes
-                    bclient.on('error', (err: any) => {
-                      console.error('Redis BClient Error:', err.message);
-                    });
-                    return bclient;
+                    return sharedClient.duplicate();
                   default:
                     return sharedClient.duplicate();
                 }
@@ -226,7 +178,6 @@ const QUEUES_ENABLED =
               },
             };
           },
-          inject: [ConfigService],
         }),
       ]
       : []),

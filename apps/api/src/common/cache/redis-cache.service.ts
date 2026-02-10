@@ -1,13 +1,16 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.module';
 
 @Injectable()
-export class RedisCacheService implements OnModuleDestroy {
+export class RedisCacheService {
   private readonly logger = new Logger(RedisCacheService.name);
-  private client: Redis | null = null;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @Optional() @Inject(REDIS_CLIENT) private readonly client: Redis | null,
+  ) { }
 
   private getClient(): Redis | null {
     const redisEnabled =
@@ -16,42 +19,7 @@ export class RedisCacheService implements OnModuleDestroy {
     if (!redisEnabled) {
       return null;
     }
-
-    if (this.client) return this.client;
-
-    const redisUrl = this.configService.get<string>('REDIS_URL');
-    const host = this.configService.get<string>('REDIS_HOST') || 'localhost';
-    const port = this.configService.get<number>('REDIS_PORT') || 6379;
-    const password = this.configService.get<string>('REDIS_PASSWORD');
-
-    try {
-      this.client = redisUrl
-        ? new Redis(redisUrl, {
-            enableOfflineQueue: true,
-            maxRetriesPerRequest: 3,
-            lazyConnect: true,
-          })
-        : new Redis({
-            host,
-            port,
-            password,
-            enableOfflineQueue: true,
-            maxRetriesPerRequest: 3,
-            lazyConnect: true,
-          });
-
-      this.client.on('error', (err) => {
-        this.logger.warn(`Redis cache error: ${err?.message || err}`);
-      });
-
-      return this.client;
-    } catch (error) {
-      this.logger.warn(
-        `Redis cache disabled: ${error instanceof Error ? error.message : error}`,
-      );
-      this.client = null;
-      return null;
-    }
+    return this.client;
   }
 
   async get<T>(key: string): Promise<T | null> {
@@ -108,12 +76,5 @@ export class RedisCacheService implements OnModuleDestroy {
 
   getRawClient(): Redis | null {
     return this.getClient();
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    if (this.client) {
-      await this.client.quit();
-      this.client = null;
-    }
   }
 }

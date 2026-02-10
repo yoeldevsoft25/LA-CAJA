@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import {
   HealthIndicator,
   HealthIndicatorResult,
@@ -6,58 +6,18 @@ import {
 } from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../../common/redis/redis.module';
 
 @Injectable()
-export class RedisHealthIndicator
-  extends HealthIndicator
-  implements OnModuleDestroy
-{
-  private redisClient: Redis | null = null;
-
-  constructor(private configService: ConfigService) {
+export class RedisHealthIndicator extends HealthIndicator {
+  constructor(
+    private configService: ConfigService,
+    @Optional() @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
+  ) {
     super();
-    // ⚡ OPTIMIZACIÓN: Lazy initialization - solo crear conexión cuando se necesite
-    // Esto evita crear conexiones Redis innecesarias que consumen el límite de clientes
   }
 
   private getRedisClient(): Redis | null {
-    // ⚡ OPTIMIZACIÓN: Crear conexión solo cuando se necesite (lazy)
-    if (!this.redisClient) {
-      try {
-        const redisUrl = this.configService.get<string>('REDIS_URL');
-
-        if (redisUrl) {
-          this.redisClient = new Redis(redisUrl, {
-            maxRetriesPerRequest: null,
-            enableReadyCheck: true,
-            connectTimeout: 5000,
-            lazyConnect: true, // Conectar solo cuando se necesite
-          });
-        } else {
-          const host =
-            this.configService.get<string>('REDIS_HOST') || 'localhost';
-          const port = this.configService.get<number>('REDIS_PORT') || 6379;
-          const password = this.configService.get<string>('REDIS_PASSWORD');
-
-          this.redisClient = new Redis({
-            host,
-            port,
-            password,
-            maxRetriesPerRequest: null,
-            enableReadyCheck: true,
-            connectTimeout: 5000,
-            lazyConnect: true, // Conectar solo cuando se necesite
-          });
-        }
-
-        this.redisClient.on('error', (err) => {
-          // Error manejado en isHealthy
-        });
-      } catch (error) {
-        // Error manejado en isHealthy
-        return null;
-      }
-    }
     return this.redisClient;
   }
 
@@ -111,11 +71,4 @@ export class RedisHealthIndicator
     }
   }
 
-  // ⚡ OPTIMIZACIÓN: Cerrar conexión cuando el módulo se destruye
-  async onModuleDestroy() {
-    if (this.redisClient) {
-      await this.redisClient.quit();
-      this.redisClient = null;
-    }
-  }
 }

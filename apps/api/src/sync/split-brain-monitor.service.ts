@@ -101,22 +101,25 @@ export class SplitBrainMonitorService {
         );
         const saleGapCount = Number(saleGaps[0].count || 0);
 
-        // DebtCreated events without row in debts (conceptually, assuming debts table links via debt_id)
-        // Assuming 'debts' or 'customer_debts' table exists. 
-        // Checking schema... migrations 07_customers_and_debts.sql creates 'customer_debts'
-        const debtGaps = await this.dataSource.query(
-            `
-            SELECT COUNT(*) as count
-            FROM events e
-            LEFT JOIN customer_debts d ON d.id = (e.payload->>'debt_id')::uuid
-            WHERE e.store_id = $1 
-              AND e.type = 'DebtCreated' 
-              AND e.created_at < NOW() - INTERVAL '1 minute'
-              AND d.id IS NULL
-            `,
-            [storeId]
-        );
-        const debtGapCount = Number(debtGaps[0].count || 0);
+        // DebtCreated events without corresponding row in debts table
+        let debtGapCount = 0;
+        try {
+            const debtGaps = await this.dataSource.query(
+                `
+                SELECT COUNT(*) as count
+                FROM events e
+                LEFT JOIN debts d ON d.id = (e.payload->>'debt_id')::uuid
+                WHERE e.store_id = $1 
+                  AND e.type = 'DebtCreated' 
+                  AND e.created_at < NOW() - INTERVAL '1 minute'
+                  AND d.id IS NULL
+                `,
+                [storeId]
+            );
+            debtGapCount = Number(debtGaps[0].count || 0);
+        } catch {
+            // Table may not exist yet in some environments
+        }
         const totalProjectionGaps = saleGapCount + debtGapCount;
 
         // 3. Stock Divergence
