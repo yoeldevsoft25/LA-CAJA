@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, In, IsNull } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Sale } from '../database/entities/sale.entity';
 import { SaleItem } from '../database/entities/sale-item.entity';
 import { Product } from '../database/entities/product.entity';
@@ -607,37 +607,32 @@ export class DashboardService {
     startDate.setDate(startDate.getDate() - 7);
     startDate.setHours(0, 0, 0, 0);
 
-    const sales = await this.saleRepository.find({
-      where: {
-        store_id: storeId,
-        sold_at: Between(startDate, endDate),
-        voided_at: IsNull(),
-      },
-    });
+    // Tendencias de ventas por día: agregación en DB (menos IO/memoria)
+    const totalsBsExpr =
+      "COALESCE((sale.totals->>'total_bs')::numeric, 0)";
+    const totalsUsdExpr =
+      "COALESCE((sale.totals->>'total_usd')::numeric, 0)";
 
-    // Tendencias de ventas por día
-    const salesByDay = new Map<
-      string,
-      { count: number; amount_bs: number; amount_usd: number }
-    >();
+    const salesTrendRows = await this.saleRepository
+      .createQueryBuilder('sale')
+      .select("to_char(date_trunc('day', sale.sold_at), 'YYYY-MM-DD')", 'date')
+      .addSelect('COUNT(sale.id)', 'count')
+      .addSelect(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'amount_bs')
+      .addSelect(`COALESCE(SUM(${totalsUsdExpr}), 0)`, 'amount_usd')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere('sale.sold_at >= :start', { start: startDate })
+      .andWhere('sale.sold_at <= :end', { end: endDate })
+      .groupBy("date_trunc('day', sale.sold_at)")
+      .orderBy("date_trunc('day', sale.sold_at)", 'ASC')
+      .getRawMany();
 
-    for (const sale of sales) {
-      const dateKey = sale.sold_at.toISOString().split('T')[0];
-      if (!salesByDay.has(dateKey)) {
-        salesByDay.set(dateKey, { count: 0, amount_bs: 0, amount_usd: 0 });
-      }
-      const dayData = salesByDay.get(dateKey)!;
-      dayData.count++;
-      dayData.amount_bs += Number(sale.totals.total_bs);
-      dayData.amount_usd += Number(sale.totals.total_usd);
-    }
-
-    const salesTrend = Array.from(salesByDay.entries())
-      .map(([date, data]) => ({
-        date,
-        ...data,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const salesTrend = salesTrendRows.map((r) => ({
+      date: r.date,
+      count: Number(r.count || 0),
+      amount_bs: Number(r.amount_bs || 0),
+      amount_usd: Number(r.amount_usd || 0),
+    }));
 
     // Top 10 por peso y top 10 por cantidad: una sola query amplia y separación en JS
     // (evita que el filtro SQL por is_weight_product deje fuera productos por tipo/coerción)
