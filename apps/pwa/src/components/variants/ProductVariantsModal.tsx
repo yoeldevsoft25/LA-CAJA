@@ -24,7 +24,7 @@ export default function ProductVariantsModal({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-4xl flex flex-col p-0 gap-0 border-l border-border shadow-2xl">
+      <SheetContent className="w-full sm:max-w-2xl flex flex-col p-0 gap-0 border-l border-border shadow-2xl">
         <SheetHeader className="px-5 py-4 border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <SheetTitle className="text-xl font-semibold flex items-center">
             <Layers className="w-6 h-6 text-primary mr-3" />
