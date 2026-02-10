@@ -21,9 +21,14 @@ import GeneralLedgerReport from '@/components/accounting/GeneralLedgerReport'
 import CashFlowReport from '@/components/accounting/CashFlowReport'
 import ValidationReport from '@/components/accounting/ValidationReport'
 import ReconciliationTool from '@/components/accounting/ReconciliationTool'
+import AccountsAgingReport from '@/components/accounting/AccountsAgingReport'
+import VATBooksReport from '@/components/accounting/VATBooksReport'
+const AuditLogViewer = lazy(() => import('@/components/accounting/AuditLogViewer'))
+const BudgetReport = lazy(() => import('@/components/accounting/BudgetReport'))
+const BankReconciliationTool = lazy(() => import('@/components/accounting/BankReconciliationTool'))
 import { chartOfAccountsService, accountMappingsService } from '@/services/accounting.service'
 import type { AccountingEntry, AccountMapping } from '@/types/accounting.types'
-import { FileText, BookOpen, Download, Settings, TrendingUp, Plus, BarChart3, ShieldCheck } from 'lucide-react'
+import { FileText, BookOpen, Download, Settings, TrendingUp, Plus, BarChart3, ShieldCheck, RefreshCw } from 'lucide-react'
 import toast from '@/lib/toast'
 
 /**
@@ -142,6 +147,21 @@ export default function AccountingPage() {
             <span className="hidden sm:inline">Validaciones</span>
             <span className="sm:hidden">Valid.</span>
           </TabsTrigger>
+          <TabsTrigger value="budget" className="text-xs sm:text-sm gap-1.5 sm:gap-2">
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Presupuestos</span>
+            <span className="sm:hidden">Budget</span>
+          </TabsTrigger>
+          <TabsTrigger value="bank-reconciliation" className="text-xs sm:text-sm gap-1.5 sm:gap-2">
+            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Conciliación</span>
+            <span className="sm:hidden">Concil.</span>
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="text-xs sm:text-sm gap-1.5 sm:gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Auditoría</span>
+            <span className="sm:hidden">Audit</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-4">
@@ -234,6 +254,8 @@ export default function AccountingPage() {
               <TabsTrigger value="cash-flow">Flujo de Efectivo</TabsTrigger>
               <TabsTrigger value="trial-balance">Balance de Comprobación</TabsTrigger>
               <TabsTrigger value="general-ledger">Libro Mayor</TabsTrigger>
+              <TabsTrigger value="aging-report">Antigüedad de Saldos</TabsTrigger>
+              <TabsTrigger value="vat-books">Libros IVA</TabsTrigger>
             </TabsList>
             <TabsContent value="balance-sheet">
               <BalanceSheetReport />
@@ -249,6 +271,12 @@ export default function AccountingPage() {
             </TabsContent>
             <TabsContent value="general-ledger">
               <GeneralLedgerReport />
+            </TabsContent>
+            <TabsContent value="aging-report">
+              <AccountsAgingReport />
+            </TabsContent>
+            <TabsContent value="vat-books">
+              <VATBooksReport />
             </TabsContent>
           </Tabs>
         </TabsContent>
@@ -266,6 +294,15 @@ export default function AccountingPage() {
               <ReconciliationTool />
             </TabsContent>
           </Tabs>
+        </TabsContent>
+        <TabsContent value="budget" className="space-y-4">
+          <BudgetReport />
+        </TabsContent>
+        <TabsContent value="bank-reconciliation" className="space-y-4">
+          <BankReconciliationTool />
+        </TabsContent>
+        <TabsContent value="audit" className="space-y-4">
+          <AuditLogViewer />
         </TabsContent>
       </Tabs>
 

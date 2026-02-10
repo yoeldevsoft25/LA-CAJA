@@ -32,7 +32,7 @@ export class AccountingPeriodService {
     private accountRepository: Repository<ChartOfAccount>,
     private sharedService: AccountingSharedService,
     private reportingService: AccountingReportingService,
-  ) {}
+  ) { }
 
   /**
    * Obtener o crear período contable para una fecha
@@ -158,18 +158,30 @@ export class AccountingPeriodService {
       },
     });
 
-    // Buscar cuenta de ganancias retenidas (3.02.01) o capital (3.01.01) como fallback
+    // Buscar cuenta de Resultado del Ejercicio (3.03.01)
     let equityAccount = await this.accountRepository.findOne({
       where: {
         store_id: storeId,
         account_type: 'equity',
-        account_code: '3.02.01', // Utilidades Acumuladas (Ganancias Retenidas)
+        account_code: '3.03.01',
         is_active: true,
       },
     });
 
     if (!equityAccount) {
-      // Buscar cualquier cuenta de Ganancias Retenidas (3.02)
+      // Fallback 1: Utilidades Acumuladas (3.02.01)
+      equityAccount = await this.accountRepository.findOne({
+        where: {
+          store_id: storeId,
+          account_type: 'equity',
+          account_code: '3.02.01',
+          is_active: true,
+        },
+      });
+    }
+
+    if (!equityAccount) {
+      // Fallback 2: Ganancias Retenidas (3.02)
       equityAccount = await this.accountRepository.findOne({
         where: {
           store_id: storeId,
@@ -181,7 +193,7 @@ export class AccountingPeriodService {
     }
 
     if (!equityAccount) {
-      // Fallback: usar Capital Social (3.01.01)
+      // Fallback 3: Capital Social (3.01.01)
       equityAccount = await this.accountRepository.findOne({
         where: {
           store_id: storeId,
@@ -193,14 +205,14 @@ export class AccountingPeriodService {
     }
 
     if (!equityAccount) {
-      // Último fallback: cualquier cuenta de capital (3.01)
+      // Último fallback: cualquier cuenta de capital
       equityAccount = await this.accountRepository.findOne({
         where: {
           store_id: storeId,
           account_type: 'equity',
-          account_code: '3.01',
           is_active: true,
         },
+        order: { account_code: 'ASC' },
       });
     }
 
@@ -232,10 +244,10 @@ export class AccountingPeriodService {
     const revenueBalances =
       revenueAccountIds.length > 0
         ? await this.sharedService.calculateAccountBalancesBatch(
-            storeId,
-            revenueAccountIds,
-            periodEnd,
-          )
+          storeId,
+          revenueAccountIds,
+          periodEnd,
+        )
         : new Map();
 
     // Cerrar ingresos: Débito a Ingresos, Crédito a Ganancias Retenidas
@@ -286,10 +298,10 @@ export class AccountingPeriodService {
     const expenseBalances =
       expenseAccountIds.length > 0
         ? await this.sharedService.calculateAccountBalancesBatch(
-            storeId,
-            expenseAccountIds,
-            periodEnd,
-          )
+          storeId,
+          expenseAccountIds,
+          periodEnd,
+        )
         : new Map();
 
     // Cerrar gastos: Crédito a Gasto, Débito a Ganancias Retenidas
@@ -395,6 +407,147 @@ export class AccountingPeriodService {
       where: { id: savedEntry.id },
       relations: ['lines'],
     });
+
+    // --- Cierre Anual: Transferir Resultado del Ejercicio a Utilidades Acumuladas ---
+    const isYearEnd = periodEnd.getMonth() === 11 && periodEnd.getDate() === 31;
+
+    if (isYearEnd && equityAccount.account_code === '3.03.01') {
+      const retainedEarningsAccount = await this.accountRepository.findOne({
+        where: {
+          store_id: storeId,
+          account_code: '3.02.01',
+          is_active: true,
+        },
+      });
+
+      if (retainedEarningsAccount) {
+        // Calcular saldo acumulado del año en Resultado del Ejercicio
+        const balanceMap = await this.sharedService.calculateAccountBalancesBatch(
+          storeId,
+          [equityAccount.id],
+          periodEnd,
+        );
+        const balance = balanceMap.get(equityAccount.id) || {
+          balance_bs: 0,
+          balance_usd: 0,
+        };
+
+        const amountBs = balance.balance_bs;
+        const amountUsd = balance.balance_usd;
+
+        // Si hay saldo que transferir
+        if (Math.abs(amountBs) > 0.01 || Math.abs(amountUsd) > 0.01) {
+          const transferLines: Array<{
+            account_id: string;
+            account_code: string;
+            account_name: string;
+            debit_amount_bs: number;
+            credit_amount_bs: number;
+            debit_amount_usd: number;
+            credit_amount_usd: number;
+            description: string;
+          }> = [];
+
+          if (amountBs >= 0) {
+            // Ganancia (Crédito): Debitar 3.03.01, Acreditar 3.02.01
+            transferLines.push({
+              account_id: equityAccount.id,
+              account_code: equityAccount.account_code,
+              account_name: equityAccount.account_name,
+              debit_amount_bs: Math.abs(amountBs),
+              credit_amount_bs: 0,
+              debit_amount_usd: Math.abs(amountUsd),
+              credit_amount_usd: 0,
+              description: 'Cierre anual - Transferencia a Utilidades Acumuladas',
+            });
+            transferLines.push({
+              account_id: retainedEarningsAccount.id,
+              account_code: retainedEarningsAccount.account_code,
+              account_name: retainedEarningsAccount.account_name,
+              debit_amount_bs: 0,
+              credit_amount_bs: Math.abs(amountBs),
+              debit_amount_usd: 0,
+              credit_amount_usd: Math.abs(amountUsd),
+              description: 'Cierre anual - Recibido de Resultado del Ejercicio',
+            });
+          } else {
+            // Pérdida (Débito): Acreditar 3.03.01, Debitar 3.02.01
+            transferLines.push({
+              account_id: equityAccount.id,
+              account_code: equityAccount.account_code,
+              account_name: equityAccount.account_name,
+              debit_amount_bs: 0,
+              credit_amount_bs: Math.abs(amountBs),
+              debit_amount_usd: 0,
+              credit_amount_usd: Math.abs(amountUsd),
+              description: 'Cierre anual - Transferencia de Pérdida',
+            });
+            transferLines.push({
+              account_id: retainedEarningsAccount.id,
+              account_code: retainedEarningsAccount.account_code,
+              account_name: retainedEarningsAccount.account_name,
+              debit_amount_bs: Math.abs(amountBs),
+              credit_amount_bs: 0,
+              debit_amount_usd: Math.abs(amountUsd),
+              credit_amount_usd: 0,
+              description: 'Cierre anual - Absorción de Pérdida',
+            });
+          }
+
+          // Crear asiento de transferencia anual
+          const transferEntryNumber = await this.sharedService.generateEntryNumber(
+            storeId,
+            periodEnd,
+          );
+
+          const transferEntry = this.journalEntryRepository.create({
+            id: randomUUID(),
+            store_id: storeId,
+            entry_number: transferEntryNumber, // Puede colisionar si es muy rápido, pero generateEntryNumber busca el ultimo en DB
+            entry_date: periodEnd,
+            entry_type: 'manual',
+            source_type: 'period_close_year_end',
+            source_id: period.id,
+            description: `Cierre Anual ${period.period_code} - Transferencia a Utilidades`,
+            total_debit_bs: Math.abs(amountBs),
+            total_credit_bs: Math.abs(amountBs),
+            total_debit_usd: Math.abs(amountUsd),
+            total_credit_usd: Math.abs(amountUsd),
+            currency: 'MIXED',
+            status: 'posted',
+            is_auto_generated: true,
+            posted_at: new Date(),
+            posted_by: userId,
+            metadata: {
+              period_id: period.id,
+              period_code: period.period_code,
+              type: 'year_end_transfer',
+            },
+          });
+
+          const savedTransferEntry = await this.journalEntryRepository.save(transferEntry);
+
+          const transferEntryLines = transferLines.map((line, index) =>
+            this.journalEntryLineRepository.create({
+              id: randomUUID(),
+              entry_id: savedTransferEntry.id,
+              line_number: index + 1,
+              account_id: line.account_id,
+              account_code: line.account_code,
+              account_name: line.account_name,
+              description: line.description,
+              debit_amount_bs: line.debit_amount_bs,
+              credit_amount_bs: line.credit_amount_bs,
+              debit_amount_usd: line.debit_amount_usd,
+              credit_amount_usd: line.credit_amount_usd,
+            }),
+          );
+
+          await this.journalEntryLineRepository.save(transferEntryLines);
+          await this.sharedService.updateAccountBalances(storeId, periodEnd, transferLines);
+        }
+      }
+    }
 
     return {
       period,

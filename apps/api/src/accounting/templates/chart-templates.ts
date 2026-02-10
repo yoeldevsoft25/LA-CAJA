@@ -262,6 +262,14 @@ export const retailTemplate: AccountTemplate[] = [
     level: 3,
     parent: '3.02',
   },
+  { code: '3.03', name: 'Resultados', type: 'equity', level: 2, parent: '3' },
+  {
+    code: '3.03.01',
+    name: 'Resultado del Ejercicio',
+    type: 'equity',
+    level: 3,
+    parent: '3.03',
+  },
 
   // ========== INGRESOS ==========
   { code: '4', name: 'INGRESOS', type: 'revenue', level: 1 },
@@ -648,6 +656,14 @@ export const servicesTemplate: AccountTemplate[] = [
     level: 3,
     parent: '3.02',
   },
+  { code: '3.03', name: 'Resultados', type: 'equity', level: 2, parent: '3' },
+  {
+    code: '3.03.01',
+    name: 'Resultado del Ejercicio',
+    type: 'equity',
+    level: 3,
+    parent: '3.03',
+  },
 
   // ========== INGRESOS ==========
   { code: '4', name: 'INGRESOS', type: 'revenue', level: 1 },
@@ -1013,6 +1029,14 @@ export const restaurantTemplate: AccountTemplate[] = [
     type: 'equity',
     level: 3,
     parent: '3.02',
+  },
+  { code: '3.03', name: 'Resultados', type: 'equity', level: 2, parent: '3' },
+  {
+    code: '3.03.01',
+    name: 'Resultado del Ejercicio',
+    type: 'equity',
+    level: 3,
+    parent: '3.03',
   },
 
   // ========== INGRESOS ==========
@@ -1539,31 +1563,31 @@ export function getDefaultMappings(businessType: BusinessType): Array<{
     transaction_type: TransactionType;
     account_code: string;
   }> = [
-    {
-      transaction_type: 'cash_asset' as TransactionType,
-      account_code: '1.01.01',
-    },
-    {
-      transaction_type: 'accounts_receivable' as TransactionType,
-      account_code: '1.01.03',
-    },
-    {
-      transaction_type: 'sale_tax' as TransactionType,
-      account_code: '2.01.02',
-    },
-    {
-      transaction_type: 'purchase_tax' as TransactionType,
-      account_code: '1.01.04',
-    },
-    {
-      transaction_type: 'accounts_payable' as TransactionType,
-      account_code: '2.01.01',
-    },
-    {
-      transaction_type: 'transfer' as TransactionType,
-      account_code: '1.01.02',
-    },
-  ];
+      {
+        transaction_type: 'cash_asset' as TransactionType,
+        account_code: '1.01.01',
+      },
+      {
+        transaction_type: 'accounts_receivable' as TransactionType,
+        account_code: '1.01.03',
+      },
+      {
+        transaction_type: 'sale_tax' as TransactionType,
+        account_code: '2.01.02',
+      },
+      {
+        transaction_type: 'purchase_tax' as TransactionType,
+        account_code: '1.01.04',
+      },
+      {
+        transaction_type: 'accounts_payable' as TransactionType,
+        account_code: '2.01.01',
+      },
+      {
+        transaction_type: 'transfer' as TransactionType,
+        account_code: '1.01.02',
+      },
+    ];
 
   // Mapeos específicos según tipo de negocio
   switch (businessType) {

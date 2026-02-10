@@ -21,6 +21,10 @@ import {
     CashFlowReport,
     AccountingValidationResult,
     AccountingReconciliationResult,
+    AccountsReceivableAgingReport,
+    AccountsPayableAgingReport,
+    AccountingBudget,
+    BudgetVsActualsReport,
 } from '../types/accounting.types';
 
 /**
@@ -308,6 +312,94 @@ export const accountingReportsService = {
         });
         return response.data;
     },
+
+    /**
+     * Obtiene el Aging de Cuentas por Cobrar
+     */
+    async getAccountsReceivableAging(params?: {
+        as_of_date?: string;
+    }): Promise<AccountsReceivableAgingReport> {
+        const response = await api.get<AccountsReceivableAgingReport>('/accounting/reports/aging-receivable', {
+            params,
+        });
+        return response.data;
+    },
+
+    /**
+     * Obtiene el Aging de Cuentas por Pagar
+     */
+    async getAccountsPayableAging(params?: {
+        as_of_date?: string;
+    }): Promise<AccountsPayableAgingReport> {
+        const response = await api.get<AccountsPayableAgingReport>('/accounting/reports/aging-payable', {
+            params,
+        });
+        return response.data;
+    },
+    /**
+     * Obtiene el Libro de Ventas (VAT Sales Book)
+     */
+    async getVATSalesBook(params: {
+        start_date: string;
+        end_date: string;
+    }): Promise<{
+        entries: Array<{
+            date: string;
+            invoice_number: string;
+            control_number: string;
+            customer_name: string;
+            customer_tax_id: string;
+            total_sales: number;
+            exempt_sales: number;
+            taxable_base: number;
+            tax_amount: number;
+            tax_rate: number;
+            status: string;
+        }>;
+        summary: {
+            total_sales: number;
+            total_exempt: number;
+            total_taxable: number;
+            total_tax: number;
+        };
+    }> {
+        const response = await api.get('/accounting/reports/vat-sales-book', {
+            params,
+        });
+        return response.data;
+    },
+
+    /**
+     * Obtiene el Libro de Compras (VAT Purchases Book)
+     */
+    async getVATPurchasesBook(params: {
+        start_date: string;
+        end_date: string;
+    }): Promise<{
+        entries: Array<{
+            date: string;
+            invoice_number: string;
+            control_number: string;
+            supplier_name: string;
+            supplier_tax_id: string;
+            total_purchases: number;
+            exempt_purchases: number;
+            taxable_base: number;
+            tax_amount: number;
+            tax_rate: number;
+        }>;
+        summary: {
+            total_purchases: number;
+            total_exempt: number;
+            total_taxable: number;
+            total_tax: number;
+        };
+    }> {
+        const response = await api.get('/accounting/reports/vat-purchases-book', {
+            params,
+        });
+        return response.data;
+    },
 };
 
 /**
@@ -359,6 +451,100 @@ export const accountingValidationService = {
                 error: string;
             }>;
         }>('/accounting/recalculate-totals', params || {});
+        return response.data;
+    },
+
+    /**
+     * Reconstruye todos los saldos de cuentas desde cero (fix discrepancias)
+     */
+    async rebuildBalances(): Promise<{
+        accounts_processed: number;
+        periods_rebuilt: number;
+        previous_balances_deleted: number;
+    }> {
+        const response = await api.post<{
+            accounts_processed: number;
+            periods_rebuilt: number;
+            previous_balances_deleted: number;
+        }>('/accounting/rebuild-balances');
+        return response.data;
+    },
+};
+
+/**
+ * Servicio para Presupuestos
+ */
+export const budgetService = {
+    /**
+     * Crea un nuevo presupuesto
+     */
+    async create(data: {
+        store_id: string;
+        name: string;
+        description?: string;
+        period_start: string;
+        period_end: string;
+        created_by?: string;
+    }): Promise<AccountingBudget> {
+        const response = await api.post<AccountingBudget>('/accounting/budgets', data);
+        return response.data;
+    },
+
+    /**
+     * Lista presupuestos
+     */
+    async list(storeId: string): Promise<AccountingBudget[]> {
+        const response = await api.get<AccountingBudget[]>('/accounting/budgets', {
+            params: { store_id: storeId },
+        });
+        return response.data;
+    },
+
+    /**
+     * Obtiene un presupuesto por ID
+     */
+    async get(storeId: string, budgetId: string): Promise<AccountingBudget> {
+        const response = await api.get<AccountingBudget>(`/accounting/budgets/${budgetId}`, {
+            params: { store_id: storeId },
+        });
+        return response.data;
+    },
+
+    /**
+     * Actualiza líneas de presupuesto
+     */
+    async updateLines(
+        storeId: string,
+        budgetId: string,
+        lines: Array<{
+            account_id: string;
+            amount_bs: number;
+            amount_usd: number;
+            notes?: string;
+        }>
+    ): Promise<AccountingBudget> {
+        const response = await api.put<AccountingBudget>(`/accounting/budgets/${budgetId}`, { lines }, {
+            params: { store_id: storeId },
+        });
+        return response.data;
+    },
+
+    /**
+     * Elimina un presupuesto
+     */
+    async delete(storeId: string, budgetId: string): Promise<void> {
+        await api.delete(`/accounting/budgets/${budgetId}`, {
+            params: { store_id: storeId },
+        });
+    },
+
+    /**
+     * Obtiene reporte comparativo vs Real
+     */
+    async getComparison(storeId: string, budgetId: string): Promise<BudgetVsActualsReport> {
+        const response = await api.get<BudgetVsActualsReport>(`/accounting/budgets/${budgetId}/comparison`, {
+            params: { store_id: storeId },
+        });
         return response.data;
     },
 };

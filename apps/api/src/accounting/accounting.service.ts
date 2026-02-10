@@ -42,6 +42,7 @@ import {
 import { AccountingPeriodService } from './accounting-period.service';
 import { AccountingSharedService } from './accounting-shared.service';
 import { AccountingReportingService } from './accounting-reporting.service';
+import { AccountingAuditService } from './accounting-audit.service';
 
 @Injectable()
 export class AccountingService {
@@ -88,7 +89,8 @@ export class AccountingService {
     private reportingService: AccountingReportingService,
     @Inject(forwardRef(() => AccountingPeriodService))
     private periodService: AccountingPeriodService,
-  ) {}
+    private auditService: AccountingAuditService,
+  ) { }
 
   /**
    * Generar número de asiento único (delegado a AccountingSharedService)
@@ -211,10 +213,23 @@ export class AccountingService {
 
     await this.journalEntryLineRepository.save(lines);
 
-    return this.journalEntryRepository.findOne({
+    const result = await this.journalEntryRepository.findOne({
       where: { id: savedEntry.id },
       relations: ['lines'],
-    }) as Promise<JournalEntry>;
+    }) as JournalEntry;
+
+    // Audit Log
+    await this.auditService.logAction({
+      store_id: storeId,
+      user_id: _userId,
+      action: 'create_journal_entry',
+      entity_type: 'JournalEntry',
+      entity_id: savedEntry.id,
+      after_value: savedEntry,
+      metadata: { entry_number: entryNumber }
+    });
+
+    return result;
   }
 
   private async calculateSaleCosts(
@@ -442,7 +457,7 @@ export class AccountingService {
 
       const roundingAdjustmentBs = roundTwo(
         (sale.payment?.cash_payment?.change_rounding?.adjustment_bs || 0) +
-          (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0),
+        (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0),
       );
 
       // Calcular costo real desde sale_items (opcional, si hay inventario)
@@ -888,6 +903,19 @@ export class AccountingService {
   }
 
   /**
+   * Reconstruir todos los saldos de cuentas desde cero (Delegado a AccountingSharedService)
+   */
+  async rebuildAllAccountBalances(
+    storeId: string,
+  ): Promise<{
+    accounts_processed: number;
+    periods_rebuilt: number;
+    previous_balances_deleted: number;
+  }> {
+    return this.sharedService.rebuildAllAccountBalances(storeId);
+  }
+
+  /**
    * Obtener asientos contables
    */
   async getJournalEntries(
@@ -1010,6 +1038,16 @@ export class AccountingService {
       })),
     );
 
+    // Audit Log
+    await this.auditService.logAction({
+      store_id: storeId,
+      user_id: userId,
+      action: 'post_journal_entry',
+      entity_type: 'JournalEntry',
+      entity_id: entry.id,
+      after_value: { status: 'posted', posted_at: entry.posted_at, posted_by: userId }
+    });
+
     return entry;
   }
 
@@ -1067,7 +1105,22 @@ export class AccountingService {
     entry.cancelled_by = userId;
     entry.cancellation_reason = reason;
 
-    return entryRepo.save(entry);
+    entry.cancellation_reason = reason;
+
+    const savedEntry = await entryRepo.save(entry);
+
+    // Audit Log
+    await this.auditService.logAction({
+      store_id: storeId,
+      user_id: userId,
+      action: 'cancel_journal_entry',
+      entity_type: 'JournalEntry',
+      entity_id: entry.id,
+      after_value: { status: 'cancelled', cancelled_at: entry.cancelled_at, cancelled_by: userId, reason },
+      metadata: { reason }
+    });
+
+    return savedEntry;
   }
 
   /**
@@ -2405,6 +2458,88 @@ export class AccountingService {
   }
 
   /**
+   * Aging de Cuentas por Cobrar (Delegado a ReportingService)
+   */
+  async getAccountsReceivableAging(
+    storeId: string,
+    asOfDate: Date,
+  ): Promise<{
+    customers: Array<{
+      customer_id: string;
+      customer_name: string;
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    }>;
+    totals: {
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    };
+  }> {
+    return this.reportingService.getAccountsReceivableAging(storeId, asOfDate);
+  }
+
+  /**
+   * Aging de Cuentas por Pagar (Delegado a ReportingService)
+   */
+  async getAccountsPayableAging(
+    storeId: string,
+    asOfDate: Date,
+  ): Promise<{
+    suppliers: Array<{
+      supplier_id: string;
+      supplier_name: string;
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    }>;
+    totals: {
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    };
+  }> {
+    return this.reportingService.getAccountsPayableAging(storeId, asOfDate);
+  }
+
+  /**
    * Generar Balance General
    */
   async getBalanceSheet(
@@ -3124,18 +3259,18 @@ export class AccountingService {
     const cashBalancesStart =
       cashAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            cashAccountIds,
-            startDate,
-          )
+          storeId,
+          cashAccountIds,
+          startDate,
+        )
         : new Map();
     const cashBalancesEnd =
       cashAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            cashAccountIds,
-            endDate,
-          )
+          storeId,
+          cashAccountIds,
+          endDate,
+        )
         : new Map();
 
     // Calcular saldos al inicio del período
@@ -3179,18 +3314,18 @@ export class AccountingService {
     const specialBalancesStart =
       specialAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            specialAccountIds,
-            startDate,
-          )
+          storeId,
+          specialAccountIds,
+          startDate,
+        )
         : new Map();
     const specialBalancesEnd =
       specialAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-            storeId,
-            specialAccountIds,
-            endDate,
-          )
+          storeId,
+          specialAccountIds,
+          endDate,
+        )
         : new Map();
 
     if (receivableAccount) {
@@ -3499,11 +3634,11 @@ export class AccountingService {
 
             const expectedBalanceBs =
               account.account_type === 'asset' ||
-              account.account_type === 'expense'
+                account.account_type === 'expense'
                 ? Number(balance.closing_balance_debit_bs || 0) -
-                  Number(balance.closing_balance_credit_bs || 0)
+                Number(balance.closing_balance_credit_bs || 0)
                 : Number(balance.closing_balance_credit_bs || 0) -
-                  Number(balance.closing_balance_debit_bs || 0);
+                Number(balance.closing_balance_debit_bs || 0);
 
             const calculatedBalanceBs = calculatedBalance.balance_bs;
             const difference = Math.abs(
@@ -3670,11 +3805,11 @@ export class AccountingService {
   }> {
     const accountsToReconcile = accountIds
       ? await this.accountRepository.find({
-          where: accountIds.map((id) => ({ id, store_id: storeId })),
-        })
+        where: accountIds.map((id) => ({ id, store_id: storeId })),
+      })
       : await this.accountRepository.find({
-          where: { store_id: storeId, is_active: true },
-        });
+        where: { store_id: storeId, is_active: true },
+      });
 
     const discrepancies: Array<{
       account_id: string;
@@ -3714,19 +3849,19 @@ export class AccountingService {
         if (balance) {
           expectedBalanceBs =
             account.account_type === 'asset' ||
-            account.account_type === 'expense'
+              account.account_type === 'expense'
               ? Number(balance.closing_balance_debit_bs || 0) -
-                Number(balance.closing_balance_credit_bs || 0)
+              Number(balance.closing_balance_credit_bs || 0)
               : Number(balance.closing_balance_credit_bs || 0) -
-                Number(balance.closing_balance_debit_bs || 0);
+              Number(balance.closing_balance_debit_bs || 0);
 
           expectedBalanceUsd =
             account.account_type === 'asset' ||
-            account.account_type === 'expense'
+              account.account_type === 'expense'
               ? Number(balance.closing_balance_debit_usd || 0) -
-                Number(balance.closing_balance_credit_usd || 0)
+              Number(balance.closing_balance_credit_usd || 0)
               : Number(balance.closing_balance_credit_usd || 0) -
-                Number(balance.closing_balance_debit_usd || 0);
+              Number(balance.closing_balance_debit_usd || 0);
         }
 
         const differenceBs = Math.abs(
@@ -4089,19 +4224,19 @@ export class AccountingService {
             // Ajustar la línea para balancear
             const newDebitBs = roundTo2Decimals(
               Number(adjustmentLine.debit_amount_bs || 0) +
-                (diffBs > 0 ? 0 : Math.abs(diffBs)),
+              (diffBs > 0 ? 0 : Math.abs(diffBs)),
             );
             const newCreditBs = roundTo2Decimals(
               Number(adjustmentLine.credit_amount_bs || 0) +
-                (diffBs > 0 ? Math.abs(diffBs) : 0),
+              (diffBs > 0 ? Math.abs(diffBs) : 0),
             );
             const newDebitUsd = roundTo2Decimals(
               Number(adjustmentLine.debit_amount_usd || 0) +
-                (diffUsd > 0 ? 0 : Math.abs(diffUsd)),
+              (diffUsd > 0 ? 0 : Math.abs(diffUsd)),
             );
             const newCreditUsd = roundTo2Decimals(
               Number(adjustmentLine.credit_amount_usd || 0) +
-                (diffUsd > 0 ? Math.abs(diffUsd) : 0),
+              (diffUsd > 0 ? Math.abs(diffUsd) : 0),
             );
 
             // Actualizar la línea con información del tipo de error

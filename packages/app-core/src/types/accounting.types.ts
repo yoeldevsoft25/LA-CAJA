@@ -415,3 +415,158 @@ export interface AccountingReconciliationResult {
     discrepancies: AccountingReconciliationDiscrepancy[]
     summary: AccountingReconciliationSummary
 }
+
+export interface AgingReportCustomer {
+    customer_id: string
+    customer_name: string
+    current_bs: number
+    current_usd: number
+    days_1_30_bs: number
+    days_1_30_usd: number
+    days_31_60_bs: number
+    days_31_60_usd: number
+    days_61_90_bs: number
+    days_61_90_usd: number
+    days_over_90_bs: number
+    days_over_90_usd: number
+    total_bs: number
+    total_usd: number
+}
+
+export interface AgingReportTotals {
+    current_bs: number
+    current_usd: number
+    days_1_30_bs: number
+    days_1_30_usd: number
+    days_31_60_bs: number
+    days_31_60_usd: number
+    days_61_90_bs: number
+    days_61_90_usd: number
+    days_over_90_bs: number
+    days_over_90_usd: number
+    total_bs: number
+    total_usd: number
+}
+
+export interface AccountsReceivableAgingReport {
+    customers: AgingReportCustomer[]
+    totals: AgingReportTotals
+}
+
+export interface AgingReportSupplier {
+    supplier_id: string
+    supplier_name: string
+    current_bs: number
+    current_usd: number
+    days_1_30_bs: number
+    days_1_30_usd: number
+    days_31_60_bs: number
+    days_31_60_usd: number
+    days_61_90_bs: number
+    days_61_90_usd: number
+    days_over_90_bs: number
+    days_over_90_usd: number
+    total_bs: number
+    total_usd: number
+}
+
+export interface AccountsPayableAgingReport {
+    suppliers: AgingReportSupplier[]
+    totals: AgingReportTotals
+}
+
+export interface AccountingBudgetLine {
+    id: string
+    budget_id: string
+    account_id: string
+    account_code?: string
+    account_name?: string
+    amount_bs: number
+    amount_usd: number
+    notes?: string
+    created_at: string
+    updated_at: string
+}
+
+export interface AccountingBudget {
+    id: string
+    store_id: string
+    name: string
+    description?: string
+    period_start: string
+    period_end: string
+    status: 'draft' | 'active' | 'archived'
+    total_amount_bs: number
+    total_amount_usd: number
+    created_by?: string
+    lines?: AccountingBudgetLine[]
+    created_at: string
+    updated_at: string
+}
+
+export interface BudgetComparisonLine {
+    account_id: string
+    account_code: string
+    account_name: string
+    budget_bs: number
+    actual_bs: number
+    variance_bs: number
+    variance_percent_bs: number
+    budget_usd: number
+    actual_usd: number
+    variance_usd: number;
+    variance_percent_usd: number;
+}
+
+export interface BudgetVsActualsReport {
+    budget: AccountingBudget
+    comparison: BudgetComparisonLine[]
+}
+
+export interface BankStatement {
+    id: string
+    store_id: string
+    bank_name: string
+    account_number: string
+    period_start: string
+    period_end: string
+    currency: 'BS' | 'USD'
+    total_debits: number
+    total_credits: number
+    starting_balance: number
+    ending_balance: number
+    status: 'draft' | 'pending' | 'reconciled'
+    filename?: string
+    created_by?: string
+    lines?: BankTransaction[]
+    created_at: string
+    updated_at: string
+}
+
+export interface BankTransaction {
+    id: string
+    bank_statement_id: string
+    transaction_date: string
+    description: string
+    reference_number?: string
+    amount: number
+    type: 'debit' | 'credit'
+    balance_after?: number
+    is_reconciled: boolean
+    matched_entry_id?: string
+    reconciliation_notes?: string
+    metadata?: Record<string, any>
+}
+
+export interface AccountingAuditLog {
+    id: string
+    store_id: string
+    user_id: string
+    action: 'create' | 'update' | 'delete' | 'approve' | 'reject' | 'post' | 'cancel'
+    entity_type: string
+    entity_id: string
+    before_value?: Record<string, any>
+    after_value?: Record<string, any>
+    metadata?: Record<string, any>
+    created_at: string
+}

@@ -265,12 +265,22 @@ import { ProductModifier } from './product-modifier.entity';
 import { ProductModifierOption } from './product-modifier-option.entity';
 import { CashLedgerEntry } from './cash-ledger-entry.entity';
 import { StockEscrow } from './stock-escrow.entity';
+// Bank Reconciliation entities
+export { BankStatement } from './bank-statement.entity';
+export { BankTransaction } from './bank-transaction.entity';
+
+// Audit entities
+export { AccountingAuditLog } from './accounting-audit-log.entity';
 
 /**
  * Array con todas las entidades de TypeORM para configuración centralizada
  * Esto reduce el tamaño del objeto serializado en NestJS y mejora el rendimiento
  * Nota: No usar 'as const' para permitir que TypeORM acepte el array
  */
+import { BankStatement } from './bank-statement.entity';
+import { BankTransaction } from './bank-transaction.entity';
+import { AccountingAuditLog } from './accounting-audit-log.entity';
+
 export const ALL_ENTITIES = [
   Store,
   Profile,
@@ -372,5 +382,9 @@ export const ALL_ENTITIES = [
   ProductModifier,
   ProductModifierOption,
   CashLedgerEntry,
+
   StockEscrow,
+  BankStatement,
+  BankTransaction,
+  AccountingAuditLog,
 ];

@@ -4,6 +4,9 @@ import { Repository, Between, In } from 'typeorm';
 import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
+import { Debt } from '../database/entities/debt.entity';
+import { PurchaseOrder } from '../database/entities/purchase-order.entity';
+import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { AccountingSharedService } from './accounting-shared.service';
 
 /**
@@ -23,9 +26,233 @@ export class AccountingReportingService {
     private journalEntryLineRepository: Repository<JournalEntryLine>,
     @InjectRepository(ChartOfAccount)
     private accountRepository: Repository<ChartOfAccount>,
+    @InjectRepository(Debt)
+    private debtRepository: Repository<Debt>,
+    @InjectRepository(PurchaseOrder)
+    private purchaseOrderRepository: Repository<PurchaseOrder>,
+    @InjectRepository(FiscalInvoice)
+    private fiscalInvoiceRepository: Repository<FiscalInvoice>,
     private sharedService: AccountingSharedService,
-  ) {}
+  ) { }
 
+  /**
+   * Libro de Ventas (SENIAT)
+   */
+  async getVATSalesBook(
+    storeId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<{
+    entries: Array<{
+      date: Date;
+      invoice_number: string;
+      control_number: string;
+      customer_name: string;
+      customer_tax_id: string;
+      total_sales: number;
+      exempt_sales: number;
+      taxable_base: number;
+      tax_amount: number;
+      tax_rate: number;
+      status: string;
+    }>;
+    summary: {
+      total_sales: number;
+      total_exempt: number;
+      total_taxable: number;
+      total_tax: number;
+    };
+  }> {
+    const invoices = await this.fiscalInvoiceRepository.find({
+      where: {
+        store_id: storeId,
+        issued_at: Between(startDate, endDate),
+        // status: In(['issued', 'cancelled']), // Incluir anuladas para el libro
+      },
+      order: { issued_at: 'ASC', invoice_number: 'ASC' },
+      relations: ['customer'],
+    });
+
+    const entries = invoices.map((inv) => {
+      // Si está anulada, mostrar montos en 0 pero listar la factura
+      const isCancelled = inv.status === 'cancelled';
+      const total = isCancelled ? 0 : Number(inv.total_bs);
+      const tax = isCancelled ? 0 : Number(inv.tax_amount_bs);
+      const base = isCancelled ? 0 : Number(inv.subtotal_bs);
+      const exempt = isCancelled ? 0 : (Number(inv.tax_rate) === 0 ? Number(inv.total_bs) : 0);
+      // Si la tasa es > 0, base es subtotal. Si es 0, base es 0 (todo es exento)
+      const taxableBase = Number(inv.tax_rate) > 0 ? base : 0;
+
+      return {
+        date: inv.issued_at || inv.created_at,
+        invoice_number: inv.invoice_number,
+        control_number: inv.fiscal_control_code || 'N/A',
+        customer_name: inv.customer_name || 'Cliente Genérico',
+        customer_tax_id: inv.customer_tax_id || 'N/A',
+        total_sales: total,
+        exempt_sales: exempt,
+        taxable_base: taxableBase,
+        tax_amount: tax,
+        tax_rate: Number(inv.tax_rate),
+        status: inv.status,
+      };
+    });
+
+    const summary = entries.reduce(
+      (acc, curr) => ({
+        total_sales: acc.total_sales + curr.total_sales,
+        total_exempt: acc.total_exempt + curr.exempt_sales,
+        total_taxable: acc.total_taxable + curr.taxable_base,
+        total_tax: acc.total_tax + curr.tax_amount,
+      }),
+      { total_sales: 0, total_exempt: 0, total_taxable: 0, total_tax: 0 },
+    );
+
+    return { entries, summary };
+  }
+
+  /**
+   * Libro de Compras (SENIAT)
+   * Basado en Asientos de Compra y Gastos con desglose de impuestos
+   */
+  async getVATPurchasesBook(
+    storeId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<{
+    entries: Array<{
+      date: Date;
+      invoice_number: string;
+      control_number: string;
+      supplier_name: string;
+      supplier_tax_id: string;
+      total_purchases: number;
+      exempt_purchases: number;
+      taxable_base: number;
+      tax_amount: number;
+      tax_rate: number;
+    }>;
+    summary: {
+      total_purchases: number;
+      total_exempt: number;
+      total_taxable: number;
+      total_tax: number;
+    };
+  }> {
+    // Buscar asientos de tipo 'purchase', 'expense', o manuales que tengan metadata de factura
+    const entries = await this.journalEntryRepository.find({
+      where: {
+        store_id: storeId,
+        entry_date: Between(startDate, endDate),
+        // Podríamos filtrar por source_type, pero mejor traer todo lo que parezca compra
+      },
+      relations: ['lines'],
+      order: { entry_date: 'ASC' },
+    });
+
+    // Filtrar en memoria aquellos que parecen ser compras con factura
+    // Criterio: Tienen metadata.invoice_number O son source_type='purchase_order'
+    // PERO: Si vienen de PO automática, no tienen tax (por ahora). Mostrarlas como exentas.
+
+    // Lista de cuentas de crédito fiscal (Input VAT)
+    // En una implementación real, buscaríamos por configuración. 
+    // Por ahora, asumimos cuentas que empiecen con '1.01.05' (Activo Corriente -> Impuestos)
+    // O buscamos líneas con tax_code definido.
+
+    const bookEntries: Array<{
+      date: Date;
+      invoice_number: string;
+      control_number: string;
+      supplier_name: string;
+      supplier_tax_id: string;
+      total_purchases: number;
+      exempt_purchases: number;
+      taxable_base: number;
+      tax_amount: number;
+      tax_rate: number;
+    }> = [];
+
+    for (const entry of entries) {
+      // Intentar extraer datos de factura de metadata
+      const invoiceNumber = entry.metadata?.invoice_number || entry.reference_number || 'N/A';
+      const controlNumber = entry.metadata?.control_number || 'N/A';
+      const supplierName = entry.metadata?.supplier_name || entry.description || 'Proveedor';
+      const supplierTaxId = entry.metadata?.supplier_tax_id || 'N/A';
+
+      // Si no es una entrada de compra/gasto explícita y no tiene info de factura, saltar
+      // Excepto si es una PO, que sabemos es compra
+      if (!['purchase', 'expense'].includes(entry.entry_type) && !entry.metadata?.invoice_number) {
+        continue;
+      }
+
+      let taxAmount = 0;
+      let taxableBase = 0;
+      let exemptAmount = 0;
+      let totalAmount = 0;
+
+      // Calcular montos desde las líneas
+      // Buscamos líneas que incrementen el pasivo (Haber/Credit en CxP) -> Total Compra
+      // O sumamos líneas de Gasto/Activo (Debe/Debit) -> Base + Impuesto
+
+      // Enfoque: Sumar Debitos (Gasto + Tax).
+      // Identificar Tax por account_code, tax_code, o descripción.
+
+      for (const line of entry.lines) {
+        const debit = Number(line.debit_amount_bs);
+        if (debit > 0) {
+          // Heurística simple: si tiene tax_code o nombre dice "IVA Crédito", es impuesto
+          const isTax = line.tax_code || line.account_name.toLowerCase().includes('iva crédito') || line.account_name.toLowerCase().includes('fiscal credit');
+
+          if (isTax) {
+            taxAmount += debit;
+          } else {
+            // Es base o exento.
+            // Si hay taxAmount en el asiento, asumimos que esto es base.
+            // Pero es difícil saber qué línea es base de qué impuesto si hay múltiples.
+            // Simplificamos: acumulamos en "Potential Base".
+            taxableBase += debit;
+          }
+        }
+      }
+
+      // Ajuste: Si taxAmount > 0, entonces taxableBase es realmente base imponible.
+      // Si taxAmount == 0, todo lo que sumamos es Exento.
+      if (taxAmount === 0) {
+        exemptAmount = taxableBase;
+        taxableBase = 0;
+      }
+
+      totalAmount = exemptAmount + taxableBase + taxAmount;
+
+      // Calcular tasa implícita
+      const rate = taxableBase > 0 ? (taxAmount / taxableBase) * 100 : 0;
+
+      bookEntries.push({
+        date: entry.entry_date,
+        invoice_number: invoiceNumber,
+        control_number: controlNumber,
+        supplier_name: supplierName,
+        supplier_tax_id: supplierTaxId,
+        total_purchases: totalAmount,
+        exempt_purchases: exemptAmount,
+        taxable_base: taxableBase,
+        tax_amount: taxAmount,
+        tax_rate: rate
+      });
+    }
+
+    const summary = bookEntries.reduce(
+      (acc, curr) => ({
+        total_purchases: acc.total_purchases + curr.total_purchases,
+        total_exempt: acc.total_exempt + curr.exempt_purchases,
+        total_taxable: acc.total_taxable + curr.taxable_base,
+        total_tax: acc.total_tax + curr.tax_amount,
+      }),
+      { total_purchases: 0, total_exempt: 0, total_taxable: 0, total_tax: 0 },
+    );
+
+    return { entries: bookEntries, summary };
+  }
   /**
    * Generar Balance General
    */
@@ -216,6 +443,7 @@ export class AccountingReportingService {
         .andWhere('entry.status = :status', { status: 'posted' })
         .andWhere('entry.entry_date >= :startDate', { startDate })
         .andWhere('entry.entry_date <= :endDate', { endDate })
+        .andWhere('entry.source_type != :sourceType', { sourceType: 'period_close' })
         .select('SUM(line.debit_amount_bs)', 'total_debit_bs')
         .addSelect('SUM(line.credit_amount_bs)', 'total_credit_bs')
         .addSelect('SUM(line.debit_amount_usd)', 'total_debit_usd')
@@ -745,18 +973,18 @@ export class AccountingReportingService {
     const cashBalancesStart =
       cashAccountIds.length > 0
         ? await this.sharedService.calculateAccountBalancesBatch(
-            storeId,
-            cashAccountIds,
-            startDate,
-          )
+          storeId,
+          cashAccountIds,
+          startDate,
+        )
         : new Map();
     const cashBalancesEnd =
       cashAccountIds.length > 0
         ? await this.sharedService.calculateAccountBalancesBatch(
-            storeId,
-            cashAccountIds,
-            endDate,
-          )
+          storeId,
+          cashAccountIds,
+          endDate,
+        )
         : new Map();
 
     // Calcular saldos al inicio del período
@@ -800,18 +1028,18 @@ export class AccountingReportingService {
     const specialBalancesStart =
       specialAccountIds.length > 0
         ? await this.sharedService.calculateAccountBalancesBatch(
-            storeId,
-            specialAccountIds,
-            startDate,
-          )
+          storeId,
+          specialAccountIds,
+          startDate,
+        )
         : new Map();
     const specialBalancesEnd =
       specialAccountIds.length > 0
         ? await this.sharedService.calculateAccountBalancesBatch(
-            storeId,
-            specialAccountIds,
-            endDate,
-          )
+          storeId,
+          specialAccountIds,
+          endDate,
+        )
         : new Map();
 
     if (receivableAccount) {
@@ -938,5 +1166,339 @@ export class AccountingReportingService {
       cash_at_end_bs: cashAtEndBs,
       cash_at_end_usd: cashAtEndUsd,
     };
+  }
+
+  /**
+   * Aging de Cuentas por Cobrar (Accounts Receivable Aging)
+   * Agrupa deudas pendientes por antigüedad: Corriente, 1-30, 31-60, 61-90, 90+ días
+   */
+  async getAccountsReceivableAging(
+    storeId: string,
+    asOfDate: Date = new Date(),
+  ): Promise<{
+    customers: Array<{
+      customer_id: string;
+      customer_name: string;
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    }>;
+    totals: {
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    };
+  }> {
+    // Obtener todas las deudas abiertas/parciales con sus pagos y cliente
+    const debts = await this.debtRepository.find({
+      where: {
+        store_id: storeId,
+        status: In(['open', 'partial']),
+      },
+      relations: ['customer', 'payments'],
+    });
+
+    // Agrupar por cliente
+    const customerMap = new Map<
+      string,
+      {
+        customer_id: string;
+        customer_name: string;
+        current_bs: number;
+        current_usd: number;
+        days_1_30_bs: number;
+        days_1_30_usd: number;
+        days_31_60_bs: number;
+        days_31_60_usd: number;
+        days_61_90_bs: number;
+        days_61_90_usd: number;
+        days_over_90_bs: number;
+        days_over_90_usd: number;
+        total_bs: number;
+        total_usd: number;
+      }
+    >();
+
+    for (const debt of debts) {
+      // Calcular saldo pendiente (monto - pagos)
+      const totalPaidBs = (debt.payments || []).reduce(
+        (sum, p) => sum + Number(p.amount_bs || 0),
+        0,
+      );
+      const totalPaidUsd = (debt.payments || []).reduce(
+        (sum, p) => sum + Number(p.amount_usd || 0),
+        0,
+      );
+      const outstandingBs = Number(debt.amount_bs) - totalPaidBs;
+      const outstandingUsd = Number(debt.amount_usd) - totalPaidUsd;
+
+      if (outstandingBs <= 0.01 && outstandingUsd <= 0.01) continue;
+
+      // Calcular antigüedad en días
+      const daysSinceCreation = Math.floor(
+        (asOfDate.getTime() - new Date(debt.created_at).getTime()) /
+        (1000 * 60 * 60 * 24),
+      );
+
+      // Obtener o crear registro del cliente
+      if (!customerMap.has(debt.customer_id)) {
+        customerMap.set(debt.customer_id, {
+          customer_id: debt.customer_id,
+          customer_name:
+            debt.customer?.name || 'Sin nombre',
+          current_bs: 0,
+          current_usd: 0,
+          days_1_30_bs: 0,
+          days_1_30_usd: 0,
+          days_31_60_bs: 0,
+          days_31_60_usd: 0,
+          days_61_90_bs: 0,
+          days_61_90_usd: 0,
+          days_over_90_bs: 0,
+          days_over_90_usd: 0,
+          total_bs: 0,
+          total_usd: 0,
+        });
+      }
+
+      const record = customerMap.get(debt.customer_id)!;
+
+      // Clasificar por antigüedad
+      if (daysSinceCreation <= 0) {
+        record.current_bs += outstandingBs;
+        record.current_usd += outstandingUsd;
+      } else if (daysSinceCreation <= 30) {
+        record.days_1_30_bs += outstandingBs;
+        record.days_1_30_usd += outstandingUsd;
+      } else if (daysSinceCreation <= 60) {
+        record.days_31_60_bs += outstandingBs;
+        record.days_31_60_usd += outstandingUsd;
+      } else if (daysSinceCreation <= 90) {
+        record.days_61_90_bs += outstandingBs;
+        record.days_61_90_usd += outstandingUsd;
+      } else {
+        record.days_over_90_bs += outstandingBs;
+        record.days_over_90_usd += outstandingUsd;
+      }
+
+      record.total_bs += outstandingBs;
+      record.total_usd += outstandingUsd;
+    }
+
+    const customers = Array.from(customerMap.values()).sort(
+      (a, b) => b.total_bs - a.total_bs,
+    );
+
+    // Calcular totales
+    const totals = customers.reduce(
+      (acc, c) => ({
+        current_bs: acc.current_bs + c.current_bs,
+        current_usd: acc.current_usd + c.current_usd,
+        days_1_30_bs: acc.days_1_30_bs + c.days_1_30_bs,
+        days_1_30_usd: acc.days_1_30_usd + c.days_1_30_usd,
+        days_31_60_bs: acc.days_31_60_bs + c.days_31_60_bs,
+        days_31_60_usd: acc.days_31_60_usd + c.days_31_60_usd,
+        days_61_90_bs: acc.days_61_90_bs + c.days_61_90_bs,
+        days_61_90_usd: acc.days_61_90_usd + c.days_61_90_usd,
+        days_over_90_bs: acc.days_over_90_bs + c.days_over_90_bs,
+        days_over_90_usd: acc.days_over_90_usd + c.days_over_90_usd,
+        total_bs: acc.total_bs + c.total_bs,
+        total_usd: acc.total_usd + c.total_usd,
+      }),
+      {
+        current_bs: 0,
+        current_usd: 0,
+        days_1_30_bs: 0,
+        days_1_30_usd: 0,
+        days_31_60_bs: 0,
+        days_31_60_usd: 0,
+        days_61_90_bs: 0,
+        days_61_90_usd: 0,
+        days_over_90_bs: 0,
+        days_over_90_usd: 0,
+        total_bs: 0,
+        total_usd: 0,
+      },
+    );
+
+    return { customers, totals };
+  }
+
+  /**
+   * Aging de Cuentas por Pagar (Accounts Payable Aging)
+   * Agrupa órdenes de compra pendientes por antigüedad
+   */
+  async getAccountsPayableAging(
+    storeId: string,
+    asOfDate: Date = new Date(),
+  ): Promise<{
+    suppliers: Array<{
+      supplier_id: string;
+      supplier_name: string;
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    }>;
+    totals: {
+      current_bs: number;
+      current_usd: number;
+      days_1_30_bs: number;
+      days_1_30_usd: number;
+      days_31_60_bs: number;
+      days_31_60_usd: number;
+      days_61_90_bs: number;
+      days_61_90_usd: number;
+      days_over_90_bs: number;
+      days_over_90_usd: number;
+      total_bs: number;
+      total_usd: number;
+    };
+  }> {
+    // Obtener órdenes de compra pendientes (no completadas ni canceladas)
+    const orders = await this.purchaseOrderRepository.find({
+      where: {
+        store_id: storeId,
+        status: In(['draft', 'sent', 'confirmed', 'partial']),
+      },
+      relations: ['supplier'],
+    });
+
+    // Agrupar por proveedor
+    const supplierMap = new Map<
+      string,
+      {
+        supplier_id: string;
+        supplier_name: string;
+        current_bs: number;
+        current_usd: number;
+        days_1_30_bs: number;
+        days_1_30_usd: number;
+        days_31_60_bs: number;
+        days_31_60_usd: number;
+        days_61_90_bs: number;
+        days_61_90_usd: number;
+        days_over_90_bs: number;
+        days_over_90_usd: number;
+        total_bs: number;
+        total_usd: number;
+      }
+    >();
+
+    for (const order of orders) {
+      const amountBs = Number(order.total_amount_bs || 0);
+      const amountUsd = Number(order.total_amount_usd || 0);
+
+      if (amountBs <= 0.01 && amountUsd <= 0.01) continue;
+
+      const daysSinceCreation = Math.floor(
+        (asOfDate.getTime() - new Date(order.created_at).getTime()) /
+        (1000 * 60 * 60 * 24),
+      );
+
+      if (!supplierMap.has(order.supplier_id)) {
+        supplierMap.set(order.supplier_id, {
+          supplier_id: order.supplier_id,
+          supplier_name: order.supplier?.name || 'Sin nombre',
+          current_bs: 0,
+          current_usd: 0,
+          days_1_30_bs: 0,
+          days_1_30_usd: 0,
+          days_31_60_bs: 0,
+          days_31_60_usd: 0,
+          days_61_90_bs: 0,
+          days_61_90_usd: 0,
+          days_over_90_bs: 0,
+          days_over_90_usd: 0,
+          total_bs: 0,
+          total_usd: 0,
+        });
+      }
+
+      const record = supplierMap.get(order.supplier_id)!;
+
+      if (daysSinceCreation <= 0) {
+        record.current_bs += amountBs;
+        record.current_usd += amountUsd;
+      } else if (daysSinceCreation <= 30) {
+        record.days_1_30_bs += amountBs;
+        record.days_1_30_usd += amountUsd;
+      } else if (daysSinceCreation <= 60) {
+        record.days_31_60_bs += amountBs;
+        record.days_31_60_usd += amountUsd;
+      } else if (daysSinceCreation <= 90) {
+        record.days_61_90_bs += amountBs;
+        record.days_61_90_usd += amountUsd;
+      } else {
+        record.days_over_90_bs += amountBs;
+        record.days_over_90_usd += amountUsd;
+      }
+
+      record.total_bs += amountBs;
+      record.total_usd += amountUsd;
+    }
+
+    const suppliers = Array.from(supplierMap.values()).sort(
+      (a, b) => b.total_bs - a.total_bs,
+    );
+
+    const totals = suppliers.reduce(
+      (acc, s) => ({
+        current_bs: acc.current_bs + s.current_bs,
+        current_usd: acc.current_usd + s.current_usd,
+        days_1_30_bs: acc.days_1_30_bs + s.days_1_30_bs,
+        days_1_30_usd: acc.days_1_30_usd + s.days_1_30_usd,
+        days_31_60_bs: acc.days_31_60_bs + s.days_31_60_bs,
+        days_31_60_usd: acc.days_31_60_usd + s.days_31_60_usd,
+        days_61_90_bs: acc.days_61_90_bs + s.days_61_90_bs,
+        days_61_90_usd: acc.days_61_90_usd + s.days_61_90_usd,
+        days_over_90_bs: acc.days_over_90_bs + s.days_over_90_bs,
+        days_over_90_usd: acc.days_over_90_usd + s.days_over_90_usd,
+        total_bs: acc.total_bs + s.total_bs,
+        total_usd: acc.total_usd + s.total_usd,
+      }),
+      {
+        current_bs: 0,
+        current_usd: 0,
+        days_1_30_bs: 0,
+        days_1_30_usd: 0,
+        days_31_60_bs: 0,
+        days_31_60_usd: 0,
+        days_61_90_bs: 0,
+        days_61_90_usd: 0,
+        days_over_90_bs: 0,
+        days_over_90_usd: 0,
+        total_bs: 0,
+        total_usd: 0,
+      },
+    );
+
+    return { suppliers, totals };
   }
 }

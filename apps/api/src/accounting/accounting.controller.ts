@@ -25,6 +25,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ChartOfAccountsService } from './chart-of-accounts.service';
 import { AccountingService } from './accounting.service';
 import { AccountingExportService } from './accounting-export.service';
+import { AccountingAuditService } from './accounting-audit.service';
+import { AccountingReportingService } from './accounting-reporting.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { CreateJournalEntryDto } from './dto/create-journal-entry.dto';
 import { GetJournalEntriesDto } from './dto/get-journal-entries.dto';
@@ -56,9 +58,11 @@ export class AccountingController {
     private readonly chartOfAccountsService: ChartOfAccountsService,
     private readonly accountingService: AccountingService,
     private readonly exportService: AccountingExportService,
+    private readonly auditService: AccountingAuditService,
+    private readonly reportingService: AccountingReportingService,
     @InjectRepository(AccountingAccountMapping)
     private mappingRepository: Repository<AccountingAccountMapping>,
-  ) {}
+  ) { }
 
   /**
    * Plan de Cuentas
@@ -403,6 +407,36 @@ export class AccountingController {
   }
 
   /**
+   * Aging de Cuentas por Cobrar
+   */
+  @Get('reports/aging-receivable')
+  async getAgingReceivable(
+    @Request() req: any,
+    @Query('as_of_date') asOfDate?: string,
+  ) {
+    const storeId = req.user.store_id;
+    return this.accountingService.getAccountsReceivableAging(
+      storeId,
+      asOfDate ? new Date(asOfDate) : new Date(),
+    );
+  }
+
+  /**
+   * Aging de Cuentas por Pagar
+   */
+  @Get('reports/aging-payable')
+  async getAgingPayable(
+    @Request() req: any,
+    @Query('as_of_date') asOfDate?: string,
+  ) {
+    const storeId = req.user.store_id;
+    return this.accountingService.getAccountsPayableAging(
+      storeId,
+      asOfDate ? new Date(asOfDate) : new Date(),
+    );
+  }
+
+  /**
    * Cerrar período contable
    */
   @Post('periods/close')
@@ -495,6 +529,61 @@ export class AccountingController {
     return this.accountingService.recalculateEntryTotals(
       storeId,
       body?.entry_ids,
+    );
+  }
+
+  /**
+   * Reconstruir todos los saldos de cuentas desde cero
+   * Usar cuando los saldos acumulados tengan discrepancias vs las líneas de asientos
+   */
+  @Post('rebuild-balances')
+  @HttpCode(HttpStatus.OK)
+  async rebuildAccountBalances(@Request() req: any) {
+    const storeId = req.user.store_id;
+    return this.accountingService.rebuildAllAccountBalances(storeId);
+  }
+
+  /**
+   * Audit Logs
+   */
+  @Get('logs')
+  async getAuditLogs(
+    @Request() req: any,
+    @Query('entity_type') entityType?: string,
+    @Query('entity_id') entityId?: string,
+  ) {
+    const storeId = req.user.store_id;
+    return this.auditService.getLogs(storeId, entityType, entityId);
+  }
+
+  /**
+   * Libros IVA (SENIAT)
+   */
+  @Get('reports/vat-sales-book')
+  async getVATSalesBook(
+    @Request() req: any,
+    @Query('start_date') startDate: string,
+    @Query('end_date') endDate: string,
+  ) {
+    const storeId = req.user.store_id;
+    return this.reportingService.getVATSalesBook(
+      storeId,
+      new Date(startDate),
+      new Date(endDate),
+    );
+  }
+
+  @Get('reports/vat-purchases-book')
+  async getVATPurchasesBook(
+    @Request() req: any,
+    @Query('start_date') startDate: string,
+    @Query('end_date') endDate: string,
+  ) {
+    const storeId = req.user.store_id;
+    return this.reportingService.getVATPurchasesBook(
+      storeId,
+      new Date(startDate),
+      new Date(endDate),
     );
   }
 }

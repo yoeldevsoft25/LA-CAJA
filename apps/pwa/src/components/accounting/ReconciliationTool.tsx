@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { accountingValidationService } from '@/services/accounting.service'
-import { Calendar as CalendarIcon, RefreshCw, Loader2, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import { Calendar as CalendarIcon, RefreshCw, Loader2, CheckCircle2, AlertTriangle, XCircle, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -26,8 +26,22 @@ export default function ReconciliationTool() {
       }),
   })
 
+  const rebuildMutation = useMutation({
+    mutationFn: () => accountingValidationService.rebuildBalances(),
+    onSuccess: () => {
+      // After rebuild, auto-run reconciliation to show updated results
+      reconciliationMutation.mutate()
+    },
+  })
+
   const handleReconcile = () => {
     reconciliationMutation.mutate()
+  }
+
+  const handleRebuild = () => {
+    if (confirm('¿Está seguro? Esto recalculará TODOS los saldos de cuentas desde cero usando las líneas de asientos contables.')) {
+      rebuildMutation.mutate()
+    }
   }
 
   const formatCurrency = (amount: number, currency: 'BS' | 'USD' = 'BS') => {
@@ -37,6 +51,7 @@ export default function ReconciliationTool() {
   }
 
   const result = reconciliationMutation.data
+  const rebuildResult = rebuildMutation.data
 
   return (
     <div className="space-y-4">
@@ -64,19 +79,34 @@ export default function ReconciliationTool() {
                 </PopoverContent>
               </Popover>
             </div>
-            <Button onClick={handleReconcile} disabled={reconciliationMutation.isPending} className="w-full md:w-auto">
-              {reconciliationMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Reconciliando...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Reconciliar
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Button onClick={handleReconcile} disabled={reconciliationMutation.isPending || rebuildMutation.isPending} className="flex-1 md:flex-none">
+                {reconciliationMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Reconciliando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Reconciliar
+                  </>
+                )}
+              </Button>
+              <Button onClick={handleRebuild} disabled={rebuildMutation.isPending || reconciliationMutation.isPending} variant="outline" className="flex-1 md:flex-none">
+                {rebuildMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Reconstruyendo...
+                  </>
+                ) : (
+                  <>
+                    <Database className="w-4 h-4 mr-2" />
+                    Reconstruir Saldos
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -87,6 +117,16 @@ export default function ReconciliationTool() {
           <XCircle className="h-4 w-4" />
           <AlertDescription>
             Error al ejecutar la reconciliación: {reconciliationMutation.error instanceof Error ? reconciliationMutation.error.message : 'Error desconocido'}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Resultado de rebuild */}
+      {rebuildResult && (
+        <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <Database className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
+            Saldos reconstruidos: {rebuildResult.accounts_processed} cuentas procesadas, {rebuildResult.periods_rebuilt} períodos recreados, {rebuildResult.previous_balances_deleted} registros anteriores eliminados.
           </AlertDescription>
         </Alert>
       )}

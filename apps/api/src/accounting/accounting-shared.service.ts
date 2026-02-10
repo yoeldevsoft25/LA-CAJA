@@ -26,7 +26,7 @@ export class AccountingSharedService {
     private accountRepository: Repository<ChartOfAccount>,
     @InjectRepository(AccountBalance)
     private balanceRepository: Repository<AccountBalance>,
-  ) {}
+  ) { }
 
   /**
    * Generar número de asiento único
@@ -188,8 +188,8 @@ export class AccountingSharedService {
     const accounts =
       missingAccountIds.length > 0
         ? await accountRepo.find({
-            where: { id: In(missingAccountIds) },
-          })
+          where: { id: In(missingAccountIds) },
+        })
         : [];
 
     // Crear mapa de balances existentes
@@ -301,5 +301,135 @@ export class AccountingSharedService {
     if (balancesToSave.length > 0) {
       await repo.save(balancesToSave);
     }
+  }
+
+  /**
+   * Reconstruir TODOS los saldos de cuentas desde cero.
+   * Elimina los saldos existentes y los recalcula a partir de las líneas de asientos posteados.
+   * Usar cuando los saldos acumulados se hayan desincronizado (e.g., por duplicación, restarts).
+   */
+  async rebuildAllAccountBalances(
+    storeId: string,
+  ): Promise<{
+    accounts_processed: number;
+    periods_rebuilt: number;
+    previous_balances_deleted: number;
+  }> {
+    this.logger.log(
+      `[REBUILD] Iniciando reconstrucción de saldos para tienda ${storeId}`,
+    );
+
+    // 1. Contar y eliminar saldos existentes
+    const existingCount = await this.balanceRepository.count({
+      where: { store_id: storeId },
+    });
+
+    await this.balanceRepository.delete({ store_id: storeId });
+
+    this.logger.log(
+      `[REBUILD] Eliminados ${existingCount} registros de saldos anteriores`,
+    );
+
+    // 2. Obtener todas las cuentas activas
+    const accounts = await this.accountRepository.find({
+      where: { store_id: storeId },
+    });
+
+    const accountMap = new Map(accounts.map((a) => [a.id, a]));
+
+    // 3. Obtener todos los movimientos agrupados por cuenta + período (mes)
+    const rawData = await this.journalEntryLineRepository
+      .createQueryBuilder('line')
+      .innerJoin('line.entry', 'entry')
+      .where('entry.store_id = :storeId', { storeId })
+      .andWhere('entry.status = :status', { status: 'posted' })
+      .select('line.account_id', 'account_id')
+      .addSelect(
+        "DATE_TRUNC('month', entry.entry_date)",
+        'period_month',
+      )
+      .addSelect('SUM(line.debit_amount_bs)', 'total_debit_bs')
+      .addSelect('SUM(line.credit_amount_bs)', 'total_credit_bs')
+      .addSelect('SUM(line.debit_amount_usd)', 'total_debit_usd')
+      .addSelect('SUM(line.credit_amount_usd)', 'total_credit_usd')
+      .groupBy('line.account_id')
+      .addGroupBy("DATE_TRUNC('month', entry.entry_date)")
+      .orderBy('line.account_id')
+      .addOrderBy("DATE_TRUNC('month', entry.entry_date)")
+      .getRawMany();
+
+    this.logger.log(
+      `[REBUILD] Encontrados ${rawData.length} registros cuenta-período para reconstruir`,
+    );
+
+    // 4. Construir nuevos AccountBalance records
+    const balancesToSave: AccountBalance[] = [];
+
+    for (const row of rawData) {
+      const account = accountMap.get(row.account_id);
+      if (!account) {
+        this.logger.warn(
+          `[REBUILD] Cuenta ${row.account_id} no encontrada, omitiendo`,
+        );
+        continue;
+      }
+
+      const periodMonth = new Date(row.period_month);
+      const year = periodMonth.getFullYear();
+      const month = periodMonth.getMonth();
+      const periodStart = new Date(year, month, 1);
+      const periodEnd = new Date(year, month + 1, 0);
+
+      const periodDebitBs = Number(row.total_debit_bs || 0);
+      const periodCreditBs = Number(row.total_credit_bs || 0);
+      const periodDebitUsd = Number(row.total_debit_usd || 0);
+      const periodCreditUsd = Number(row.total_credit_usd || 0);
+
+      const balance = this.balanceRepository.create({
+        id: randomUUID(),
+        store_id: storeId,
+        account_id: row.account_id,
+        account_code: account.account_code,
+        period_start: periodStart,
+        period_end: periodEnd,
+        opening_balance_debit_bs: 0,
+        opening_balance_credit_bs: 0,
+        opening_balance_debit_usd: 0,
+        opening_balance_credit_usd: 0,
+        period_debit_bs: periodDebitBs,
+        period_credit_bs: periodCreditBs,
+        period_debit_usd: periodDebitUsd,
+        period_credit_usd: periodCreditUsd,
+        closing_balance_debit_bs: periodDebitBs,
+        closing_balance_credit_bs: periodCreditBs,
+        closing_balance_debit_usd: periodDebitUsd,
+        closing_balance_credit_usd: periodCreditUsd,
+        last_calculated_at: new Date(),
+      });
+
+      balancesToSave.push(balance);
+    }
+
+    // 5. Guardar en batch
+    if (balancesToSave.length > 0) {
+      // Guardar en chunks de 100 para evitar problemas con queries muy grandes
+      const chunkSize = 100;
+      for (let i = 0; i < balancesToSave.length; i += chunkSize) {
+        const chunk = balancesToSave.slice(i, i + chunkSize);
+        await this.balanceRepository.save(chunk);
+      }
+    }
+
+    const uniqueAccounts = new Set(rawData.map((r: any) => r.account_id)).size;
+
+    this.logger.log(
+      `[REBUILD] Reconstrucción completa: ${uniqueAccounts} cuentas, ${balancesToSave.length} registros de período creados`,
+    );
+
+    return {
+      accounts_processed: uniqueAccounts,
+      periods_rebuilt: balancesToSave.length,
+      previous_balances_deleted: existingCount,
+    };
   }
 }
