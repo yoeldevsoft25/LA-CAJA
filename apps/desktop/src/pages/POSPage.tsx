@@ -3,15 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CatalogHeader } from '@/components/pos/catalog/CatalogHeader'
 import { ProductCatalog } from '@/components/pos/catalog/ProductCatalog'
 import { QuickActions } from '@/components/pos/catalog/QuickActions'
-import { productsService, ProductSearchResponse } from '@/services/products.service'
+import { productsService } from '@la-caja/app-core'
 import { realtimeWebSocketService } from '@/services/realtime-websocket.service'
 import { useOnline } from '@/hooks/use-online'
 import { fastCheckoutService, QuickProduct } from '@/services/fast-checkout.service'
 import { printService } from '@/services/print.service'
 import { productSerialsService } from '@/services/product-serials.service'
-import { productsCacheService } from '@/services/products-cache.service'
+import { productsCacheService } from '@la-caja/app-core'
 import { salesService, CreateSaleRequest } from '@/services/sales.service'
-import { exchangeService } from '@/services/exchange.service'
+import { exchangeService } from '@la-caja/app-core'
 import { cashService } from '@/services/cash.service'
 import { paymentsService } from '@/services/payments.service'
 import { invoiceSeriesService } from '@/services/invoice-series.service'
@@ -23,17 +23,20 @@ import { usePOSStore } from '@/stores/pos.store'
 import { inventoryService } from '@/services/inventory.service'
 import { warehousesService } from '@/services/warehouses.service'
 import toast from '@/lib/toast'
+import { stockValidatorService } from '@/services/stock-validator.service'
 
 // Hooks POS Modularizados
 import { usePOSCartActions } from '@/hooks/pos/usePOSCartActions'
 import { usePOSScanner } from '@/hooks/pos/usePOSScanner'
 import { usePOSHotkeys } from '@/hooks/pos/usePOSHotkeys'
+import { useDebounce } from '@/hooks/use-debounce'
 
 import CheckoutModal from '@/components/pos/CheckoutModal'
 import VariantSelector from '@/components/variants/VariantSelector'
 import WeightInputModal from '@/components/pos/WeightInputModal'
 import POSCart from '@/components/pos/cart/POSCart'
 import { SuccessOverlay } from '@/components/pos/SuccessOverlay'
+import { FadeInUp } from '@/components/ui/motion-wrapper'
 import { cn } from '@/lib/utils'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
 import { useOrientation } from '@/hooks/use-orientation'
@@ -53,8 +56,6 @@ export default function POSPage() {
   // Usar store persistente para UI State
   const { searchQuery, isCheckoutOpen: showCheckout, setSearchQuery, setIsCheckoutOpen: setShowCheckout } = usePOSStore()
 
-  const mobileSearchRef = useRef<HTMLDivElement | null>(null)
-  const [mobileResultsTop, setMobileResultsTop] = useState<number | null>(null)
   const [shouldPrint, setShouldPrint] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -259,58 +260,18 @@ export default function POSPage() {
     }
   })
 
-  const [initialData, setInitialData] = useState<ProductSearchResponse | undefined>(undefined)
-  // Cargar desde IndexedDB al montar o cuando cambia la búsqueda
-  useEffect(() => {
-    if (user?.store_id && (searchQuery.length >= 2 || searchQuery.length === 0)) {
-      productsCacheService.getProductsFromCache(user.store_id, {
-        search: searchQuery || undefined,
-        is_active: true,
-        limit: 50,
-      }).then(cached => {
-        if (cached.length > 0) {
-          setInitialData({
-            products: cached,
-            total: cached.length,
-          });
-        }
-      }).catch(() => {
-        // Silenciar errores
-      });
-    }
-  }, [user?.store_id, searchQuery]);
-
-  useEffect(() => {
-    if (!isMobile || searchQuery.trim().length < 2) {
-      setMobileResultsTop(null)
-      return
-    }
-
-    const updatePosition = () => {
-      const rect = mobileSearchRef.current?.getBoundingClientRect()
-      if (!rect) return
-      setMobileResultsTop(rect.bottom + 8)
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition, true)
-    return () => {
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition, true)
-    }
-  }, [isMobile, searchQuery])
+  const debouncedSearchQuery = useDebounce(searchQuery, 250)
 
   // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading, isError: isProductsError } = useQuery({
-    queryKey: ['products', 'search', searchQuery, user?.store_id],
+    queryKey: ['products', 'search', debouncedSearchQuery, user?.store_id],
     queryFn: () =>
       Promise.race([
         productsService.search(
           {
             q: searchQuery || undefined,
             is_active: true,
-            limit: 50,
+            limit: searchQuery ? 50 : 10,
           },
           user?.store_id
         ),
@@ -328,8 +289,8 @@ export default function POSPage() {
       return false
     },
     retryDelay: 1200,
-    initialData: !isOnline ? initialData : undefined,
-    placeholderData: !isOnline ? initialData : undefined,
+    initialData: undefined,
+    placeholderData: undefined,
   })
 
   const products = productsData?.products || []
@@ -622,6 +583,11 @@ export default function POSPage() {
       // Activar animación de éxito premium central y evitar toast duplicado en online
       setSuccessSaleId(sale.id.slice(0, 8))
 
+      // Decrementar stock local optimísticamente (Phase 2 Defensiva)
+      void stockValidatorService.decrementLocalStock(
+        saleItemsForCache.map((i) => ({ product_id: i.product_id, qty: i.qty }))
+      )
+
       // Cerrar y limpiar inmediato para no bloquear UI
       clear()
       setShowCheckout(false)
@@ -857,18 +823,21 @@ export default function POSPage() {
   }
 
 
+  const handleAnimationComplete = useCallback(() => {
+    setSuccessSaleId(null)
+  }, [])
+
   return (
-    <div className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4" data-pull-to-refresh>
+    <FadeInUp className="h-[calc(100vh-4rem)] max-w-7xl mx-auto overflow-y-auto md:overflow-hidden touch-pan-y flex flex-col p-2 lg:p-4" data-pull-to-refresh>
       {/* Layout: Mobile (stacked) / Tablet Landscape (optimizado) / Desktop (side by side) */}
       <div className={cn(
         "grid gap-3 sm:gap-4 flex-1 min-h-0 grid-rows-[minmax(0,1fr)]",
         isTabletLandscape ? "grid-cols-[1.3fr_1fr]" : "grid-cols-1 lg:grid-cols-[1fr_400px]"
       )}>
         {/* Búsqueda y Lista de Productos */}
-        {/* Columna Izquierda: Catálogo (ocultar en mobile) */}
         {!isMobile && (
           <div className={cn(
-            "flex flex-col h-full overflow-hidden bg-card/30 rounded-2xl border-2 border-border shadow-md p-3"
+            "flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-border/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-3"
           )}>
             <CatalogHeader
               searchQuery={searchQuery}
@@ -917,7 +886,7 @@ export default function POSPage() {
           !isTabletLandscape && "lg:col-span-1"
         )}>
           {isMobile && (
-            <div className="mb-3" ref={mobileSearchRef}>
+            <div className="mb-3 relative group">
               <CatalogHeader
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -930,45 +899,47 @@ export default function POSPage() {
                 }}
                 isRefetching={isLoading}
               />
-            </div>
-          )}
-          {isMobile && searchQuery.trim().length >= 2 && mobileResultsTop !== null && (
-            <div
-              className="fixed left-0 right-0 z-[100] px-2"
-              style={{ top: mobileResultsTop }}
-            >
-              <div className="rounded-xl border border-border/50 bg-card shadow-lg overflow-hidden">
-                <div className="px-3 py-2 border-b border-border/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Resultados
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {products.length === 0 ? (
-                    <div className="px-3 py-4 text-sm text-muted-foreground">
-                      No se encontraron productos.
+
+              {/* Resultados de búsqueda móviles con posicionamiento CSS absoluto (Zero Reflow) */}
+              {searchQuery.trim().length >= 2 && (
+                <div className="absolute top-full left-0 right-0 z-[100] mt-1 pr-0 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden border-primary/20">
+                    <div className="px-3 py-2 border-b border-border/40 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] bg-primary/5">
+                      Resultados
                     </div>
-                  ) : (
-                    products.slice(0, 8).map((product: any) => (
-                      <button
-                        key={`mobile-result-${product.id}`}
-                        onClick={() => handleProductClick(product)}
-                        className="w-full px-3 py-2 text-left hover:bg-muted/40 transition-colors border-b border-border/20 last:border-b-0"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium truncate">{product.name}</div>
-                            {product.barcode && (
-                              <div className="text-[11px] text-muted-foreground truncate">{product.barcode}</div>
-                            )}
-                          </div>
-                          <div className="text-sm font-semibold whitespace-nowrap">
-                            ${Number(product.price_usd || 0).toFixed(2)}
-                          </div>
+                    <div className="max-h-64 overflow-y-auto overscroll-contain">
+                      {products.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-muted-foreground bg-background/50">
+                          No se encontraron productos.
                         </div>
-                      </button>
-                    ))
-                  )}
+                      ) : (
+                        products.slice(0, 8).map((product: any) => (
+                          <button
+                            key={`mobile-result-${product.id}`}
+                            onClick={() => {
+                              handleProductClick(product)
+                              setSearchQuery('') // Limpiar búsqueda al seleccionar
+                            }}
+                            className="w-full px-3 py-3 text-left hover:bg-primary/5 active:bg-primary/10 transition-colors border-b border-border/20 last:border-b-0"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-bold truncate text-foreground">{product.name}</div>
+                                {product.barcode && (
+                                  <div className="text-[10px] font-medium text-muted-foreground truncate tracking-tight">{product.barcode}</div>
+                                )}
+                              </div>
+                              <div className="text-sm font-black text-primary tabular-nums">
+                                ${Number(product.price_usd || 0).toFixed(2)}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
           <div className="flex-1 min-h-0">
@@ -1006,20 +977,16 @@ export default function POSPage() {
       />
 
       {/* Selector de variantes */}
-      {
-        selectedProductForVariant && (
-          <VariantSelector
-            isOpen={showVariantSelector}
-            onClose={() => {
-              setShowVariantSelector(false)
-              setSelectedProductForVariant(null)
-            }}
-            productId={selectedProductForVariant.id}
-            productName={selectedProductForVariant.name}
-            onSelect={handleVariantSelect}
-          />
-        )
-      }
+      <VariantSelector
+        isOpen={showVariantSelector}
+        onClose={() => {
+          setShowVariantSelector(false)
+          setSelectedProductForVariant(null)
+        }}
+        productId={selectedProductForVariant?.id}
+        productName={selectedProductForVariant?.name || ''}
+        onSelect={handleVariantSelect}
+      />
 
       {/* Modal de entrada de peso */}
       <WeightInputModal
@@ -1035,9 +1002,9 @@ export default function POSPage() {
       {/* Animación de éxito premium centralizada */}
       <SuccessOverlay
         isOpen={!!successSaleId}
-        onAnimationComplete={() => setSuccessSaleId(null)}
+        onAnimationComplete={handleAnimationComplete}
         message={isOnline ? `Venta #${successSaleId} procesada exitosamente` : `Venta #${successSaleId} almacenada en OFFLINE`}
       />
-    </div>
+    </FadeInUp>
   )
 }

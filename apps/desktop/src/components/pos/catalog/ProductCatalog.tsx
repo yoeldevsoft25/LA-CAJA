@@ -1,10 +1,10 @@
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { memo, useRef, useEffect, useState, useMemo } from 'react'
 import { Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Scale, Search, WifiOff } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
+
 
 // Definición de tipos mínimos necesarios si no se importan de /services
 interface Product {
@@ -32,7 +32,7 @@ interface ProductCatalogProps {
     exchangeRate: number
 }
 
-export function ProductCatalog({
+export const ProductCatalog = memo(function ProductCatalog({
     products,
     isLoading,
     isError,
@@ -48,14 +48,27 @@ export function ProductCatalog({
     // Lógica de virtualización
     useEffect(() => {
         if (!listViewportRef.current) return
-        const updateHeight = () => {
-            setListViewportHeight(listViewportRef.current?.clientHeight || 0)
-        }
-        updateHeight()
 
-        const observer = new ResizeObserver(updateHeight)
+        const updateHeight = () => {
+            if (listViewportRef.current) {
+                setListViewportHeight(listViewportRef.current.clientHeight || 0)
+            }
+        }
+
+        // 🚀 Optimización: Usar requestAnimationFrame para evitar Forced Reflow
+        // durante el mount inicial o re-renders pesados (ej. post-sync)
+        const frameId = requestAnimationFrame(updateHeight)
+
+        const observer = new ResizeObserver(() => {
+            // ResizeObserver ya corre desacoplado del flujo principal de layout,
+            // pero lo envolvemos en rAF por consistencia si es necesario o simplemente lo llamamos.
+            updateHeight()
+        })
         observer.observe(listViewportRef.current)
-        return () => observer.disconnect()
+        return () => {
+            cancelAnimationFrame(frameId)
+            observer.disconnect()
+        }
     }, [])
 
     const PRODUCT_ROW_HEIGHT = 112 // Aumentado para dar espacio y evitar cortes (104px card + 8px gap)
@@ -147,7 +160,7 @@ export function ProductCatalog({
     }
 
     return (
-        <div className="h-full w-full relative bg-background/50 rounded-xl border border-border/50 overflow-hidden shadow-inner">
+        <div className="h-full w-full relative bg-white dark:bg-slate-900 rounded-2xl border border-border/40 dark:border-white/10 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <ScrollArea
                 className="h-full"
                 viewportRef={listViewportRef}
@@ -173,27 +186,17 @@ export function ProductCatalog({
                         return (
                             <div
                                 key={product.id}
-                                className="absolute left-0 right-0 px-2"
+                                className="absolute left-0 right-0 px-2 contain-layout"
                                 style={{
                                     top: (originalIndex * PRODUCT_ROW_HEIGHT) + LIST_TOP_PADDING,
                                     height: PRODUCT_ROW_HEIGHT
                                 }}
                             >
-                                <motion.button
+                                <button
                                     onClick={() => onProductClick(product)}
-                                    whileHover={{ scale: 1.01, translateY: -2 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 400,
-                                        damping: 25,
-                                        opacity: { duration: 0.3 }
-                                    }}
-                                    className="w-full h-[104px] text-left group relative bg-gradient-to-br from-card/90 to-card/50 hover:from-card hover:to-card/80 backdrop-blur-md rounded-2xl border border-white/10 hover:border-primary/20 shadow-sm hover:shadow-lg overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10"
+                                    className="w-full h-[104px] text-left group relative bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800 rounded-2xl border border-border/20 dark:border-white/5 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200 will-change-transform"
                                 >
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-all duration-300" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-[background-color] duration-300" />
 
                                     {/* Icono / Imagen */}
                                     <div className={cn(
@@ -224,7 +227,7 @@ export function ProductCatalog({
 
                                         <div className="flex items-center gap-2 mt-auto">
                                             {product.category && (
-                                                <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[100px] hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/30 border border-white/5">
+                                                <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[100px] hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/30 dark:bg-white/5 border border-white/5">
                                                     {product.category}
                                                 </span>
                                             )}
@@ -252,7 +255,7 @@ export function ProductCatalog({
                                             </span>
                                         </div>
                                     </div>
-                                </motion.button>
+                                </button>
                             </div>
                         )
                     })}
@@ -260,4 +263,4 @@ export function ProductCatalog({
             </ScrollArea>
         </div>
     )
-}
+})

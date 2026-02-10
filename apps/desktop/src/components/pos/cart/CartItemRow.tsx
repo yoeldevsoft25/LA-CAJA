@@ -32,11 +32,10 @@ export function CartItemRow({
     return (
         <div
             className={cn(
-                "group p-3 border-b border-border/40 hover:bg-muted/30 relative transition-all",
+                "group p-3 mb-2 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-border/20 dark:border-white/5 shadow-sm hover:shadow-md hover:bg-slate-100/80 dark:hover:bg-slate-800 relative transition-all duration-200",
                 isMobile && "pr-12",
-                isInvalid && "bg-destructive/5"
-            )}
-        >
+                isInvalid && "bg-destructive/5 border-destructive/20"
+            )}>
             {isMobile && (
                 <div
                     data-swipe-handle
@@ -93,7 +92,7 @@ export function CartItemRow({
                                     e.stopPropagation()
                                     onRemoveItem(item.id)
                                 }}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:text-white"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-[opacity,background-color,color] hover:bg-destructive hover:text-white"
                                 title="Eliminar producto"
                             >
                                 <Trash2 className="w-3.5 h-3.5" />

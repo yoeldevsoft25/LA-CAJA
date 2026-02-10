@@ -14,7 +14,7 @@ interface CartTabsProps {
 
 export function CartTabs({ cartSummaries, activeCartId, onSwitchCart }: CartTabsProps) {
     return (
-        <div className="px-3 pt-3 pb-2 border-b border-border/40 bg-gradient-to-r from-muted/20 via-background to-muted/20 flex-shrink-0">
+        <div className="px-3 pt-3 pb-2 border-b border-white/10 bg-gradient-to-r from-muted/20 via-background to-muted/20 flex-shrink-0">
             <div className="flex gap-2">
                 {cartSummaries.map((s, i) => {
                     const isActive = s.id === activeCartId

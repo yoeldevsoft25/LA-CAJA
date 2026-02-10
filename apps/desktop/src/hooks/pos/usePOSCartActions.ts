@@ -3,8 +3,8 @@ import { toast } from 'sonner'
 import { useCart } from '@/stores/cart.store'
 import { inventoryService } from '@/services/inventory.service'
 import { productVariantsService, ProductVariant } from '@/services/product-variants.service'
-import { productsService } from '@/services/products.service'
-import { productsCacheService } from '@/services/products-cache.service'
+import { productsService } from '@la-caja/app-core'
+import { productsCacheService } from '@la-caja/app-core'
 import { WeightProduct } from '@/components/pos/WeightInputModal'
 
 interface UsePOSCartActionsProps {

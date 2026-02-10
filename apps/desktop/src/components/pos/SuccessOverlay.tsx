@@ -1,9 +1,10 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Check } from "lucide-react"
-import { useEffect, useState, useMemo } from "react"
+import { X, Check } from "lucide-react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 interface SuccessOverlayProps {
     isOpen: boolean
@@ -18,6 +19,11 @@ export function SuccessOverlay({
 }: SuccessOverlayProps) {
     // Generar partículas aleatorias solo una vez al montar o abrir
     const [particles, setParticles] = useState<Array<{ x: number; y: number; color: string; size: number }>>([])
+
+    const onAnimationCompleteRef = useRef(onAnimationComplete)
+    useEffect(() => {
+        onAnimationCompleteRef.current = onAnimationComplete
+    }, [onAnimationComplete])
 
     useEffect(() => {
         if (isOpen) {
@@ -35,11 +41,11 @@ export function SuccessOverlay({
             setParticles(newParticles)
 
             const timer = setTimeout(() => {
-                onAnimationComplete?.()
-            }, 2800) // Un poco más largo para disfrutar la animación
+                onAnimationCompleteRef.current?.()
+            }, 2500) // Reducido un poco para mayor fluidez
             return () => clearTimeout(timer)
         }
-    }, [isOpen, onAnimationComplete])
+    }, [isOpen])
 
     const displayMessage = useMemo(() => {
         if (!message) return 'PROCESADO'
@@ -60,7 +66,23 @@ export function SuccessOverlay({
                     className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
                 >
                     {/* Fondo Backdrop Luminoso */}
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-xl pointer-events-auto" />
+                    <div
+                        className="absolute inset-0 bg-white/60 backdrop-blur-xl pointer-events-auto cursor-pointer"
+                        onClick={() => onAnimationCompleteRef.current?.()}
+                    />
+
+                    {/* Botón de cierre de emergencia (X) */}
+                    <div className="absolute top-4 right-4 z-50 pointer-events-auto">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/40 border border-white/40 text-slate-800"
+                            onClick={() => onAnimationCompleteRef.current?.()}
+                        >
+                            <X className="h-6 w-6" />
+                            <span className="sr-only">Cerrar</span>
+                        </Button>
+                    </div>
 
                     {/* Spotlight de fondo sutil */}
                     <motion.div

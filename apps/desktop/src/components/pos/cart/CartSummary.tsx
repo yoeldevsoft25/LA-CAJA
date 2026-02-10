@@ -33,9 +33,9 @@ export function CartSummary({
     const subtotalUsd = totalUsd + totalDiscountUsd
 
     return (
-        <div className="flex-none p-4 sm:p-5 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-background/50 backdrop-blur-sm space-y-4">
+        <div className="flex-none p-4 sm:p-5 border-t border-border/40 dark:border-white/10 bg-white dark:bg-slate-900 space-y-4">
             {!hasOpenCash && (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 font-medium flex items-center justify-center shadow-sm">
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center justify-center shadow-sm">
                     ⚠️ Debes abrir caja para procesar ventas
                 </div>
             )}
@@ -46,7 +46,7 @@ export function CartSummary({
             )}
 
             <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border border-border/50 bg-card/40 px-4 py-2.5 shadow-sm">
+                <div className="flex items-center justify-between rounded-2xl border border-border/20 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5 shadow-sm">
                     <div className="space-y-0.5">
                         <Label className="text-sm font-semibold text-foreground/80">Imprimir ticket</Label>
                         <p className="text-[10px] text-muted-foreground">
@@ -57,8 +57,8 @@ export function CartSummary({
                 </div>
 
                 {/* Tarjeta de Totales Flotante Premium */}
-                <div className="rounded-2xl bg-gradient-to-br from-card to-card/95 border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden relative group">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/40 via-primary to-primary/40 opacity-70" />
+                <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-border/20 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative group">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/30 via-primary/60 to-primary/30 opacity-70" />
 
                     <div className="p-5 space-y-4 relative">
                         {/* Subtotal y Descuentos */}
@@ -82,7 +82,7 @@ export function CartSummary({
                         <div className="flex items-end justify-between">
                             <div className="space-y-1">
                                 <span className="text-sm font-bold text-muted-foreground/80 uppercase tracking-wider block">Total a Pagar</span>
-                                <div className="text-sm font-medium text-muted-foreground tabular-nums flex items-center gap-1.5 bg-muted/30 px-2 py-0.5 rounded-md w-fit">
+                                <div className="text-sm font-medium text-muted-foreground tabular-nums flex items-center gap-1.5 bg-muted/30 dark:bg-white/5 px-2 py-0.5 rounded-md w-fit">
                                     <span>Bs</span>
                                     <span>{totalBs.toFixed(2)}</span>
                                 </div>
@@ -103,7 +103,7 @@ export function CartSummary({
                 disabled={itemsCount === 0 || !hasOpenCash || invalidCartProductIds.length > 0}
                 className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all rounded-xl relative overflow-hidden group"
             >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[100%] group-hover:animate-shine" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/10 to-transparent -translate-x-[100%] group-hover:animate-shine" />
                 <ShoppingCart className="w-5 h-5 mr-2.5" />
                 Procesar Venta
             </Button>

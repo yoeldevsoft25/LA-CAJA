@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
-import { productsService } from '@/services/products.service'
-import { productsCacheService } from '@/services/products-cache.service'
+import { productsService } from '@la-caja/app-core'
+import { productsCacheService } from '@la-caja/app-core'
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 
-import { Product } from '@/services/products.service'
+import { Product } from '@la-caja/app-core'
 import { normalizeBarcode } from '@la-caja/domain'
 
 interface UsePOSScannerProps {

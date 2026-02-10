@@ -45,8 +45,8 @@ export function QuickActions({
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 className={isMobile
-                                    ? "inline-flex items-center gap-1 bg-[#0c81cf10] hover:bg-[#0c81cf] text-[#0c81cf] hover:text-white px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border border-[#0c81cf30] hover:border-[#0c81cf] shadow-sm"
-                                    : "inline-flex items-center gap-1.5 bg-[#0c81cf10] hover:bg-[#0c81cf] text-[#0c81cf] hover:text-white px-3 py-1.5 rounded-full text-sm font-bold transition-all border border-[#0c81cf30] hover:border-[#0c81cf] shadow-sm"
+                                    ? "inline-flex items-center gap-1 bg-[#0c81cf10] hover:bg-[#0c81cf] text-[#0c81cf] hover:text-white px-2.5 py-1 rounded-full text-[11px] font-semibold transition-[background-color,color,border-color] border border-[#0c81cf30] hover:border-[#0c81cf] shadow-sm"
+                                    : "inline-flex items-center gap-1.5 bg-[#0c81cf10] hover:bg-[#0c81cf] text-[#0c81cf] hover:text-white px-3 py-1.5 rounded-full text-sm font-bold transition-[background-color,color,border-color] border border-[#0c81cf30] hover:border-[#0c81cf] shadow-sm"
                                 }
                             >
                                 {product.name}

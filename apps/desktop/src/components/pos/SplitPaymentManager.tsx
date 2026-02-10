@@ -106,12 +106,12 @@ export default function SplitPaymentManager({
 
   return (
     <div className="space-y-3">
-      <Card className="border-slate-200 bg-white shadow-sm">
+      <Card className="border-border bg-card shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Pagos divididos</h3>
-              <p className="text-xs text-slate-500">Combina varios metodos hasta completar el total</p>
+              <h3 className="text-sm font-bold text-foreground">Pagos divididos</h3>
+              <p className="text-xs text-muted-foreground">Combina varios metodos hasta completar el total</p>
             </div>
             {!showAddForm && !isComplete && (
               <Button
@@ -119,7 +119,7 @@ export default function SplitPaymentManager({
                 size="sm"
                 variant="outline"
                 onClick={() => setShowAddForm(true)}
-                className="h-9 rounded-lg border-slate-200 bg-slate-50"
+                className="h-9 rounded-lg border-border bg-muted/40"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Agregar
@@ -129,16 +129,16 @@ export default function SplitPaymentManager({
 
           <div className={cn(
             'mt-3 rounded-xl border p-3',
-            isComplete ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50',
+            isComplete ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-amber-500/30 bg-amber-500/10',
           )}>
             <div className="flex items-center gap-2">
-              {isComplete ? <CircleCheckBig className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-amber-600" />}
-              <p className={cn('text-sm font-semibold', isComplete ? 'text-emerald-800' : 'text-amber-800')}>
+              {isComplete ? <CircleCheckBig className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> : <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
+              <p className={cn('text-sm font-semibold', isComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
                 {isComplete ? 'Pago completado' : 'Monto pendiente'}
               </p>
             </div>
             {!isComplete && (
-              <p className="mt-1 text-xs text-amber-700">
+              <p className="mt-1 text-xs text-amber-600/80 dark:text-amber-400/80">
                 ${remainingUsd.toFixed(2)} USD (Bs. {remainingBs.toFixed(2)})
               </p>
             )}
@@ -149,7 +149,7 @@ export default function SplitPaymentManager({
       {payments.length > 0 && (
         <div className="space-y-2">
           {payments.map((payment) => (
-            <Card key={payment.id} className="border-slate-200 bg-white shadow-sm">
+            <Card key={payment.id} className="border-border bg-card shadow-sm">
               <CardContent className="p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-start gap-2">
@@ -157,13 +157,13 @@ export default function SplitPaymentManager({
                       {getPaymentMethodIcon(payment.method)}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-900">{getPaymentMethodLabel(payment.method)}</p>
-                      <p className="text-xs text-slate-600">
+                      <p className="text-sm font-semibold text-foreground">{getPaymentMethodLabel(payment.method)}</p>
+                      <p className="text-xs text-muted-foreground">
                         ${payment.amount_usd.toFixed(2)} USD - Bs. {payment.amount_bs.toFixed(2)}
                       </p>
-                      {payment.reference && <p className="text-xs text-slate-500">Ref: {payment.reference}</p>}
+                      {payment.reference && <p className="text-xs text-muted-foreground/70">Ref: {payment.reference}</p>}
                       {payment.bank && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground/70">
                           {VENEZUELAN_BANKS.find((bank) => bank.code === payment.bank)?.name || payment.bank}
                         </p>
                       )}
@@ -187,20 +187,20 @@ export default function SplitPaymentManager({
       )}
 
       {showAddForm && (
-        <Card className="border-primary/20 bg-white shadow-sm">
+        <Card className="border-primary/20 bg-card shadow-sm">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-slate-900">Agregar pago</h4>
+              <h4 className="text-sm font-bold text-foreground">Agregar pago</h4>
               <Button type="button" size="sm" variant="ghost" onClick={() => setShowAddForm(false)}>Cancelar</Button>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Metodo</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Metodo</label>
               <Select
                 value={newPayment.method}
                 onValueChange={(value) => setNewPayment({ ...newPayment, method: value as PaymentMethod })}
               >
-                <SelectTrigger className="bg-slate-50">
+                <SelectTrigger className="bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -213,23 +213,23 @@ export default function SplitPaymentManager({
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Monto</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Monto</label>
                 <Input
                   type="number"
                   step="0.01"
                   value={newPayment.amount}
                   onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
                   placeholder="0.00"
-                  className="bg-slate-50"
+                  className="bg-background"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Moneda</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Moneda</label>
                 <Select
                   value={newPayment.currency}
                   onValueChange={(value) => setNewPayment({ ...newPayment, currency: value as 'USD' | 'BS' })}
                 >
-                  <SelectTrigger className="bg-slate-50">
+                  <SelectTrigger className="bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -242,12 +242,12 @@ export default function SplitPaymentManager({
 
             {requiresBank && (
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Banco</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Banco</label>
                 <Select
                   value={newPayment.bank}
                   onValueChange={(value) => setNewPayment({ ...newPayment, bank: value })}
                 >
-                  <SelectTrigger className="bg-slate-50">
+                  <SelectTrigger className="bg-background">
                     <SelectValue placeholder="Seleccionar banco" />
                   </SelectTrigger>
                   <SelectContent>
@@ -263,26 +263,26 @@ export default function SplitPaymentManager({
 
             {requiresReference && (
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Referencia</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Referencia</label>
                 <Input
                   type="text"
                   value={newPayment.reference}
                   onChange={(e) => setNewPayment({ ...newPayment, reference: e.target.value })}
                   placeholder="Numero de referencia"
-                  className="bg-slate-50"
+                  className="bg-background"
                 />
               </div>
             )}
 
             {newPayment.method === 'PAGO_MOVIL' && (
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Telefono</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Telefono</label>
                 <Input
                   type="tel"
                   value={newPayment.phone}
                   onChange={(e) => setNewPayment({ ...newPayment, phone: e.target.value })}
                   placeholder="0412-1234567"
-                  className="bg-slate-50"
+                  className="bg-background"
                 />
               </div>
             )}
@@ -313,7 +313,7 @@ export default function SplitPaymentManager({
             })
             setShowAddForm(true)
           }}
-          className="w-full h-10 rounded-xl border-slate-200 bg-slate-50 text-slate-700"
+          className="w-full h-10 rounded-xl border-border bg-muted/40 text-foreground/80 hover:bg-muted/60"
         >
           <Wallet className="w-4 h-4 mr-2" />
           Completar con Pago Movil (Bs. {remainingBs.toFixed(2)})

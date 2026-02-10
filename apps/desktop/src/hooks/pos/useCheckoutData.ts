@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { exchangeService } from '@/services/exchange.service'
+import { exchangeService } from '@la-caja/app-core'
 import { customersService } from '@/services/customers.service'
 import { paymentsService } from '@/services/payments.service'
 import { invoiceSeriesService } from '@/services/invoice-series.service'
@@ -19,10 +19,7 @@ export function useCheckoutData(options: {
     const {
         storeId,
         isOpen,
-        customerSearch,
-        selectedCustomerId,
     } = options
-    const normalizedSearch = customerSearch?.trim() ?? ''
     const shouldFetchCustomers = isOpen && !!storeId
 
     // Exchange rate
@@ -37,25 +34,13 @@ export function useCheckoutData(options: {
 
     // Customers
     const customersQuery = useQuery({
-        queryKey: ['customers', storeId, normalizedSearch || 'all', selectedCustomerId || 'none'],
+        queryKey: ['customers', storeId],
         queryFn: async () => {
-            if (normalizedSearch.length >= 2) {
-                return customersService.search(normalizedSearch)
-            }
-            if (selectedCustomerId) {
-                try {
-                    const customer = await customersService.getById(selectedCustomerId)
-                    return customer ? [customer] : []
-                } catch {
-                    return []
-                }
-            }
-            // Importante para offline-first:
-            // precarga clientes base para que el buscador funcione sin internet.
+            // Siempre buscamos todos para permitir filtrado local reactivo
             return customersService.search('')
         },
         enabled: shouldFetchCustomers,
-        staleTime: 1000 * 60 * 2, // 2 minutos
+        staleTime: 1000 * 60 * 5, // 5 minutos
         placeholderData: (previous) => previous,
     })
 

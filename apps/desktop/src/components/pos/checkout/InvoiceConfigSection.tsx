@@ -68,26 +68,26 @@ export default function InvoiceConfigSection({
     }, [invoiceSeries, selectedSeriesId, onSeriesChange])
 
     return (
-        <Card className={cn('border-slate-200 bg-white shadow-sm', className)}>
+        <Card className={cn('border-border bg-card shadow-sm', className)}>
             <CardContent className="p-4 space-y-4">
                 <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
                         <ReceiptText className="h-4 w-4" />
                     </span>
                     <div>
-                        <h3 className="text-sm font-bold text-slate-900">Configuracion operativa</h3>
-                        <p className="text-xs text-slate-500">Factura, precios y bodega</p>
+                        <h3 className="text-sm font-bold text-foreground">Configuracion operativa</h3>
+                        <p className="text-xs text-muted-foreground">Factura, precios y bodega</p>
                     </div>
                 </div>
 
                 {invoiceSeries.length > 0 && (
                     <div className="space-y-2">
-                        <Label htmlFor="invoice-series" className="text-xs uppercase tracking-wide text-slate-600">Serie de factura</Label>
+                        <Label htmlFor="invoice-series" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Serie de factura</Label>
                         <Select
                             value={selectedSeriesId || 'none'}
                             onValueChange={(value) => onSeriesChange(value === 'none' ? null : value)}
                         >
-                            <SelectTrigger id="invoice-series" className="bg-slate-50">
+                            <SelectTrigger id="invoice-series" className="bg-muted/40 border-border">
                                 <SelectValue placeholder="Seleccionar serie" />
                             </SelectTrigger>
                             <SelectContent>
@@ -104,12 +104,12 @@ export default function InvoiceConfigSection({
 
                 {priceLists.length > 0 && (
                     <div className="space-y-2">
-                        <Label htmlFor="price-list" className="text-xs uppercase tracking-wide text-slate-600">Lista de precios</Label>
+                        <Label htmlFor="price-list" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lista de precios</Label>
                         <Select
                             value={selectedPriceListId || 'none'}
                             onValueChange={(value) => onPriceListChange(value === 'none' ? null : value)}
                         >
-                            <SelectTrigger id="price-list" className="bg-slate-50">
+                            <SelectTrigger id="price-list" className="bg-muted/40 border-border">
                                 <SelectValue placeholder="Precio base" />
                             </SelectTrigger>
                             <SelectContent>
@@ -126,12 +126,12 @@ export default function InvoiceConfigSection({
 
                 {warehouses.length > 0 && (
                     <div className="space-y-2">
-                        <Label htmlFor="warehouse" className="text-xs uppercase tracking-wide text-slate-600">Bodega</Label>
+                        <Label htmlFor="warehouse" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bodega</Label>
                         <Select
                             value={selectedWarehouseId || 'none'}
                             onValueChange={(value) => onWarehouseChange(value === 'none' ? null : value)}
                         >
-                            <SelectTrigger id="warehouse" className="bg-slate-50">
+                            <SelectTrigger id="warehouse" className="bg-muted/40 border-border">
                                 <SelectValue placeholder="Bodega principal" />
                             </SelectTrigger>
                             <SelectContent>
@@ -146,10 +146,10 @@ export default function InvoiceConfigSection({
                     </div>
                 )}
 
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
                     <div>
-                        <Label htmlFor="fiscal-invoice" className="text-sm font-medium text-slate-900">Factura fiscal</Label>
-                        <p className="text-xs text-slate-500">Generar documento fiscal en esta venta</p>
+                        <Label htmlFor="fiscal-invoice" className="text-sm font-medium text-foreground">Factura fiscal</Label>
+                        <p className="text-xs text-muted-foreground">Generar documento fiscal en esta venta</p>
                     </div>
                     <Switch
                         id="fiscal-invoice"

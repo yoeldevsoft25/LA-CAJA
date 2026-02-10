@@ -194,7 +194,7 @@ export const ProductCatalog = memo(function ProductCatalog({
                             >
                                 <button
                                     onClick={() => onProductClick(product)}
-                                    className="w-full h-[104px] text-left group relative bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800 rounded-2xl border border-border/50 dark:border-white/5 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200 will-change-transform"
+                                    className="w-full h-[104px] text-left group relative bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800 rounded-2xl border border-border/20 dark:border-white/5 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200 will-change-transform"
                                 >
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-[background-color] duration-300" />
 

@@ -6,7 +6,7 @@ import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNear
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'
@@ -21,6 +21,17 @@ import { useCheckoutState } from '@/hooks/pos/useCheckoutState'
 import { useCheckoutData } from '@/hooks/pos/useCheckoutData'
 import { useCheckoutValidation } from '@/hooks/pos/useCheckoutValidation'
 import { Badge } from '@/components/ui/badge'
+import { stockValidatorService, StockWarning } from '@/services/stock-validator.service'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface SplitPaymentForBackend {
   method: PaymentMethod
@@ -117,6 +128,11 @@ export default function CheckoutModal({
   const [selectedSerials, setSelectedSerials] = useState<Record<string, string[]>>({})
   const [serialSelectorItem, setSerialSelectorItem] = useState<{ productId: string; productName: string; quantity: number } | null>(null)
 
+  // Stock Validation State
+  const [stockWarnings, setStockWarnings] = useState<StockWarning[]>([])
+  const [showStockWarningDialog, setShowStockWarningDialog] = useState(false)
+  const [isValidatingStock, setIsValidatingStock] = useState(false)
+
   useEffect(() => {
     if (!isOpen) return
     actions.reset()
@@ -164,7 +180,7 @@ export default function CheckoutModal({
     }
   }, [serialSelectorItem])
 
-  const handleConfirm = () => {
+  const handleConfirm = async (confirmedWarnings = false) => {
     if (state.paymentMode === 'SINGLE') {
       const methodValidation = validation.validatePaymentMethod(state.selectedMethod, state.customerData.selectedId)
       if (!methodValidation.valid) {
@@ -192,6 +208,44 @@ export default function CheckoutModal({
         return
       }
     }
+
+    // ---------------------------------------------------------
+    // STOCK VALIDATION (Phase 2 Defensiva)
+    // ---------------------------------------------------------
+    if (!confirmedWarnings) {
+      setIsValidatingStock(true)
+      try {
+        const validationItems = items.map(i => ({
+          product_id: i.product_id,
+          qty: i.qty,
+          name: i.product_name
+        }))
+        const isOnline = navigator.onLine
+
+        const stockResult = await stockValidatorService.validateBeforeSale(validationItems, isOnline)
+
+        if (!stockResult.valid) {
+          // Bloqueo total (Error offline con stock <= 0)
+          const errorMsg = stockResult.errors.map(e => `• ${e.product_name}: ${e.message}`).join('\n')
+          actions.setError(`STOCK INSUFICIENTE (OFFLINE):\n${errorMsg}`)
+          setIsValidatingStock(false)
+          return
+        }
+
+        if (stockResult.warnings.length > 0) {
+          // Mostrar warnings y pedir confirmación
+          setStockWarnings(stockResult.warnings)
+          setShowStockWarningDialog(true)
+          setIsValidatingStock(false)
+          return
+        }
+      } catch (err) {
+        console.warn('Stock validation failed, fail-open', err)
+      } finally {
+        setIsValidatingStock(false)
+      }
+    }
+    // ---------------------------------------------------------
 
     if (
       state.paymentMode === 'SINGLE'
@@ -286,28 +340,28 @@ export default function CheckoutModal({
 
   const summaryPanel = (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+      <section className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+        <h3 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
           <ShoppingBag className="h-3.5 w-3.5" />
           Detalle del pedido
         </h3>
 
-        <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200/90 bg-slate-50/80">
+        <div className="max-h-56 overflow-y-auto rounded-xl border border-border/90 bg-muted/30">
           {items.map((item, index) => (
             <div
               key={item.id}
               className={cn(
                 'flex items-center justify-between gap-3 px-3 py-2.5',
-                index < items.length - 1 && 'border-b border-slate-200/70',
+                index < items.length - 1 && 'border-b border-border/70',
               )}
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">{item.product_name}</p>
-                <p className="text-[11px] text-slate-500">
+                <p className="truncate text-sm font-semibold text-foreground">{item.product_name}</p>
+                <p className="text-[11px] text-muted-foreground">
                   {item.qty} {item.is_weight_product ? item.weight_unit : 'unid.'} x ${Number(item.unit_price_usd).toFixed(2)}
                 </p>
               </div>
-              <p className="text-sm font-bold tabular-nums text-slate-900">
+              <p className="text-sm font-bold tabular-nums text-foreground">
                 ${(item.qty * Number(item.unit_price_usd)).toFixed(2)}
               </p>
             </div>
@@ -315,17 +369,17 @@ export default function CheckoutModal({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-white p-4 shadow-sm">
+      <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">Total pagable</p>
         <div className="mt-2 flex items-end justify-between gap-2">
-          <p className="text-3xl font-black tracking-tight text-slate-900 tabular-nums sm:text-4xl">
+          <p className="text-3xl font-black tracking-tight text-foreground tabular-nums sm:text-4xl">
             ${total.usd.toFixed(2)}
           </p>
-          <Badge variant="outline" className="border-primary/25 bg-white/80 text-primary">
+          <Badge variant="outline" className="border-primary/25 bg-card/80 text-primary">
             Tasa {checkoutData.exchangeRate.toFixed(2)}
           </Badge>
         </div>
-        <p className="mt-1 text-sm font-medium text-slate-600 tabular-nums">
+        <p className="mt-1 text-sm font-medium text-muted-foreground tabular-nums">
           Bs. {totalBs.toFixed(2)}
         </p>
       </section>
@@ -420,8 +474,8 @@ export default function CheckoutModal({
         />
       )}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h4 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <h4 className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />
           Procesamiento operativo
         </h4>
@@ -442,12 +496,12 @@ export default function CheckoutModal({
           />
 
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-slate-700">Nota interna</Label>
+            <Label className="text-xs font-semibold text-foreground/80">Nota interna</Label>
             <Input
               value={state.saleNote}
               onChange={(e) => actions.setSaleNote(e.target.value)}
               placeholder="Ej: cliente frecuente, delivery prioritario"
-              className="h-10 rounded-xl border-slate-200 bg-slate-50"
+              className="h-10 rounded-xl border-border bg-muted/40"
             />
           </div>
         </div>
@@ -456,104 +510,136 @@ export default function CheckoutModal({
   )
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose() }}>
-      <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
-        <DialogHeader className="border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-                <CheckCircle2 className="h-5 w-5" />
-              </span>
-              <div className="min-w-0">
-                <DialogTitle className="truncate text-lg font-black tracking-tight text-slate-900 sm:text-xl">
-                  Finalizar venta
-                </DialogTitle>
-                <DialogDescription className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Confirma el pago y genera el comprobante
-                </DialogDescription>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose() }}>
+        <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
+          <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                  <CheckCircle2 className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <AccessibleDialogTitle className="truncate text-lg font-black tracking-tight text-foreground sm:text-xl">
+                    Finalizar venta
+                  </AccessibleDialogTitle>
+                  <DialogDescription className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Confirma el pago y genera el comprobante
+                  </DialogDescription>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                disabled={isLoading}
+                className="h-8 w-8 rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Cerrar checkout"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+
+          <div className="min-h-0 overflow-hidden">
+            <div className="h-full overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4 lg:hidden">
+              <div className="space-y-4">
+                {summaryPanel}
+                {checkoutControls}
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              disabled={isLoading}
-              className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-              aria-label="Cerrar checkout"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogHeader>
-
-        <div className="min-h-0 overflow-hidden">
-          <div className="h-full overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4 lg:hidden">
-            <div className="space-y-4">
-              {summaryPanel}
-              {checkoutControls}
+            <div className="hidden h-full lg:grid lg:grid-cols-[minmax(320px,38%)_1fr] lg:divide-x lg:divide-border">
+              <aside className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
+                {summaryPanel}
+              </aside>
+              <section className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
+                {checkoutControls}
+              </section>
             </div>
           </div>
 
-          <div className="hidden h-full lg:grid lg:grid-cols-[minmax(320px,38%)_1fr] lg:divide-x lg:divide-slate-200">
-            <aside className="min-h-0 overflow-y-auto overscroll-contain bg-slate-50 p-6">
-              {summaryPanel}
-            </aside>
-            <section className="min-h-0 overflow-y-auto overscroll-contain bg-slate-50 p-6">
-              {checkoutControls}
-            </section>
-          </div>
-        </div>
+          <footer className="border-t border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
+            {state.error && (
+              <div className="mb-3 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive" role="alert" aria-live="assertive">
+                <X className="h-4 w-4" />
+                {state.error}
+              </div>
+            )}
 
-        <footer className="border-t border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
-          {state.error && (
-            <div className="mb-3 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive" role="alert" aria-live="assertive">
-              <X className="h-4 w-4" />
-              {state.error}
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Button
+                variant="outline"
+                onClick={onClose}
+                disabled={isLoading}
+                className="h-11 flex-1 rounded-xl border-border"
+                aria-label="Cancelar y volver al carrito"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => handleConfirm()}
+                disabled={isLoading || isValidatingStock || items.length === 0}
+                className="h-11 flex-[1.25] rounded-xl font-bold"
+                aria-label="Confirmar pago y finalizar venta"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    Confirmar pago
+                    <Receipt className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
             </div>
-          )}
+          </footer>
 
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isLoading}
-              className="h-11 flex-1 rounded-xl border-slate-300"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={isLoading || items.length === 0}
-              className="h-11 flex-[1.25] rounded-xl font-bold"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  Confirmar pago
-                  <Receipt className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
-        </footer>
-
-        {serialSelectorItem && (
           <SerialSelector
             isOpen={!!serialSelectorItem}
             onClose={() => setSerialSelectorItem(null)}
-            productId={serialSelectorItem.productId}
-            productName={serialSelectorItem.productName}
-            quantity={serialSelectorItem.quantity}
+            productId={serialSelectorItem?.productId || ''}
+            productName={serialSelectorItem?.productName || ''}
+            quantity={serialSelectorItem?.quantity || 0}
             onSelect={handleSerialSelect}
           />
-        )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showStockWarningDialog} onOpenChange={setShowStockWarningDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Advertencia de Stock</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se detectaron los siguientes problemas de inventario:
+              <ul className="mt-2 text-sm text-yellow-600 dark:text-yellow-400 list-disc pl-5">
+                {stockWarnings.map((w, idx) => (
+                  <li key={idx}>
+                    <strong>{w.product_name}:</strong> {w.message}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 font-bold">
+                ¿Deseas continuar de todos modos?
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowStockWarningDialog(false)
+              handleConfirm(true) // Re-run confirm skipping validation
+            }}>
+              Continuar (Overselling)
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

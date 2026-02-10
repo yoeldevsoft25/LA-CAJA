@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { CartItem } from '@/stores/cart.store'
@@ -37,7 +37,7 @@ interface POSCartProps {
     exchangeRate: number
 }
 
-export default function POSCart({
+const POSCart = memo(function POSCart({
     items,
     cartSummaries,
     activeCartId,
@@ -69,7 +69,7 @@ export default function POSCart({
     return (
         <div className={cn("h-full min-h-0 flex flex-col", !isTabletLandscape && "lg:col-span-1")}>
             <Card className={cn(
-                "bg-card/30 rounded-2xl border-2 border-border shadow-md overflow-hidden h-full min-h-0",
+                "bg-white dark:bg-slate-900 rounded-2xl border border-border/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden h-full min-h-0",
                 "grid grid-rows-[auto_auto_minmax(0,1fr)_auto]"
             )}>
                 {/* Tabs de Carrito */}
@@ -80,7 +80,7 @@ export default function POSCart({
                 />
 
                 {/* Header del Carrito (Título + Limpiar) */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 flex-shrink-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 flex-shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="bg-primary/10 p-2 rounded-full">
                             <ShoppingCartIcon className="w-5 h-5 text-primary" />
@@ -150,7 +150,9 @@ export default function POSCart({
             </AlertDialog>
         </div>
     )
-}
+})
+
+export default POSCart;
 
 function ShoppingCartIcon(props: any) {
     return (

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Search, RotateCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -13,7 +14,7 @@ interface CatalogHeaderProps {
     isRefetching: boolean
 }
 
-export function CatalogHeader({
+export const CatalogHeader = memo(function CatalogHeader({
     searchQuery,
     onSearchChange,
     scannerStatus,
@@ -53,11 +54,11 @@ export function CatalogHeader({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                     placeholder="Buscar producto por nombre, código o categoría... (Alt+F)"
-                    className="pl-10 h-11 sm:h-12 text-base sm:text-lg bg-muted/30 border-muted-foreground/20 focus:border-primary/50 focus:ring-primary/20 transition-all font-medium"
+                    className="pl-10 h-11 sm:h-12 text-base sm:text-lg bg-muted/30 border-muted-foreground/20 focus:border-primary/50 focus:ring-primary/20 transition-colors font-medium"
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value)}
                 />
             </div>
         </div>
     )
-}
+})
