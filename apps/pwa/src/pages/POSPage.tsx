@@ -837,7 +837,7 @@ export default function POSPage() {
         {/* Búsqueda y Lista de Productos */}
         {!isMobile && (
           <div className={cn(
-            "flex flex-col h-full overflow-hidden glass-panel rounded-2xl border-white/20 premium-shadow-md p-3"
+            "flex flex-col h-full overflow-hidden bg-white rounded-2xl border border-border/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-3"
           )}>
             <CatalogHeader
               searchQuery={searchQuery}

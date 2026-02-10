@@ -46,7 +46,7 @@ export function CartSummary({
             )}
 
             <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-card/40 px-4 py-2.5 shadow-sm">
+                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-slate-50 px-4 py-2.5 shadow-sm">
                     <div className="space-y-0.5">
                         <Label className="text-sm font-semibold text-foreground/80">Imprimir ticket</Label>
                         <p className="text-[10px] text-muted-foreground">
@@ -57,8 +57,8 @@ export function CartSummary({
                 </div>
 
                 {/* Tarjeta de Totales Flotante Premium */}
-                <div className="rounded-2xl bg-gradient-to-br from-card to-card/95 border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden relative group">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/40 via-primary to-primary/40 opacity-70" />
+                <div className="rounded-2xl bg-slate-50 border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative group">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/30 via-primary/60 to-primary/30 opacity-70" />
 
                     <div className="p-5 space-y-4 relative">
                         {/* Subtotal y Descuentos */}
