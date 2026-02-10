@@ -46,7 +46,7 @@ async getStores(): Promise<
 
 **Cualquier persona puede acceder a:**
 ```http
-GET https://naughty-clem-veloxpos-ee21de4c.koyeb.app/auth/stores
+GET https://tory-walliw-veloxpos-55b61313.koyeb.app/auth/stores
 
 Response:
 [

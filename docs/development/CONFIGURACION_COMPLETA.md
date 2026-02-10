@@ -3,7 +3,7 @@
 ## URLs de Producción
 
 - **Frontend (Netlify)**: https://la-caja.netlify.app
-- **Backend (Koyeb)**: https://naughty-clem-veloxpos-ee21de4c.koyeb.app
+- **Backend (Koyeb)**: https://tory-walliw-veloxpos-55b61313.koyeb.app
 
 ---
 
@@ -12,7 +12,7 @@
 ### Variable de Entorno
 
 **Key**: `VITE_API_URL`  
-**Value**: `https://naughty-clem-veloxpos-ee21de4c.koyeb.app`
+**Value**: `https://tory-walliw-veloxpos-55b61313.koyeb.app`
 
 ### Pasos:
 
@@ -22,7 +22,7 @@
 4. Haz clic en **Add variable**
 5. Agrega:
    - **Key**: `VITE_API_URL`
-   - **Value**: `https://naughty-clem-veloxpos-ee21de4c.koyeb.app`
+   - **Value**: `https://tory-walliw-veloxpos-55b61313.koyeb.app`
 6. Haz clic en **Save**
 7. **Redeploy** el sitio:
    - Ve a **Deploys**
@@ -62,7 +62,7 @@ https://la-caja.netlify.app,http://localhost:5173,http://localhost:3000
 
 Abre en tu navegador:
 ```
-https://naughty-clem-veloxpos-ee21de4c.koyeb.app
+https://tory-walliw-veloxpos-55b61313.koyeb.app
 ```
 
 Deberías ver una respuesta del API (puede ser un error 404 o un mensaje, pero significa que está funcionando).
@@ -73,7 +73,7 @@ Deberías ver una respuesta del API (puede ser un error 404 o un mensaje, pero s
 2. Abre la consola del navegador (F12)
 3. Ve a la pestaña **Network**
 4. Intenta hacer login
-5. Deberías ver peticiones a `https://naughty-clem-veloxpos-ee21de4c.koyeb.app`
+5. Deberías ver peticiones a `https://tory-walliw-veloxpos-55b61313.koyeb.app`
 
 ### 3. Si ves errores de CORS
 
@@ -88,7 +88,7 @@ Deberías ver una respuesta del API (puede ser un error 404 o un mensaje, pero s
 
 ### Netlify (Frontend)
 ```
-VITE_API_URL=https://naughty-clem-veloxpos-ee21de4c.koyeb.app
+VITE_API_URL=https://tory-walliw-veloxpos-55b61313.koyeb.app
 ```
 
 ### Render (Backend)
@@ -118,7 +118,7 @@ ALLOWED_ORIGINS=https://la-caja.netlify.app,http://localhost:5173,http://localho
 
 ### Error: "Cannot connect to API"
 
-1. Verifica que el backend esté funcionando: https://naughty-clem-veloxpos-ee21de4c.koyeb.app
+1. Verifica que el backend esté funcionando: https://tory-walliw-veloxpos-55b61313.koyeb.app
 2. Verifica que `VITE_API_URL` esté configurada correctamente en Netlify
 3. Verifica que hayas hecho redeploy después de agregar la variable
 

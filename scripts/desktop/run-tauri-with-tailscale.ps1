@@ -7,7 +7,7 @@ param(
 
   [string]$PrimaryApiUrl = "http://127.0.0.1:3001",
   [string]$FallbackApiUrl = "https://desktop-0kscckj.tail501d29.ts.net",
-  [string]$TertiaryApiUrl = "https://naughty-clem-veloxpos-ee21de4c.koyeb.app"
+  [string]$TertiaryApiUrl = "https://tory-walliw-veloxpos-55b61313.koyeb.app"
 )
 
 $ErrorActionPreference = "Stop"

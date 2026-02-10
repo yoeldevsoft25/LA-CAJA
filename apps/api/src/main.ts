@@ -226,7 +226,7 @@ async function bootstrap() {
       )
       .addServer('http://localhost:3000', 'Servidor de desarrollo')
       .addServer(
-        'https://naughty-clem-veloxpos-ee21de4c.koyeb.app',
+        'https://tory-walliw-veloxpos-55b61313.koyeb.app',
         'Servidor de Producción (Koyeb)',
       )
       .build();

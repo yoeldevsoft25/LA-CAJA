@@ -1390,13 +1390,25 @@ export class FederationSyncService implements OnModuleInit {
     const days = Number(
       this.configService.get<string>('FEDERATION_RECONCILE_DAYS') || 30,
     );
-    const maxBatch = Number(
-      this.configService.get<string>('FEDERATION_RECONCILE_MAX_BATCH') || 500,
+    // Asymmetric throttling: outbound (Local→Cloud) stays controlled,
+    // inbound (Cloud→Local) is unlimited for powerful local hardware.
+    const maxBatchOutbound = Number(
+      this.configService.get<string>('FEDERATION_RECONCILE_MAX_BATCH_OUTBOUND') ||
+      this.configService.get<string>('FEDERATION_RECONCILE_MAX_BATCH') ||
+      500,
+    );
+    const maxBatchInbound = Number(
+      this.configService.get<string>('FEDERATION_RECONCILE_MAX_BATCH_INBOUND') ||
+      10000,
     );
     const now = new Date();
     const fromDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
     const dateFrom = fromDate.toISOString().slice(0, 10);
     const dateTo = now.toISOString().slice(0, 10);
+
+    this.logger.log(
+      `🔄 Reconcile ${storeId}: outbound batch=${maxBatchOutbound}, inbound batch=${maxBatchInbound}`,
+    );
 
     // Paso 1: Autocorrección local/remota de snapshot de inventario antes de comparar IDs.
     const localPreHeal = await this.reconcileInventoryStock(storeId);
@@ -1515,18 +1527,21 @@ export class FederationSyncService implements OnModuleInit {
     const voidsMissingInRemote = this.diff(localVoids.ids, remoteVoids.ids);
     const voidsMissingInLocal = this.diff(remoteVoids.ids, localVoids.ids);
 
-    const replaySessionsToRemote = sessionsMissingInRemote.slice(0, maxBatch);
-    const replaySessionsToLocal = sessionsMissingInLocal.slice(0, maxBatch);
-    const replaySalesToRemote = salesMissingInRemote.slice(0, maxBatch);
-    const replaySalesToLocal = salesMissingInLocal.slice(0, maxBatch);
-    const replayInvToRemote = invMissingInRemote.slice(0, maxBatch);
-    const replayInvToLocal = invMissingInLocal.slice(0, maxBatch);
-    const replayDebtsToRemote = debtsMissingInRemote.slice(0, maxBatch);
-    const replayDebtsToLocal = debtsMissingInLocal.slice(0, maxBatch);
-    const replayPaymentsToRemote = paymentsMissingInRemote.slice(0, maxBatch);
-    const replayPaymentsToLocal = paymentsMissingInLocal.slice(0, maxBatch);
-    const replayVoidsToRemote = voidsMissingInRemote.slice(0, maxBatch);
-    const replayVoidsToLocal = voidsMissingInLocal.slice(0, maxBatch);
+    // Outbound (Local → Cloud): controlled batch to protect cloud resources
+    const replaySessionsToRemote = sessionsMissingInRemote.slice(0, maxBatchOutbound);
+    const replaySalesToRemote = salesMissingInRemote.slice(0, maxBatchOutbound);
+    const replayInvToRemote = invMissingInRemote.slice(0, maxBatchOutbound);
+    const replayDebtsToRemote = debtsMissingInRemote.slice(0, maxBatchOutbound);
+    const replayPaymentsToRemote = paymentsMissingInRemote.slice(0, maxBatchOutbound);
+    const replayVoidsToRemote = voidsMissingInRemote.slice(0, maxBatchOutbound);
+
+    // Inbound (Cloud → Local): unlimited batch — local hardware can handle it
+    const replaySessionsToLocal = sessionsMissingInLocal.slice(0, maxBatchInbound);
+    const replaySalesToLocal = salesMissingInLocal.slice(0, maxBatchInbound);
+    const replayInvToLocal = invMissingInLocal.slice(0, maxBatchInbound);
+    const replayDebtsToLocal = debtsMissingInLocal.slice(0, maxBatchInbound);
+    const replayPaymentsToLocal = paymentsMissingInLocal.slice(0, maxBatchInbound);
+    const replayVoidsToLocal = voidsMissingInLocal.slice(0, maxBatchInbound);
 
     // PASO 2: Replicar sesiones (Local -> Remote) primero para dependencias
     const [sessionsToRemoteResult] = await Promise.all([
