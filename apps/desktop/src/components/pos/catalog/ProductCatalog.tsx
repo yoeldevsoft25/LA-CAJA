@@ -160,7 +160,7 @@ export const ProductCatalog = memo(function ProductCatalog({
     }
 
     return (
-        <div className="h-full w-full relative bg-white dark:bg-slate-900 rounded-2xl border border-border/40 dark:border-white/10 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="h-full w-full relative bg-white dark:bg-slate-900 rounded-2xl border border-border/20 dark:border-white/10 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <ScrollArea
                 className="h-full"
                 viewportRef={listViewportRef}

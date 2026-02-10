@@ -28,6 +28,12 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: Setup Go (macOS universal tailscale build)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
       - name: Install dependencies
         run: npm install
 

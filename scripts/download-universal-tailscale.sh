@@ -30,7 +30,28 @@ ensure_tool() {
 
 ensure_tool lipo
 ensure_tool file
-ensure_tool unzip
+ensure_tool go
+
+detect_stable_version() {
+  local base="https://pkgs.tailscale.com/stable"
+  local html version
+  echo "Detectando versión Tailscale desde ${base}/ ..."
+  html="$(curl -fsSL "${base}/")"
+
+  # Prefer the macOS artifact version if present.
+  version="$(echo "$html" | grep -oE 'Tailscale-([0-9.]+)-macos\.(zip|pkg)' | head -n 1 | sed -E 's/^Tailscale-([0-9.]+)-macos\.(zip|pkg)$/\1/' || true)"
+  if [[ -z "$version" ]]; then
+    # Fallback to static tarball version (same release train).
+    version="$(echo "$html" | grep -oE 'tailscale_([0-9.]+)_amd64\.tgz' | head -n 1 | sed -E 's/^tailscale_([0-9.]+)_amd64\.tgz$/\1/' || true)"
+  fi
+
+  if [[ -z "$version" ]]; then
+    echo "Error: No se pudo detectar la versión desde ${base}/"
+    exit 1
+  fi
+
+  echo "$version"
+}
 
 assert_universal_macho() {
   local path="$1"
@@ -51,64 +72,42 @@ assert_universal_macho() {
   fi
 }
 
-download_macos_universal_from_pkgs() {
-  # pkgs.tailscale.com/stable provides a macOS app zip/pkg, not per-arch CLI tarballs.
-  # We download the .zip and extract `tailscale` and `tailscaled` from inside the app bundle.
-  local base="https://pkgs.tailscale.com/stable"
-  local html zip_name url tmp
+build_universal_with_go() {
+  local version="$1" # e.g. 1.94.1
+  local tag="v${version}"
 
-  echo "Detectando versión macOS desde $base/ ..."
-  html="$(curl -fsSL "${base}/")"
-  # The stable page lists versioned macOS artifacts like:
-  # - Tailscale-1.94.1-macos.zip
-  # - Tailscale-1.94.1-macos.pkg
-  #
-  # Use a single backslash (within single quotes) to escape the dot.
-  zip_name="$(echo "$html" | grep -oE 'Tailscale-[0-9.]+-macos\.zip' | head -n 1 || true)"
-  if [[ -z "$zip_name" ]]; then
-    echo "Error: No se pudo detectar el zip de macOS en ${base}/"
-    exit 1
-  fi
+  echo "Compilando tailscale/tailscaled desde Go modules ($tag) para macOS universal..."
 
-  url="${base}/${zip_name}"
-  echo "Descargando Tailscale macOS: $zip_name"
-
+  local tmp
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT
 
-  curl -fsSL "$url" -o "${tmp}/${zip_name}"
-  unzip -q "${tmp}/${zip_name}" -d "${tmp}/unzipped"
+  # Build tailscaled for both architectures.
+  GOBIN="${tmp}/amd64" GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go install "tailscale.com/cmd/tailscaled@${tag}"
+  GOBIN="${tmp}/arm64" GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go install "tailscale.com/cmd/tailscaled@${tag}"
 
-  # Find tailscaled/tailscale binaries within the extracted app.
-  local tailscaled_path tailscale_path
-  # Zip extraction may not preserve executable bits, so do not filter by -perm.
-  tailscaled_path="$(find "${tmp}/unzipped" -type f -name "tailscaled" 2>/dev/null | head -n 1 || true)"
-  tailscale_path="$(find "${tmp}/unzipped" -type f -name "tailscale" 2>/dev/null | head -n 1 || true)"
+  # Build tailscale CLI for both architectures.
+  GOBIN="${tmp}/amd64" GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go install "tailscale.com/cmd/tailscale@${tag}"
+  GOBIN="${tmp}/arm64" GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go install "tailscale.com/cmd/tailscale@${tag}"
 
-  if [[ -z "$tailscaled_path" || -z "$tailscale_path" ]]; then
-    echo "Error: No se encontraron binarios 'tailscaled'/'tailscale' dentro del zip."
-    echo "Dump (primeros matches):"
-    find "${tmp}/unzipped" -maxdepth 6 -type f -name "*tail*" 2>/dev/null | head -n 50 || true
-    exit 1
-  fi
+  # Combine into universal Mach-O.
+  lipo -create "${tmp}/amd64/tailscaled" "${tmp}/arm64/tailscaled" -output "${BIN_DIR}/tailscaled-universal-apple-darwin"
+  lipo -create "${tmp}/amd64/tailscale" "${tmp}/arm64/tailscale" -output "${BIN_DIR}/tailscale-universal-apple-darwin"
+  chmod +x "${BIN_DIR}/tailscaled-universal-apple-darwin" "${BIN_DIR}/tailscale-universal-apple-darwin"
 
-  echo "Validando binarios universales..."
-  assert_universal_macho "$tailscaled_path"
-  assert_universal_macho "$tailscale_path"
-
-  echo "Copiando binarios universales a $BIN_DIR..."
-  cp "$tailscaled_path" "$BIN_DIR/tailscaled-universal-apple-darwin"
-  cp "$tailscale_path" "$BIN_DIR/tailscale-universal-apple-darwin"
-  chmod +x "$BIN_DIR/tailscaled-universal-apple-darwin" "$BIN_DIR/tailscale-universal-apple-darwin"
+  # Sanity check.
+  assert_universal_macho "${BIN_DIR}/tailscaled-universal-apple-darwin"
+  assert_universal_macho "${BIN_DIR}/tailscale-universal-apple-darwin"
 
   # Compatibility: some tooling expects per-target filenames.
-  cp "$BIN_DIR/tailscaled-universal-apple-darwin" "$BIN_DIR/tailscaled-x86_64-apple-darwin"
-  cp "$BIN_DIR/tailscaled-universal-apple-darwin" "$BIN_DIR/tailscaled-aarch64-apple-darwin"
-  cp "$BIN_DIR/tailscale-universal-apple-darwin" "$BIN_DIR/tailscale-x86_64-apple-darwin"
-  cp "$BIN_DIR/tailscale-universal-apple-darwin" "$BIN_DIR/tailscale-aarch64-apple-darwin"
+  cp "${BIN_DIR}/tailscaled-universal-apple-darwin" "${BIN_DIR}/tailscaled-x86_64-apple-darwin"
+  cp "${BIN_DIR}/tailscaled-universal-apple-darwin" "${BIN_DIR}/tailscaled-aarch64-apple-darwin"
+  cp "${BIN_DIR}/tailscale-universal-apple-darwin" "${BIN_DIR}/tailscale-x86_64-apple-darwin"
+  cp "${BIN_DIR}/tailscale-universal-apple-darwin" "${BIN_DIR}/tailscale-aarch64-apple-darwin"
 }
 
-download_macos_universal_from_pkgs
+ts_version="$(detect_stable_version)"
+build_universal_with_go "$ts_version"
 
 echo "----------------------------------------------------------"
 echo "Contenido de $BIN_DIR:"

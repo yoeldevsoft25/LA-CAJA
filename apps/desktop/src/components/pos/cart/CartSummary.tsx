@@ -33,7 +33,7 @@ export function CartSummary({
     const subtotalUsd = totalUsd + totalDiscountUsd
 
     return (
-        <div className="flex-none p-4 sm:p-5 border-t border-border/40 dark:border-white/10 bg-white dark:bg-slate-900 space-y-4">
+        <div className="flex-none p-4 sm:p-5 border-t border-border/20 dark:border-white/5 bg-white dark:bg-slate-900 space-y-4">
             {!hasOpenCash && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center justify-center shadow-sm">
                     ⚠️ Debes abrir caja para procesar ventas
