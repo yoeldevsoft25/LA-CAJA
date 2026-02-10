@@ -211,7 +211,7 @@ export default function AdminLayout() {
             <SkipLinks />
 
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40">
+            <header className="sticky top-0 z-40 bg-sidebar-background/95 backdrop-blur-xl border-b border-sidebar-border">
                 <div className="flex h-16 items-center gap-4 px-4 sm:px-6">
                     {/* Logo (Desktop) */}
                     <div className="hidden lg:flex items-center gap-3">
@@ -274,7 +274,7 @@ export default function AdminLayout() {
                 </div>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-auto bg-muted/30">
+                <main className="flex-1 overflow-auto bg-background">
                     <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <Outlet />
                     </div>

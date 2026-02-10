@@ -105,7 +105,7 @@ export const Header = memo(function Header({
                     </SheetTrigger>
                     <SheetContent
                         side="left"
-                        className="p-0 w-72 flex flex-col max-h-screen overflow-hidden"
+                        className="p-0 w-72 flex flex-col max-h-screen overflow-hidden bg-sidebar-background text-sidebar-foreground border-sidebar-border"
                         hideClose
                     >
                         <SidebarContent

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Hash, Plus, Edit, RotateCcw, AlertTriangle, Boxes } from 'lucide-react'
+import { Hash, Plus, Edit, RotateCcw, AlertTriangle } from 'lucide-react'
 import {
   productSerialsService,
   ProductSerial,
