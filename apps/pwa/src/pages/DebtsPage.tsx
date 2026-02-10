@@ -41,6 +41,7 @@ export default function DebtsPage() {
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(10)
   const queryClient = useQueryClient()
 
   // Obtener datos del prefetch como placeholderData
@@ -110,6 +111,11 @@ export default function DebtsPage() {
       )
     }
   }, [searchQuery, viewMode, debtsByCustomer, allDebts])
+
+  // Reset visible count when filters or view mode change
+  useMemo(() => {
+    setVisibleCount(10)
+  }, [searchQuery, statusFilter, viewMode])
 
   // Calcular estadísticas
   const stats = useMemo(() => {
@@ -355,16 +361,29 @@ export default function DebtsPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  (filteredData as { customer: Customer; debts: Debt[] }[]).map(({ customer, debts }) => (
-                    <CustomerDebtCard
-                      key={customer.id}
-                      customer={customer}
-                      debts={debts}
-                      onViewDebt={handleViewDebt}
-                      onAddPayment={handleAddPayment}
-                      onPaymentSuccess={handlePaymentSuccess}
-                    />
-                  ))
+                  <>
+                    {(filteredData as { customer: Customer; debts: Debt[] }[]).slice(0, visibleCount).map(({ customer, debts }) => (
+                      <CustomerDebtCard
+                        key={customer.id}
+                        customer={customer}
+                        debts={debts}
+                        onViewDebt={handleViewDebt}
+                        onAddPayment={handleAddPayment}
+                        onPaymentSuccess={handlePaymentSuccess}
+                      />
+                    ))}
+                    {(filteredData as any[]).length > visibleCount && (
+                      <div className="py-4 flex justify-center">
+                        <Button
+                          variant="outline"
+                          onClick={() => setVisibleCount(prev => prev + 10)}
+                          className="w-full sm:w-auto"
+                        >
+                          Cargar más clientes ({visibleCount} de {(filteredData as any[]).length})
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
@@ -413,7 +432,7 @@ export default function DebtsPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {debtsList.map((debt) => {
+                            {debtsList.slice(0, visibleCount).map((debt) => {
                               const calc = calculateDebtTotals(debt)
                               const paymentPercentage = getPaymentPercentage(debt)
                               const statusConfig = {
@@ -488,6 +507,17 @@ export default function DebtsPage() {
                             })}
                           </TableBody>
                         </Table>
+                        {debtsList.length > visibleCount && (
+                          <div className="p-4 border-t border-border flex justify-center">
+                            <Button
+                              variant="ghost"
+                              onClick={() => setVisibleCount(prev => prev + 10)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              Ver más deudas ({visibleCount} de {debtsList.length})
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )
                   })()}

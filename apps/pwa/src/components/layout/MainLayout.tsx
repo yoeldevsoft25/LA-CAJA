@@ -86,7 +86,7 @@ export default function MainLayout() {
   // RENDER — Estructura plana y limpia
   // =============================================
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30 bg-[radial-gradient(circle_at_12%_-10%,hsl(var(--primary)_/_0.10),transparent_55%),radial-gradient(circle_at_88%_0%,hsl(var(--info)_/_0.08),transparent_50%)]">
       {/* Accessibility */}
       <SkipLinks />
 
@@ -124,7 +124,7 @@ export default function MainLayout() {
         <aside
           id="main-navigation"
           className={cn(
-            'hidden lg:flex flex-col border-r border-border bg-background h-full',
+            'hidden lg:flex flex-col border-r border-sidebar-border/70 bg-sidebar-background/85 h-full',
             'transition-[width] duration-300 will-change-[width]',
             sidebarCollapsed ? 'w-20' : 'w-64'
           )}

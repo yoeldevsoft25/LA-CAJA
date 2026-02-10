@@ -141,7 +141,7 @@ export const SidebarContent = React.memo(({
                                                                 className={cn(
                                                                     "text-[9px] h-4 px-1 flex-shrink-0",
                                                                     item.badge === 'Nuevo' && "bg-primary/15 text-primary border-0",
-                                                                    item.badge === 'Beta' && "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0"
+                                                                    item.badge === 'Beta' && "bg-[hsl(var(--warning)_/_0.16)] text-[hsl(var(--warning))] border-0"
                                                                 )}
                                                             >
                                                                 {item.badge}
@@ -249,7 +249,7 @@ export const SidebarContent = React.memo(({
                                                                 className={cn(
                                                                     "text-[9px] h-4 px-1.5 flex-shrink-0 font-semibold",
                                                                     item.badge === 'Nuevo' && "bg-primary/15 text-primary border-0",
-                                                                    item.badge === 'Beta' && "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0"
+                                                                    item.badge === 'Beta' && "bg-[hsl(var(--warning)_/_0.16)] text-[hsl(var(--warning))] border-0"
                                                                 )}
                                                             >
                                                                 {item.badge}

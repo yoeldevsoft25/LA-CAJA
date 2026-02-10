@@ -65,11 +65,17 @@ export const Header = memo(function Header({
 }: HeaderProps) {
     return (
         <header
-            className="sticky top-0 z-40 border-b border-border/40
-                 bg-background/80 backdrop-blur-xl
+            className="sticky top-0 z-40 border-b border-border/50
+                 bg-background/75 backdrop-blur-xl
                  transition-[background-color] duration-300
-                 will-change-[backdrop-filter]"
+                 will-change-[backdrop-filter] relative"
         >
+            {/* Subtle brand wash (tokens only) */}
+            <div
+                className="pointer-events-none absolute inset-0 -z-10
+                           bg-[radial-gradient(circle_at_18%_-40%,hsl(var(--primary)_/_0.10),transparent_55%),radial-gradient(circle_at_82%_-60%,hsl(var(--info)_/_0.08),transparent_55%)]"
+                aria-hidden="true"
+            />
             <div className="flex h-14 items-center gap-2 sm:gap-3 px-3 sm:px-4">
                 {/* Logo (Desktop) — Compacto y elegante */}
                 <div className="hidden lg:flex items-center gap-2.5 mr-1">
@@ -156,8 +162,8 @@ export const Header = memo(function Header({
                 <div className="flex items-center gap-1 shrink-0">
                     {/* Online indicator (mobile only) */}
                     <span
-                        className="sm:hidden inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse
-                       shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"
+                        className="sm:hidden inline-flex h-2 w-2 rounded-full bg-[hsl(var(--success))] animate-pulse
+                       shadow-[0_0_0_3px_hsl(var(--success)_/_0.18)]"
                         aria-hidden="true"
                     />
 

@@ -18,9 +18,9 @@ const ICON_MAP: Record<string, any> = {
 }
 
 const COLOR_MAP: Record<string, string> = {
-    warning: 'text-amber-600',
-    success: 'text-emerald-600',
-    error: 'text-red-600',
+    warning: 'text-[hsl(var(--warning))]',
+    success: 'text-[hsl(var(--success))]',
+    error: 'text-destructive',
     info: 'text-primary',
 }
 

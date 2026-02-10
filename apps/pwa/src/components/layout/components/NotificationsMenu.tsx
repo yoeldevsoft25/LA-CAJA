@@ -34,9 +34,9 @@ const ICON_MAP = {
 } as const
 
 const COLOR_MAP = {
-    warning: 'text-amber-600',
-    success: 'text-emerald-600',
-    error: 'text-red-600',
+    warning: 'text-[hsl(var(--warning))]',
+    success: 'text-[hsl(var(--success))]',
+    error: 'text-destructive',
     info: 'text-primary',
 } as const
 
