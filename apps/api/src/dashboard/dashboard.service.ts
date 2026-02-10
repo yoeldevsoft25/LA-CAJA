@@ -156,51 +156,52 @@ export class DashboardService {
       previousPeriodStart.setHours(0, 0, 0, 0);
     }
 
-    // Ventas de hoy
-    const todaySales = await this.saleRepository.find({
-      where: {
-        store_id: storeId,
-        sold_at: Between(today, todayEnd),
-        voided_at: IsNull(),
-      },
-    });
+    // Ventas: agregaciones en DB (evita traer N filas y sumar en JS)
+    const totalsBsExpr =
+      "COALESCE((sale.totals->>'total_bs')::numeric, 0)";
+    const totalsUsdExpr =
+      "COALESCE((sale.totals->>'total_usd')::numeric, 0)";
 
-    let todayAmountBs = 0;
-    let todayAmountUsd = 0;
-    for (const sale of todaySales) {
-      todayAmountBs += Number(sale.totals.total_bs);
-      todayAmountUsd += Number(sale.totals.total_usd);
-    }
+    const todayAgg = await this.saleRepository
+      .createQueryBuilder('sale')
+      .select('COUNT(sale.id)', 'count')
+      .addSelect(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'sum_bs')
+      .addSelect(`COALESCE(SUM(${totalsUsdExpr}), 0)`, 'sum_usd')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere('sale.sold_at >= :start', { start: today })
+      .andWhere('sale.sold_at <= :end', { end: todayEnd })
+      .getRawOne();
 
-    // Ventas del período
-    const periodSales = await this.saleRepository.find({
-      where: {
-        store_id: storeId,
-        sold_at: Between(periodStart, periodEnd),
-        voided_at: IsNull(),
-      },
-    });
+    const periodAgg = await this.saleRepository
+      .createQueryBuilder('sale')
+      .select('COUNT(sale.id)', 'count')
+      .addSelect(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'sum_bs')
+      .addSelect(`COALESCE(SUM(${totalsUsdExpr}), 0)`, 'sum_usd')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere('sale.sold_at >= :start', { start: periodStart })
+      .andWhere('sale.sold_at <= :end', { end: periodEnd })
+      .getRawOne();
 
-    let periodAmountBs = 0;
-    let periodAmountUsd = 0;
-    for (const sale of periodSales) {
-      periodAmountBs += Number(sale.totals.total_bs);
-      periodAmountUsd += Number(sale.totals.total_usd);
-    }
+    const previousPeriodAgg = await this.saleRepository
+      .createQueryBuilder('sale')
+      .select(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'sum_bs')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere('sale.sold_at >= :start', { start: previousPeriodStart })
+      .andWhere('sale.sold_at <= :end', { end: previousPeriodEnd })
+      .getRawOne();
 
-    // Ventas del período anterior (para crecimiento)
-    const previousPeriodSales = await this.saleRepository.find({
-      where: {
-        store_id: storeId,
-        sold_at: Between(previousPeriodStart, previousPeriodEnd),
-        voided_at: IsNull(),
-      },
-    });
+    const todayCount = Number(todayAgg?.count || 0);
+    const todayAmountBs = Number(todayAgg?.sum_bs || 0);
+    const todayAmountUsd = Number(todayAgg?.sum_usd || 0);
 
-    let previousPeriodAmountBs = 0;
-    for (const sale of previousPeriodSales) {
-      previousPeriodAmountBs += Number(sale.totals.total_bs);
-    }
+    const periodCount = Number(periodAgg?.count || 0);
+    const periodAmountBs = Number(periodAgg?.sum_bs || 0);
+    const periodAmountUsd = Number(periodAgg?.sum_usd || 0);
+
+    const previousPeriodAmountBs = Number(previousPeriodAgg?.sum_bs || 0);
 
     const growthPercentage =
       previousPeriodAmountBs > 0
@@ -397,35 +398,29 @@ export class DashboardService {
       .getCount();
 
     // Finanzas (Deudas)
-    const openDebts = await this.debtRepository.find({
-      where: {
-        store_id: storeId,
-        status: DebtStatus.OPEN,
-      },
-    });
+    const openDebtsAgg = await this.debtRepository
+      .createQueryBuilder('debt')
+      .select('COALESCE(SUM(debt.amount_bs), 0)', 'sum_bs')
+      .addSelect('COALESCE(SUM(debt.amount_usd), 0)', 'sum_usd')
+      .where('debt.store_id = :storeId', { storeId })
+      .andWhere('debt.status = :status', { status: DebtStatus.OPEN })
+      .getRawOne();
 
-    let totalDebtBs = 0;
-    let totalDebtUsd = 0;
-    for (const debt of openDebts) {
-      totalDebtBs += Number(debt.amount_bs);
-      totalDebtUsd += Number(debt.amount_usd);
-    }
+    const totalDebtBs = Number(openDebtsAgg?.sum_bs || 0);
+    const totalDebtUsd = Number(openDebtsAgg?.sum_usd || 0);
 
     // Pagos recibidos en el período
-    const periodPayments = await this.debtPaymentRepository
+    const periodPaymentsAgg = await this.debtPaymentRepository
       .createQueryBuilder('payment')
-      .leftJoin('payment.debt', 'debt')
-      .where('debt.store_id = :storeId', { storeId })
+      .select('COALESCE(SUM(payment.amount_bs), 0)', 'sum_bs')
+      .addSelect('COALESCE(SUM(payment.amount_usd), 0)', 'sum_usd')
+      .where('payment.store_id = :storeId', { storeId })
       .andWhere('payment.paid_at >= :start', { start: periodStart })
       .andWhere('payment.paid_at <= :end', { end: periodEnd })
-      .getMany();
+      .getRawOne();
 
-    let totalCollectedBs = 0;
-    let totalCollectedUsd = 0;
-    for (const payment of periodPayments) {
-      totalCollectedBs += Number(payment.amount_bs);
-      totalCollectedUsd += Number(payment.amount_usd);
-    }
+    const totalCollectedBs = Number(periodPaymentsAgg?.sum_bs || 0);
+    const totalCollectedUsd = Number(periodPaymentsAgg?.sum_usd || 0);
 
     // Compras
     const pendingOrders = await this.purchaseOrderRepository.count({
@@ -435,41 +430,41 @@ export class DashboardService {
       },
     });
 
-    const completedOrders = await this.purchaseOrderRepository
+    const completedOrdersAgg = await this.purchaseOrderRepository
       .createQueryBuilder('order')
+      .select('COUNT(order.id)', 'count')
+      .addSelect('COALESCE(SUM(order.total_amount_bs), 0)', 'sum_bs')
+      .addSelect('COALESCE(SUM(order.total_amount_usd), 0)', 'sum_usd')
       .where('order.store_id = :storeId', { storeId })
       .andWhere('order.status = :status', { status: 'completed' })
       .andWhere('order.requested_at >= :start', { start: periodStart })
       .andWhere('order.requested_at <= :end', { end: periodEnd })
-      .getMany();
+      .getRawOne();
 
-    let totalPurchasesBs = 0;
-    let totalPurchasesUsd = 0;
-    for (const order of completedOrders) {
-      totalPurchasesBs += Number(order.total_amount_bs);
-      totalPurchasesUsd += Number(order.total_amount_usd);
-    }
+    const completedOrdersCount = Number(completedOrdersAgg?.count || 0);
+    const totalPurchasesBs = Number(completedOrdersAgg?.sum_bs || 0);
+    const totalPurchasesUsd = Number(completedOrdersAgg?.sum_usd || 0);
 
     // Facturación Fiscal
-    const issuedInvoices = await this.fiscalInvoiceRepository
+    const issuedInvoicesAgg = await this.fiscalInvoiceRepository
       .createQueryBuilder('invoice')
+      .select('COUNT(invoice.id)', 'count')
+      .addSelect('COALESCE(SUM(invoice.total_bs), 0)', 'sum_bs')
+      .addSelect('COALESCE(SUM(invoice.total_usd), 0)', 'sum_usd')
+      .addSelect('COALESCE(SUM(invoice.tax_amount_bs), 0)', 'tax_sum_bs')
+      .addSelect('COALESCE(SUM(invoice.tax_amount_usd), 0)', 'tax_sum_usd')
       .where('invoice.store_id = :storeId', { storeId })
       .andWhere('invoice.status = :status', { status: 'issued' })
       .andWhere('invoice.issued_at IS NOT NULL')
       .andWhere('invoice.issued_at >= :start', { start: periodStart })
       .andWhere('invoice.issued_at <= :end', { end: periodEnd })
-      .getMany();
+      .getRawOne();
 
-    let totalFiscalAmountBs = 0;
-    let totalFiscalAmountUsd = 0;
-    let totalTaxCollectedBs = 0;
-    let totalTaxCollectedUsd = 0;
-    for (const invoice of issuedInvoices) {
-      totalFiscalAmountBs += Number(invoice.total_bs);
-      totalFiscalAmountUsd += Number(invoice.total_usd);
-      totalTaxCollectedBs += Number(invoice.tax_amount_bs);
-      totalTaxCollectedUsd += Number(invoice.tax_amount_usd);
-    }
+    const issuedInvoicesCount = Number(issuedInvoicesAgg?.count || 0);
+    const totalFiscalAmountBs = Number(issuedInvoicesAgg?.sum_bs || 0);
+    const totalFiscalAmountUsd = Number(issuedInvoicesAgg?.sum_usd || 0);
+    const totalTaxCollectedBs = Number(issuedInvoicesAgg?.tax_sum_bs || 0);
+    const totalTaxCollectedUsd = Number(issuedInvoicesAgg?.tax_sum_usd || 0);
 
     // Performance - Producto más vendido
     let topProduct: any = null;
@@ -520,17 +515,16 @@ export class DashboardService {
       topCategory = null;
     }
 
-    const avgSaleAmountBs =
-      periodSales.length > 0 ? periodAmountBs / periodSales.length : 0;
+    const avgSaleAmountBs = periodCount > 0 ? periodAmountBs / periodCount : 0;
     const avgSaleAmountUsd =
-      periodSales.length > 0 ? periodAmountUsd / periodSales.length : 0;
+      periodCount > 0 ? periodAmountUsd / periodCount : 0;
 
     const result = {
       sales: {
-        today_count: todaySales.length,
+        today_count: todayCount,
         today_amount_bs: todayAmountBs,
         today_amount_usd: todayAmountUsd,
-        period_count: periodSales.length,
+        period_count: periodCount,
         period_amount_bs: periodAmountBs,
         period_amount_usd: periodAmountUsd,
         growth_percentage: growthPercentage,
@@ -554,10 +548,10 @@ export class DashboardService {
         pending_orders: pendingOrders,
         total_purchases_bs: totalPurchasesBs,
         total_purchases_usd: totalPurchasesUsd,
-        completed_orders: completedOrders.length,
+        completed_orders: completedOrdersCount,
       },
       fiscal: {
-        issued_invoices: issuedInvoices.length,
+        issued_invoices: issuedInvoicesCount,
         total_fiscal_amount_bs: totalFiscalAmountBs,
         total_fiscal_amount_usd: totalFiscalAmountUsd,
         total_tax_collected_bs: totalTaxCollectedBs,

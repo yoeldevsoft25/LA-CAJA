@@ -131,9 +131,7 @@ export default function MainLayout() {
         <aside
           id="main-navigation"
           className={cn(
-            'hidden lg:flex flex-col border-r border-sidebar-border/70 bg-sidebar-background/85 h-full relative',
-            // Subtle tint + soft separation from the canvas.
-            "after:content-[''] after:absolute after:inset-0 after:pointer-events-none after:bg-[radial-gradient(circle_at_30%_0%,hsl(var(--primary)_/_0.06),transparent_55%)]",
+            'hidden lg:flex flex-col border-r border-sidebar-border bg-sidebar-background/95 h-full relative',
             'shadow-[0_1px_0_hsl(var(--sidebar-border)_/_0.25),0_24px_60px_-56px_hsl(var(--foreground)_/_0.22)]',
             'transition-[width] duration-300 will-change-[width]',
             sidebarCollapsed ? 'w-20' : 'w-64'
