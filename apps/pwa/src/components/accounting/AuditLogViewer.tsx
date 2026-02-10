@@ -5,8 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { api } from '@/services/api'
+import { api } from '@/lib/api'
 import { useAuth } from '@/stores/auth.store'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -97,7 +96,7 @@ export default function AuditLogViewer() {
                                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No hay registros de auditoría.</TableCell>
                             </TableRow>
                         ) : (
-                            logs?.map((log) => (
+                            logs?.map((log: AuditLog) => (
                                 <TableRow key={log.id}>
                                     <TableCell className="font-mono text-xs">
                                         {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss')}
