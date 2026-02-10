@@ -21,36 +21,6 @@ if [[ -f "$BIN_DIR/tailscale-universal-apple-darwin" ]] && [[ -f "$BIN_DIR/tails
   exit 0
 fi
 
-download_tailscale() {
-  local ARCH=$1       # amd64 o arm64
-  local TARGET=$2     # x86_64-apple-darwin o aarch64-apple-darwin
-
-  local URL="https://pkgs.tailscale.com/stable/tailscale_${VERSION}_${ARCH}.tgz"
-  local FILE="tailscale_${ARCH}.tgz"
-
-  echo "Descargando Tailscale para $TARGET ($ARCH)..."
-  curl -fsSL "$URL" -o "$FILE"
-
-  tar -xzf "$FILE"
-
-  local FOLDER
-  FOLDER=$(ls -d tailscale_*_"$ARCH" | head -n 1)
-
-  if [[ -d "$FOLDER" ]]; then
-    echo "Copiando binarios para $TARGET..."
-    cp "$FOLDER/tailscaled" "$BIN_DIR/tailscaled-$TARGET"
-    cp "$FOLDER/tailscale" "$BIN_DIR/tailscale-$TARGET"
-    chmod +x "$BIN_DIR/tailscaled-$TARGET" "$BIN_DIR/tailscale-$TARGET"
-    rm -rf "$FOLDER"
-  else
-    echo "Error: No se encontró la carpeta extraída para $ARCH"
-    ls -ld tailscale_*
-    exit 1
-  fi
-
-  rm "$FILE"
-}
-
 ensure_tool() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "La herramienta $1 no está instalada; instálala para continuar."
@@ -59,6 +29,124 @@ ensure_tool() {
 }
 
 ensure_tool lipo
+ensure_tool python3
+ensure_tool file
+
+fetch_release_json() {
+  # We intentionally use GitHub releases for macOS. The pkgs.tailscale.com tarballs are Linux ELF,
+  # which makes `lipo` fail when creating a universal Mach-O binary.
+  local api
+  if [[ "$VERSION" == "latest" ]]; then
+    api="https://api.github.com/repos/tailscale/tailscale/releases/latest"
+  else
+    # Accept VERSION with or without leading "v"
+    local tag="$VERSION"
+    if [[ "$tag" != v* ]]; then
+      tag="v${tag}"
+    fi
+    api="https://api.github.com/repos/tailscale/tailscale/releases/tags/${tag}"
+  fi
+
+  # Avoid GitHub API rate limiting when running locally by allowing a token.
+  # In GitHub Actions, this isn't strictly required, but it also works there.
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "$api"
+  else
+    curl -fsSL -H "X-GitHub-Api-Version: 2022-11-28" "$api"
+  fi
+}
+
+pick_asset_url() {
+  local release_json="$1"
+  local arch="$2" # amd64 | arm64
+
+  # Match both old/new naming variants just in case.
+  # Examples we try to match:
+  # - tailscale_*_darwin_amd64.tgz
+  # - tailscale_*_darwin_arm64.tgz
+  # - tailscale_*_darwin_x86_64.tgz
+  # - tailscale_*_darwin_aarch64.tgz
+  python3 - "$arch" <<'PY' <<<"$release_json"
+import json, re, sys
+
+arch = sys.argv[1]
+data = json.load(sys.stdin)
+assets = data.get("assets", [])
+
+patterns = []
+if arch == "amd64":
+  patterns = [
+    re.compile(r"^tailscale_.*_darwin_amd64\.tgz$"),
+    re.compile(r"^tailscale_.*_darwin_x86_64\.tgz$"),
+  ]
+elif arch == "arm64":
+  patterns = [
+    re.compile(r"^tailscale_.*_darwin_arm64\.tgz$"),
+    re.compile(r"^tailscale_.*_darwin_aarch64\.tgz$"),
+  ]
+else:
+  raise SystemExit(f"Unknown arch: {arch}")
+
+for a in assets:
+  name = a.get("name", "")
+  for p in patterns:
+    if p.match(name):
+      url = a.get("browser_download_url")
+      if url:
+        print(url)
+        raise SystemExit(0)
+
+available = ", ".join([a.get("name", "") for a in assets])
+raise SystemExit(f"No matching darwin asset for arch={arch}. Available: {available}")
+PY
+}
+
+assert_macho() {
+  local path="$1"
+  local desc
+  desc="$(file "$path" || true)"
+  if ! echo "$desc" | grep -q "Mach-O"; then
+    echo "Error: Se esperaba un binario Mach-O para macOS, pero obtuvimos:"
+    echo "  $desc"
+    echo "Ruta: $path"
+    exit 1
+  fi
+}
+
+download_tailscale() {
+  local ARCH=$1       # amd64 o arm64
+  local TARGET=$2     # x86_64-apple-darwin o aarch64-apple-darwin
+
+  local release_json url file
+  release_json="$(fetch_release_json)"
+  url="$(pick_asset_url "$release_json" "$ARCH")"
+  file="tailscale_${TARGET}.tgz"
+
+  echo "Descargando Tailscale para $TARGET ($ARCH)..."
+  curl -fsSL "$url" -o "$file"
+
+  tar -xzf "$file"
+
+  local FOLDER
+  # GitHub release tarballs usually extract into `tailscale_<version>_darwin_<arch>`
+  FOLDER=$(ls -d "tailscale_"*_darwin_"$ARCH"* 2>/dev/null | head -n 1 || true)
+
+  if [[ -d "$FOLDER" ]]; then
+    echo "Copiando binarios para $TARGET..."
+    cp "$FOLDER/tailscaled" "$BIN_DIR/tailscaled-$TARGET"
+    cp "$FOLDER/tailscale" "$BIN_DIR/tailscale-$TARGET"
+    chmod +x "$BIN_DIR/tailscaled-$TARGET" "$BIN_DIR/tailscale-$TARGET"
+    assert_macho "$BIN_DIR/tailscaled-$TARGET"
+    assert_macho "$BIN_DIR/tailscale-$TARGET"
+    rm -rf "$FOLDER"
+  else
+    echo "Error: No se encontró la carpeta extraída para $ARCH"
+    ls -ld tailscale_* || true
+    exit 1
+  fi
+
+  rm "$file"
+}
 
 download_tailscale "amd64" "x86_64-apple-darwin"
 download_tailscale "arm64" "aarch64-apple-darwin"

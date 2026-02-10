@@ -32,17 +32,17 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					'50': '#f0f7fe',
-					'100': '#e0effd',
-					'200': '#bae0fb',
-					'300': '#7cc8f8',
-					'400': '#38acf1',
-					'500': '#0C81CF',
-					'600': '#0967a9',
-					'700': '#085289',
-					'800': '#0a4671',
-					'900': '#0e3b5e',
-					'950': '#09263f',
+					'50': 'hsl(221 90% 96%)',
+					'100': 'hsl(221 90% 92%)',
+					'200': 'hsl(221 90% 84%)',
+					'300': 'hsl(221 90% 72%)',
+					'400': 'hsl(221 83% 60%)',
+					'500': 'hsl(221 83% 53%)',
+					'600': 'hsl(221 83% 45%)',
+					'700': 'hsl(221 83% 35%)',
+					'800': 'hsl(221 83% 25%)',
+					'900': 'hsl(221 83% 15%)',
+					'950': 'hsl(221 83% 10%)',
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
@@ -207,11 +207,11 @@ export default {
 				'pulse-glow': {
 					'0%, 100%': {
 						opacity: '1',
-						boxShadow: '0 0 20px rgba(13, 129, 206, 0.4)'
+						boxShadow: '0 0 20px hsl(var(--primary) / 0.4)'
 					},
 					'50%': {
 						opacity: '0.8',
-						boxShadow: '0 0 40px rgba(13, 129, 206, 0.6)'
+						boxShadow: '0 0 40px hsl(var(--primary) / 0.6)'
 					}
 				},
 				float: {
@@ -345,10 +345,6 @@ export default {
 						opacity: 0,
 					},
 				},
-				"pulse-subtle": {
-					"0%, 100%": { opacity: "1" },
-					"50%": { opacity: "0.85" },
-				},
 				"shine": {
 					"0%": {
 						"background-position": "0% 0%",
@@ -386,7 +382,6 @@ export default {
 				blob: 'blob 7s infinite',
 				'move-up': 'move-up 0.5s ease-out',
 				'sync-pulse': 'sync-pulse 1.5s ease-in-out infinite',
-				'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
 				"meteor": "meteor 5s linear infinite",
 				"shine": "shine 8s ease-in-out infinite"
 			},

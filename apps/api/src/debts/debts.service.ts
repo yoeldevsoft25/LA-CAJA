@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
@@ -10,16 +12,19 @@ import { Debt, DebtStatus } from '../database/entities/debt.entity';
 import { DebtPayment } from '../database/entities/debt-payment.entity';
 import { Customer } from '../database/entities/customer.entity';
 import { Sale } from '../database/entities/sale.entity';
+import { Event } from '../database/entities/event.entity';
 import { CreateDebtPaymentDto } from './dto/create-debt-payment.dto';
 import { CreateLegacyDebtDto } from './dto/create-legacy-debt.dto';
 import { ExchangeService } from '../exchange/exchange.service';
 import { AccountingService } from '../accounting/accounting.service';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
+import { FederationSyncService } from '../sync/federation-sync.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class DebtsService {
   private readonly logger = new Logger(DebtsService.name);
+  private readonly serverDeviceId = '00000000-0000-0000-0000-000000000001';
 
   constructor(
     @InjectRepository(Debt)
@@ -30,11 +35,104 @@ export class DebtsService {
     private customerRepository: Repository<Customer>,
     @InjectRepository(Sale)
     private saleRepository: Repository<Sale>,
+    @InjectRepository(Event)
+    private eventRepository: Repository<Event>,
     private dataSource: DataSource,
     private exchangeService: ExchangeService,
     private accountingService: AccountingService,
     private whatsappMessagingService: WhatsAppMessagingService,
-  ) {}
+    @Inject(forwardRef(() => FederationSyncService))
+    private federationSyncService: FederationSyncService,
+  ) { }
+
+  // ─── Event emission helpers ────────────────────────────────────
+
+  private async emitDebtCreatedEvent(
+    debt: Debt,
+    userId?: string | null,
+  ): Promise<void> {
+    try {
+      const seq = Date.now();
+      const event = this.eventRepository.create({
+        event_id: randomUUID(),
+        store_id: debt.store_id,
+        device_id: this.serverDeviceId,
+        seq,
+        type: 'DebtCreated',
+        version: 1,
+        created_at: debt.created_at || new Date(),
+        actor_user_id: userId || null,
+        actor_role: 'system',
+        payload: {
+          debt_id: debt.id,
+          sale_id: debt.sale_id || null,
+          customer_id: debt.customer_id,
+          created_at: (debt.created_at || new Date()).toISOString(),
+          amount_bs: Number(debt.amount_bs),
+          amount_usd: Number(debt.amount_usd),
+          note: debt.note || null,
+        },
+        vector_clock: { [this.serverDeviceId]: seq },
+        causal_dependencies: [],
+        delta_payload: null,
+        full_payload_hash: null,
+      });
+      const saved = await this.eventRepository.save(event);
+      await this.federationSyncService.queueRelay(saved);
+    } catch (error) {
+      this.logger.error(
+        `Error emitting DebtCreated event for debt ${debt.id}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async emitDebtPaymentRecordedEvent(
+    storeId: string,
+    paymentId: string,
+    debtId: string,
+    amountBs: number,
+    amountUsd: number,
+    method: string,
+    paidAt: Date,
+    note?: string | null,
+    userId?: string | null,
+  ): Promise<void> {
+    try {
+      const seq = Date.now();
+      const event = this.eventRepository.create({
+        event_id: randomUUID(),
+        store_id: storeId,
+        device_id: this.serverDeviceId,
+        seq,
+        type: 'DebtPaymentRecorded',
+        version: 1,
+        created_at: paidAt,
+        actor_user_id: userId || null,
+        actor_role: 'system',
+        payload: {
+          payment_id: paymentId,
+          debt_id: debtId,
+          amount_bs: amountBs,
+          amount_usd: amountUsd,
+          method,
+          paid_at: paidAt.toISOString(),
+          note: note || null,
+        },
+        vector_clock: { [this.serverDeviceId]: seq },
+        causal_dependencies: [],
+        delta_payload: null,
+        full_payload_hash: null,
+      });
+      const saved = await this.eventRepository.save(event);
+      await this.federationSyncService.queueRelay(saved);
+    } catch (error) {
+      this.logger.error(
+        `Error emitting DebtPaymentRecorded event for payment ${paymentId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
 
   async createDebtFromSale(
     storeId: string,
@@ -79,6 +177,9 @@ export class DebtsService {
 
     const savedDebt = await this.debtRepository.save(debt);
 
+    // Emit DebtCreated event for federation sync
+    await this.emitDebtCreatedEvent(savedDebt);
+
     // Enviar notificación de WhatsApp si está habilitado (offline-first)
     try {
       await this.whatsappMessagingService.sendDebtNotification(
@@ -121,6 +222,10 @@ export class DebtsService {
     });
 
     const savedDebt = await this.debtRepository.save(debt);
+
+    // Emit DebtCreated event for federation sync
+    await this.emitDebtCreatedEvent(savedDebt);
+
     this.logger.log(
       `Legacy Debt creada: ${savedDebt.id} para cliente ${customer.name}`,
     );
@@ -304,6 +409,18 @@ export class DebtsService {
           ],
         );
 
+        // Emit DebtPaymentRecorded event for federation sync
+        await this.emitDebtPaymentRecordedEvent(
+          storeId,
+          paymentId,
+          debtId,
+          paymentAmountBs,
+          paymentAmountUsd,
+          dto.method,
+          paidAt,
+          dto.note || null,
+        );
+
         this.logger.log(`Insert completado usando SQL directo`);
 
         // Recargar el pago insertado
@@ -338,6 +455,18 @@ export class DebtsService {
             ],
           );
 
+          // Emit DebtCreated event for rollover debt
+          await this.emitDebtCreatedEvent({
+            id: rolloverDebtId,
+            store_id: storeId,
+            sale_id: null,
+            customer_id: debt.customer_id,
+            created_at: paidAt,
+            amount_bs: rolloverAmountBs,
+            amount_usd: rolloverAmountUsd,
+            note: `Saldo restante de deuda ${debtId}`,
+          } as Debt);
+
           const rolloverPaymentId = randomUUID();
           await manager.query(
             `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
@@ -352,6 +481,18 @@ export class DebtsService {
               'ROLLOVER',
               `Saldo trasladado a nueva deuda ${rolloverDebtId}`,
             ],
+          );
+
+          // Emit DebtPaymentRecorded event for rollover payment
+          await this.emitDebtPaymentRecordedEvent(
+            storeId,
+            rolloverPaymentId,
+            debtId,
+            rolloverAmountBs,
+            rolloverAmountUsd,
+            'ROLLOVER',
+            paidAt,
+            `Saldo trasladado a nueva deuda ${rolloverDebtId}`,
           );
         }
 
@@ -608,9 +749,13 @@ export class DebtsService {
             status: DebtStatus.OPEN,
           });
 
-          await this.debtRepository.save(debt);
+          const savedFiaoDebt = await this.debtRepository.save(debt);
+
+          // Emit DebtCreated event for auto-healed FIAO debt
+          await this.emitDebtCreatedEvent(savedFiaoDebt);
+
           this.logger.log(
-            `✅ Deuda creada para venta FIAO ${sale.id}: ${debt.id} - Cliente: ${customer.name} - Monto: $${totalUsd} USD`,
+            `✅ Deuda creada para venta FIAO ${sale.id}: ${savedFiaoDebt.id} - Cliente: ${customer.name} - Monto: $${totalUsd} USD`,
           );
         } catch (error) {
           this.logger.error(
@@ -814,7 +959,7 @@ export class DebtsService {
         const allocations = debtBalances.map((entry) =>
           Math.floor(
             (paymentCents * Math.round(entry.remainingUsd * 100)) /
-              totalRemainingCents,
+            totalRemainingCents,
           ),
         );
 
@@ -917,9 +1062,9 @@ export class DebtsService {
               payUsd,
               dto.method,
               dto.note ||
-                (isSelective
-                  ? 'Pago de deudas seleccionadas'
-                  : 'Pago completo de todas las deudas'),
+              (isSelective
+                ? 'Pago de deudas seleccionadas'
+                : 'Pago completo de todas las deudas'),
             ],
           );
 
