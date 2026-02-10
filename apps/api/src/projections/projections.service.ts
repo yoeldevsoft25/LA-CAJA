@@ -83,7 +83,7 @@ export class ProjectionsService {
     private warehousesService: WarehousesService,
     private metricsService: SyncMetricsService,
     private invoiceSeriesService: InvoiceSeriesService,
-  ) { }
+  ) {}
 
   private toBoolean(value: unknown): boolean {
     if (typeof value === 'boolean') {
@@ -688,13 +688,13 @@ export class ProjectionsService {
           const productIds = payload.items.map((i) => i.product_id);
           const deviceEscrows = event.device_id
             ? await manager.getRepository(StockEscrow).find({
-              where: {
-                store_id: event.store_id,
-                device_id: event.device_id,
-                product_id: In(productIds),
-                expires_at: MoreThan(new Date()),
-              },
-            })
+                where: {
+                  store_id: event.store_id,
+                  device_id: event.device_id,
+                  product_id: In(productIds),
+                  expires_at: MoreThan(new Date()),
+                },
+              })
             : [];
 
           const escrowMap = new Map<string, StockEscrow>();
@@ -708,7 +708,7 @@ export class ProjectionsService {
           for (const item of payload.items) {
             const totalQty =
               this.toBoolean(item.is_weight_product) &&
-                item.weight_value != null
+              item.weight_value != null
                 ? this.toNumber(item.weight_value)
                 : this.toNumber(item.qty);
 
@@ -1654,10 +1654,10 @@ export class ProjectionsService {
 
   /**
    * healFailedProjections - Re-proyecta eventos que fallaron anteriormente
-   * 
+   *
    * Esto soluciona el bug donde eventos (ej: DebtCreated) no se proyectaban correctamente
    * y quedaban con projection_status='failed' o sin proyección.
-   * 
+   *
    * @param storeId - Opcional, filtrar por tienda
    * @param limit - Máximo número de eventos a procesar (default: 100)
    * @returns Estadísticas de eventos curados
@@ -1679,9 +1679,7 @@ export class ProjectionsService {
     let query = this.dataSource
       .getRepository(Event)
       .createQueryBuilder('e')
-      .where(
-        "(e.projection_status = 'failed' OR e.projection_status IS NULL)",
-      )
+      .where("(e.projection_status = 'failed' OR e.projection_status IS NULL)")
       .orderBy('e.created_at', 'ASC')
       .limit(limit);
 

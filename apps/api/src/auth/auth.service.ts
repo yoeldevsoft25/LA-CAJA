@@ -62,7 +62,7 @@ export class AuthService {
     private emailService: EmailService,
     private usageService: UsageService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   private getTrialExpiration(plan: 'trial' | 'freemium' = 'trial'): {
     expiresAt: Date;

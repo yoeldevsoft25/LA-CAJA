@@ -1,23 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OutboxService } from './outbox.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Event } from '../database/entities/event.entity';
-import { ProjectionsService } from '../projections/projections.service';
 import { FederationSyncService } from './federation-sync.service';
 import { DataSource } from 'typeorm';
 
+// ProjectionsService pulls WhatsApp/Baileys, which includes ESM-only deps that Jest won't parse in CJS mode.
+// For this unit test we only need the token + shape, so we mock the whole module.
+jest.mock('../projections/projections.service', () => ({
+    ProjectionsService: class ProjectionsService {
+        projectEvent = jest.fn();
+    },
+}));
+
+type OutboxServiceT = import('./outbox.service').OutboxService;
+const { OutboxService } = require('./outbox.service') as { OutboxService: new (...args: any[]) => OutboxServiceT };
+const { ProjectionsService } = require('../projections/projections.service') as { ProjectionsService: any };
+
 describe('OutboxService', () => {
-    let service: OutboxService;
-    let dataSource: Partial<DataSource>;
+    let service: OutboxServiceT;
+    let dataSource: DataSource;
     let manager: any;
 
     beforeEach(async () => {
         manager = {
             query: jest.fn(),
         };
-        dataSource = {
-            transaction: jest.fn((cb) => cb(manager)),
-        };
+        // writeOutboxEntries() doesn't touch DataSource; it only needs to exist for DI.
+        dataSource = {} as unknown as DataSource;
 
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -29,7 +38,7 @@ describe('OutboxService', () => {
             ],
         }).compile();
 
-        service = module.get<OutboxService>(OutboxService);
+        service = module.get<OutboxServiceT>(OutboxService);
     });
 
     it('should be defined', () => {

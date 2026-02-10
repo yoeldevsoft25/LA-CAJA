@@ -48,7 +48,7 @@ export class ConflictResolutionService {
     private readonly eventRepository: Repository<Event>,
     private readonly dataSource: DataSource,
     private readonly conflictAudit: ConflictAuditService,
-  ) { }
+  ) {}
 
   /**
    * Detecta si dos eventos están en conflicto
@@ -235,15 +235,16 @@ export class ConflictResolutionService {
     const winnerCrdt = this.crdtService.resolveLWW(registers);
 
     // Identificar el evento ganador por sus atributos (device_id y timestamp coinciden)
-    const winnerEvent = events.find(e =>
-      e.device_id === winnerCrdt.device_id &&
-      e.timestamp === winnerCrdt.timestamp
+    const winnerEvent = events.find(
+      (e) =>
+        e.device_id === winnerCrdt.device_id &&
+        e.timestamp === winnerCrdt.timestamp,
     );
 
     const winnerEventId = winnerEvent?.event_id || 'unknown';
     const loserEventIds = events
-      .filter(e => e.event_id !== winnerEventId)
-      .map(e => e.event_id);
+      .filter((e) => e.event_id !== winnerEventId)
+      .map((e) => e.event_id);
 
     this.logger.log(
       `LWW resolved: ${events.length} events, winner=${winnerEventId}`,

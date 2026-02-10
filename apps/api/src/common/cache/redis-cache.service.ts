@@ -10,7 +10,7 @@ export class RedisCacheService {
   constructor(
     private readonly configService: ConfigService,
     @Optional() @Inject(REDIS_CLIENT) private readonly client: Redis | null,
-  ) { }
+  ) {}
 
   private getClient(): Redis | null {
     const redisEnabled =

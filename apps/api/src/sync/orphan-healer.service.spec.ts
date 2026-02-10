@@ -1,13 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { OrphanHealerService } from './orphan-healer.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Event } from '../database/entities/event.entity';
-import { ProjectionsService } from '../projections/projections.service';
 import { DataSource } from 'typeorm';
 import { Logger } from '@nestjs/common';
 
+// ProjectionsService pulls WhatsApp/Baileys, which includes ESM-only deps that Jest won't parse in CJS mode.
+jest.mock('../projections/projections.service', () => ({
+    ProjectionsService: class ProjectionsService {
+        projectEvent = jest.fn();
+    },
+}));
+
+type OrphanHealerServiceT = import('./orphan-healer.service').OrphanHealerService;
+const { OrphanHealerService } = require('./orphan-healer.service') as { OrphanHealerService: new (...args: any[]) => OrphanHealerServiceT };
+const { ProjectionsService } = require('../projections/projections.service') as { ProjectionsService: any };
+
 describe('OrphanHealerService', () => {
-    let service: OrphanHealerService;
+    let service: OrphanHealerServiceT;
     let dataSource: Partial<DataSource>;
     let eventRepo: any;
     let projectionsService: any;
@@ -33,7 +42,7 @@ describe('OrphanHealerService', () => {
             ],
         }).compile();
 
-        service = module.get<OrphanHealerService>(OrphanHealerService);
+        service = module.get<OrphanHealerServiceT>(OrphanHealerService);
     });
 
     it('should be defined', () => {

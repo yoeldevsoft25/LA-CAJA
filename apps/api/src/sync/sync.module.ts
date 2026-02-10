@@ -82,4 +82,4 @@ import { FederationAlertsService } from './federation-alerts.service';
     FederationAlertsService,
   ],
 })
-export class SyncModule { }
+export class SyncModule {}

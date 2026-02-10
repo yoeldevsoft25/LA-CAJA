@@ -29,4 +29,4 @@ import { NotificationsModule } from '../notifications/notifications.module';
   providers: [InventoryService, OversellAlertService],
   exports: [InventoryService, OversellAlertService],
 })
-export class InventoryModule { }
+export class InventoryModule {}

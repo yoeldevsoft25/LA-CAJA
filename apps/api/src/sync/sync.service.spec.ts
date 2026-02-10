@@ -15,6 +15,10 @@ import { UsageService } from '../licenses/usage.service';
 import { PushSyncDto } from './dto/push-sync.dto';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
 import { FederationSyncService } from './federation-sync.service';
+import { OutboxService } from './outbox.service';
+import { WarehouseStock } from '../database/entities/warehouse-stock.entity';
+import { OversellAlertService } from '../inventory/oversell-alert.service';
+import { FiscalSequenceService } from '../fiscal/fiscal-sequence.service';
 
 jest.mock('../projections/projections.service', () => ({
   ProjectionsService: class ProjectionsService { },
@@ -41,6 +45,7 @@ describe('SyncService', () => {
     find: jest.fn(),
   };
   const cashSessionRepository = {
+    find: jest.fn().mockResolvedValue([]),
     findOne: jest.fn(),
   };
   const projectionsService = {
@@ -119,6 +124,30 @@ describe('SyncService', () => {
           provide: FederationSyncService,
           useValue: {
             replicateEvent: jest.fn(),
+          },
+        },
+        {
+          provide: OutboxService,
+          useValue: {
+            writeOutboxEntries: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(WarehouseStock),
+          useValue: {
+            find: jest.fn().mockResolvedValue([]),
+          },
+        },
+        {
+          provide: OversellAlertService,
+          useValue: {
+            createOversellAlert: jest.fn(),
+          },
+        },
+        {
+          provide: FiscalSequenceService,
+          useValue: {
+            validateFiscalNumber: jest.fn().mockResolvedValue(true),
           },
         },
       ],

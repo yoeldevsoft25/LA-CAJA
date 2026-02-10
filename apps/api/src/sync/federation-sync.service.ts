@@ -38,17 +38,17 @@ export interface FederationStatus {
     failed: number;
   };
   remoteProbe:
-  | {
-    ok: boolean;
-    latencyMs: number;
-    statusCode: number;
-  }
-  | {
-    ok: false;
-    latencyMs: number;
-    error: string;
-  }
-  | null;
+    | {
+        ok: boolean;
+        latencyMs: number;
+        statusCode: number;
+      }
+    | {
+        ok: false;
+        latencyMs: number;
+        error: string;
+      }
+    | null;
   lastRelayError: {
     eventId: string;
     message: string;
@@ -248,7 +248,7 @@ export class FederationSyncService implements OnModuleInit {
 
     const waitingThreshold = Number(
       this.configService.get<string>('FEDERATION_HEAL_WAITING_THRESHOLD') ||
-      100,
+        100,
     );
     const failedThreshold = Number(
       this.configService.get<string>('FEDERATION_HEAL_FAILED_THRESHOLD') || 1,
@@ -373,13 +373,15 @@ export class FederationSyncService implements OnModuleInit {
         ],
       };
 
-      await this.circuitBreaker.execute(() => axios.post(`${this.remoteUrl}/sync/push`, payload, {
-        headers: {
-          Authorization: `Bearer ${this.adminKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000,
-      }));
+      await this.circuitBreaker.execute(() =>
+        axios.post(`${this.remoteUrl}/sync/push`, payload, {
+          headers: {
+            Authorization: `Bearer ${this.adminKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000,
+        }),
+      );
 
       this.logger.log(`✅ Event ${event.event_id} relayed successfully.`);
     } catch (error) {
@@ -483,7 +485,9 @@ export class FederationSyncService implements OnModuleInit {
     );
 
     if (missingSaleIds.length > 0) {
-      this.logger.warn(`Missing SaleCreated events for sale_ids: ${missingSaleIds.join(', ')}`);
+      this.logger.warn(
+        `Missing SaleCreated events for sale_ids: ${missingSaleIds.join(', ')}`,
+      );
     }
 
     let queued = 0;
@@ -492,7 +496,9 @@ export class FederationSyncService implements OnModuleInit {
         where: { event_id: row.event_id },
       });
       if (!event) {
-        this.logger.error(`Event ${row.event_id} found in query but not in repository!`);
+        this.logger.error(
+          `Event ${row.event_id} found in query but not in repository!`,
+        );
         continue;
       }
       await this.queueRelay(event);
@@ -1070,7 +1076,8 @@ export class FederationSyncService implements OnModuleInit {
             try {
               results.push(await this.reconcileStore(currentStoreId));
             } catch (error) {
-              const reason = error instanceof Error ? error.message : String(error);
+              const reason =
+                error instanceof Error ? error.message : String(error);
               this.logger.warn(
                 `Auto-reconcile skipped for ${currentStoreId}: ${reason}`,
               );
@@ -1138,7 +1145,8 @@ export class FederationSyncService implements OnModuleInit {
     limit = 10000,
     offset = 0,
   ): Promise<FederationIdsResult> {
-    const totalRows = await this.dataSource.query(`
+    const totalRows = await this.dataSource.query(
+      `
       SELECT COUNT(DISTINCT payload->>'sale_id')::int AS total
       FROM events
       WHERE store_id = $1
@@ -1146,9 +1154,12 @@ export class FederationSyncService implements OnModuleInit {
         AND created_at >= $2::date
         AND created_at < ($3::date + interval '1 day')
         AND payload->>'sale_id' IS NOT NULL
-    `, [storeId, dateFrom, dateTo]);
+    `,
+      [storeId, dateFrom, dateTo],
+    );
 
-    const rows = await this.dataSource.query(`
+    const rows = await this.dataSource.query(
+      `
       SELECT DISTINCT payload->>'sale_id' AS id
       FROM events
       WHERE store_id = $1
@@ -1158,7 +1169,9 @@ export class FederationSyncService implements OnModuleInit {
         AND payload->>'sale_id' IS NOT NULL
       ORDER BY id
       LIMIT $4 OFFSET $5
-    `, [storeId, dateFrom, dateTo, limit, offset]);
+    `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
 
     return {
       total: Number(totalRows?.[0]?.total || 0),
@@ -1173,7 +1186,8 @@ export class FederationSyncService implements OnModuleInit {
     limit = 10000,
     offset = 0,
   ): Promise<FederationIdsResult> {
-    const totalRows = await this.dataSource.query(`
+    const totalRows = await this.dataSource.query(
+      `
       SELECT COUNT(DISTINCT payload->>'debt_id')::int AS total
       FROM events
       WHERE store_id = $1
@@ -1181,9 +1195,12 @@ export class FederationSyncService implements OnModuleInit {
         AND created_at >= $2::date
         AND created_at < ($3::date + interval '1 day')
         AND payload->>'debt_id' IS NOT NULL
-    `, [storeId, dateFrom, dateTo]);
+    `,
+      [storeId, dateFrom, dateTo],
+    );
 
-    const rows = await this.dataSource.query(`
+    const rows = await this.dataSource.query(
+      `
       SELECT DISTINCT payload->>'debt_id' AS id
       FROM events
       WHERE store_id = $1
@@ -1193,7 +1210,9 @@ export class FederationSyncService implements OnModuleInit {
         AND payload->>'debt_id' IS NOT NULL
       ORDER BY id
       LIMIT $4 OFFSET $5
-    `, [storeId, dateFrom, dateTo, limit, offset]);
+    `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
 
     return {
       total: Number(totalRows?.[0]?.total || 0),
@@ -1208,7 +1227,8 @@ export class FederationSyncService implements OnModuleInit {
     limit = 10000,
     offset = 0,
   ): Promise<FederationIdsResult> {
-    const totalRows = await this.dataSource.query(`
+    const totalRows = await this.dataSource.query(
+      `
       SELECT COUNT(DISTINCT payload->>'payment_id')::int AS total
       FROM events
       WHERE store_id = $1
@@ -1216,9 +1236,12 @@ export class FederationSyncService implements OnModuleInit {
         AND created_at >= $2::date
         AND created_at < ($3::date + interval '1 day')
         AND payload->>'payment_id' IS NOT NULL
-    `, [storeId, dateFrom, dateTo]);
+    `,
+      [storeId, dateFrom, dateTo],
+    );
 
-    const rows = await this.dataSource.query(`
+    const rows = await this.dataSource.query(
+      `
       SELECT DISTINCT payload->>'payment_id' AS id
       FROM events
       WHERE store_id = $1
@@ -1228,7 +1251,9 @@ export class FederationSyncService implements OnModuleInit {
         AND payload->>'payment_id' IS NOT NULL
       ORDER BY id
       LIMIT $4 OFFSET $5
-    `, [storeId, dateFrom, dateTo, limit, offset]);
+    `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
 
     return {
       total: Number(totalRows?.[0]?.total || 0),
@@ -1243,7 +1268,8 @@ export class FederationSyncService implements OnModuleInit {
     limit = 10000,
     offset = 0,
   ): Promise<FederationIdsResult> {
-    const totalRows = await this.dataSource.query(`
+    const totalRows = await this.dataSource.query(
+      `
       SELECT COUNT(DISTINCT payload->>'session_id')::int AS total
       FROM events
       WHERE store_id = $1
@@ -1251,9 +1277,12 @@ export class FederationSyncService implements OnModuleInit {
         AND created_at >= $2::date
         AND created_at < ($3::date + interval '1 day')
         AND payload->>'session_id' IS NOT NULL
-    `, [storeId, dateFrom, dateTo]);
+    `,
+      [storeId, dateFrom, dateTo],
+    );
 
-    const rows = await this.dataSource.query(`
+    const rows = await this.dataSource.query(
+      `
       SELECT DISTINCT payload->>'session_id' AS id
       FROM events
       WHERE store_id = $1
@@ -1263,7 +1292,9 @@ export class FederationSyncService implements OnModuleInit {
         AND payload->>'session_id' IS NOT NULL
       ORDER BY id
       LIMIT $4 OFFSET $5
-    `, [storeId, dateFrom, dateTo, limit, offset]);
+    `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
 
     return {
       total: Number(totalRows?.[0]?.total || 0),
@@ -1278,7 +1309,8 @@ export class FederationSyncService implements OnModuleInit {
     limit = 10000,
     offset = 0,
   ): Promise<FederationIdsResult> {
-    const totalRows = await this.dataSource.query(`
+    const totalRows = await this.dataSource.query(
+      `
       SELECT COUNT(DISTINCT payload->>'sale_id')::int AS total
       FROM events
       WHERE store_id = $1
@@ -1286,9 +1318,12 @@ export class FederationSyncService implements OnModuleInit {
         AND created_at >= $2::date
         AND created_at < ($3::date + interval '1 day')
         AND payload->>'sale_id' IS NOT NULL
-    `, [storeId, dateFrom, dateTo]);
+    `,
+      [storeId, dateFrom, dateTo],
+    );
 
-    const rows = await this.dataSource.query(`
+    const rows = await this.dataSource.query(
+      `
       SELECT DISTINCT payload->>'sale_id' AS id
       FROM events
       WHERE store_id = $1
@@ -1298,7 +1333,9 @@ export class FederationSyncService implements OnModuleInit {
         AND payload->>'sale_id' IS NOT NULL
       ORDER BY id
       LIMIT $4 OFFSET $5
-    `, [storeId, dateFrom, dateTo, limit, offset]);
+    `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
 
     return {
       total: Number(totalRows?.[0]?.total || 0),
@@ -1313,7 +1350,8 @@ export class FederationSyncService implements OnModuleInit {
     limit = 10000,
     offset = 0,
   ): Promise<FederationIdsResult> {
-    const totalRows = await this.dataSource.query(`
+    const totalRows = await this.dataSource.query(
+      `
       SELECT COUNT(DISTINCT payload->>'movement_id')::int AS total
       FROM events
       WHERE store_id = $1
@@ -1321,9 +1359,12 @@ export class FederationSyncService implements OnModuleInit {
         AND created_at >= $2::date
         AND created_at < ($3::date + interval '1 day')
         AND payload->>'movement_id' IS NOT NULL
-    `, [storeId, dateFrom, dateTo]);
+    `,
+      [storeId, dateFrom, dateTo],
+    );
 
-    const rows = await this.dataSource.query(`
+    const rows = await this.dataSource.query(
+      `
       SELECT DISTINCT payload->>'movement_id' AS id
       FROM events
       WHERE store_id = $1
@@ -1333,7 +1374,9 @@ export class FederationSyncService implements OnModuleInit {
         AND payload->>'movement_id' IS NOT NULL
       ORDER BY id
       LIMIT $4 OFFSET $5
-    `, [storeId, dateFrom, dateTo, limit, offset]);
+    `,
+      [storeId, dateFrom, dateTo, limit, offset],
+    );
 
     return {
       total: Number(totalRows?.[0]?.total || 0),
@@ -1365,7 +1408,14 @@ export class FederationSyncService implements OnModuleInit {
       },
     );
 
-    const [localSales, localInventory, localSessions, localDebts, localDebtPayments, localVoids] = await Promise.all([
+    const [
+      localSales,
+      localInventory,
+      localSessions,
+      localDebts,
+      localDebtPayments,
+      localVoids,
+    ] = await Promise.all([
       this.getSalesEventIds(storeId, dateFrom, dateTo),
       this.getInventoryMovementEventIds(storeId, dateFrom, dateTo),
       this.getSessionEventIds(storeId, dateFrom, dateTo),
@@ -1374,34 +1424,89 @@ export class FederationSyncService implements OnModuleInit {
       this.getVoidedSalesEventIds(storeId, dateFrom, dateTo),
     ]);
 
-    const [remoteSales, remoteInventory, remoteSessions, remoteDebts, remoteDebtPayments, remoteVoids] = await Promise.all([
-      this.fetchRemoteIds('/sync/federation/sales-ids', storeId, dateFrom, dateTo),
-      this.fetchRemoteIds('/sync/federation/inventory-movement-ids', storeId, dateFrom, dateTo),
-      this.fetchRemoteIds('/sync/federation/session-ids', storeId, dateFrom, dateTo),
-      this.fetchRemoteIds('/sync/federation/debt-ids', storeId, dateFrom, dateTo),
-      this.fetchRemoteIds('/sync/federation/debt-payment-ids', storeId, dateFrom, dateTo),
-      this.fetchRemoteIds('/sync/federation/voided-sales-ids', storeId, dateFrom, dateTo),
+    const [
+      remoteSales,
+      remoteInventory,
+      remoteSessions,
+      remoteDebts,
+      remoteDebtPayments,
+      remoteVoids,
+    ] = await Promise.all([
+      this.fetchRemoteIds(
+        '/sync/federation/sales-ids',
+        storeId,
+        dateFrom,
+        dateTo,
+      ),
+      this.fetchRemoteIds(
+        '/sync/federation/inventory-movement-ids',
+        storeId,
+        dateFrom,
+        dateTo,
+      ),
+      this.fetchRemoteIds(
+        '/sync/federation/session-ids',
+        storeId,
+        dateFrom,
+        dateTo,
+      ),
+      this.fetchRemoteIds(
+        '/sync/federation/debt-ids',
+        storeId,
+        dateFrom,
+        dateTo,
+      ),
+      this.fetchRemoteIds(
+        '/sync/federation/debt-payment-ids',
+        storeId,
+        dateFrom,
+        dateTo,
+      ),
+      this.fetchRemoteIds(
+        '/sync/federation/voided-sales-ids',
+        storeId,
+        dateFrom,
+        dateTo,
+      ),
     ]);
 
     // Sessions diff
-    const sessionsMissingInRemote = this.diff(localSessions.ids, remoteSessions.ids);
-    const sessionsMissingInLocal = this.diff(remoteSessions.ids, localSessions.ids);
+    const sessionsMissingInRemote = this.diff(
+      localSessions.ids,
+      remoteSessions.ids,
+    );
+    const sessionsMissingInLocal = this.diff(
+      remoteSessions.ids,
+      localSessions.ids,
+    );
 
     // Sales diff
     const salesMissingInRemote = this.diff(localSales.ids, remoteSales.ids);
     const salesMissingInLocal = this.diff(remoteSales.ids, localSales.ids);
 
     // Inventory diff
-    const invMissingInRemote = this.diff(localInventory.ids, remoteInventory.ids);
-    const invMissingInLocal = this.diff(remoteInventory.ids, localInventory.ids);
+    const invMissingInRemote = this.diff(
+      localInventory.ids,
+      remoteInventory.ids,
+    );
+    const invMissingInLocal = this.diff(
+      remoteInventory.ids,
+      localInventory.ids,
+    );
 
     // Debts diff
     const debtsMissingInRemote = this.diff(localDebts.ids, remoteDebts.ids);
     const debtsMissingInLocal = this.diff(remoteDebts.ids, localDebts.ids);
 
     // Debt Payments diff
-    const paymentsMissingInRemote = this.diff(localDebtPayments.ids, remoteDebtPayments.ids);
-    const paymentsMissingInLocal = this.diff(remoteDebtPayments.ids, localDebtPayments.ids);
+    const paymentsMissingInRemote = this.diff(
+      localDebtPayments.ids,
+      remoteDebtPayments.ids,
+    );
+    const paymentsMissingInLocal = this.diff(
+      remoteDebtPayments.ids,
+      localDebtPayments.ids,
+    );
 
     // Voided Sales diff (Status bidirectional)
     const voidsMissingInRemote = this.diff(localVoids.ids, remoteVoids.ids);
@@ -1429,7 +1534,12 @@ export class FederationSyncService implements OnModuleInit {
 
     // PASO 3: Replicar deudas y ventas (Local -> Remote)
     // Las deudas antes de los pagos
-    const [debtsToRemoteResult, salesToRemoteResult, invToRemoteResult, voidsToRemoteResult] = await Promise.all([
+    const [
+      debtsToRemoteResult,
+      salesToRemoteResult,
+      invToRemoteResult,
+      voidsToRemoteResult,
+    ] = await Promise.all([
       replayDebtsToRemote.length > 0
         ? this.replayDebtsByIds(storeId, replayDebtsToRemote)
         : Promise.resolve({ queued: 0 }),
@@ -1539,16 +1649,22 @@ export class FederationSyncService implements OnModuleInit {
         remoteStockHealed,
       },
       debts: {
-        remoteMissingCount: debtsMissingInRemote.length + paymentsMissingInRemote.length,
-        localMissingCount: debtsMissingInLocal.length + paymentsMissingInLocal.length,
-        replayedToRemote: Number((debtsToRemoteResult as { queued: number }).queued || 0) +
+        remoteMissingCount:
+          debtsMissingInRemote.length + paymentsMissingInRemote.length,
+        localMissingCount:
+          debtsMissingInLocal.length + paymentsMissingInLocal.length,
+        replayedToRemote:
+          Number((debtsToRemoteResult as { queued: number }).queued || 0) +
           Number((paymentsToRemoteResult as { queued: number }).queued || 0),
-        replayedToLocal: replayDebtsToLocal.length + replayPaymentsToLocal.length,
+        replayedToLocal:
+          replayDebtsToLocal.length + replayPaymentsToLocal.length,
       },
       voids: {
         remoteMissingCount: voidsMissingInRemote.length,
         localMissingCount: voidsMissingInLocal.length,
-        replayedToRemote: Number((voidsToRemoteResult as { queued: number }).queued || 0),
+        replayedToRemote: Number(
+          (voidsToRemoteResult as { queued: number }).queued || 0,
+        ),
         replayedToLocal: replayVoidsToLocal.length,
       },
     };
@@ -1576,19 +1692,21 @@ export class FederationSyncService implements OnModuleInit {
     dateFrom: string,
     dateTo: string,
   ): Promise<FederationIdsResult> {
-    const response = await this.circuitBreaker.execute(() => axios.get(`${this.remoteUrl}${endpoint}`, {
-      headers: {
-        Authorization: `Bearer ${this.adminKey}`,
-      },
-      params: {
-        store_id: storeId,
-        date_from: dateFrom,
-        date_to: dateTo,
-        limit: 10000,
-        offset: 0,
-      },
-      timeout: 15000,
-    }));
+    const response = await this.circuitBreaker.execute(() =>
+      axios.get(`${this.remoteUrl}${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${this.adminKey}`,
+        },
+        params: {
+          store_id: storeId,
+          date_from: dateFrom,
+          date_to: dateTo,
+          limit: 10000,
+          offset: 0,
+        },
+        timeout: 15000,
+      }),
+    );
     return {
       total: Number(response.data?.total || 0),
       ids: Array.isArray(response.data?.ids) ? response.data.ids : [],
@@ -1599,29 +1717,33 @@ export class FederationSyncService implements OnModuleInit {
     endpoint: string,
     payload: Record<string, unknown>,
   ) {
-    await this.circuitBreaker.execute(() => axios.post(`${this.remoteUrl}${endpoint}`, payload, {
-      headers: {
-        Authorization: `Bearer ${this.adminKey}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 15000,
-    }));
-  }
-
-  private async postRemoteStockReconcile(
-    storeId: string,
-  ): Promise<InventoryStockReconcileResult | null> {
-    const response = await this.circuitBreaker.execute(() => axios.post(
-      `${this.remoteUrl}/sync/federation/reconcile-inventory-stock`,
-      { store_id: storeId },
-      {
+    await this.circuitBreaker.execute(() =>
+      axios.post(`${this.remoteUrl}${endpoint}`, payload, {
         headers: {
           Authorization: `Bearer ${this.adminKey}`,
           'Content-Type': 'application/json',
         },
         timeout: 15000,
-      },
-    ));
+      }),
+    );
+  }
+
+  private async postRemoteStockReconcile(
+    storeId: string,
+  ): Promise<InventoryStockReconcileResult | null> {
+    const response = await this.circuitBreaker.execute(() =>
+      axios.post(
+        `${this.remoteUrl}/sync/federation/reconcile-inventory-stock`,
+        { store_id: storeId },
+        {
+          headers: {
+            Authorization: `Bearer ${this.adminKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000,
+        },
+      ),
+    );
 
     return response.data as InventoryStockReconcileResult;
   }

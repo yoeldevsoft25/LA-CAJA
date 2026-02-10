@@ -34,7 +34,7 @@ export class DebtsService {
     private exchangeService: ExchangeService,
     private accountingService: AccountingService,
     private whatsappMessagingService: WhatsAppMessagingService,
-  ) { }
+  ) {}
 
   async createDebtFromSale(
     storeId: string,
@@ -444,13 +444,11 @@ export class DebtsService {
       .leftJoinAndSelect('debt.sale', 'sale')
       .where('debt.store_id = :storeId', { storeId })
       .andWhere('debt.customer_id = :customerId', { customerId })
-      .andWhere(
-        '(:includePaid = true OR debt.status = :openStatus)',
-        { includePaid, openStatus: DebtStatus.OPEN }
-      )
-      .andWhere(
-        '(debt.sale_id IS NULL OR sale.voided_at IS NULL)',
-      ); // Excluir deudas de ventas anuladas usando el join ya existente
+      .andWhere('(:includePaid = true OR debt.status = :openStatus)', {
+        includePaid,
+        openStatus: DebtStatus.OPEN,
+      })
+      .andWhere('(debt.sale_id IS NULL OR sale.voided_at IS NULL)'); // Excluir deudas de ventas anuladas usando el join ya existente
 
     query.orderBy('debt.created_at', 'DESC');
 
@@ -465,9 +463,7 @@ export class DebtsService {
       .leftJoinAndSelect('debt.sale', 'sale')
       .where('debt.store_id = :storeId', { storeId })
       .andWhere('debt.customer_id = :customerId', { customerId })
-      .andWhere(
-        '(debt.sale_id IS NULL OR sale.voided_at IS NULL)',
-      )
+      .andWhere('(debt.sale_id IS NULL OR sale.voided_at IS NULL)')
       .getMany();
 
     let totalDebtBs = 0;
@@ -530,9 +526,7 @@ export class DebtsService {
       .leftJoinAndSelect('debt.payments', 'payments')
       .leftJoinAndSelect('debt.sale', 'sale')
       .where('debt.store_id = :storeId', { storeId })
-      .andWhere(
-        '(debt.sale_id IS NULL OR sale.voided_at IS NULL)',
-      ); // Excluir deudas de ventas anuladas
+      .andWhere('(debt.sale_id IS NULL OR sale.voided_at IS NULL)'); // Excluir deudas de ventas anuladas
 
     if (status) {
       query.andWhere('debt.status = :status', { status });
@@ -820,7 +814,7 @@ export class DebtsService {
         const allocations = debtBalances.map((entry) =>
           Math.floor(
             (paymentCents * Math.round(entry.remainingUsd * 100)) /
-            totalRemainingCents,
+              totalRemainingCents,
           ),
         );
 
@@ -923,9 +917,9 @@ export class DebtsService {
               payUsd,
               dto.method,
               dto.note ||
-              (isSelective
-                ? 'Pago de deudas seleccionadas'
-                : 'Pago completo de todas las deudas'),
+                (isSelective
+                  ? 'Pago de deudas seleccionadas'
+                  : 'Pago completo de todas las deudas'),
             ],
           );
 

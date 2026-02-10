@@ -5,11 +5,9 @@ import { FiscalController } from './fiscal.controller';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-    imports: [
-        AuthModule,
-    ],
-    controllers: [FiscalController],
-    providers: [FiscalSequenceService],
-    exports: [FiscalSequenceService],
+  imports: [AuthModule],
+  controllers: [FiscalController],
+  providers: [FiscalSequenceService],
+  exports: [FiscalSequenceService],
 })
-export class FiscalModule { }
+export class FiscalModule {}

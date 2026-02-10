@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { X, Search, Scale, Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Monitor, Calculator } from 'lucide-react'
+import { X, Search, Scale, Package, Coffee, Apple, Beef, Shirt, Home, Cpu, Pill, ShoppingBag, Monitor, Calculator, UtensilsCrossed } from 'lucide-react'
 import { productsService, Product, RecipeIngredient } from '@la-caja/app-core'
 import { exchangeService } from '@la-caja/app-core'
 import { suppliersService } from '@/services/suppliers.service'
@@ -24,14 +24,10 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
 import { RecipeIngredientManager } from './RecipeIngredientManager'
 import { recipesService } from '@/services/recipes.service'
+
+type ProductMode = 'item' | 'weight' | 'restaurant'
 
 const productSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
@@ -133,8 +129,39 @@ export default function ProductFormModal({
   const [applySupplierPriceToSale, setApplySupplierPriceToSale] = useState(false)
   const [calculatorCurrency, setCalculatorCurrency] = useState<'BS' | 'USD'>('BS')
   const [recipeIngredients, setRecipeIngredients] = useState<Partial<RecipeIngredient>[]>([])
-  const [activeTab, setActiveTab] = useState('general')
+  const [selectedMode, setSelectedMode] = useState<ProductMode>('item')
   const submitGuardRef = useRef(false)
+
+  // Derive product mode from product data
+  const deriveMode = useCallback((p: Product | null | undefined): ProductMode => {
+    if (!p) return 'item'
+    if (p.is_recipe || p.product_type === 'prepared') return 'restaurant'
+    if (p.is_weight_product) return 'weight'
+    return 'item'
+  }, [])
+
+  // Sync form fields when mode changes
+  const handleModeChange = useCallback((mode: ProductMode) => {
+    setSelectedMode(mode)
+    switch (mode) {
+      case 'item':
+        setValue('is_weight_product', false)
+        setValue('is_recipe', false)
+        setValue('product_type', 'sale_item')
+        break
+      case 'weight':
+        setValue('is_weight_product', true)
+        setValue('is_recipe', false)
+        setValue('product_type', 'sale_item')
+        if (!getValues('weight_unit')) setValue('weight_unit', 'kg')
+        break
+      case 'restaurant':
+        setValue('is_weight_product', false)
+        setValue('is_recipe', true)
+        setValue('product_type', 'prepared')
+        break
+    }
+  }, [setValue, getValues])
 
   // Obtener tasa BCV para cálculo automático (usa cache del prefetch)
   // Carga inmediata porque es ligera y necesaria para cálculos
@@ -179,7 +206,7 @@ export default function ProductFormModal({
   const priceBs = useWatch({ control, name: 'price_bs' })
   const costBs = useWatch({ control, name: 'cost_bs' })
   const isWeightProduct = useWatch({ control, name: 'is_weight_product' })
-  const productType = useWatch({ control, name: 'product_type' })
+  // productType is now derived from selectedMode
   const pricePerWeightUsd = useWatch({ control, name: 'price_per_weight_usd' })
   const costPerWeightUsd = useWatch({ control, name: 'cost_per_weight_usd' })
   const pricePerWeightBs = useWatch({ control, name: 'price_per_weight_bs' })
@@ -505,6 +532,7 @@ export default function ProductFormModal({
         public_image_url: productToUse.public_image_url || '',
         public_category: productToUse.public_category || '',
       })
+      setSelectedMode(deriveMode(productToUse))
     } else {
       reset({
         name: '',
@@ -537,8 +565,9 @@ export default function ProductFormModal({
         public_image_url: '',
         public_category: '',
       })
+      setSelectedMode('item')
     }
-  }, [isOpen, productToUse, reset])
+  }, [isOpen, productToUse, reset, deriveMode])
 
   useEffect(() => {
     if (!isOpen) return
@@ -869,17 +898,38 @@ export default function ProductFormModal({
           })}
           className="flex-1 flex flex-col min-h-0 overflow-hidden"
         >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <div className="px-3 sm:px-4 md:px-6 pt-2">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="general">General</TabsTrigger>
-                <TabsTrigger value="weight">Control de Peso</TabsTrigger>
-                <TabsTrigger value="restaurant">Restaurante</TabsTrigger>
-              </TabsList>
-            </div>
-
+          <div className="flex-1 flex flex-col min-h-0">
             <CardContent className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overscroll-contain">
-              <TabsContent value="general" className="space-y-4 sm:space-y-6 mt-0">
+              {/* ── Tipo de Producto ── */}
+              <div>
+                <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tipo de Producto</Label>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-2">
+                  {([
+                    { mode: 'item' as ProductMode, icon: Package, label: 'Por Unidad', desc: 'Venta por pieza' },
+                    { mode: 'weight' as ProductMode, icon: Scale, label: 'Por Peso', desc: 'Venta por kg/lb' },
+                    { mode: 'restaurant' as ProductMode, icon: UtensilsCrossed, label: 'Restaurante', desc: 'Plato / Receta' },
+                  ]).map(({ mode, icon: Icon, label, desc }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleModeChange(mode)}
+                      className={`relative flex flex-col items-center gap-1 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-center ${selectedMode === mode
+                        ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary/20'
+                        : 'border-border/60 bg-muted/20 hover:border-muted-foreground/30 hover:bg-muted/40'
+                        }`}
+                    >
+                      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${selectedMode === mode ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className={`text-xs sm:text-sm font-semibold leading-tight ${selectedMode === mode ? 'text-primary' : 'text-foreground'}`}>{label}</span>
+                      <span className="text-[10px] text-muted-foreground hidden sm:block">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* ── Información Básica ── */}
+              <div className="space-y-4 sm:space-y-6">
                 {/* Nombre */}
                 <div>
                   <Label htmlFor="name" className="text-sm font-semibold">
@@ -1314,388 +1364,337 @@ export default function ProductFormModal({
                   </p>
                 </div>
 
-              </TabsContent>
+              </div>
 
-              <TabsContent value="weight" className="space-y-4 sm:space-y-6 mt-0">
-                {/* Producto con peso */}
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="is_weight_product" className="text-base font-semibold">
-                      Producto con Peso
+              {/* ── Configuración de Peso (solo modo peso) ── */}
+              {selectedMode === 'weight' && (
+                <div className="space-y-4 border border-primary/20 rounded-lg p-4 bg-primary/5 animate-in fade-in duration-200">
+                  <h3 className="font-semibold text-foreground">Configuración de Peso</h3>
+
+                  {/* Unidad de peso */}
+                  <div>
+                    <Label htmlFor="weight_unit" className="text-sm font-semibold">
+                      Unidad de Peso <span className="text-destructive">*</span>
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Activa esta opción si el producto se vende por peso (ej: carne, frutas, verduras)
-                    </p>
-                  </div>
-                  <Switch
-                    id="is_weight_product"
-                    checked={isWeightProduct || false}
-                    onCheckedChange={(checked) => setValue('is_weight_product', checked)}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* Campos de peso (solo si is_weight_product está activado) */}
-                {isWeightProduct && (
-                  <div className="space-y-4 border border-primary/20 rounded-lg p-4 bg-primary/5">
-                    <h3 className="font-semibold text-foreground">Configuración de Peso</h3>
-
-                    {/* Unidad de peso */}
-                    <div>
-                      <Label htmlFor="weight_unit" className="text-sm font-semibold">
-                        Unidad de Peso <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={weightUnit || 'kg'}
-                        onValueChange={(value) =>
-                          setValue('weight_unit', value as 'kg' | 'g' | 'lb' | 'oz')
-                        }
-                        disabled={isLoading}
-                      >
-                        <SelectTrigger className="mt-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">Kilogramos (kg)</SelectItem>
-                          <SelectItem value="g">Gramos (g)</SelectItem>
-                          <SelectItem value="lb">Libras (lb)</SelectItem>
-                          <SelectItem value="oz">Onzas (oz)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Precio por peso */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="price_per_weight_usd" className="text-sm font-semibold">
-                          Precio por Peso USD ({weightUnit || 'kg'})
-                          <span className="text-destructive"> *</span>
-                        </Label>
-                        <Input
-                          id="price_per_weight_usd"
-                          type="number"
-                          inputMode="decimal"
-                          step={weightPriceStep}
-                          {...register('price_per_weight_usd', { valueAsNumber: true, onChange: handleWeightPriceUsdChange })}
-                          className="mt-2 text-base"
-                          placeholder="0.00"
-                        />
-                        {errors.price_per_weight_usd && (
-                          <p className="mt-1 text-xs text-destructive">
-                            {errors.price_per_weight_usd.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="price_per_weight_bs" className="text-sm font-semibold">
-                          Precio por Peso Bs ({weightUnit || 'kg'})
-                          <span className="text-destructive"> *</span>
-                        </Label>
-                        <Input
-                          id="price_per_weight_bs"
-                          type="number"
-                          step={weightPriceStep}
-                          {...register('price_per_weight_bs', { valueAsNumber: true, onChange: handleWeightPriceBsChange })}
-                          className="mt-2 text-base"
-                          placeholder="0.00"
-                        />
-                        {errors.price_per_weight_bs && (
-                          <p className="mt-1 text-xs text-destructive">
-                            {errors.price_per_weight_bs.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Costo por peso */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="cost_per_weight_usd" className="text-sm font-semibold">
-                          Costo por Peso USD ({weightUnit || 'kg'})
-                        </Label>
-                        <Input
-                          id="cost_per_weight_usd"
-                          type="number"
-                          inputMode="decimal"
-                          step={weightPriceStep}
-                          {...register('cost_per_weight_usd', { valueAsNumber: true, onChange: handleWeightCostUsdChange })}
-                          className="mt-2 text-base"
-                          placeholder="0.00"
-                        />
-                        {errors.cost_per_weight_usd && (
-                          <p className="mt-1 text-xs text-destructive">
-                            {errors.cost_per_weight_usd.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="cost_per_weight_bs" className="text-sm font-semibold">
-                          Costo por Peso Bs ({weightUnit || 'kg'})
-                        </Label>
-                        <Input
-                          id="cost_per_weight_bs"
-                          type="number"
-                          step={weightPriceStep}
-                          {...register('cost_per_weight_bs', { valueAsNumber: true, onChange: handleWeightCostBsChange })}
-                          className="mt-2 text-base"
-                          placeholder="0.00"
-                        />
-                        {errors.cost_per_weight_bs && (
-                          <p className="mt-1 text-xs text-destructive">
-                            {errors.cost_per_weight_bs.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Peso mínimo y máximo */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="min_weight" className="text-sm font-semibold">
-                          Peso Mínimo
-                        </Label>
-                        <Input
-                          id="min_weight"
-                          type="number"
-                          inputMode="decimal"
-                          step="0.001"
-                          {...register('min_weight', { valueAsNumber: true })}
-                          className="mt-2 text-base"
-                          placeholder="0.000"
-                        />
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Peso mínimo permitido para la venta
-                        </p>
-                      </div>
-                      <div>
-                        <Label htmlFor="max_weight" className="text-sm font-semibold">
-                          Peso Máximo
-                        </Label>
-                        <Input
-                          id="max_weight"
-                          type="number"
-                          inputMode="decimal"
-                          step="0.001"
-                          {...register('max_weight', { valueAsNumber: true })}
-                          className="mt-2 text-base"
-                          placeholder="0.000"
-                        />
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Peso máximo permitido para la venta
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* PLU y Departamento para balanza */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="scale_plu" className="text-sm font-semibold">
-                          PLU de Balanza
-                        </Label>
-                        <Input
-                          id="scale_plu"
-                          type="text"
-                          {...register('scale_plu')}
-                          className="mt-2 text-base"
-                          placeholder="Ej: 001"
-                          maxLength={50}
-                        />
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Código PLU para identificar el producto en la balanza
-                        </p>
-                      </div>
-                      <div>
-                        <Label htmlFor="scale_department" className="text-sm font-semibold">
-                          Departamento de Balanza
-                        </Label>
-                        <Input
-                          id="scale_department"
-                          type="number"
-                          inputMode="numeric"
-                          step="1"
-                          min="1"
-                          {...register('scale_department', { valueAsNumber: true })}
-                          className="mt-2 text-base"
-                          placeholder="1"
-                        />
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Número de departamento para la balanza
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="restaurant" className="space-y-4 sm:space-y-6 mt-0">
-                {/* Imagen y Descripción */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="image_url" className="text-sm font-semibold">URL de la Imagen</Label>
-                      <Input
-                        id="image_url"
-                        type="url"
-                        {...register('image_url')}
-                        className="mt-2"
-                        placeholder="https://ejemplo.com/imagen.jpg"
-                      />
-                    </div>
-                    {watchedValues.image_url && (
-                      <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted">
-                        <img
-                          src={watchedValues.image_url}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                          onError={(e) => (e.currentTarget.src = 'https://placehold.co/600x400?text=Error+Imagen')}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="description" className="text-sm font-semibold">Descripción del Plato</Label>
-                    <textarea
-                      id="description"
-                      {...register('description')}
-                      className="mt-2 w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      placeholder="Describe los ingredientes, alérgenos o detalles del plato..."
-                    />
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Configuración de Receta */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="product_type" className="text-sm font-semibold">Tipo de Producto</Label>
                     <Select
-                      value={productType || 'sale_item'}
-                      onValueChange={(value) => {
-                        setValue('product_type', value as ProductFormData['product_type'])
-                        if (value === 'ingredient') {
-                          setValue('is_recipe', false)
-                          setValue('is_visible_public', false)
-                        } else if (value === 'prepared') {
-                          setValue('is_recipe', true)
-                        }
-                      }}
+                      value={weightUnit || 'kg'}
+                      onValueChange={(value) =>
+                        setValue('weight_unit', value as 'kg' | 'g' | 'lb' | 'oz')
+                      }
                       disabled={isLoading}
                     >
-                      <SelectTrigger id="product_type" className="mt-2">
-                        <SelectValue placeholder="Selecciona un tipo" />
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="sale_item">Producto de venta</SelectItem>
-                        <SelectItem value="prepared">Plato elaborado / receta</SelectItem>
-                        <SelectItem value="ingredient">Ingrediente (solo interno)</SelectItem>
+                        <SelectItem value="kg">Kilogramos (kg)</SelectItem>
+                        <SelectItem value="g">Gramos (g)</SelectItem>
+                        <SelectItem value="lb">Libras (lb)</SelectItem>
+                        <SelectItem value="oz">Onzas (oz)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/10 p-3 mt-6 sm:mt-8">
+
+                  {/* Precio por peso */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="price_per_weight_usd" className="text-sm font-semibold">
+                        Precio por Peso USD ({weightUnit || 'kg'})
+                        <span className="text-destructive"> *</span>
+                      </Label>
+                      <Input
+                        id="price_per_weight_usd"
+                        type="number"
+                        inputMode="decimal"
+                        step={weightPriceStep}
+                        {...register('price_per_weight_usd', { valueAsNumber: true, onChange: handleWeightPriceUsdChange })}
+                        className="mt-2 text-base"
+                        placeholder="0.00"
+                      />
+                      {errors.price_per_weight_usd && (
+                        <p className="mt-1 text-xs text-destructive">
+                          {errors.price_per_weight_usd.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="price_per_weight_bs" className="text-sm font-semibold">
+                        Precio por Peso Bs ({weightUnit || 'kg'})
+                        <span className="text-destructive"> *</span>
+                      </Label>
+                      <Input
+                        id="price_per_weight_bs"
+                        type="number"
+                        step={weightPriceStep}
+                        {...register('price_per_weight_bs', { valueAsNumber: true, onChange: handleWeightPriceBsChange })}
+                        className="mt-2 text-base"
+                        placeholder="0.00"
+                      />
+                      {errors.price_per_weight_bs && (
+                        <p className="mt-1 text-xs text-destructive">
+                          {errors.price_per_weight_bs.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Costo por peso */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cost_per_weight_usd" className="text-sm font-semibold">
+                        Costo por Peso USD ({weightUnit || 'kg'})
+                      </Label>
+                      <Input
+                        id="cost_per_weight_usd"
+                        type="number"
+                        inputMode="decimal"
+                        step={weightPriceStep}
+                        {...register('cost_per_weight_usd', { valueAsNumber: true, onChange: handleWeightCostUsdChange })}
+                        className="mt-2 text-base"
+                        placeholder="0.00"
+                      />
+                      {errors.cost_per_weight_usd && (
+                        <p className="mt-1 text-xs text-destructive">
+                          {errors.cost_per_weight_usd.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="cost_per_weight_bs" className="text-sm font-semibold">
+                        Costo por Peso Bs ({weightUnit || 'kg'})
+                      </Label>
+                      <Input
+                        id="cost_per_weight_bs"
+                        type="number"
+                        step={weightPriceStep}
+                        {...register('cost_per_weight_bs', { valueAsNumber: true, onChange: handleWeightCostBsChange })}
+                        className="mt-2 text-base"
+                        placeholder="0.00"
+                      />
+                      {errors.cost_per_weight_bs && (
+                        <p className="mt-1 text-xs text-destructive">
+                          {errors.cost_per_weight_bs.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Peso mínimo y máximo */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="min_weight" className="text-sm font-semibold">
+                        Peso Mínimo
+                      </Label>
+                      <Input
+                        id="min_weight"
+                        type="number"
+                        inputMode="decimal"
+                        step="0.001"
+                        {...register('min_weight', { valueAsNumber: true })}
+                        className="mt-2 text-base"
+                        placeholder="0.000"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Peso mínimo permitido para la venta
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="max_weight" className="text-sm font-semibold">
+                        Peso Máximo
+                      </Label>
+                      <Input
+                        id="max_weight"
+                        type="number"
+                        inputMode="decimal"
+                        step="0.001"
+                        {...register('max_weight', { valueAsNumber: true })}
+                        className="mt-2 text-base"
+                        placeholder="0.000"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Peso máximo permitido para la venta
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* PLU y Departamento para balanza */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="scale_plu" className="text-sm font-semibold">
+                        PLU de Balanza
+                      </Label>
+                      <Input
+                        id="scale_plu"
+                        type="text"
+                        {...register('scale_plu')}
+                        className="mt-2 text-base"
+                        placeholder="Ej: 001"
+                        maxLength={50}
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Código PLU para identificar el producto en la balanza
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="scale_department" className="text-sm font-semibold">
+                        Departamento de Balanza
+                      </Label>
+                      <Input
+                        id="scale_department"
+                        type="number"
+                        inputMode="numeric"
+                        step="1"
+                        min="1"
+                        {...register('scale_department', { valueAsNumber: true })}
+                        className="mt-2 text-base"
+                        placeholder="1"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Número de departamento para la balanza
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Restaurante (solo modo restaurante) ── */}
+              {selectedMode === 'restaurant' && (
+                <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-200">
+                  {/* Imagen y Descripción */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="image_url" className="text-sm font-semibold">URL de la Imagen</Label>
+                        <Input
+                          id="image_url"
+                          type="url"
+                          {...register('image_url')}
+                          className="mt-2"
+                          placeholder="https://ejemplo.com/imagen.jpg"
+                        />
+                      </div>
+                      {watchedValues.image_url && (
+                        <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted">
+                          <img
+                            src={watchedValues.image_url}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.currentTarget.src = 'https://placehold.co/600x400?text=Error+Imagen')}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="description" className="text-sm font-semibold">Descripción del Plato</Label>
+                      <textarea
+                        id="description"
+                        {...register('description')}
+                        className="mt-2 w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Describe los ingredientes, alérgenos o detalles del plato..."
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Info badge */}
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                    <UtensilsCrossed className="w-4 h-4 text-primary flex-shrink-0" />
+                    <p className="text-xs text-muted-foreground">
+                      Los platos de restaurante permiten gestionar recetas con ingredientes. El stock se descontará automáticamente de los ingredientes al venderse.
+                    </p>
+                  </div>
+
+                  {/* Visibilidad pública */}
+                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/10 p-3">
                     <div className="space-y-0.5">
                       <Label htmlFor="is_visible_public" className="text-sm font-semibold">Visible en menú público</Label>
                       <p className="text-xs text-muted-foreground">
-                        Solo clientes verán estos productos en el catálogo.
+                        Los clientes verán este producto en el catálogo digital.
                       </p>
                     </div>
                     <Switch
                       id="is_visible_public"
                       checked={watchedValues.is_visible_public || false}
                       onCheckedChange={(checked) => setValue('is_visible_public', checked)}
-                      disabled={isLoading || productType === 'ingredient'}
+                      disabled={isLoading}
                     />
                   </div>
+
+                  {watchedValues.is_visible_public && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="public_name" className="text-sm font-semibold">Nombre público</Label>
+                        <Input
+                          id="public_name"
+                          type="text"
+                          {...register('public_name')}
+                          className="mt-2"
+                          placeholder="Ej: Smash Burger"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="public_category" className="text-sm font-semibold">Categoría pública</Label>
+                        <Input
+                          id="public_category"
+                          type="text"
+                          {...register('public_category')}
+                          className="mt-2"
+                          placeholder="Ej: Hamburguesas"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="public_description" className="text-sm font-semibold">Descripción pública</Label>
+                        <textarea
+                          id="public_description"
+                          {...register('public_description')}
+                          className="mt-2 w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          placeholder="Descripción visible para clientes..."
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="public_image_url" className="text-sm font-semibold">Imagen pública (URL)</Label>
+                        <Input
+                          id="public_image_url"
+                          type="url"
+                          {...register('public_image_url')}
+                          className="mt-2"
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {watchedValues.is_recipe && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                        <Label htmlFor="profit_margin" className="text-sm font-semibold">Margen de Ganancia Deseado (%)</Label>
+                        <Input
+                          id="profit_margin"
+                          type="number"
+                          {...register('profit_margin', { valueAsNumber: true })}
+                          className="mt-2"
+                          placeholder="0"
+                        />
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Margen porcentual sugerido para calcular el precio de venta.
+                        </p>
+                      </div>
+
+                      <RecipeIngredientManager
+                        ingredients={recipeIngredients}
+                        onIngredientsChange={setRecipeIngredients}
+                        onSearchProduct={async (q) => {
+                          const resp = await productsService.search({ q, limit: 10, is_active: true }, user?.store_id)
+                          return resp.products
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="is_recipe" className="text-base font-semibold">Es una Receta / Plato Elaborado</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Si se activa, el stock se descontará de sus ingredientes al venderse.
-                    </p>
-                  </div>
-                  <Switch
-                    id="is_recipe"
-                    checked={watchedValues.is_recipe || false}
-                    onCheckedChange={(checked) => setValue('is_recipe', checked)}
-                    disabled={isLoading || productType === 'ingredient'}
-                  />
-                </div>
-
-                {watchedValues.is_visible_public && productType !== 'ingredient' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="public_name" className="text-sm font-semibold">Nombre público</Label>
-                      <Input
-                        id="public_name"
-                        type="text"
-                        {...register('public_name')}
-                        className="mt-2"
-                        placeholder="Ej: Smash Burger"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="public_category" className="text-sm font-semibold">Categoría pública</Label>
-                      <Input
-                        id="public_category"
-                        type="text"
-                        {...register('public_category')}
-                        className="mt-2"
-                        placeholder="Ej: Hamburguesas"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label htmlFor="public_description" className="text-sm font-semibold">Descripción pública</Label>
-                      <textarea
-                        id="public_description"
-                        {...register('public_description')}
-                        className="mt-2 w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Descripción visible para clientes..."
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label htmlFor="public_image_url" className="text-sm font-semibold">Imagen pública (URL)</Label>
-                      <Input
-                        id="public_image_url"
-                        type="url"
-                        {...register('public_image_url')}
-                        className="mt-2"
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {watchedValues.is_recipe && (
-                  <div className="space-y-6 animate-in fade-in duration-300">
-                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                      <Label htmlFor="profit_margin" className="text-sm font-semibold">Margen de Ganancia Deseado (%)</Label>
-                      <Input
-                        id="profit_margin"
-                        type="number"
-                        {...register('profit_margin', { valueAsNumber: true })}
-                        className="mt-2"
-                        placeholder="0"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Margen porcentual sugerido para calcular el precio de venta.
-                      </p>
-                    </div>
-
-                    <RecipeIngredientManager
-                      ingredients={recipeIngredients}
-                      onIngredientsChange={setRecipeIngredients}
-                      onSearchProduct={async (q) => {
-                        const resp = await productsService.search({ q, limit: 10, is_active: true }, user?.store_id)
-                        return resp.products
-                      }}
-                    />
-                  </div>
-                )}
-              </TabsContent>
+              )}
             </CardContent>
-          </Tabs>
+          </div>
 
           {/* Preview de cómo se ve en POS */}
           {previewProduct.name && previewProduct.name !== 'Nombre del producto' && (
@@ -1787,6 +1786,6 @@ export default function ProductFormModal({
           </div>
         </form>
       </Card>
-    </div>
+    </div >
   )
 }

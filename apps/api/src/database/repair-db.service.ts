@@ -5,7 +5,7 @@ import { DataSource } from 'typeorm';
 export class DbRepairService implements OnModuleInit {
   private readonly logger = new Logger(DbRepairService.name);
 
-  constructor(private dataSource: DataSource) { }
+  constructor(private dataSource: DataSource) {}
 
   async onModuleInit() {
     this.logger.log(

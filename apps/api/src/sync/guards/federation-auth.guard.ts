@@ -15,7 +15,9 @@ export class FederationAuthGuard implements CanActivate {
 
     if (!authHeader || !this.adminSecret) {
       if (!this.adminSecret) {
-        console.warn('[FederationAuthGuard] ADMIN_SECRET not set in environment!');
+        console.warn(
+          '[FederationAuthGuard] ADMIN_SECRET not set in environment!',
+        );
       }
       return true;
     }

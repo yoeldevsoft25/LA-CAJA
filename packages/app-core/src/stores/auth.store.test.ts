@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useAuth, type AuthUser } from './auth.store';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+
+type AuthUser = import('./auth.store').AuthUser;
+type UseAuth = typeof import('./auth.store').useAuth;
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -23,6 +25,13 @@ Object.defineProperty(global, 'localStorage', {
 });
 
 describe('useAuth', () => {
+    let useAuth: UseAuth;
+
+    beforeAll(async () => {
+        // Import AFTER localStorage is defined so zustand persist picks up a real storage.
+        ({ useAuth } = await import('./auth.store'));
+    });
+
     beforeEach(() => {
         localStorage.clear();
         useAuth.setState({ user: null, token: null, isAuthenticated: false });

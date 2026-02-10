@@ -32,7 +32,7 @@ export class HealthController {
     private bullmq: BullMQHealthIndicator,
     private externalApis: ExternalApisHealthIndicator,
     private websocket: WebSocketHealthIndicator,
-  ) { }
+  ) {}
 
   // Cache simple para mejorar rendimiento
   private cache: Map<string, { result: any; time: number }> = new Map();
@@ -180,7 +180,6 @@ export class HealthController {
           );
         }
       });
-
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       this.logger.error(

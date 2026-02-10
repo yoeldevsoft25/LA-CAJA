@@ -159,7 +159,7 @@ export class SyncService {
     @Inject(forwardRef(() => OversellAlertService))
     private oversellAlertService: OversellAlertService,
     private fiscalSequenceService: FiscalSequenceService,
-  ) { }
+  ) {}
 
   async push(
     dto: PushSyncDto,
@@ -219,19 +219,19 @@ export class SyncService {
         }),
         requestIds.length > 0
           ? this.eventRepository.find({
-            where: { request_id: In(requestIds) },
-            select: ['request_id', 'event_id'],
-          })
+              where: { request_id: In(requestIds) },
+              select: ['request_id', 'event_id'],
+            })
           : Promise.resolve([]),
         productIds.size > 0
           ? this.productRepository.find({
-            where: { id: In(Array.from(productIds)), store_id: dto.store_id },
-          })
+              where: { id: In(Array.from(productIds)), store_id: dto.store_id },
+            })
           : Promise.resolve([]),
         sessionIds.size > 0
           ? this.cashSessionRepository.find({
-            where: { id: In(Array.from(sessionIds)), store_id: dto.store_id },
-          })
+              where: { id: In(Array.from(sessionIds)), store_id: dto.store_id },
+            })
           : Promise.resolve([]),
         this.storeRepository.findOne({
           where: { id: dto.store_id },
@@ -240,12 +240,13 @@ export class SyncService {
       ]);
 
     // Fetch stocks (Phase 4: Soft Validation)
-    const warehouseStocks = productIds.size > 0
-      ? await this.warehouseStockRepository.find({
-        where: { product_id: In(Array.from(productIds)) },
-        relations: ['warehouse'],
-      })
-      : [];
+    const warehouseStocks =
+      productIds.size > 0
+        ? await this.warehouseStockRepository.find({
+            where: { product_id: In(Array.from(productIds)) },
+            relations: ['warehouse'],
+          })
+        : [];
 
     // Filter stocks by store_id since we fetched broadly (or optimize query above)
     // Actually optimize query above to filter by store_id via warehouse relation
@@ -255,7 +256,7 @@ export class SyncService {
 
     // Map ProductID -> Total Stock
     const stockMap = new Map<string, number>();
-    warehouseStocks.forEach(ws => {
+    warehouseStocks.forEach((ws) => {
       const current = stockMap.get(ws.product_id) || 0;
       stockMap.set(ws.product_id, current + Number(ws.stock));
     });
@@ -538,8 +539,6 @@ export class SyncService {
       // However, we could trigger the processor immediately if we wanted faster cloud sync,
       // but let's stick to the robust cron design for now.
     }
-
-
 
     const durationMs = Date.now() - startTime;
 
@@ -826,9 +825,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedSubtotalBs - Number(payload.totals.subtotal_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedSubtotalUsd - Number(payload.totals.subtotal_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -839,9 +838,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedDiscountBs - Number(payload.totals.discount_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedDiscountUsd - Number(payload.totals.discount_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -852,9 +851,9 @@ export class SyncService {
 
     if (
       Math.abs(expectedTotalBs - Number(payload.totals.total_bs || 0)) >
-      tolerance ||
+        tolerance ||
       Math.abs(expectedTotalUsd - Number(payload.totals.total_usd || 0)) >
-      tolerance
+        tolerance
     ) {
       return {
         valid: false,
@@ -925,13 +924,19 @@ export class SyncService {
     const actorRole = event.actor?.role || 'cashier';
 
     // Phase 5: Fiscal Validation
-    if (payload.fiscal_number && payload.invoice_series_id && deviceId && authenticatedUserId !== 'system-federation') {
-      const isValidFiscal = await this.fiscalSequenceService.validateFiscalNumber(
-        storeId,
-        Number(payload.fiscal_number),
-        payload.invoice_series_id,
-        deviceId
-      );
+    if (
+      payload.fiscal_number &&
+      payload.invoice_series_id &&
+      deviceId &&
+      authenticatedUserId !== 'system-federation'
+    ) {
+      const isValidFiscal =
+        await this.fiscalSequenceService.validateFiscalNumber(
+          storeId,
+          Number(payload.fiscal_number),
+          payload.invoice_series_id,
+          deviceId,
+        );
 
       if (!isValidFiscal) {
         // Si el número fiscal no pertenece a un rango asignado a este dispositivo
@@ -954,12 +959,17 @@ export class SyncService {
       return {
         valid: false,
         code: 'SECURITY_ERROR',
-        message: 'El usuario del evento no coincide con el usuario autenticado.',
+        message:
+          'El usuario del evento no coincide con el usuario autenticado.',
       };
     }
 
     // 2. Validación de Payload básico
-    if (!payload || !Array.isArray(payload.items) || payload.items.length === 0) {
+    if (
+      !payload ||
+      !Array.isArray(payload.items) ||
+      payload.items.length === 0
+    ) {
       return {
         valid: false,
         code: 'VALIDATION_ERROR',
@@ -1019,8 +1029,12 @@ export class SyncService {
         };
       }
 
-      const isWeightProduct = Boolean(item.is_weight_product || product.is_weight_product);
-      const qty = isWeightProduct ? Number(item.weight_value ?? item.qty) : Number(item.qty);
+      const isWeightProduct = Boolean(
+        item.is_weight_product || product.is_weight_product,
+      );
+      const qty = isWeightProduct
+        ? Number(item.weight_value ?? item.qty)
+        : Number(item.qty);
 
       if (!Number.isFinite(qty) || qty <= 0) {
         return {
@@ -1034,17 +1048,30 @@ export class SyncService {
       const unitPriceUsd = Number(item.unit_price_usd ?? 0);
 
       // Validación de precios (mismo lógica que original pero sin DB hit)
-      const productPriceBs = isWeightProduct ? Number(product.price_per_weight_bs ?? 0) : Number(product.price_bs ?? 0);
-      const productPriceUsd = isWeightProduct ? Number(product.price_per_weight_usd ?? 0) : Number(product.price_usd ?? 0);
+      const productPriceBs = isWeightProduct
+        ? Number(product.price_per_weight_bs ?? 0)
+        : Number(product.price_bs ?? 0);
+      const productPriceUsd = isWeightProduct
+        ? Number(product.price_per_weight_usd ?? 0)
+        : Number(product.price_usd ?? 0);
 
       if (productPriceBs > 0) {
         if (isWeightProduct) {
-          const deviationBs = Math.abs(unitPriceBs - productPriceBs) / productPriceBs;
+          const deviationBs =
+            Math.abs(unitPriceBs - productPriceBs) / productPriceBs;
           if (deviationBs > allowedDeviation && actorRole !== 'owner') {
-            return { valid: false, code: 'SECURITY_ERROR', message: `Precio modificado para ${product.name}.` };
+            return {
+              valid: false,
+              code: 'SECURITY_ERROR',
+              message: `Precio modificado para ${product.name}.`,
+            };
           }
         } else if (Math.abs(unitPriceBs - productPriceBs) > tolerance) {
-          return { valid: false, code: 'SECURITY_ERROR', message: `Precio de ${product.name} no coincide.` };
+          return {
+            valid: false,
+            code: 'SECURITY_ERROR',
+            message: `Precio de ${product.name} no coincide.`,
+          };
         }
       }
 
@@ -1063,7 +1090,11 @@ export class SyncService {
         if (currentStock - qty < 0) {
           const warning = `Stock insuficiente para ${product.name} (Stock: ${currentStock}, Solicitado: ${qty})`;
           // Async alert (fire & forget)
-          this.oversellAlertService.createOversellAlert(storeId, event.event_id, [warning]);
+          this.oversellAlertService.createOversellAlert(
+            storeId,
+            event.event_id,
+            [warning],
+          );
         }
 
         // Decrement provisional stock map for next iteration
@@ -1073,10 +1104,14 @@ export class SyncService {
 
     // 5. Validación de totales
     if (!payload.totals) {
-      return { valid: false, code: 'VALIDATION_ERROR', message: 'Faltan totales.' };
+      return {
+        valid: false,
+        code: 'VALIDATION_ERROR',
+        message: 'Faltan totales.',
+      };
     }
 
-    // No repetimos toda la lógica de validación de descuentos aquí para brevedad 
+    // No repetimos toda la lógica de validación de descuentos aquí para brevedad
     // pero incluimos lo esencial para evitar N+1
 
     return { valid: true };

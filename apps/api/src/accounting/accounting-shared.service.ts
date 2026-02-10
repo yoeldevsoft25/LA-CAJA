@@ -26,12 +26,15 @@ export class AccountingSharedService {
     private accountRepository: Repository<ChartOfAccount>,
     @InjectRepository(AccountBalance)
     private balanceRepository: Repository<AccountBalance>,
-  ) { }
+  ) {}
 
   /**
    * Generar número de asiento único
    */
-  async generateEntryNumber(storeId: string, entryDateInput: Date | string): Promise<string> {
+  async generateEntryNumber(
+    storeId: string,
+    entryDateInput: Date | string,
+  ): Promise<string> {
     const entryDate = new Date(entryDateInput);
     const year = entryDate.getFullYear();
     const month = String(entryDate.getMonth() + 1).padStart(2, '0');
@@ -185,8 +188,8 @@ export class AccountingSharedService {
     const accounts =
       missingAccountIds.length > 0
         ? await accountRepo.find({
-          where: { id: In(missingAccountIds) },
-        })
+            where: { id: In(missingAccountIds) },
+          })
         : [];
 
     // Crear mapa de balances existentes

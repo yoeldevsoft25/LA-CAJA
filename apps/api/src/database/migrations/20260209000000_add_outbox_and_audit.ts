@@ -1,11 +1,11 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddOutboxAndAuditTables20260209000000 implements MigrationInterface {
-    name = 'AddOutboxAndAuditTables20260209000000';
+  name = 'AddOutboxAndAuditTables20260209000000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Outbox para garantizar atomicidad event + projection + relay
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // 1. Outbox para garantizar atomicidad event + projection + relay
+    await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS outbox_entries (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         event_id VARCHAR(255) NOT NULL,
@@ -20,19 +20,19 @@ export class AddOutboxAndAuditTables20260209000000 implements MigrationInterface
       );
     `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS idx_outbox_pending 
         ON outbox_entries (created_at) 
         WHERE status = 'pending';
     `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS idx_outbox_event_id 
         ON outbox_entries (event_id);
     `);
 
-        // 2. Audit trail para conflictos resueltos
-        await queryRunner.query(`
+    // 2. Audit trail para conflictos resueltos
+    await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS conflict_audit_log (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         store_id UUID NOT NULL,
@@ -48,13 +48,13 @@ export class AddOutboxAndAuditTables20260209000000 implements MigrationInterface
       );
     `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS idx_conflict_audit_store 
         ON conflict_audit_log (store_id, resolved_at DESC);
     `);
 
-        // 3. Fiscal sequence ranges (preparación Phase 3)
-        await queryRunner.query(`
+    // 3. Fiscal sequence ranges (preparación Phase 3)
+    await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS fiscal_sequence_ranges (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         store_id UUID NOT NULL,
@@ -72,14 +72,14 @@ export class AddOutboxAndAuditTables20260209000000 implements MigrationInterface
       );
     `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS idx_fiscal_ranges_active 
         ON fiscal_sequence_ranges (store_id, device_id, status) 
         WHERE status = 'active';
     `);
 
-        // 4. Federation health snapshots (Phase 5 prep)
-        await queryRunner.query(`
+    // 4. Federation health snapshots (Phase 5 prep)
+    await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS federation_health_snapshots (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         store_id UUID NOT NULL,
@@ -96,16 +96,16 @@ export class AddOutboxAndAuditTables20260209000000 implements MigrationInterface
       );
     `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS idx_health_snapshots 
         ON federation_health_snapshots (store_id, snapshot_at DESC);
     `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP TABLE IF EXISTS federation_health_snapshots`);
-        await queryRunner.query(`DROP TABLE IF EXISTS fiscal_sequence_ranges`);
-        await queryRunner.query(`DROP TABLE IF EXISTS conflict_audit_log`);
-        await queryRunner.query(`DROP TABLE IF EXISTS outbox_entries`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TABLE IF EXISTS federation_health_snapshots`);
+    await queryRunner.query(`DROP TABLE IF EXISTS fiscal_sequence_ranges`);
+    await queryRunner.query(`DROP TABLE IF EXISTS conflict_audit_log`);
+    await queryRunner.query(`DROP TABLE IF EXISTS outbox_entries`);
+  }
 }

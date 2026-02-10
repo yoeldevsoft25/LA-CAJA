@@ -64,7 +64,11 @@ import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { RedisCacheModule } from './common/cache/redis-cache.module';
-import { RedisModule, REDIS_CLIENT, REDIS_SUBSCRIBER } from './common/redis/redis.module';
+import {
+  RedisModule,
+  REDIS_CLIENT,
+  REDIS_SUBSCRIBER,
+} from './common/redis/redis.module';
 // Nota: LicenseWatcherService necesita NotificationsGateway, que está en NotificationsModule
 // Importar todas las entidades desde el índice centralizado
 // Esto reduce el tamaño del objeto serializado y mejora el rendimiento del bootstrap
@@ -122,64 +126,64 @@ const QUEUES_ENABLED =
     // El plan gratuito de Redis Cloud tiene límite de ~10-30 conexiones
     ...(QUEUES_ENABLED
       ? [
-        BullModule.forRootAsync({
-          imports: [ConfigModule, RedisModule],
-          inject: [ConfigService, REDIS_CLIENT, REDIS_SUBSCRIBER],
-          useFactory: async (
-            configService: ConfigService,
-            sharedClient: Redis,
-            sharedSubscriber: Redis,
-          ) => {
-            const redisUrl = configService.get<string>('REDIS_URL');
-            let connectionOpts: any = {};
+          BullModule.forRootAsync({
+            imports: [ConfigModule, RedisModule],
+            inject: [ConfigService, REDIS_CLIENT, REDIS_SUBSCRIBER],
+            useFactory: async (
+              configService: ConfigService,
+              sharedClient: Redis,
+              sharedSubscriber: Redis,
+            ) => {
+              const redisUrl = configService.get<string>('REDIS_URL');
+              let connectionOpts: any = {};
 
-            if (redisUrl) {
-              connectionOpts = {
-                url: redisUrl,
-                maxRetriesPerRequest: null,
-                enableOfflineQueue: true,
-                connectTimeout: 5000,
-              };
-            } else {
-              connectionOpts = {
-                host: configService.get<string>('REDIS_HOST') || 'localhost',
-                port: configService.get<number>('REDIS_PORT') || 6379,
-                password: configService.get<string>('REDIS_PASSWORD'),
-                maxRetriesPerRequest: null,
-                enableOfflineQueue: true,
-                connectTimeout: 5000,
-              };
-            }
+              if (redisUrl) {
+                connectionOpts = {
+                  url: redisUrl,
+                  maxRetriesPerRequest: null,
+                  enableOfflineQueue: true,
+                  connectTimeout: 5000,
+                };
+              } else {
+                connectionOpts = {
+                  host: configService.get<string>('REDIS_HOST') || 'localhost',
+                  port: configService.get<number>('REDIS_PORT') || 6379,
+                  password: configService.get<string>('REDIS_PASSWORD'),
+                  maxRetriesPerRequest: null,
+                  enableOfflineQueue: true,
+                  connectTimeout: 5000,
+                };
+              }
 
-            return {
-              connection: connectionOpts,
-              createClient: (type) => {
-                switch (type) {
-                  case 'client':
-                    return sharedClient;
-                  case 'subscriber':
-                    return sharedSubscriber;
-                  case 'bclient':
-                    // bclient (blocking client) NO puede ser compartido entre workers
-                    return sharedClient.duplicate();
-                  default:
-                    return sharedClient.duplicate();
-                }
-              },
-              // Opciones por defecto para jobs
-              defaultJobOptions: {
-                removeOnComplete: 100, // Mantener solo los últimos 100 trabajos completados
-                removeOnFail: 200, // Mantener los últimos 200 fallidos para debugging
-                attempts: 3,
-                backoff: {
-                  type: 'exponential',
-                  delay: 1000,
+              return {
+                connection: connectionOpts,
+                createClient: (type) => {
+                  switch (type) {
+                    case 'client':
+                      return sharedClient;
+                    case 'subscriber':
+                      return sharedSubscriber;
+                    case 'bclient':
+                      // bclient (blocking client) NO puede ser compartido entre workers
+                      return sharedClient.duplicate();
+                    default:
+                      return sharedClient.duplicate();
+                  }
                 },
-              },
-            };
-          },
-        }),
-      ]
+                // Opciones por defecto para jobs
+                defaultJobOptions: {
+                  removeOnComplete: 100, // Mantener solo los últimos 100 trabajos completados
+                  removeOnFail: 200, // Mantener los últimos 200 fallidos para debugging
+                  attempts: 3,
+                  backoff: {
+                    type: 'exponential',
+                    delay: 1000,
+                  },
+                },
+              };
+            },
+          }),
+        ]
       : []),
     // Rate limiting global
     ThrottlerModule.forRootAsync({
@@ -271,7 +275,9 @@ const QUEUES_ENABLED =
           // Usar array centralizado de entidades para reducir serialización
           entities: ALL_ENTITIES,
           synchronize: false, // Usamos migraciones SQL manuales
-          logging: configService.get<string>('NODE_ENV') === 'development' || configService.get<string>('DB_LOGGING') === 'true',
+          logging:
+            configService.get<string>('NODE_ENV') === 'development' ||
+            configService.get<string>('DB_LOGGING') === 'true',
           // Configuración robusta del pool de conexiones para Render/Cloud
           extra: {
             // Pool de conexiones (más conservador en desarrollo local con VPN)
@@ -295,9 +301,9 @@ const QUEUES_ENABLED =
           ssl:
             (isCloudDatabase || isProduction) && !isLocalDbHost(resolvedDb.host)
               ? {
-                rejectUnauthorized: sslRejectUnauthorized,
-                ...(sslCa ? { ca: sslCa } : {}),
-              }
+                  rejectUnauthorized: sslRejectUnauthorized,
+                  ...(sslCa ? { ca: sslCa } : {}),
+                }
               : false,
         };
       },
@@ -387,4 +393,4 @@ const QUEUES_ENABLED =
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

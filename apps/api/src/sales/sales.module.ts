@@ -110,4 +110,4 @@ import { ReturnSaleHandler } from './application/commands/return-sale/return-sal
   ],
   exports: [SalesService],
 })
-export class SalesModule { }
+export class SalesModule {}

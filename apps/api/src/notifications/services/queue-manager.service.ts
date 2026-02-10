@@ -19,7 +19,7 @@ export class QueueManagerService implements OnModuleInit {
     private notificationsQueue: Queue,
     @InjectRepository(Store)
     private storeRepository: Repository<Store>,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     this.logger.log('Queue Manager initialized');
@@ -105,7 +105,8 @@ export class QueueManagerService implements OnModuleInit {
    */
   @Cron(CronExpression.EVERY_HOUR)
   async processMLInsightsHourly() {
-    const isEnabled = process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+    const isEnabled =
+      process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
       process.env.EMAIL_ENABLED?.toLowerCase() !== 'false';
     if (!isEnabled) return;
 
@@ -135,7 +136,8 @@ export class QueueManagerService implements OnModuleInit {
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async processEmailQueueCron() {
-    const isEnabled = process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+    const isEnabled =
+      process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
       process.env.EMAIL_ENABLED?.toLowerCase() !== 'false';
     if (!isEnabled) return;
 
@@ -164,7 +166,8 @@ export class QueueManagerService implements OnModuleInit {
     timeZone: 'America/La_Paz',
   })
   async generateDailyDigestsCron() {
-    const isEnabled = process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+    const isEnabled =
+      process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
       process.env.EMAIL_ENABLED?.toLowerCase() !== 'false';
     if (!isEnabled) return;
 
@@ -205,7 +208,8 @@ export class QueueManagerService implements OnModuleInit {
     timeZone: 'America/Caracas',
   })
   async generateWeeklyOwnerReportsCron() {
-    const isEnabled = process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
+    const isEnabled =
+      process.env.QUEUES_ENABLED?.toLowerCase() !== 'false' &&
       process.env.EMAIL_ENABLED?.toLowerCase() !== 'false';
     if (!isEnabled) return;
 

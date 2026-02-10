@@ -39,7 +39,7 @@ export class CRDTService {
   private readonly orSet = new ORSet();
   private readonly rgaComp = new RGACRDT<any>();
 
-  constructor(private readonly vectorClockService: VectorClockService) { }
+  constructor(private readonly vectorClockService: VectorClockService) {}
 
   /**
    * Aplica un delta a un estado CRDT basado en el tipo de entidad

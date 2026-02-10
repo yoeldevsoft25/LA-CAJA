@@ -66,4 +66,4 @@ import { LicensesModule } from '../licenses/licenses.module';
     ReconciliationService,
   ],
 })
-export class AccountingModule { }
+export class AccountingModule {}

@@ -12,7 +12,9 @@ import { REDIS_CLIENT } from '../../common/redis/redis.module';
 export class RedisHealthIndicator extends HealthIndicator {
   constructor(
     private configService: ConfigService,
-    @Optional() @Inject(REDIS_CLIENT) private readonly redisClient: Redis | null,
+    @Optional()
+    @Inject(REDIS_CLIENT)
+    private readonly redisClient: Redis | null,
   ) {
     super();
   }
@@ -70,5 +72,4 @@ export class RedisHealthIndicator extends HealthIndicator {
       );
     }
   }
-
 }

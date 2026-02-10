@@ -44,7 +44,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly securityAudit: SecurityAuditService,
-  ) { }
+  ) {}
 
   /**
    * Lista pública de tiendas (solo id y nombre) para flujo de login
@@ -136,11 +136,11 @@ export class AuthController {
       userFromRequest: req.user,
       userFromDB: member
         ? {
-          user_id: member.user_id,
-          store_id: member.store_id,
-          role: member.role,
-          full_name: member.profile?.full_name,
-        }
+            user_id: member.user_id,
+            store_id: member.store_id,
+            role: member.role,
+            full_name: member.profile?.full_name,
+          }
         : null,
       comparison: {
         roleInToken,

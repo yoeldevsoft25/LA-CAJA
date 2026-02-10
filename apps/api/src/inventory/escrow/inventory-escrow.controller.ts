@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 @Controller('inventory/escrow')
 @UseGuards(JwtAuthGuard)
 export class InventoryEscrowController {
-  constructor(private readonly escrowService: InventoryEscrowService) { }
+  constructor(private readonly escrowService: InventoryEscrowService) {}
 
   async grantQuota(@Body() dto: GrantStockQuotaDto, @Request() req: any) {
     const storeId = req.user.store_id;
@@ -25,7 +25,10 @@ export class InventoryEscrowController {
   }
 
   @Post('batch-grant')
-  async batchGrantQuota(@Body() dto: BatchGrantStockQuotaDto, @Request() req: any) {
+  async batchGrantQuota(
+    @Body() dto: BatchGrantStockQuotaDto,
+    @Request() req: any,
+  ) {
     const storeId = req.user.store_id;
     const userId = req.user.sub;
     return this.escrowService.batchGrantQuota(storeId, userId, dto);

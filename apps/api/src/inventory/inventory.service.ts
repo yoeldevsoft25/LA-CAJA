@@ -124,7 +124,7 @@ export class InventoryService {
     @Inject(forwardRef(() => FederationSyncService))
     private federationSyncService: FederationSyncService,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   private buildServerEvent(
     manager: EntityManager,

@@ -177,9 +177,7 @@ export class SalesPostProcessingQueueProcessor extends WorkerHost {
       } else {
         await this.accountingService.generateEntryFromSale(storeId, sale);
 
-        this.logger.log(
-          `✅ Asiento contable generado para venta ${saleId}`,
-        );
+        this.logger.log(`✅ Asiento contable generado para venta ${saleId}`);
       }
 
       await job.updateProgress(100);

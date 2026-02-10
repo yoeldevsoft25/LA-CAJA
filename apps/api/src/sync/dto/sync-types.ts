@@ -238,12 +238,12 @@ export interface CashLedgerEntryCreatedPayload {
   entry_id: string;
   request_id: string;
   entry_type:
-  | 'sale'
-  | 'expense'
-  | 'adjustment'
-  | 'transfer'
-  | 'initial_balance'
-  | 'income';
+    | 'sale'
+    | 'expense'
+    | 'adjustment'
+    | 'transfer'
+    | 'initial_balance'
+    | 'income';
   amount_bs: number | string;
   amount_usd: number | string;
   currency: 'BS' | 'USD' | 'MIXED';

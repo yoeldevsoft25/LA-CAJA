@@ -88,7 +88,7 @@ export class AccountingService {
     private reportingService: AccountingReportingService,
     @Inject(forwardRef(() => AccountingPeriodService))
     private periodService: AccountingPeriodService,
-  ) { }
+  ) {}
 
   /**
    * Generar número de asiento único (delegado a AccountingSharedService)
@@ -442,7 +442,7 @@ export class AccountingService {
 
       const roundingAdjustmentBs = roundTwo(
         (sale.payment?.cash_payment?.change_rounding?.adjustment_bs || 0) +
-        (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0),
+          (sale.payment?.cash_payment_bs?.change_rounding?.adjustment_bs || 0),
       );
 
       // Calcular costo real desde sale_items (opcional, si hay inventario)
@@ -518,9 +518,15 @@ export class AccountingService {
         } else {
           // Fallback: Si no hay cuenta de IVA, añadir al ingreso
           const lastLine = lines[lines.length - 1];
-          lastLine.credit_amount_bs = roundTwo(lastLine.credit_amount_bs + taxAmountBs);
-          lastLine.credit_amount_usd = roundTwo(lastLine.credit_amount_usd + taxAmountUsd);
-          this.logger.warn(`No se encontró cuenta de IVA ('sale_tax'), se incluyó en ingresos para ${sale.id}`);
+          lastLine.credit_amount_bs = roundTwo(
+            lastLine.credit_amount_bs + taxAmountBs,
+          );
+          lastLine.credit_amount_usd = roundTwo(
+            lastLine.credit_amount_usd + taxAmountUsd,
+          );
+          this.logger.warn(
+            `No se encontró cuenta de IVA ('sale_tax'), se incluyó en ingresos para ${sale.id}`,
+          );
         }
       }
 
@@ -1036,7 +1042,9 @@ export class AccountingService {
 
     // Si el asiento estaba posteado, revertir saldos
     if (entry.status === 'posted' && entry.lines && entry.lines.length > 0) {
-      this.logger.log(`Revirtiendo saldos por cancelación de asiento ${entry.entry_number}`);
+      this.logger.log(
+        `Revirtiendo saldos por cancelación de asiento ${entry.entry_number}`,
+      );
 
       const linesToRevert = entry.lines.map((line) => ({
         account_id: line.account_id,
@@ -1249,9 +1257,9 @@ export class AccountingService {
 
           existingSaleEntry.source_type = 'fiscal_invoice';
           existingSaleEntry.source_id = fiscalInvoice.id;
-          existingSaleEntry.entry_type = (isCreditNote
-            ? 'credit_note'
-            : 'fiscal_invoice') as JournalEntryType;
+          existingSaleEntry.entry_type = (
+            isCreditNote ? 'credit_note' : 'fiscal_invoice'
+          ) as JournalEntryType;
           existingSaleEntry.description = `${typeLabel} ${fiscalInvoice.invoice_number}`;
           existingSaleEntry.reference_number = fiscalInvoice.invoice_number;
           existingSaleEntry.metadata = {
@@ -1271,10 +1279,7 @@ export class AccountingService {
                 line.description.includes('Cobro')
               ) {
                 line.description = `${typeLabel} ${fiscalInvoice.invoice_number} - Cobro`;
-              } else if (
-                line.description &&
-                line.description.includes('IVA')
-              ) {
+              } else if (line.description && line.description.includes('IVA')) {
                 line.description = `${typeLabel} ${fiscalInvoice.invoice_number} - IVA`;
               }
             }
@@ -1444,7 +1449,9 @@ export class AccountingService {
         store_id: storeId,
         entry_number: entryNumber,
         entry_date: entryDate,
-        entry_type: (isCreditNote ? 'credit_note' : 'fiscal_invoice') as JournalEntryType,
+        entry_type: (isCreditNote
+          ? 'credit_note'
+          : 'fiscal_invoice') as JournalEntryType,
         source_type: 'fiscal_invoice',
         source_id: fiscalInvoice.id,
         description: `${typeLabel} ${fiscalInvoice.invoice_number}`,
@@ -3117,18 +3124,18 @@ export class AccountingService {
     const cashBalancesStart =
       cashAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-          storeId,
-          cashAccountIds,
-          startDate,
-        )
+            storeId,
+            cashAccountIds,
+            startDate,
+          )
         : new Map();
     const cashBalancesEnd =
       cashAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-          storeId,
-          cashAccountIds,
-          endDate,
-        )
+            storeId,
+            cashAccountIds,
+            endDate,
+          )
         : new Map();
 
     // Calcular saldos al inicio del período
@@ -3172,18 +3179,18 @@ export class AccountingService {
     const specialBalancesStart =
       specialAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-          storeId,
-          specialAccountIds,
-          startDate,
-        )
+            storeId,
+            specialAccountIds,
+            startDate,
+          )
         : new Map();
     const specialBalancesEnd =
       specialAccountIds.length > 0
         ? await this.calculateAccountBalancesBatch(
-          storeId,
-          specialAccountIds,
-          endDate,
-        )
+            storeId,
+            specialAccountIds,
+            endDate,
+          )
         : new Map();
 
     if (receivableAccount) {
@@ -3492,11 +3499,11 @@ export class AccountingService {
 
             const expectedBalanceBs =
               account.account_type === 'asset' ||
-                account.account_type === 'expense'
+              account.account_type === 'expense'
                 ? Number(balance.closing_balance_debit_bs || 0) -
-                Number(balance.closing_balance_credit_bs || 0)
+                  Number(balance.closing_balance_credit_bs || 0)
                 : Number(balance.closing_balance_credit_bs || 0) -
-                Number(balance.closing_balance_debit_bs || 0);
+                  Number(balance.closing_balance_debit_bs || 0);
 
             const calculatedBalanceBs = calculatedBalance.balance_bs;
             const difference = Math.abs(
@@ -3663,11 +3670,11 @@ export class AccountingService {
   }> {
     const accountsToReconcile = accountIds
       ? await this.accountRepository.find({
-        where: accountIds.map((id) => ({ id, store_id: storeId })),
-      })
+          where: accountIds.map((id) => ({ id, store_id: storeId })),
+        })
       : await this.accountRepository.find({
-        where: { store_id: storeId, is_active: true },
-      });
+          where: { store_id: storeId, is_active: true },
+        });
 
     const discrepancies: Array<{
       account_id: string;
@@ -3707,19 +3714,19 @@ export class AccountingService {
         if (balance) {
           expectedBalanceBs =
             account.account_type === 'asset' ||
-              account.account_type === 'expense'
+            account.account_type === 'expense'
               ? Number(balance.closing_balance_debit_bs || 0) -
-              Number(balance.closing_balance_credit_bs || 0)
+                Number(balance.closing_balance_credit_bs || 0)
               : Number(balance.closing_balance_credit_bs || 0) -
-              Number(balance.closing_balance_debit_bs || 0);
+                Number(balance.closing_balance_debit_bs || 0);
 
           expectedBalanceUsd =
             account.account_type === 'asset' ||
-              account.account_type === 'expense'
+            account.account_type === 'expense'
               ? Number(balance.closing_balance_debit_usd || 0) -
-              Number(balance.closing_balance_credit_usd || 0)
+                Number(balance.closing_balance_credit_usd || 0)
               : Number(balance.closing_balance_credit_usd || 0) -
-              Number(balance.closing_balance_debit_usd || 0);
+                Number(balance.closing_balance_debit_usd || 0);
         }
 
         const differenceBs = Math.abs(
@@ -4082,19 +4089,19 @@ export class AccountingService {
             // Ajustar la línea para balancear
             const newDebitBs = roundTo2Decimals(
               Number(adjustmentLine.debit_amount_bs || 0) +
-              (diffBs > 0 ? 0 : Math.abs(diffBs)),
+                (diffBs > 0 ? 0 : Math.abs(diffBs)),
             );
             const newCreditBs = roundTo2Decimals(
               Number(adjustmentLine.credit_amount_bs || 0) +
-              (diffBs > 0 ? Math.abs(diffBs) : 0),
+                (diffBs > 0 ? Math.abs(diffBs) : 0),
             );
             const newDebitUsd = roundTo2Decimals(
               Number(adjustmentLine.debit_amount_usd || 0) +
-              (diffUsd > 0 ? 0 : Math.abs(diffUsd)),
+                (diffUsd > 0 ? 0 : Math.abs(diffUsd)),
             );
             const newCreditUsd = roundTo2Decimals(
               Number(adjustmentLine.credit_amount_usd || 0) +
-              (diffUsd > 0 ? Math.abs(diffUsd) : 0),
+                (diffUsd > 0 ? Math.abs(diffUsd) : 0),
             );
 
             // Actualizar la línea con información del tipo de error

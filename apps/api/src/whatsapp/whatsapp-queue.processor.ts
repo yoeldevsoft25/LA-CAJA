@@ -27,7 +27,7 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
     @InjectRepository(Store)
     private storeRepository: Repository<Store>,
     private whatsappBotService: WhatsAppBotService,
-  ) { }
+  ) {}
 
   /**
    * Inicializa bots automáticamente al iniciar el módulo (producción).
@@ -38,7 +38,9 @@ export class WhatsAppQueueProcessor implements OnModuleInit {
   async onModuleInit() {
     const isEnabled = process.env.WHATSAPP_ENABLED?.toLowerCase() !== 'false';
     if (!isEnabled) {
-      this.logger.log('Procesador de cola de WhatsApp deshabilitado por configuración (WHATSAPP_ENABLED=false)');
+      this.logger.log(
+        'Procesador de cola de WhatsApp deshabilitado por configuración (WHATSAPP_ENABLED=false)',
+      );
       return;
     }
     this.logger.log('Inicializando procesador de cola de WhatsApp...');

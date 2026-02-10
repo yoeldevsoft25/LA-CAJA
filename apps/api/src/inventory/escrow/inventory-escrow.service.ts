@@ -32,7 +32,7 @@ export class InventoryEscrowService {
     private stockEscrowRepository: Repository<StockEscrow>,
     private dataSource: DataSource,
     private moduleRef: ModuleRef,
-  ) { }
+  ) {}
 
   private get federationSyncService(): FederationSyncService {
     return this.moduleRef.get(FederationSyncService, { strict: false });
@@ -266,10 +266,11 @@ export class InventoryEscrowService {
         }
 
         // 1b. Calcular máximo permitido (30% del stock total)
-        const maxGrant = Math.floor(totalStock * 0.30);
+        const maxGrant = Math.floor(totalStock * 0.3);
         const qtyToGrant = Math.min(item.qty, maxGrant);
 
-        if (qtyToGrant < 1) { // Changed from <= 0 to < 1 to prevent 0 qty grants
+        if (qtyToGrant < 1) {
+          // Changed from <= 0 to < 1 to prevent 0 qty grants
           denied.push({
             product_id: item.product_id,
             requested: item.qty,

@@ -36,8 +36,10 @@ export class Store {
     type: 'jsonb',
     default: '{}',
     transformer: {
-      from: (v: string | object) => (typeof v === 'string' ? JSON.parse(v || '{}') : v ?? {}),
-      to: (v: object) => (v && typeof v === 'object' ? JSON.stringify(v) : '{}'),
+      from: (v: string | object) =>
+        typeof v === 'string' ? JSON.parse(v || '{}') : (v ?? {}),
+      to: (v: object) =>
+        v && typeof v === 'object' ? JSON.stringify(v) : '{}',
     },
   })
   settings: {
