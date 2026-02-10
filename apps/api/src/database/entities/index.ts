@@ -137,6 +137,8 @@ export { AccountingExport } from './accounting-export.entity';
 export { AccountingERPSync } from './accounting-erp-sync.entity';
 export { AccountingPeriod } from './accounting-period.entity';
 export type { AccountingPeriodStatus } from './accounting-period.entity';
+export { AccountingBudget } from './accounting-budget.entity';
+export { AccountingBudgetLine } from './accounting-budget-line.entity';
 
 // License payment entities
 export {
@@ -280,6 +282,8 @@ export { AccountingAuditLog } from './accounting-audit-log.entity';
 import { BankStatement } from './bank-statement.entity';
 import { BankTransaction } from './bank-transaction.entity';
 import { AccountingAuditLog } from './accounting-audit-log.entity';
+import { AccountingBudget } from './accounting-budget.entity';
+import { AccountingBudgetLine } from './accounting-budget-line.entity';
 
 export const ALL_ENTITIES = [
   Store,
@@ -387,4 +391,6 @@ export const ALL_ENTITIES = [
   BankStatement,
   BankTransaction,
   AccountingAuditLog,
+  AccountingBudget,
+  AccountingBudgetLine,
 ];
