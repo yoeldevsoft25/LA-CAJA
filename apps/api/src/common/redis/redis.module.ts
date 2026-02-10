@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { ConfigService, ConfigModule } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -12,6 +12,7 @@ export const REDIS_SUBSCRIBER = 'REDIS_SUBSCRIBER';
     {
       provide: REDIS_CLIENT,
       useFactory: (configService: ConfigService) => {
+        const logger = new Logger('RedisModule');
         const redisEnabled =
           process.env.REDIS_ENABLED?.toLowerCase() !== 'false' &&
           process.env.REDIS_DISABLED?.toLowerCase() !== 'true';
@@ -38,7 +39,7 @@ export const REDIS_SUBSCRIBER = 'REDIS_SUBSCRIBER';
             });
 
         client.on('error', (err) => {
-          console.error('❌ Redis Client Error:', err.message);
+          logger.error(`Redis client error: ${err?.message ?? String(err)}`);
         });
 
         return client;
@@ -48,10 +49,11 @@ export const REDIS_SUBSCRIBER = 'REDIS_SUBSCRIBER';
     {
       provide: REDIS_SUBSCRIBER,
       useFactory: (client: Redis | null) => {
+        const logger = new Logger('RedisModule');
         if (!client) return null;
         const subscriber = client.duplicate();
         subscriber.on('error', (err) => {
-          console.error('❌ Redis Subscriber Error:', err.message);
+          logger.error(`Redis subscriber error: ${err?.message ?? String(err)}`);
         });
         return subscriber;
       },

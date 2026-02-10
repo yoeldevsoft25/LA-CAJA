@@ -2,12 +2,15 @@ import {
   Injectable,
   ExecutionContext,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
+  private readonly logger = new Logger(JwtAuthGuard.name);
+
   constructor(private reflector: Reflector) {
     super();
   }
@@ -23,9 +26,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     const request = context.switchToHttp().getRequest();
     if (request?.isFederationAuthenticated === true) {
-      console.log(
-        '[JwtAuthGuard] Federation authenticated, skipping JWT check.',
-      );
+      this.logger.debug('Federation authenticated; skipping JWT check.');
       return true;
     }
 

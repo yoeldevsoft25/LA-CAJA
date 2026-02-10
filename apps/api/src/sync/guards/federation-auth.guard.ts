@@ -1,9 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class FederationAuthGuard implements CanActivate {
   private readonly adminSecret: string | undefined;
+  private readonly logger = new Logger(FederationAuthGuard.name);
 
   constructor(private configService: ConfigService) {
     this.adminSecret = this.configService.get<string>('ADMIN_SECRET');
@@ -15,16 +16,14 @@ export class FederationAuthGuard implements CanActivate {
 
     if (!authHeader || !this.adminSecret) {
       if (!this.adminSecret) {
-        console.warn(
-          '[FederationAuthGuard] ADMIN_SECRET not set in environment!',
-        );
+        this.logger.warn('ADMIN_SECRET not set in environment; federation bypass disabled.');
       }
       return true;
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (token === this.adminSecret) {
-      console.log('[FederationAuthGuard] Admin secret matched! Bypassing JWT.');
+      this.logger.debug('Admin secret matched; bypassing JWT for federation request.');
       // ⚡ BYPASS: If admin secret matches, we inject a "system" user
       // so that controllers and interceptors don't complain about missing store_id
       const bodyStoreId = request.body?.store_id;
@@ -42,7 +41,7 @@ export class FederationAuthGuard implements CanActivate {
       return true;
     }
 
-    console.warn('[FederationAuthGuard] Admin secret mismatch');
+    this.logger.warn('Admin secret mismatch for federation request.');
     return true;
   }
 }

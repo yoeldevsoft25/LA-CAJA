@@ -88,10 +88,10 @@ export default function MainLayout() {
   return (
     <div
       className={cn(
-        'min-h-screen bg-muted/30',
-        // Add texture + depth without introducing new colors.
-        'bg-[radial-gradient(circle_at_1px_1px,hsl(var(--muted-foreground)_/_0.06)_1px,transparent_0),radial-gradient(circle_at_12%_-10%,hsl(var(--primary)_/_0.10),transparent_55%),radial-gradient(circle_at_88%_0%,hsl(var(--info)_/_0.08),transparent_50%)]',
-        '[background-size:24px_24px,auto,auto]'
+        'min-h-screen bg-background',
+        // Subtle grid pattern only - removed colored washes for cleaner POS look
+        'bg-[radial-gradient(circle_at_1px_1px,hsl(var(--muted-foreground)_/_0.06)_1px,transparent_0)]',
+        '[background-size:24px_24px]'
       )}
     >
       {/* Accessibility */}

@@ -12,6 +12,7 @@ import {
   DefaultValuePipe,
   ParseIntPipe,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { AdminApiGuard } from '../admin/admin-api.guard';
 import { LicensePaymentsService } from './license-payments.service';
@@ -23,6 +24,8 @@ import { LicensePaymentStatus } from '../database/entities/license-payment.entit
 @Controller('admin/license-payments')
 @UseGuards(AdminApiGuard)
 export class AdminLicensePaymentsController {
+  private readonly logger = new Logger(AdminLicensePaymentsController.name);
+
   constructor(
     private readonly paymentsService: LicensePaymentsService,
     private readonly verificationService: LicenseVerificationService,
@@ -94,7 +97,10 @@ export class AdminLicensePaymentsController {
         dto.notes,
       );
     } catch (error: any) {
-      console.error('Error approving payment:', error);
+      this.logger.error(
+        `Error approving payment id=${id} approvedBy=${approvedBy}`,
+        error?.stack || String(error),
+      );
       throw new InternalServerErrorException(
         error.message || 'Error approving payment',
       );

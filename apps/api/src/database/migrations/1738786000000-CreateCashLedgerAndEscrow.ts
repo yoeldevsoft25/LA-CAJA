@@ -87,17 +87,10 @@ export class CreateCashLedgerAndEscrow1738786000000 implements MigrationInterfac
     );
 
     // Indices for stock_escrow
-    await queryRunner.createUniqueConstraint(
-      'stock_escrow',
-      new TableUnique({
-        name: 'UQ_stock_escrow_store_product_device',
-        columnNames: ['store_id', 'product_id', 'device_id'], // Assuming variant handles nulls correctly in older PGs? Or just business logic?
-        // Note: Unique constraints with NULL columns behavior depends on DB. Assuming product_id implies variant logic handled or separate rows.
-        // Actually, if variant_id can be null, we might need a partial index or just rely on UUIDs.
-        // Let's stick to the constraint requested: store, product, device. Variant should probably be part of uniqueness if it exists.
-        // Let's separate it into an index for now since standard Unique handles NULLs as non-equal.
-      }),
-    );
+    await queryRunner.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "UQ_stock_escrow_store_product_device" 
+      ON "stock_escrow" ("store_id", "product_id", "device_id");
+    `);
 
     // Better unique constraint including variant logic implicitly or explicitly.
     // If variant_id is NULL, multiple NULLs are allowed in standard SQL unique index.

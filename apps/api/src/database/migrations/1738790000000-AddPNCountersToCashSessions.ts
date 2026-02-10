@@ -4,10 +4,10 @@ export class AddPNCountersToCashSessions1738790000000 implements MigrationInterf
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE cash_sessions 
-      ADD COLUMN ledger_p_bs NUMERIC(18,2) DEFAULT 0,
-      ADD COLUMN ledger_n_bs NUMERIC(18,2) DEFAULT 0,
-      ADD COLUMN ledger_p_usd NUMERIC(18,2) DEFAULT 0,
-      ADD COLUMN ledger_n_usd NUMERIC(18,2) DEFAULT 0;
+      ADD COLUMN IF NOT EXISTS ledger_p_bs NUMERIC(18,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS ledger_n_bs NUMERIC(18,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS ledger_p_usd NUMERIC(18,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS ledger_n_usd NUMERIC(18,2) DEFAULT 0;
     `);
   }
 
