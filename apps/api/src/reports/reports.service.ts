@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Repository,
-  Between,
   In,
   LessThanOrEqual,
   MoreThanOrEqual,
@@ -154,159 +153,148 @@ export class ReportsService {
     const cached = await this.cache.get<any>(cacheKey);
     if (cached) return cached;
 
-    const query = this.saleRepository
+    const start = startDate
+      ? this.normalizeStartDate(new Date(startDate))
+      : undefined;
+    const end = endDate ? this.normalizeEndDate(new Date(endDate)) : undefined;
+
+    const totalsBsExpr =
+      "COALESCE((sale.totals->>'total_bs')::numeric, 0)";
+    const totalsUsdExpr =
+      "COALESCE((sale.totals->>'total_usd')::numeric, 0)";
+    const methodExpr = "COALESCE(sale.payment->>'method', 'unknown')";
+    // Mantener compatibilidad con el comportamiento anterior (ISO string => día UTC)
+    const dayExpr =
+      "to_char((sale.sold_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD')";
+
+    const dailySalesRows = await this.saleRepository
       .createQueryBuilder('sale')
+      .select(dayExpr, 'date')
+      .addSelect('COUNT(sale.id)', 'sales_count')
+      .addSelect(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'total_bs')
+      .addSelect(`COALESCE(SUM(${totalsUsdExpr}), 0)`, 'total_usd')
       .where('sale.store_id = :storeId', { storeId })
-      .andWhere('sale.voided_at IS NULL');
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere(start ? 'sale.sold_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'sale.sold_at <= :end' : '1=1', { end })
+      .groupBy(dayExpr)
+      .orderBy(dayExpr, 'ASC')
+      .getRawMany();
 
-    if (startDate) {
-      const start = this.normalizeStartDate(new Date(startDate));
-      query.andWhere('sale.sold_at >= :startDate', { startDate: start });
-    }
-    if (endDate) {
-      const end = this.normalizeEndDate(new Date(endDate));
-      query.andWhere('sale.sold_at <= :endDate', { endDate: end });
-    }
+    const isWeightExpr =
+      '(item.is_weight_product = true OR product.is_weight_product = true)';
+    const unitCostBsExpr = `CASE
+      WHEN ${isWeightExpr} THEN COALESCE(product.cost_per_weight_bs, product.cost_bs, 0)
+      ELSE COALESCE(product.cost_bs, 0)
+    END`;
+    const unitCostUsdExpr = `CASE
+      WHEN ${isWeightExpr} THEN COALESCE(product.cost_per_weight_usd, product.cost_usd, 0)
+      ELSE COALESCE(product.cost_usd, 0)
+    END`;
 
-    const sales = await query.getMany();
+    const dailyCostRows = await this.saleItemRepository
+      .createQueryBuilder('item')
+      .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
+      .innerJoin(Product, 'product', 'product.id = item.product_id')
+      .select(dayExpr, 'date')
+      .addSelect(`COALESCE(SUM((${unitCostBsExpr}) * item.qty), 0)`, 'cost_bs')
+      .addSelect(`COALESCE(SUM((${unitCostUsdExpr}) * item.qty), 0)`, 'cost_usd')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere(start ? 'sale.sold_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'sale.sold_at <= :end' : '1=1', { end })
+      .groupBy(dayExpr)
+      .orderBy(dayExpr, 'ASC')
+      .getRawMany();
 
-    const total_sales = sales.length;
-    let total_amount_bs = 0;
-    let total_amount_usd = 0;
-    let total_cost_bs = 0;
-    let total_cost_usd = 0;
+    const totalsAgg = await this.saleRepository
+      .createQueryBuilder('sale')
+      .select('COUNT(sale.id)', 'total_sales')
+      .addSelect(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'total_amount_bs')
+      .addSelect(`COALESCE(SUM(${totalsUsdExpr}), 0)`, 'total_amount_usd')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere(start ? 'sale.sold_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'sale.sold_at <= :end' : '1=1', { end })
+      .getRawOne();
+
+    const totalCostAgg = await this.saleItemRepository
+      .createQueryBuilder('item')
+      .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
+      .innerJoin(Product, 'product', 'product.id = item.product_id')
+      .select(
+        `COALESCE(SUM((${unitCostBsExpr}) * item.qty), 0)`,
+        'total_cost_bs',
+      )
+      .addSelect(
+        `COALESCE(SUM((${unitCostUsdExpr}) * item.qty), 0)`,
+        'total_cost_usd',
+      )
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere(start ? 'sale.sold_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'sale.sold_at <= :end' : '1=1', { end })
+      .getRawOne();
+
+    const byPaymentRows = await this.saleRepository
+      .createQueryBuilder('sale')
+      .select(methodExpr, 'method')
+      .addSelect('COUNT(sale.id)', 'count')
+      .addSelect(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'amount_bs')
+      .addSelect(`COALESCE(SUM(${totalsUsdExpr}), 0)`, 'amount_usd')
+      .where('sale.store_id = :storeId', { storeId })
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere(start ? 'sale.sold_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'sale.sold_at <= :end' : '1=1', { end })
+      .groupBy(methodExpr)
+      .orderBy('count', 'DESC')
+      .getRawMany();
 
     const by_payment_method: Record<
       string,
       { count: number; amount_bs: number; amount_usd: number }
     > = {};
-    const dailyMap: Map<
+    for (const row of byPaymentRows) {
+      const method = row.method || 'unknown';
+      by_payment_method[method] = {
+        count: Number(row.count || 0),
+        amount_bs: Number(row.amount_bs || 0),
+        amount_usd: Number(row.amount_usd || 0),
+      };
+    }
+
+    const costByDate = new Map<
       string,
-      {
-        sales_count: number;
-        total_bs: number;
-        total_usd: number;
-        cost_bs: number;
-        cost_usd: number;
-      }
-    > = new Map();
-
-    // Optimización: Cargar todos los items de todas las ventas de una vez
-    const saleIds = sales.map((s) => s.id);
-    const allSaleItems =
-      saleIds.length > 0
-        ? await this.saleItemRepository.find({
-            where: { sale_id: In(saleIds) },
-          })
-        : [];
-
-    // Agrupar items por sale_id
-    const itemsBySaleId = new Map<string, SaleItem[]>();
-    for (const item of allSaleItems) {
-      if (!itemsBySaleId.has(item.sale_id)) {
-        itemsBySaleId.set(item.sale_id, []);
-      }
-      itemsBySaleId.get(item.sale_id)!.push(item);
+      { cost_bs: number; cost_usd: number }
+    >();
+    for (const row of dailyCostRows) {
+      costByDate.set(row.date, {
+        cost_bs: Number(row.cost_bs || 0),
+        cost_usd: Number(row.cost_usd || 0),
+      });
     }
 
-    // Optimización: Cargar todos los productos necesarios de una vez
-    const productIds = [
-      ...new Set(allSaleItems.map((item) => item.product_id)),
-    ];
-    const products =
-      productIds.length > 0
-        ? await this.productRepository.find({
-            where: { id: In(productIds), store_id: storeId },
-            select: [
-              'id',
-              'cost_bs',
-              'cost_usd',
-              'cost_per_weight_bs',
-              'cost_per_weight_usd',
-              'is_weight_product',
-            ],
-          })
-        : [];
+    const daily = dailySalesRows.map((row) => {
+      const cost = costByDate.get(row.date) || { cost_bs: 0, cost_usd: 0 };
+      const total_bs = Number(row.total_bs || 0);
+      const total_usd = Number(row.total_usd || 0);
+      return {
+        date: row.date,
+        sales_count: Number(row.sales_count || 0),
+        total_bs,
+        total_usd,
+        cost_bs: cost.cost_bs,
+        cost_usd: cost.cost_usd,
+        profit_bs: total_bs - cost.cost_bs,
+        profit_usd: total_usd - cost.cost_usd,
+      };
+    });
 
-    // Crear mapa de productos para acceso rápido
-    const productMap = new Map<string, Product>();
-    for (const product of products) {
-      productMap.set(product.id, product);
-    }
-
-    // Procesar ventas
-    for (const sale of sales) {
-      const totals = sale.totals || {};
-      const total_bs = Number(totals.total_bs || 0);
-      const total_usd = Number(totals.total_usd || 0);
-
-      total_amount_bs += total_bs;
-      total_amount_usd += total_usd;
-
-      // Obtener items de la venta del mapa
-      const saleItems = itemsBySaleId.get(sale.id) || [];
-
-      let saleCostBs = 0;
-      let saleCostUsd = 0;
-
-      for (const item of saleItems) {
-        // Obtener producto del mapa
-        const product = productMap.get(item.product_id);
-        if (product) {
-          const isWeight = Boolean(
-            item.is_weight_product || product.is_weight_product,
-          );
-          const unitCostBs = isWeight
-            ? Number(product.cost_per_weight_bs ?? product.cost_bs ?? 0)
-            : Number(product.cost_bs ?? 0);
-          const unitCostUsd = isWeight
-            ? Number(product.cost_per_weight_usd ?? product.cost_usd ?? 0)
-            : Number(product.cost_usd ?? 0);
-          saleCostBs += unitCostBs * item.qty;
-          saleCostUsd += unitCostUsd * item.qty;
-        }
-      }
-
-      total_cost_bs += saleCostBs;
-      total_cost_usd += saleCostUsd;
-
-      // Por método de pago
-      const payment = sale.payment || {};
-      const method = payment.method || 'unknown';
-      if (!by_payment_method[method]) {
-        by_payment_method[method] = { count: 0, amount_bs: 0, amount_usd: 0 };
-      }
-      by_payment_method[method].count++;
-      by_payment_method[method].amount_bs += total_bs;
-      by_payment_method[method].amount_usd += total_usd;
-
-      // Por día
-      const dateKey = sale.sold_at.toISOString().split('T')[0];
-      if (!dailyMap.has(dateKey)) {
-        dailyMap.set(dateKey, {
-          sales_count: 0,
-          total_bs: 0,
-          total_usd: 0,
-          cost_bs: 0,
-          cost_usd: 0,
-        });
-      }
-      const daily = dailyMap.get(dateKey)!;
-      daily.sales_count++;
-      daily.total_bs += total_bs;
-      daily.total_usd += total_usd;
-      daily.cost_bs += saleCostBs;
-      daily.cost_usd += saleCostUsd;
-    }
-
-    const daily = Array.from(dailyMap.entries())
-      .map(([date, data]) => ({
-        date,
-        ...data,
-        profit_bs: data.total_bs - data.cost_bs,
-        profit_usd: data.total_usd - data.cost_usd,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    const total_sales = Number(totalsAgg?.total_sales || 0);
+    const total_amount_bs = Number(totalsAgg?.total_amount_bs || 0);
+    const total_amount_usd = Number(totalsAgg?.total_amount_usd || 0);
+    const total_cost_bs = Number(totalCostAgg?.total_cost_bs || 0);
+    const total_cost_usd = Number(totalCostAgg?.total_cost_usd || 0);
 
     const total_profit_bs = total_amount_bs - total_cost_bs;
     const total_profit_usd = total_amount_usd - total_cost_usd;
@@ -356,138 +344,110 @@ export class ReportsService {
     const cached = await this.cache.get<any>(cacheKey);
     if (cached) return cached;
 
-    const query = this.saleItemRepository
+    const start = startDate
+      ? this.normalizeStartDate(new Date(startDate))
+      : undefined;
+    const end = endDate ? this.normalizeEndDate(new Date(endDate)) : undefined;
+
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 10, 100));
+
+    const isWeightExpr =
+      '(item.is_weight_product = true OR product.is_weight_product = true)';
+    const unitExpr = 'COALESCE(item.weight_unit, product.weight_unit)';
+    const kgFactorExpr = `CASE ${unitExpr}
+      WHEN 'g' THEN 0.001
+      WHEN 'lb' THEN 0.45359237
+      WHEN 'oz' THEN 0.028349523125
+      ELSE 1
+    END`;
+
+    const unitCostBsExpr = `CASE
+      WHEN ${isWeightExpr} THEN COALESCE(product.cost_per_weight_bs, product.cost_bs, 0)
+      ELSE COALESCE(product.cost_bs, 0)
+    END`;
+    const unitCostUsdExpr = `CASE
+      WHEN ${isWeightExpr} THEN COALESCE(product.cost_per_weight_usd, product.cost_usd, 0)
+      ELSE COALESCE(product.cost_usd, 0)
+    END`;
+
+    const rows = await this.saleItemRepository
       .createQueryBuilder('item')
       .innerJoin(Sale, 'sale', 'sale.id = item.sale_id')
+      .innerJoin(Product, 'product', 'product.id = item.product_id')
+      .select('product.id', 'product_id')
+      .addSelect('product.name', 'product_name')
+      .addSelect(`(${isWeightExpr})`, 'is_weight_product')
+      .addSelect('product.weight_unit', 'weight_unit')
+      .addSelect('COALESCE(SUM(item.qty), 0)', 'quantity_sold')
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN ${isWeightExpr} THEN (item.qty * ${kgFactorExpr}) ELSE 0 END), 0)`,
+        'quantity_sold_kg',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN NOT ${isWeightExpr} THEN item.qty ELSE 0 END), 0)`,
+        'quantity_sold_units',
+      )
+      .addSelect(
+        "COALESCE(SUM((item.unit_price_bs * item.qty) - COALESCE(item.discount_bs, 0)), 0)",
+        'revenue_bs',
+      )
+      .addSelect(
+        "COALESCE(SUM((item.unit_price_usd * item.qty) - COALESCE(item.discount_usd, 0)), 0)",
+        'revenue_usd',
+      )
+      .addSelect(
+        `COALESCE(SUM((${unitCostBsExpr}) * item.qty), 0)`,
+        'cost_bs',
+      )
+      .addSelect(
+        `COALESCE(SUM((${unitCostUsdExpr}) * item.qty), 0)`,
+        'cost_usd',
+      )
       .where('sale.store_id = :storeId', { storeId })
-      .andWhere('sale.voided_at IS NULL');
+      .andWhere('sale.voided_at IS NULL')
+      .andWhere(start ? 'sale.sold_at >= :start' : '1=1', { start })
+      .andWhere(end ? 'sale.sold_at <= :end' : '1=1', { end })
+      .groupBy('product.id')
+      .addGroupBy('product.name')
+      .addGroupBy('product.is_weight_product')
+      .addGroupBy('product.weight_unit')
+      .orderBy(
+        `CASE WHEN product.is_weight_product = true THEN SUM(item.qty * ${kgFactorExpr}) ELSE SUM(item.qty) END`,
+        'DESC',
+      )
+      .limit(safeLimit)
+      .getRawMany();
 
-    if (startDate) {
-      const start = this.normalizeStartDate(new Date(startDate));
-      query.andWhere('sale.sold_at >= :startDate', { startDate: start });
-    }
-    if (endDate) {
-      const end = this.normalizeEndDate(new Date(endDate));
-      query.andWhere('sale.sold_at <= :endDate', { endDate: end });
-    }
+    const result = rows.map((r) => {
+      const revenue_bs = Number(r.revenue_bs || 0);
+      const revenue_usd = Number(r.revenue_usd || 0);
+      const cost_bs = Number(r.cost_bs || 0);
+      const cost_usd = Number(r.cost_usd || 0);
+      const profit_bs = revenue_bs - cost_bs;
+      const profit_usd = revenue_usd - cost_usd;
+      const profit_margin =
+        revenue_usd > 0 ? (profit_usd / revenue_usd) * 100 : 0;
 
-    const items = await query.getMany();
-
-    // Optimización: Cargar todos los productos necesarios de una vez
-    const productIds = [...new Set(items.map((item) => item.product_id))];
-    const products =
-      productIds.length > 0
-        ? await this.productRepository.find({
-            where: { id: In(productIds), store_id: storeId },
-            select: [
-              'id',
-              'name',
-              'cost_bs',
-              'cost_usd',
-              'cost_per_weight_bs',
-              'cost_per_weight_usd',
-              'is_weight_product',
-              'weight_unit',
-            ],
-          })
-        : [];
-
-    // Crear mapa de productos para acceso rápido
-    const productsMap = new Map<string, Product>();
-    for (const product of products) {
-      productsMap.set(product.id, product);
-    }
-
-    const productMap = new Map<
-      string,
-      {
-        product_name: string;
-        quantity_sold: number;
-        quantity_sold_kg: number;
-        quantity_sold_units: number;
-        revenue_bs: number;
-        revenue_usd: number;
-        cost_bs: number;
-        cost_usd: number;
-        is_weight_product: boolean;
-        weight_unit: 'kg' | 'g' | 'lb' | 'oz' | null;
-      }
-    >();
-
-    for (const item of items) {
-      const productId = item.product_id;
-      const product = productsMap.get(productId);
-
-      if (!productMap.has(productId)) {
-        productMap.set(productId, {
-          product_name: product?.name || 'Producto desconocido',
-          quantity_sold: 0,
-          quantity_sold_kg: 0,
-          quantity_sold_units: 0,
-          revenue_bs: 0,
-          revenue_usd: 0,
-          cost_bs: 0,
-          cost_usd: 0,
-          is_weight_product: Boolean(product?.is_weight_product),
-          weight_unit: product?.weight_unit ?? null,
-        });
-      }
-
-      const productData = productMap.get(productId)!;
-      const qty = Number(item.qty) || 0;
-      const isWeight = Boolean(
-        item.is_weight_product || product?.is_weight_product,
-      );
-      const weightUnit = item.weight_unit || product?.weight_unit || null;
-      productData.quantity_sold += qty;
-      if (isWeight) {
-        productData.quantity_sold_kg += this.normalizeWeightToKg(
-          qty,
-          weightUnit,
-        );
-      } else {
-        productData.quantity_sold_units += qty;
-      }
-      productData.revenue_bs +=
-        Number(item.unit_price_bs || 0) * qty - Number(item.discount_bs || 0);
-      productData.revenue_usd +=
-        Number(item.unit_price_usd || 0) * qty - Number(item.discount_usd || 0);
-      const unitCostBs = isWeight
-        ? Number(product?.cost_per_weight_bs ?? product?.cost_bs ?? 0)
-        : Number(product?.cost_bs ?? 0);
-      const unitCostUsd = isWeight
-        ? Number(product?.cost_per_weight_usd ?? product?.cost_usd ?? 0)
-        : Number(product?.cost_usd ?? 0);
-      productData.cost_bs += unitCostBs * qty;
-      productData.cost_usd += unitCostUsd * qty;
-      productData.is_weight_product = isWeight;
-      productData.weight_unit = weightUnit;
-    }
-
-    const result = Array.from(productMap.entries())
-      .map(([product_id, data]) => {
-        const profit_bs = data.revenue_bs - data.cost_bs;
-        const profit_usd = data.revenue_usd - data.cost_usd;
-        const profit_margin =
-          data.revenue_usd > 0 ? (profit_usd / data.revenue_usd) * 100 : 0;
-        return {
-          product_id,
-          ...data,
-          profit_bs,
-          profit_usd,
-          profit_margin,
-        };
-      })
-      .sort((a, b) => {
-        const qtyA = a.is_weight_product
-          ? a.quantity_sold_kg
-          : a.quantity_sold_units;
-        const qtyB = b.is_weight_product
-          ? b.quantity_sold_kg
-          : b.quantity_sold_units;
-        return qtyB - qtyA;
-      })
-      .slice(0, limit);
+      return {
+        product_id: r.product_id,
+        product_name: r.product_name,
+        quantity_sold: Number(r.quantity_sold || 0),
+        quantity_sold_kg: Number(r.quantity_sold_kg || 0),
+        quantity_sold_units: Number(r.quantity_sold_units || 0),
+        revenue_bs,
+        revenue_usd,
+        cost_bs,
+        cost_usd,
+        profit_bs,
+        profit_usd,
+        profit_margin,
+        is_weight_product:
+          r.is_weight_product === true ||
+          r.is_weight_product === 't' ||
+          r.is_weight_product === 1,
+        weight_unit: r.weight_unit ?? null,
+      };
+    });
     await this.cache.set(cacheKey, result, 60);
     return result;
   }
@@ -519,26 +479,68 @@ export class ReportsService {
     const cached = await this.cache.get<any>(cacheKey);
     if (cached) return cached;
 
-    const debts = await this.debtRepository.find({
-      where: { store_id: storeId },
-      relations: ['payments'],
-    });
+    const totalsAgg = await this.debtRepository
+      .createQueryBuilder('debt')
+      .select('COALESCE(SUM(debt.amount_bs), 0)', 'total_debt_bs')
+      .addSelect('COALESCE(SUM(debt.amount_usd), 0)', 'total_debt_usd')
+      .where('debt.store_id = :storeId', { storeId })
+      .getRawOne();
 
-    let total_debt_bs = 0;
-    let total_debt_usd = 0;
-    let total_paid_bs = 0;
-    let total_paid_usd = 0;
+    const paidAgg = await this.debtPaymentRepository
+      .createQueryBuilder('payment')
+      .select('COALESCE(SUM(payment.amount_bs), 0)', 'total_paid_bs')
+      .addSelect('COALESCE(SUM(payment.amount_usd), 0)', 'total_paid_usd')
+      .where('payment.store_id = :storeId', { storeId })
+      .getRawOne();
 
-    const by_status = {
-      open: 0,
-      partial: 0,
-      paid: 0,
-    };
+    const byStatusRows = await this.debtRepository
+      .createQueryBuilder('debt')
+      .select('debt.status', 'status')
+      .addSelect('COUNT(debt.id)', 'count')
+      .where('debt.store_id = :storeId', { storeId })
+      .groupBy('debt.status')
+      .getRawMany();
 
-    // Obtener todos los customer_ids únicos
-    const customerIds = [
-      ...new Set(debts.map((d) => d.customer_id).filter(Boolean)),
-    ];
+    const by_status = { open: 0, partial: 0, paid: 0 };
+    for (const row of byStatusRows) {
+      if (row.status === DebtStatus.OPEN) by_status.open = Number(row.count || 0);
+      if (row.status === DebtStatus.PARTIAL) by_status.partial = Number(row.count || 0);
+      if (row.status === DebtStatus.PAID) by_status.paid = Number(row.count || 0);
+    }
+
+    const debtByCustomerRows = await this.debtRepository
+      .createQueryBuilder('debt')
+      .select('debt.customer_id', 'customer_id')
+      .addSelect('COALESCE(SUM(debt.amount_bs), 0)', 'total_debt_bs')
+      .addSelect('COALESCE(SUM(debt.amount_usd), 0)', 'total_debt_usd')
+      .where('debt.store_id = :storeId', { storeId })
+      .groupBy('debt.customer_id')
+      .getRawMany();
+
+    const paidByCustomerRows = await this.debtPaymentRepository
+      .createQueryBuilder('payment')
+      .innerJoin(Debt, 'debt', 'debt.id = payment.debt_id')
+      .select('debt.customer_id', 'customer_id')
+      .addSelect('COALESCE(SUM(payment.amount_bs), 0)', 'total_paid_bs')
+      .addSelect('COALESCE(SUM(payment.amount_usd), 0)', 'total_paid_usd')
+      .where('debt.store_id = :storeId', { storeId })
+      .groupBy('debt.customer_id')
+      .getRawMany();
+
+    const paidByCustomer = new Map<
+      string,
+      { total_paid_bs: number; total_paid_usd: number }
+    >();
+    for (const row of paidByCustomerRows) {
+      paidByCustomer.set(row.customer_id, {
+        total_paid_bs: Number(row.total_paid_bs || 0),
+        total_paid_usd: Number(row.total_paid_usd || 0),
+      });
+    }
+
+    const customerIds = debtByCustomerRows
+      .map((r) => r.customer_id)
+      .filter(Boolean);
     const customers =
       customerIds.length > 0
         ? await this.customerRepository.find({
@@ -546,79 +548,38 @@ export class ReportsService {
             select: ['id', 'name'],
           })
         : [];
-    const customerMapByName = new Map(customers.map((c) => [c.id, c.name]));
+    const customerNameById = new Map(customers.map((c) => [c.id, c.name]));
 
-    const customerMap = new Map<
-      string,
-      {
-        customer_name: string;
-        total_debt_bs: number;
-        total_debt_usd: number;
-        total_paid_bs: number;
-        total_paid_usd: number;
-      }
-    >();
-
-    for (const debt of debts) {
-      const debt_bs = Number(debt.amount_bs || 0);
-      const debt_usd = Number(debt.amount_usd || 0);
-
-      total_debt_bs += debt_bs;
-      total_debt_usd += debt_usd;
-
-      // Contar por status
-      if (debt.status === DebtStatus.OPEN) {
-        by_status.open++;
-      } else if (debt.status === DebtStatus.PARTIAL) {
-        by_status.partial++;
-      } else if (debt.status === DebtStatus.PAID) {
-        by_status.paid++;
-      }
-
-      // Pagos
-      const payments = debt.payments || [];
-      let paid_bs = 0;
-      let paid_usd = 0;
-      for (const payment of payments) {
-        paid_bs += Number(payment.amount_bs || 0);
-        paid_usd += Number(payment.amount_usd || 0);
-      }
-
-      total_paid_bs += paid_bs;
-      total_paid_usd += paid_usd;
-
-      // Por cliente
-      const customerId = debt.customer_id;
-      if (!customerMap.has(customerId)) {
-        const customerName =
-          customerMapByName.get(customerId) ||
-          `Cliente ${customerId.substring(0, 8)}`;
-        customerMap.set(customerId, {
-          customer_name: customerName,
-          total_debt_bs: 0,
-          total_debt_usd: 0,
+    const top_debtors = debtByCustomerRows
+      .map((row) => {
+        const customer_id = row.customer_id;
+        const debt_bs = Number(row.total_debt_bs || 0);
+        const debt_usd = Number(row.total_debt_usd || 0);
+        const paid = paidByCustomer.get(customer_id) || {
           total_paid_bs: 0,
           total_paid_usd: 0,
-        });
-      }
-
-      const customerData = customerMap.get(customerId)!;
-      customerData.total_debt_bs += debt_bs;
-      customerData.total_debt_usd += debt_usd;
-      customerData.total_paid_bs += paid_bs;
-      customerData.total_paid_usd += paid_usd;
-    }
-
-    const top_debtors = Array.from(customerMap.entries())
-      .map(([customer_id, data]) => ({
-        customer_id,
-        ...data,
-        pending_bs: data.total_debt_bs - data.total_paid_bs,
-        pending_usd: data.total_debt_usd - data.total_paid_usd,
-      }))
+        };
+        return {
+          customer_id,
+          customer_name:
+            customerNameById.get(customer_id) ||
+            `Cliente ${String(customer_id).substring(0, 8)}`,
+          total_debt_bs: debt_bs,
+          total_debt_usd: debt_usd,
+          total_paid_bs: paid.total_paid_bs,
+          total_paid_usd: paid.total_paid_usd,
+          pending_bs: debt_bs - paid.total_paid_bs,
+          pending_usd: debt_usd - paid.total_paid_usd,
+        };
+      })
       .filter((d) => d.pending_bs > 0 || d.pending_usd > 0)
       .sort((a, b) => b.pending_bs - a.pending_bs)
       .slice(0, 10);
+
+    const total_debt_bs = Number(totalsAgg?.total_debt_bs || 0);
+    const total_debt_usd = Number(totalsAgg?.total_debt_usd || 0);
+    const total_paid_bs = Number(paidAgg?.total_paid_bs || 0);
+    const total_paid_usd = Number(paidAgg?.total_paid_usd || 0);
 
     const result = {
       total_debt_bs,
@@ -668,11 +629,23 @@ export class ReportsService {
     ];
     const rows: string[] = [headers.join(',')];
 
+    // Obtener items para todas las ventas en un solo query (evita N+1)
+    const saleIds = sales.map((s) => s.id);
+    const allItems =
+      saleIds.length > 0
+        ? await this.saleItemRepository.find({
+            where: { sale_id: In(saleIds) },
+          })
+        : [];
+    const itemsBySaleId = new Map<string, SaleItem[]>();
+    for (const item of allItems) {
+      if (!itemsBySaleId.has(item.sale_id)) itemsBySaleId.set(item.sale_id, []);
+      itemsBySaleId.get(item.sale_id)!.push(item);
+    }
+
     // Obtener items para cada venta
     for (const sale of sales) {
-      const items = await this.saleItemRepository.find({
-        where: { sale_id: sale.id },
-      });
+      const items = itemsBySaleId.get(sale.id) || [];
 
       const totals = sale.totals || {};
       const payment = sale.payment || {};
