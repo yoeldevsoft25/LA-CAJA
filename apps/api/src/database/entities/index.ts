@@ -4,6 +4,7 @@ export { Profile } from './profile.entity';
 export { User } from './user.entity';
 export { StoreMember } from './store-member.entity';
 export { Event } from './event.entity';
+export { CrdtSnapshot } from './crdt-snapshot.entity';
 export { SecurityAuditLog } from './security-audit-log.entity';
 export { RefreshToken } from './refresh-token.entity';
 export { EmailVerificationToken } from './email-verification-token.entity';
@@ -245,6 +246,7 @@ import { AccountingExport } from './accounting-export.entity';
 import { AccountingERPSync } from './accounting-erp-sync.entity';
 import { AccountingPeriod } from './accounting-period.entity';
 import { Event } from './event.entity';
+import { CrdtSnapshot } from './crdt-snapshot.entity';
 import { SecurityAuditLog } from './security-audit-log.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { EmailVerificationToken } from './email-verification-token.entity';
@@ -354,6 +356,7 @@ export const ALL_ENTITIES = [
   AccountingERPSync,
   AccountingPeriod,
   Event,
+  CrdtSnapshot,
   SecurityAuditLog,
   RefreshToken,
   EmailVerificationToken,
