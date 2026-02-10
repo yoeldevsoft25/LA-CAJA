@@ -183,6 +183,10 @@ export class ReportsService {
 
     const isWeightExpr =
       '(item.is_weight_product = true OR product.is_weight_product = true)';
+    // In grouped queries, never select item.* booleans directly (would require GROUP BY).
+    // For "is_weight_product" we use an aggregate over items + product flag.
+    const isWeightGroupExpr =
+      '(product.is_weight_product = true OR COALESCE(BOOL_OR(item.is_weight_product), false) = true)';
     const unitCostBsExpr = `CASE
       WHEN ${isWeightExpr} THEN COALESCE(product.cost_per_weight_bs, product.cost_bs, 0)
       ELSE COALESCE(product.cost_bs, 0)
@@ -353,6 +357,10 @@ export class ReportsService {
 
     const isWeightExpr =
       '(item.is_weight_product = true OR product.is_weight_product = true)';
+    // In grouped queries, never select item.* booleans directly (would require GROUP BY).
+    // For "is_weight_product" we use an aggregate over items + product flag.
+    const isWeightGroupExpr =
+      '(product.is_weight_product = true OR COALESCE(BOOL_OR(item.is_weight_product), false) = true)';
     const unitExpr = 'COALESCE(item.weight_unit, product.weight_unit)';
     const kgFactorExpr = `CASE ${unitExpr}
       WHEN 'g' THEN 0.001
@@ -376,7 +384,7 @@ export class ReportsService {
       .innerJoin(Product, 'product', 'product.id = item.product_id')
       .select('product.id', 'product_id')
       .addSelect('product.name', 'product_name')
-      .addSelect(`(${isWeightExpr})`, 'is_weight_product')
+      .addSelect(isWeightGroupExpr, 'is_weight_product')
       .addSelect('product.weight_unit', 'weight_unit')
       .addSelect('COALESCE(SUM(item.qty), 0)', 'quantity_sold')
       .addSelect(
@@ -412,7 +420,10 @@ export class ReportsService {
       .addGroupBy('product.is_weight_product')
       .addGroupBy('product.weight_unit')
       .orderBy(
-        `CASE WHEN product.is_weight_product = true THEN SUM(item.qty * ${kgFactorExpr}) ELSE SUM(item.qty) END`,
+        `CASE WHEN ${isWeightGroupExpr}
+          THEN SUM(CASE WHEN ${isWeightExpr} THEN (item.qty * ${kgFactorExpr}) ELSE 0 END)
+          ELSE SUM(CASE WHEN NOT ${isWeightExpr} THEN item.qty ELSE 0 END)
+        END`,
         'DESC',
       )
       .limit(safeLimit)
