@@ -29,90 +29,12 @@ ensure_tool() {
 }
 
 ensure_tool lipo
-ensure_tool python3
 ensure_tool file
+ensure_tool unzip
 
-fetch_release_json() {
-  # We intentionally use GitHub releases for macOS. The pkgs.tailscale.com tarballs are Linux ELF,
-  # which makes `lipo` fail when creating a universal Mach-O binary.
-  local api
-  if [[ "$VERSION" == "latest" ]]; then
-    api="https://api.github.com/repos/tailscale/tailscale/releases/latest"
-  else
-    # Accept VERSION with or without leading "v"
-    local tag="$VERSION"
-    if [[ "$tag" != v* ]]; then
-      tag="v${tag}"
-    fi
-    api="https://api.github.com/repos/tailscale/tailscale/releases/tags/${tag}"
-  fi
-
-  # Avoid GitHub API rate limiting when running locally by allowing a token.
-  # In GitHub Actions, this isn't strictly required, but it also works there.
-  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-    curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "$api"
-  else
-    curl -fsSL -H "X-GitHub-Api-Version: 2022-11-28" "$api"
-  fi
-}
-
-pick_asset_url() {
-  local release_json="$1"
-  local arch="$2" # amd64 | arm64
-
-  # Match both old/new naming variants just in case.
-  # Examples we try to match:
-  # - tailscale_*_darwin_amd64.tgz
-  # - tailscale_*_darwin_arm64.tgz
-  # - tailscale_*_darwin_x86_64.tgz
-  # - tailscale_*_darwin_aarch64.tgz
-  # NOTE: We must not feed the JSON into stdin because `python3 -` reads the script from stdin.
-  # If JSON is passed via stdin, Python will try to execute it and fail on tokens like `false`.
-  local json_file
-  json_file="$(mktemp)"
-  trap 'rm -f "$json_file"' RETURN
-  printf '%s' "$release_json" >"$json_file"
-
-  python3 - "$arch" "$json_file" <<'PY'
-import json, re, sys
-
-arch = sys.argv[1]
-path = sys.argv[2]
-with open(path, "r", encoding="utf-8") as f:
-  data = json.load(f)
-assets = data.get("assets", [])
-
-patterns = []
-if arch == "amd64":
-  patterns = [
-    re.compile(r"^tailscale_.*_darwin_amd64\.tgz$"),
-    re.compile(r"^tailscale_.*_darwin_x86_64\.tgz$"),
-  ]
-elif arch == "arm64":
-  patterns = [
-    re.compile(r"^tailscale_.*_darwin_arm64\.tgz$"),
-    re.compile(r"^tailscale_.*_darwin_aarch64\.tgz$"),
-  ]
-else:
-  raise SystemExit(f"Unknown arch: {arch}")
-
-for a in assets:
-  name = a.get("name", "")
-  for p in patterns:
-    if p.match(name):
-      url = a.get("browser_download_url")
-      if url:
-        print(url)
-        raise SystemExit(0)
-
-available = ", ".join([a.get("name", "") for a in assets])
-raise SystemExit(f"No matching darwin asset for arch={arch}. Available: {available}")
-PY
-}
-
-assert_macho() {
+assert_universal_macho() {
   local path="$1"
-  local desc
+  local desc info
   desc="$(file "$path" || true)"
   if ! echo "$desc" | grep -q "Mach-O"; then
     echo "Error: Se esperaba un binario Mach-O para macOS, pero obtuvimos:"
@@ -120,64 +42,67 @@ assert_macho() {
     echo "Ruta: $path"
     exit 1
   fi
+  info="$(lipo -info "$path" 2>/dev/null || true)"
+  if ! echo "$info" | grep -Eq "(arm64|arm64e)" || ! echo "$info" | grep -q "x86_64"; then
+    echo "Error: Se esperaba un binario universal (arm64 + x86_64). lipo -info devolvió:"
+    echo "  $info"
+    echo "Ruta: $path"
+    exit 1
+  fi
 }
 
-download_tailscale() {
-  local ARCH=$1       # amd64 o arm64
-  local TARGET=$2     # x86_64-apple-darwin o aarch64-apple-darwin
+download_macos_universal_from_pkgs() {
+  # pkgs.tailscale.com/stable provides a macOS app zip/pkg, not per-arch CLI tarballs.
+  # We download the .zip and extract `tailscale` and `tailscaled` from inside the app bundle.
+  local base="https://pkgs.tailscale.com/stable"
+  local html zip_name url tmp
 
-  local release_json url file
-  release_json="$(fetch_release_json)"
-  url="$(pick_asset_url "$release_json" "$ARCH")"
-  file="tailscale_${TARGET}.tgz"
-
-  echo "Descargando Tailscale para $TARGET ($ARCH)..."
-  curl -fsSL "$url" -o "$file"
-
-  tar -xzf "$file"
-
-  local FOLDER
-  # GitHub release tarballs usually extract into `tailscale_<version>_darwin_<arch>`
-  FOLDER=$(ls -d "tailscale_"*_darwin_"$ARCH"* 2>/dev/null | head -n 1 || true)
-
-  if [[ -d "$FOLDER" ]]; then
-    echo "Copiando binarios para $TARGET..."
-    cp "$FOLDER/tailscaled" "$BIN_DIR/tailscaled-$TARGET"
-    cp "$FOLDER/tailscale" "$BIN_DIR/tailscale-$TARGET"
-    chmod +x "$BIN_DIR/tailscaled-$TARGET" "$BIN_DIR/tailscale-$TARGET"
-    assert_macho "$BIN_DIR/tailscaled-$TARGET"
-    assert_macho "$BIN_DIR/tailscale-$TARGET"
-    rm -rf "$FOLDER"
-  else
-    echo "Error: No se encontró la carpeta extraída para $ARCH"
-    ls -ld tailscale_* || true
+  echo "Detectando versión macOS desde $base/ ..."
+  html="$(curl -fsSL "${base}/")"
+  zip_name="$(echo "$html" | grep -oE 'Tailscale-[0-9.]+-macos\\.zip' | head -n 1 || true)"
+  if [[ -z "$zip_name" ]]; then
+    echo "Error: No se pudo detectar el zip de macOS en ${base}/"
     exit 1
   fi
 
-  rm "$file"
+  url="${base}/${zip_name}"
+  echo "Descargando Tailscale macOS: $zip_name"
+
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+
+  curl -fsSL "$url" -o "${tmp}/${zip_name}"
+  unzip -q "${tmp}/${zip_name}" -d "${tmp}/unzipped"
+
+  # Find tailscaled/tailscale binaries within the extracted app.
+  local tailscaled_path tailscale_path
+  tailscaled_path="$(find "${tmp}/unzipped" -type f -name "tailscaled" -perm -111 2>/dev/null | head -n 1 || true)"
+  tailscale_path="$(find "${tmp}/unzipped" -type f -name "tailscale" -perm -111 2>/dev/null | head -n 1 || true)"
+
+  if [[ -z "$tailscaled_path" || -z "$tailscale_path" ]]; then
+    echo "Error: No se encontraron binarios 'tailscaled'/'tailscale' dentro del zip."
+    echo "Dump (primeros matches):"
+    find "${tmp}/unzipped" -maxdepth 6 -type f -name "*tail*" 2>/dev/null | head -n 50 || true
+    exit 1
+  fi
+
+  echo "Validando binarios universales..."
+  assert_universal_macho "$tailscaled_path"
+  assert_universal_macho "$tailscale_path"
+
+  echo "Copiando binarios universales a $BIN_DIR..."
+  cp "$tailscaled_path" "$BIN_DIR/tailscaled-universal-apple-darwin"
+  cp "$tailscale_path" "$BIN_DIR/tailscale-universal-apple-darwin"
+  chmod +x "$BIN_DIR/tailscaled-universal-apple-darwin" "$BIN_DIR/tailscale-universal-apple-darwin"
+
+  # Compatibility: some tooling expects per-target filenames.
+  cp "$BIN_DIR/tailscaled-universal-apple-darwin" "$BIN_DIR/tailscaled-x86_64-apple-darwin"
+  cp "$BIN_DIR/tailscaled-universal-apple-darwin" "$BIN_DIR/tailscaled-aarch64-apple-darwin"
+  cp "$BIN_DIR/tailscale-universal-apple-darwin" "$BIN_DIR/tailscale-x86_64-apple-darwin"
+  cp "$BIN_DIR/tailscale-universal-apple-darwin" "$BIN_DIR/tailscale-aarch64-apple-darwin"
 }
 
-download_tailscale "amd64" "x86_64-apple-darwin"
-download_tailscale "arm64" "aarch64-apple-darwin"
-
-combine_universal() {
-  local output=$1
-  shift
-  echo "Creando binario universal $output..."
-  lipo -create "${BIN_DIR}/tailscaled-x86_64-apple-darwin" "${BIN_DIR}/tailscaled-aarch64-apple-darwin" -output "${BIN_DIR}/${output}"
-  chmod +x "${BIN_DIR}/${output}"
-}
-
-combine_universal "tailscaled-universal-apple-darwin"
-
-combine_cli_universal() {
-  local output=$1
-  echo "Creando binario universal $output..."
-  lipo -create "${BIN_DIR}/tailscale-x86_64-apple-darwin" "${BIN_DIR}/tailscale-aarch64-apple-darwin" -output "${BIN_DIR}/${output}"
-  chmod +x "${BIN_DIR}/${output}"
-}
-
-combine_cli_universal "tailscale-universal-apple-darwin"
+download_macos_universal_from_pkgs
 
 echo "----------------------------------------------------------"
 echo "Contenido de $BIN_DIR:"
