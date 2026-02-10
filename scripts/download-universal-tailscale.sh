@@ -59,7 +59,12 @@ download_macos_universal_from_pkgs() {
 
   echo "Detectando versión macOS desde $base/ ..."
   html="$(curl -fsSL "${base}/")"
-  zip_name="$(echo "$html" | grep -oE 'Tailscale-[0-9.]+-macos\\.zip' | head -n 1 || true)"
+  # The stable page lists versioned macOS artifacts like:
+  # - Tailscale-1.94.1-macos.zip
+  # - Tailscale-1.94.1-macos.pkg
+  #
+  # Use a single backslash (within single quotes) to escape the dot.
+  zip_name="$(echo "$html" | grep -oE 'Tailscale-[0-9.]+-macos\.zip' | head -n 1 || true)"
   if [[ -z "$zip_name" ]]; then
     echo "Error: No se pudo detectar el zip de macOS en ${base}/"
     exit 1
@@ -76,8 +81,9 @@ download_macos_universal_from_pkgs() {
 
   # Find tailscaled/tailscale binaries within the extracted app.
   local tailscaled_path tailscale_path
-  tailscaled_path="$(find "${tmp}/unzipped" -type f -name "tailscaled" -perm -111 2>/dev/null | head -n 1 || true)"
-  tailscale_path="$(find "${tmp}/unzipped" -type f -name "tailscale" -perm -111 2>/dev/null | head -n 1 || true)"
+  # Zip extraction may not preserve executable bits, so do not filter by -perm.
+  tailscaled_path="$(find "${tmp}/unzipped" -type f -name "tailscaled" 2>/dev/null | head -n 1 || true)"
+  tailscale_path="$(find "${tmp}/unzipped" -type f -name "tailscale" 2>/dev/null | head -n 1 || true)"
 
   if [[ -z "$tailscaled_path" || -z "$tailscale_path" ]]; then
     echo "Error: No se encontraron binarios 'tailscaled'/'tailscale' dentro del zip."
