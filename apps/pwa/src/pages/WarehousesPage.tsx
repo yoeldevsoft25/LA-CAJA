@@ -45,6 +45,31 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { WarehouseFormModal } from '@/components/warehouses/WarehouseFormModal'
 import { cn } from '@/lib/utils'
 
+type Tone = 'primary' | 'info' | 'success' | 'warning' | 'destructive' | 'muted'
+
+function toneBadgeClass(tone: Tone) {
+  // Uses design tokens only (no hardcoded palette). Works in light/dark.
+  if (tone === 'muted') return 'bg-muted text-muted-foreground border-border'
+
+  const varName =
+    tone === 'destructive'
+      ? '--destructive'
+      : tone === 'warning'
+        ? '--warning'
+        : tone === 'success'
+          ? '--success'
+          : tone === 'info'
+            ? '--info'
+            : '--primary'
+
+  // Tailwind arbitrary values need underscores for the slash separator.
+  return cn(
+    `bg-[hsl(var(${varName})_/_0.14)]`,
+    `text-[hsl(var(${varName}))]`,
+    `border-[hsl(var(${varName})_/_0.28)]`,
+  )
+}
+
 export default function WarehousesPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -189,14 +214,14 @@ export default function WarehousesPage() {
   }
 
   const getTypeColor = (type: string) => {
-    const types: Record<string, string> = {
-      'STORE': 'bg-blue-100 text-blue-800 border-blue-200',
-      'MAIN': 'bg-purple-100 text-purple-800 border-purple-200',
-      'SHOWROOM': 'bg-pink-100 text-pink-800 border-pink-200',
-      'TRANSIT': 'bg-amber-100 text-amber-800 border-amber-200',
-      'DAMAGED': 'bg-red-100 text-red-800 border-red-200'
+    const types: Record<string, Tone> = {
+      STORE: 'info',
+      MAIN: 'primary',
+      SHOWROOM: 'muted',
+      TRANSIT: 'warning',
+      DAMAGED: 'destructive',
     }
-    return types[type] || 'bg-gray-100 text-gray-800 border-gray-200'
+    return toneBadgeClass(types[type] || 'muted')
   }
 
   const getStatusBadge = (status: string, isActive: boolean) => {
@@ -204,9 +229,9 @@ export default function WarehousesPage() {
 
     switch (status) {
       case 'OPERATIONAL':
-        return <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">Operativo</Badge>
+        return <Badge className={toneBadgeClass('success')}>Operativo</Badge>
       case 'MAINTENANCE':
-        return <Badge className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100">Mantenimiento</Badge>
+        return <Badge className={toneBadgeClass('warning')}>Mantenimiento</Badge>
       case 'CLOSED':
         return <Badge variant="destructive">Cerrado</Badge>
       default:
@@ -263,9 +288,9 @@ export default function WarehousesPage() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium border uppercase tracking-wider", getTypeColor(warehouse.type || 'STORE'))}>
-                        {getTypeLabel(warehouse.type || 'STORE')}
-                      </span>
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium border uppercase tracking-wider", getTypeColor(warehouse.type || 'STORE'))}>
+                          {getTypeLabel(warehouse.type || 'STORE')}
+                        </span>
                       {warehouse.is_default && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-medium border bg-primary/10 text-primary border-primary/20">
                           Principal
@@ -397,7 +422,7 @@ export default function WarehousesPage() {
                           {stock.reserved > 0 && (
                             <div>
                               <p className="text-[10px] uppercase text-muted-foreground font-semibold mb-1">Reservado</p>
-                              <p className="text-xl sm:text-2xl font-bold text-amber-600 font-mono tabular-nums">{stock.reserved}</p>
+                              <p className="text-xl sm:text-2xl font-bold text-[hsl(var(--warning))] font-mono tabular-nums">{stock.reserved}</p>
                             </div>
                           )}
                         </div>
@@ -461,4 +486,3 @@ export default function WarehousesPage() {
     </div>
   )
 }
-
