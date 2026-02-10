@@ -46,38 +46,21 @@ export class CreateCashLedgerAndEscrow1738786000000 implements MigrationInterfac
     );
 
     // Indices for cash_ledger_entries
-    await queryRunner.createIndex(
-      'cash_ledger_entries',
-      new TableIndex({
-        name: 'IDX_cash_ledger_store_session',
-        columnNames: ['store_id', 'cash_session_id'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_cash_ledger_store_session" ON "cash_ledger_entries" ("store_id", "cash_session_id");
+    `);
 
-    await queryRunner.createIndex(
-      'cash_ledger_entries',
-      new TableIndex({
-        name: 'IDX_cash_ledger_event_id',
-        columnNames: ['event_id'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_cash_ledger_event_id" ON "cash_ledger_entries" ("event_id");
+    `);
 
-    await queryRunner.createIndex(
-      'cash_ledger_entries',
-      new TableIndex({
-        name: 'IDX_cash_ledger_request_id',
-        columnNames: ['request_id'],
-        isUnique: true,
-      }),
-    );
+    await queryRunner.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "IDX_cash_ledger_request_id" ON "cash_ledger_entries" ("request_id");
+    `);
 
-    await queryRunner.createIndex(
-      'cash_ledger_entries',
-      new TableIndex({
-        name: 'IDX_cash_ledger_store_created_at',
-        columnNames: ['store_id', 'created_at'],
-      }),
-    );
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_cash_ledger_store_created_at" ON "cash_ledger_entries" ("store_id", "created_at");
+    `);
 
     // Create stock_escrow table
     await queryRunner.createTable(
@@ -120,13 +103,10 @@ export class CreateCashLedgerAndEscrow1738786000000 implements MigrationInterfac
     // If variant_id is NULL, multiple NULLs are allowed in standard SQL unique index.
     // Postgres 15 allows UNIQUE NULLS NOT DISTINCT. But to be safe, let's just index store/product.
 
-    await queryRunner.createIndex(
-      'stock_escrow',
-      new TableIndex({
-        name: 'IDX_stock_escrow_store_product',
-        columnNames: ['store_id', 'product_id'],
-      }),
-    );
+    // Index for stock_escrow
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_stock_escrow_store_product" ON "stock_escrow" ("store_id", "product_id");
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

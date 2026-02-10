@@ -65,8 +65,8 @@ export const Header = memo(function Header({
 }: HeaderProps) {
     return (
         <header
-            className="sticky top-0 z-40 border-b border-border/50
-                 bg-background/75 backdrop-blur-xl
+            className="sticky top-0 z-40 border-b border-sidebar-border/70
+                 bg-sidebar-background/85 backdrop-blur-xl
                  transition-[background-color] duration-300
                  will-change-[backdrop-filter] relative"
         >
