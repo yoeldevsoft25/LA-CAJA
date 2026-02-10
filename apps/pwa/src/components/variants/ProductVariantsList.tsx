@@ -8,10 +8,10 @@ import {
 } from '@/services/product-variants.service'
 import toast from '@/lib/toast'
 import ProductVariantModal from './ProductVariantModal'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -136,11 +136,10 @@ export default function ProductVariantsList({ productId }: ProductVariantsListPr
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <Skeleton className="h-4 w-32" />
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-[300px] w-full rounded-xl" />
+      </div>
     )
   }
 
@@ -148,160 +147,147 @@ export default function ProductVariantsList({ productId }: ProductVariantsListPr
   const inactiveVariants = variantsWithStock?.filter((v) => !v.is_active) || []
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-lg sm:text-xl flex items-center">
-            <Layers className="w-5 h-5 mr-2" />
-            Variantes del Producto ({variants?.length || 0})
-          </CardTitle>
-          <Button onClick={handleAdd} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Variante
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          {variants && variants.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground">
-              No hay variantes configuradas. Agrega variantes para gestionar diferentes versiones
-              del producto.
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground flex items-center">
+            <Layers className="w-5 h-5 mr-2 text-primary" />
+            Variantes Registradas ({variants?.length || 0})
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gestiona las diferentes versiones de este producto
+          </p>
+        </div>
+        <Button onClick={handleAdd} size="sm" className="w-full sm:w-auto shadow-sm">
+          <Plus className="w-4 h-4 mr-2" />
+          Nueva Variante
+        </Button>
+      </div>
+
+      <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
+        {variants && variants.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <Package className="w-8 h-8 text-muted-foreground/50" />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead className="hidden md:table-cell">SKU</TableHead>
-                    <TableHead className="hidden lg:table-cell">Código</TableHead>
-                    <TableHead className="hidden sm:table-cell">Precio Bs</TableHead>
-                    <TableHead className="hidden sm:table-cell">Precio USD</TableHead>
-                    <TableHead className="hidden md:table-cell">Stock</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+            <h3 className="font-medium text-foreground">No hay variantes</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-[250px] mx-auto">
+              Comienza agregando tallas, colores o versiones para este producto.
+            </p>
+            <Button onClick={handleAdd} variant="outline" size="sm" className="mt-4">
+              <Plus className="w-4 h-4 mr-2" />
+              Crear primera variante
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead className="w-[100px]">Tipo</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead className="hidden md:table-cell">SKU / Barra</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">Precio</TableHead>
+                  <TableHead className="hidden md:table-cell text-center">Stock</TableHead>
+                  <TableHead className="w-[100px] text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activeVariants.map((variant) => (
+                  <TableRow key={variant.id} className="group hover:bg-muted/20">
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{variant.variant_type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <p className="font-semibold text-foreground">{variant.variant_value}</p>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-mono text-muted-foreground">{variant.sku || '-'}</p>
+                        <p className="text-[10px] font-mono text-muted-foreground/60">{variant.barcode || '-'}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-medium text-foreground">
+                          {variant.price_usd ? `$${Number(variant.price_usd).toFixed(2)}` : '-'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {variant.price_bs ? `${Number(variant.price_bs).toFixed(2)} Bs` : ''}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-center">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className={cn(
+                          "text-sm font-bold",
+                          (variant.stock || 0) > 0 ? "text-foreground" : "text-muted-foreground"
+                        )}>
+                          {variant.stock !== undefined ? variant.stock : '-'}
+                        </span>
+                        <Package className="w-3 h-3 text-muted-foreground/40" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(variant)}
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setVariantToDelete(variant)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activeVariants.map((variant) => (
-                    <TableRow key={variant.id}>
-                      <TableCell>
-                        <Badge variant="outline">{variant.variant_type}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <p className="font-medium text-foreground">{variant.variant_value}</p>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <p className="text-sm text-muted-foreground">{variant.sku || '-'}</p>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {variant.barcode || '-'}
-                        </p>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <p className="text-sm text-foreground">
-                          {variant.price_bs ? `${Number(variant.price_bs).toFixed(2)} Bs` : '-'}
-                        </p>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <p className="text-sm text-foreground">
-                          {variant.price_usd ? `$${Number(variant.price_usd).toFixed(2)}` : '-'}
-                        </p>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="flex items-center gap-1">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground">
-                            {variant.stock !== undefined ? variant.stock : '-'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">Activa</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(variant)}
-                            className="text-primary hover:text-primary hover:bg-primary/10"
-                          >
-                            <Edit className="w-4 h-4 mr-1.5" />
-                            Editar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setVariantToDelete(variant)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                ))}
+
+                {inactiveVariants.length > 0 && (
+                  <>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableCell colSpan={6} className="py-2 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Variantes Inactivas
                       </TableCell>
                     </TableRow>
-                  ))}
-                  {inactiveVariants.map((variant) => (
-                    <TableRow key={variant.id} className="opacity-60">
-                      <TableCell>
-                        <Badge variant="secondary">{variant.variant_type}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <p className="font-medium text-foreground">{variant.variant_value}</p>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <p className="text-sm text-muted-foreground">{variant.sku || '-'}</p>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {variant.barcode || '-'}
-                        </p>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <p className="text-sm text-foreground">
-                          {variant.price_bs ? `${Number(variant.price_bs).toFixed(2)} Bs` : '-'}
-                        </p>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <p className="text-sm text-foreground">
-                          {variant.price_usd ? `$${Number(variant.price_usd).toFixed(2)}` : '-'}
-                        </p>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">-</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">Inactiva</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                    {inactiveVariants.map((variant) => (
+                      <TableRow key={variant.id} className="opacity-50 grayscale hover:bg-muted/20 group">
+                        <TableCell>
+                          <Badge variant="secondary" className="capitalize">{variant.variant_type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <p className="font-medium">{variant.variant_value}</p>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">-</TableCell>
+                        <TableCell className="hidden sm:table-cell text-right">-</TableCell>
+                        <TableCell className="hidden md:table-cell text-center">-</TableCell>
+                        <TableCell className="text-right">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => handleEdit(variant)}
-                            className="text-primary hover:text-primary hover:bg-primary/10"
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100"
                           >
-                            <Edit className="w-4 h-4 mr-1.5" />
-                            Editar
+                            <Edit className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setVariantToDelete(variant)}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
       <ProductVariantModal
         isOpen={isModalOpen}
@@ -341,7 +327,7 @@ export default function ProductVariantsList({ productId }: ProductVariantsListPr
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }
 
