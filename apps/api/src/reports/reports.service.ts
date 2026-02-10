@@ -734,10 +734,45 @@ export class ReportsService {
       query.andWhere('shift.cashier_id = :cashierId', { cashierId });
     }
 
-    const shifts = await query
+    const now = new Date();
+    const totalsBsExpr =
+      "COALESCE((sale.totals->>'total_bs')::numeric, 0)";
+    const totalsUsdExpr =
+      "COALESCE((sale.totals->>'total_usd')::numeric, 0)";
+
+    // Evita N+1: agregamos ventas por turno en SQL.
+    // Nota: el join incluye rango temporal por shift; esto es mas eficiente que hacer 1 query por shift.
+    const shiftsWithSales = await query
       .leftJoinAndSelect('shift.cashier', 'cashier')
+      .leftJoin(
+        Sale,
+        'sale',
+        [
+          'sale.store_id = shift.store_id',
+          'sale.sold_by_user_id = shift.cashier_id',
+          'sale.voided_at IS NULL',
+          'sale.sold_at >= shift.opened_at',
+          'sale.sold_at <= COALESCE(shift.closed_at, :now)',
+        ].join(' AND '),
+        { now },
+      )
+      .select([
+        'shift.id',
+        'shift.cashier_id',
+        'shift.opened_at',
+        'shift.closed_at',
+        'shift.difference_bs',
+        'shift.difference_usd',
+        'cashier.id',
+        'cashier.full_name',
+      ])
+      .addSelect('COUNT(sale.id)', 'sales_count')
+      .addSelect(`COALESCE(SUM(${totalsBsExpr}), 0)`, 'total_sales_bs')
+      .addSelect(`COALESCE(SUM(${totalsUsdExpr}), 0)`, 'total_sales_usd')
+      .groupBy('shift.id')
+      .addGroupBy('cashier.id')
       .orderBy('shift.opened_at', 'DESC')
-      .getMany();
+      .getRawAndEntities();
 
     const cashierMap = new Map<
       string,
@@ -769,29 +804,14 @@ export class ReportsService {
       difference_usd: number | null;
     }> = [];
 
-    for (const shift of shifts) {
-      // Obtener ventas del turno
-      const sales = await this.saleRepository
-        .createQueryBuilder('sale')
-        .where('sale.store_id = :storeId', { storeId })
-        .andWhere('sale.sold_by_user_id = :cashierId', {
-          cashierId: shift.cashier_id,
-        })
-        .andWhere('sale.sold_at >= :openedAt', { openedAt: shift.opened_at })
-        .andWhere('sale.voided_at IS NULL')
-        .andWhere('sale.sold_at <= :closedAt', {
-          closedAt: shift.closed_at ?? new Date(),
-        })
-        .getMany();
+    const { entities: shifts, raw } = shiftsWithSales;
 
-      let shiftSalesBs = 0;
-      let shiftSalesUsd = 0;
-
-      for (const sale of sales) {
-        const totals = sale.totals || {};
-        shiftSalesBs += Number(totals.total_bs || 0);
-        shiftSalesUsd += Number(totals.total_usd || 0);
-      }
+    for (let i = 0; i < shifts.length; i++) {
+      const shift = shifts[i];
+      const row = raw[i] as any;
+      const shiftSalesBs = Number(row?.total_sales_bs || 0);
+      const shiftSalesUsd = Number(row?.total_sales_usd || 0);
+      const salesCount = Number(row?.sales_count || 0);
 
       total_sales_bs += shiftSalesBs;
       total_sales_usd += shiftSalesUsd;
@@ -829,7 +849,7 @@ export class ReportsService {
         cashier_name: cashierName,
         opened_at: shift.opened_at,
         closed_at: shift.closed_at,
-        sales_count: sales.length,
+        sales_count: salesCount,
         total_sales_bs: shiftSalesBs,
         total_sales_usd: shiftSalesUsd,
         difference_bs: shift.difference_bs,

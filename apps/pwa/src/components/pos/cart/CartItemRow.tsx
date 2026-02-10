@@ -32,7 +32,7 @@ export function CartItemRow({
     return (
         <div
             className={cn(
-                "group p-3 border-b border-border/60 hover:bg-muted/30 relative transition-colors duration-200",
+                "group p-3 border-b !border-border hover:bg-muted/30 relative transition-colors duration-200",
                 isMobile && "pr-12",
                 isInvalid && "bg-destructive/5"
             )}>

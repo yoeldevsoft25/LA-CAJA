@@ -69,7 +69,7 @@ const POSCart = memo(function POSCart({
     return (
         <div className={cn("h-full min-h-0 flex flex-col", !isTabletLandscape && "lg:col-span-1")}>
             <Card className={cn(
-                "glass-panel rounded-2xl border-border/60 premium-shadow-md overflow-hidden h-full min-h-0",
+                "glass-panel rounded-2xl !border-border premium-shadow-lg overflow-hidden h-full min-h-0",
                 "grid grid-rows-[auto_auto_minmax(0,1fr)_auto]"
             )}>
                 {/* Tabs de Carrito */}
@@ -80,7 +80,7 @@ const POSCart = memo(function POSCart({
                 />
 
                 {/* Header del Carrito (Título + Limpiar) */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 flex-shrink-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b !border-border flex-shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="bg-primary/10 p-2 rounded-full">
                             <ShoppingCartIcon className="w-5 h-5 text-primary" />
