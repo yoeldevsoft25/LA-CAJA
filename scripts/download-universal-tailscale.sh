@@ -66,11 +66,20 @@ pick_asset_url() {
   # - tailscale_*_darwin_arm64.tgz
   # - tailscale_*_darwin_x86_64.tgz
   # - tailscale_*_darwin_aarch64.tgz
-  python3 - "$arch" <<'PY' <<<"$release_json"
+  # NOTE: We must not feed the JSON into stdin because `python3 -` reads the script from stdin.
+  # If JSON is passed via stdin, Python will try to execute it and fail on tokens like `false`.
+  local json_file
+  json_file="$(mktemp)"
+  trap 'rm -f "$json_file"' RETURN
+  printf '%s' "$release_json" >"$json_file"
+
+  python3 - "$arch" "$json_file" <<'PY'
 import json, re, sys
 
 arch = sys.argv[1]
-data = json.load(sys.stdin)
+path = sys.argv[2]
+with open(path, "r", encoding="utf-8") as f:
+  data = json.load(f)
 assets = data.get("assets", [])
 
 patterns = []
