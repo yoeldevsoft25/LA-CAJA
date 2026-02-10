@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Package, Plus, Edit, Trash2, Calendar, AlertTriangle, History } from 'lucide-react'
+import { Package, Edit, History, Boxes, Plus } from 'lucide-react'
 import {
   productLotsService,
   ProductLot,
@@ -9,7 +9,6 @@ import {
 import toast from '@/lib/toast'
 import ProductLotModal from './ProductLotModal'
 import LotMovementsList from './LotMovementsList'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -32,6 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { format, isBefore, differenceInDays } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 interface ProductLotsListProps {
   productId: string
@@ -98,185 +98,171 @@ export default function ProductLotsList({ productId }: ProductLotsListProps) {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <Skeleton className="h-4 w-32" />
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-[300px] w-full rounded-xl" />
+      </div>
     )
   }
 
   const sortedLots = [...(lots || [])].sort((a, b) => {
-    // Ordenar por fecha de recepción (FIFO)
     return new Date(a.received_at).getTime() - new Date(b.received_at).getTime()
   })
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-lg sm:text-xl flex items-center">
-            <Package className="w-5 h-5 mr-2" />
-            Lotes del Producto ({lots?.length || 0})
-          </CardTitle>
-          <Button onClick={handleAdd} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Lote
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          {lots && lots.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground">
-              No hay lotes configurados. Agrega lotes para gestionar productos con fechas de
-              vencimiento y aplicar lógica FIFO.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Número de Lote</TableHead>
-                    <TableHead className="hidden sm:table-cell">Cantidad</TableHead>
-                    <TableHead className="hidden md:table-cell">Costo Unitario</TableHead>
-                    <TableHead className="hidden lg:table-cell">Recepción</TableHead>
-                    <TableHead className="hidden sm:table-cell">Vencimiento</TableHead>
-                    <TableHead className="hidden md:table-cell">Proveedor</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedLots.map((lot) => {
-                    const expirationStatus = getExpirationStatus(lot)
-                    const percentageUsed =
-                      lot.initial_quantity > 0
-                        ? ((lot.initial_quantity - lot.remaining_quantity) / lot.initial_quantity) *
-                          100
-                        : 0
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground flex items-center">
+            <Package className="w-5 h-5 mr-2 text-primary" />
+            Lotes Registrados ({lots?.length || 0})
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gestión de inventario por lotes y fechas de vencimiento (FIFO)
+          </p>
+        </div>
+        <Button onClick={handleAdd} size="sm" className="w-full sm:w-auto shadow-sm">
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo Lote
+        </Button>
+      </div>
 
-                    return (
-                      <TableRow key={lot.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-foreground">{lot.lot_number}</p>
-                            {lot.note && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                {lot.note}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <div className="text-sm">
-                            <p className="font-semibold text-foreground">
-                              {lot.remaining_quantity} / {lot.initial_quantity}
-                            </p>
-                            <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-                              <div
-                                className="bg-primary h-1.5 rounded-full transition-all"
-                                style={{ width: `${percentageUsed}%` }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="text-sm">
-                            <p className="text-foreground">
-                              ${Number(lot.unit_cost_usd).toFixed(2)} USD
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {Number(lot.unit_cost_bs).toFixed(2)} Bs
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(lot.received_at), 'dd/MM/yyyy')}
-                          </p>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {lot.expiration_date ? (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              <p className="text-sm text-foreground">
-                                {format(new Date(lot.expiration_date), 'dd/MM/yyyy')}
-                              </p>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">-</p>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <p className="text-sm text-muted-foreground">{lot.supplier || '-'}</p>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {lot.remaining_quantity === 0 ? (
-                              <Badge variant="secondary">Agotado</Badge>
-                            ) : (
-                              <Badge variant="default">Disponible</Badge>
-                            )}
-                            {expirationStatus && (
-                              <Badge
-                                variant={
-                                  expirationStatus.status === 'expired'
-                                    ? 'destructive'
-                                    : expirationStatus.status === 'warning'
-                                      ? 'destructive'
-                                      : 'secondary'
-                                }
-                                className="text-xs"
-                              >
-                                {expirationStatus.status === 'expired' && (
-                                  <AlertTriangle className="w-3 h-3 mr-1" />
-                                )}
-                                {expirationStatus.label}
-                                {expirationStatus.days !== undefined &&
-                                  expirationStatus.status !== 'expired' &&
-                                  ` (${expirationStatus.days}d)`}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setLotToViewMovements(lot)}
-                              className="text-primary hover:text-primary hover:bg-primary/10"
-                            >
-                              <History className="w-4 h-4 mr-1.5" />
-                              Movimientos
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(lot)}
-                              className="text-primary hover:text-primary hover:bg-primary/10"
-                            >
-                              <Edit className="w-4 h-4 mr-1.5" />
-                              Editar
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setLotToDelete(lot)}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+      <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
+        {lots && lots.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <Boxes className="w-8 h-8 text-muted-foreground/50" />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <h3 className="font-medium text-foreground">No hay lotes</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-[250px] mx-auto">
+              Registra lotes para realizar un seguimiento exacto de vencimientos y costos.
+            </p>
+            <Button onClick={handleAdd} variant="outline" size="sm" className="mt-4">
+              <Plus className="w-4 h-4 mr-2" />
+              Crear primer lote
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead>Número de Lote</TableHead>
+                  <TableHead className="hidden sm:table-cell">Stock / Inicial</TableHead>
+                  <TableHead className="hidden md:table-cell">Costo</TableHead>
+                  <TableHead className="hidden sm:table-cell">Vencimiento</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedLots.map((lot) => {
+                  const expirationStatus = getExpirationStatus(lot)
+                  const percentageUsed =
+                    lot.initial_quantity > 0
+                      ? ((lot.initial_quantity - lot.remaining_quantity) / lot.initial_quantity) *
+                      100
+                      : 0
+
+                  return (
+                    <TableRow key={lot.id} className="group hover:bg-muted/20">
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-semibold text-foreground">{lot.lot_number}</p>
+                          {lot.supplier && (
+                            <p className="text-[10px] text-muted-foreground uppercase">{lot.supplier}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="w-32 space-y-1.5">
+                          <div className="flex justify-between text-[11px] font-medium">
+                            <span className="text-foreground">{lot.remaining_quantity} disponibles</span>
+                            <span className="text-muted-foreground">{lot.initial_quantity}</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                lot.remaining_quantity === 0 ? "bg-muted-foreground/30" : "bg-primary"
+                              )}
+                              style={{ width: `${100 - percentageUsed}%` }}
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium text-foreground">
+                            ${Number(lot.unit_cost_usd).toFixed(2)}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {Number(lot.unit_cost_bs).toFixed(2)} Bs
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {lot.expiration_date ? (
+                          <div className="flex flex-col gap-0.5">
+                            <p className={cn(
+                              "text-sm font-medium",
+                              expirationStatus?.status === 'expired' ? "text-destructive" : "text-foreground"
+                            )}>
+                              {format(new Date(lot.expiration_date), 'dd/MM/yyyy')}
+                            </p>
+                            {expirationStatus && (
+                              <span className={cn(
+                                "text-[10px] uppercase font-bold tracking-tight",
+                                expirationStatus.status === 'expired' ? "text-destructive" :
+                                  expirationStatus.status === 'warning' ? "text-orange-500" : "text-blue-500"
+                              )}>
+                                {expirationStatus.label}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground/40">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {lot.remaining_quantity === 0 ? (
+                          <Badge variant="secondary" className="bg-muted text-muted-foreground">Agotado</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-green-600 bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
+                            Activo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setLotToViewMovements(lot)}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            title="Ver movimientos"
+                          >
+                            <History className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(lot)}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
       <ProductLotModal
         isOpen={isModalOpen}
@@ -327,7 +313,7 @@ export default function ProductLotsList({ productId }: ProductLotsListProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }
 

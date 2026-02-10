@@ -7,7 +7,13 @@ import {
   ProductLot,
   CreateProductLotRequest,
 } from '@/services/product-lots.service'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -105,37 +111,37 @@ export default function ProductLotModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
-            <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="w-full sm:max-w-xl flex flex-col p-0 gap-0 border-l border-border shadow-2xl">
+        <SheetHeader className="px-5 py-4 border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <SheetTitle className="text-xl font-semibold flex items-center">
+            <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-3" />
             {lot ? 'Editar Lote' : 'Crear Lote'}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
+          </SheetTitle>
+          <SheetDescription className="sr-only">
             {lot ? 'Edita los datos del lote' : 'Crea un nuevo lote para el producto'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-            <div className="space-y-4">
-              <Alert className="bg-info/5 border-info/50">
-                <AlertDescription className="text-sm text-foreground">
-                  Los lotes permiten rastrear productos con fechas de vencimiento y aplicar lógica
-                  FIFO (primero en entrar, primero en salir) automáticamente.
-                </AlertDescription>
-              </Alert>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 bg-background">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-6 space-y-6">
+            <Alert className="bg-primary/5 border-primary/20 p-4">
+              <AlertDescription className="text-sm text-foreground/90 leading-relaxed">
+                Los lotes permiten rastrear productos con fechas de vencimiento y aplicar lógica
+                FIFO (primero en entrar, primero en salir) automáticamente.
+              </AlertDescription>
+            </Alert>
 
+            <div className="space-y-5">
               {/* Número de lote */}
               <div>
-                <Label htmlFor="lot_number">
+                <Label htmlFor="lot_number" className="text-sm font-medium mb-1.5 block">
                   Número de Lote <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="lot_number"
                   {...register('lot_number')}
-                  className="mt-2"
+                  className="h-10"
                   placeholder="Ej: LOT-2024-001"
                   maxLength={100}
                   disabled={isLoading || !!lot}
@@ -144,7 +150,7 @@ export default function ProductLotModal({
                   <p className="mt-1 text-sm text-destructive">{errors.lot_number.message}</p>
                 )}
                 {lot && (
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     El número de lote no se puede modificar
                   </p>
                 )}
@@ -152,7 +158,7 @@ export default function ProductLotModal({
 
               {/* Cantidad inicial */}
               <div>
-                <Label htmlFor="initial_quantity">
+                <Label htmlFor="initial_quantity" className="text-sm font-medium mb-1.5 block">
                   Cantidad Inicial <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -161,7 +167,7 @@ export default function ProductLotModal({
                   step="1"
                   min="1"
                   {...register('initial_quantity', { valueAsNumber: true })}
-                  className="mt-2"
+                  className="h-10"
                   placeholder="100"
                   disabled={isLoading || !!lot}
                 />
@@ -169,46 +175,52 @@ export default function ProductLotModal({
                   <p className="mt-1 text-sm text-destructive">{errors.initial_quantity.message}</p>
                 )}
                 {lot && (
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     Cantidad inicial: {lot.initial_quantity} | Restante: {lot.remaining_quantity}
                   </p>
                 )}
               </div>
 
               {/* Costos unitarios */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <Label htmlFor="unit_cost_bs">
+                  <Label htmlFor="unit_cost_bs" className="text-sm font-medium mb-1.5 block">
                     Costo Unitario Bs <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="unit_cost_bs"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register('unit_cost_bs', { valueAsNumber: true })}
-                    className="mt-2"
-                    placeholder="0.00"
-                    disabled={isLoading}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Bs.</span>
+                    <Input
+                      id="unit_cost_bs"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('unit_cost_bs', { valueAsNumber: true })}
+                      className="pl-9 h-10"
+                      placeholder="0.00"
+                      disabled={isLoading}
+                    />
+                  </div>
                   {errors.unit_cost_bs && (
                     <p className="mt-1 text-sm text-destructive">{errors.unit_cost_bs.message}</p>
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="unit_cost_usd">
+                  <Label htmlFor="unit_cost_usd" className="text-sm font-medium mb-1.5 block">
                     Costo Unitario USD <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="unit_cost_usd"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register('unit_cost_usd', { valueAsNumber: true })}
-                    className="mt-2"
-                    placeholder="0.00"
-                    disabled={isLoading}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      id="unit_cost_usd"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('unit_cost_usd', { valueAsNumber: true })}
+                      className="pl-7 h-10"
+                      placeholder="0.00"
+                      disabled={isLoading}
+                    />
+                  </div>
                   {errors.unit_cost_usd && (
                     <p className="mt-1 text-sm text-destructive">{errors.unit_cost_usd.message}</p>
                   )}
@@ -217,14 +229,14 @@ export default function ProductLotModal({
 
               {/* Fecha de recepción */}
               <div>
-                <Label htmlFor="received_at">
+                <Label htmlFor="received_at" className="text-sm font-medium mb-1.5 block">
                   Fecha de Recepción <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="received_at"
                   type="datetime-local"
                   {...register('received_at')}
-                  className="mt-2"
+                  className="h-10"
                   disabled={isLoading}
                 />
                 {errors.received_at && (
@@ -234,32 +246,32 @@ export default function ProductLotModal({
 
               {/* Fecha de vencimiento */}
               <div>
-                <Label htmlFor="expiration_date">Fecha de Vencimiento (Opcional)</Label>
-                <div className="relative mt-2">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Label htmlFor="expiration_date" className="text-sm font-medium mb-1.5 block">Fecha de Vencimiento (Opcional)</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="expiration_date"
                     type="date"
                     {...register('expiration_date')}
-                    className="pl-10"
+                    className="pl-10 h-10"
                     disabled={isLoading}
                   />
                 </div>
                 {errors.expiration_date && (
                   <p className="mt-1 text-sm text-destructive">{errors.expiration_date.message}</p>
                 )}
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1.5 text-xs text-muted-foreground">
                   Si se especifica, el sistema alertará cuando el lote esté próximo a vencer
                 </p>
               </div>
 
               {/* Proveedor */}
               <div>
-                <Label htmlFor="supplier">Proveedor (Opcional)</Label>
+                <Label htmlFor="supplier" className="text-sm font-medium mb-1.5 block">Proveedor (Opcional)</Label>
                 <Input
                   id="supplier"
                   {...register('supplier')}
-                  className="mt-2"
+                  className="h-10"
                   placeholder="Nombre del proveedor"
                   maxLength={500}
                   disabled={isLoading}
@@ -271,12 +283,12 @@ export default function ProductLotModal({
 
               {/* Nota */}
               <div>
-                <Label htmlFor="note">Nota (Opcional)</Label>
+                <Label htmlFor="note" className="text-sm font-medium mb-1.5 block">Nota (Opcional)</Label>
                 <Textarea
                   id="note"
                   {...register('note')}
                   rows={3}
-                  className="mt-2 resize-none"
+                  className="resize-none"
                   placeholder="Notas adicionales sobre el lote..."
                   maxLength={1000}
                   disabled={isLoading}
@@ -289,30 +301,30 @@ export default function ProductLotModal({
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-muted/10 backdrop-blur-sm">
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1"
+                className="flex-1 h-11"
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
                     Guardando...
                   </>
                 ) : (
                   <>
-                    <Save className="w-5 h-5 mr-2" />
+                    <Save className="w-4 h-4 mr-2" />
                     {lot ? 'Actualizar' : 'Crear'} Lote
                   </>
                 )}
@@ -320,8 +332,7 @@ export default function ProductLotModal({
             </div>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }
-

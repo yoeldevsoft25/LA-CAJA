@@ -2,13 +2,19 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Hash, Save, Plus, X } from 'lucide-react'
+import { Hash, Save, Plus, X, ListChecks } from 'lucide-react'
 import {
   ProductSerial,
   CreateProductSerialRequest,
   CreateSerialsBatchRequest,
 } from '@/services/product-serials.service'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -138,37 +144,37 @@ export default function ProductSerialModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="text-lg sm:text-xl flex items-center">
-            <Hash className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="w-full sm:max-w-xl flex flex-col p-0 gap-0 border-l border-border shadow-2xl">
+        <SheetHeader className="px-5 py-4 border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <SheetTitle className="text-xl font-semibold flex items-center">
+            <Hash className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-3" />
             {serial ? 'Editar Serial' : 'Crear Serial'}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
+          </SheetTitle>
+          <SheetDescription className="sr-only">
             {serial ? 'Edita los datos del serial' : 'Crea un nuevo serial para el producto'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         {serial ? (
           // Editar serial individual
-          <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-              <div className="space-y-4">
-                <Alert className="bg-info/5 border-info/50">
-                  <AlertDescription className="text-sm text-foreground">
-                    Los seriales permiten rastrear productos individuales por número de serie.
-                  </AlertDescription>
-                </Alert>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 bg-background">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-6 space-y-6">
+              <Alert className="bg-primary/5 border-primary/20 p-4">
+                <AlertDescription className="text-sm text-foreground/90 leading-relaxed">
+                  Los seriales permiten rastrear productos individuales por número de serie.
+                </AlertDescription>
+              </Alert>
 
+              <div className="space-y-5">
                 <div>
-                  <Label htmlFor="serial_number">
+                  <Label htmlFor="serial_number" className="text-sm font-medium mb-1.5 block">
                     Número de Serie <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="serial_number"
                     {...register('serial_number')}
-                    className="mt-2"
+                    className="h-10 font-mono"
                     placeholder="Ej: SN-2024-001"
                     maxLength={200}
                     disabled={isLoading || !!serial}
@@ -177,21 +183,21 @@ export default function ProductSerialModal({
                     <p className="mt-1 text-sm text-destructive">{errors.serial_number.message}</p>
                   )}
                   {serial && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1.5 text-xs text-muted-foreground">
                       El número de serie no se puede modificar
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="received_at">
+                  <Label htmlFor="received_at" className="text-sm font-medium mb-1.5 block">
                     Fecha de Recepción <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="received_at"
                     type="datetime-local"
                     {...register('received_at')}
-                    className="mt-2"
+                    className="h-10"
                     disabled={isLoading}
                   />
                   {errors.received_at && (
@@ -200,12 +206,12 @@ export default function ProductSerialModal({
                 </div>
 
                 <div>
-                  <Label htmlFor="note">Nota (Opcional)</Label>
+                  <Label htmlFor="note" className="text-sm font-medium mb-1.5 block">Nota (Opcional)</Label>
                   <Textarea
                     id="note"
                     {...register('note')}
                     rows={3}
-                    className="mt-2 resize-none"
+                    className="resize-none"
                     placeholder="Notas adicionales sobre el serial..."
                     maxLength={1000}
                     disabled={isLoading}
@@ -217,30 +223,30 @@ export default function ProductSerialModal({
               </div>
             </div>
 
-            <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-muted/10 backdrop-blur-sm">
+              <div className="flex flex-col-reverse sm:flex-row gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={onClose}
-                  className="flex-1"
+                  className="flex-1 h-11"
                   disabled={isLoading}
                 >
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
                       Guardando...
                     </>
                   ) : (
                     <>
-                      <Save className="w-5 h-5 mr-2" />
+                      <Save className="w-4 h-4 mr-2" />
                       Actualizar Serial
                     </>
                   )}
@@ -250,32 +256,38 @@ export default function ProductSerialModal({
           </form>
         ) : (
           // Crear serial (individual o en lote)
-          <Tabs defaultValue="single" className="flex-1 flex flex-col min-h-0">
-            <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 pt-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="single">Individual</TabsTrigger>
-                <TabsTrigger value="batch">En Lote</TabsTrigger>
+          <Tabs defaultValue="single" className="flex-1 flex flex-col min-h-0 bg-background">
+            <div className="flex-shrink-0 px-5 pt-5 pb-2">
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1">
+                <TabsTrigger value="single" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Hash className="w-4 h-4 mr-2" />
+                  Individual
+                </TabsTrigger>
+                <TabsTrigger value="batch" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <ListChecks className="w-4 h-4 mr-2" />
+                  En Lote
+                </TabsTrigger>
               </TabsList>
             </div>
 
             <TabsContent value="single" className="flex-1 flex flex-col min-h-0 mt-0">
               <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-                  <div className="space-y-4">
-                    <Alert className="bg-info/5 border-info/50">
-                      <AlertDescription className="text-sm text-foreground">
-                        Crea un serial individual para el producto.
-                      </AlertDescription>
-                    </Alert>
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-6 space-y-6">
+                  <Alert className="bg-primary/5 border-primary/20 p-4">
+                    <AlertDescription className="text-sm text-foreground/90 leading-relaxed">
+                      Crea un serial individual para el producto.
+                    </AlertDescription>
+                  </Alert>
 
+                  <div className="space-y-5">
                     <div>
-                      <Label htmlFor="single_serial_number">
+                      <Label htmlFor="single_serial_number" className="text-sm font-medium mb-1.5 block">
                         Número de Serie <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="single_serial_number"
                         {...register('serial_number')}
-                        className="mt-2"
+                        className="h-10 font-mono"
                         placeholder="Ej: SN-2024-001"
                         maxLength={200}
                         disabled={isLoading}
@@ -288,14 +300,14 @@ export default function ProductSerialModal({
                     </div>
 
                     <div>
-                      <Label htmlFor="single_received_at">
+                      <Label htmlFor="single_received_at" className="text-sm font-medium mb-1.5 block">
                         Fecha de Recepción <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="single_received_at"
                         type="datetime-local"
                         {...register('received_at')}
-                        className="mt-2"
+                        className="h-10"
                         disabled={isLoading}
                       />
                       {errors.received_at && (
@@ -304,12 +316,12 @@ export default function ProductSerialModal({
                     </div>
 
                     <div>
-                      <Label htmlFor="single_note">Nota (Opcional)</Label>
+                      <Label htmlFor="single_note" className="text-sm font-medium mb-1.5 block">Nota (Opcional)</Label>
                       <Textarea
                         id="single_note"
                         {...register('note')}
                         rows={3}
-                        className="mt-2 resize-none"
+                        className="resize-none"
                         placeholder="Notas adicionales sobre el serial..."
                         maxLength={1000}
                         disabled={isLoading}
@@ -321,30 +333,30 @@ export default function ProductSerialModal({
                   </div>
                 </div>
 
-                <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-muted/10 backdrop-blur-sm">
+                  <div className="flex flex-col-reverse sm:flex-row gap-3">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={onClose}
-                      className="flex-1"
+                      className="flex-1 h-11"
                       disabled={isLoading}
                     >
                       Cancelar
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                       disabled={isLoading}
                     >
                       {isLoading ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                          <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
                           Guardando...
                         </>
                       ) : (
                         <>
-                          <Save className="w-5 h-5 mr-2" />
+                          <Save className="w-4 h-4 mr-2" />
                           Crear Serial
                         </>
                       )}
@@ -356,23 +368,23 @@ export default function ProductSerialModal({
 
             <TabsContent value="batch" className="flex-1 flex flex-col min-h-0 mt-0">
               <form onSubmit={handleSubmitBatch(onBatchSubmit)} className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-                  <div className="space-y-4">
-                    <Alert className="bg-info/5 border-info/50">
-                      <AlertDescription className="text-sm text-foreground">
-                        Crea múltiples seriales a la vez. Ingresa un número de serie por línea.
-                      </AlertDescription>
-                    </Alert>
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-6 space-y-6">
+                  <Alert className="bg-primary/5 border-primary/20 p-4">
+                    <AlertDescription className="text-sm text-foreground/90 leading-relaxed">
+                      Crea múltiples seriales a la vez. Útil para recepciones de grandes lotes.
+                    </AlertDescription>
+                  </Alert>
 
+                  <div className="space-y-5">
                     <div>
-                      <Label htmlFor="batch_received_at">
+                      <Label htmlFor="batch_received_at" className="text-sm font-medium mb-1.5 block">
                         Fecha de Recepción <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         id="batch_received_at"
                         type="datetime-local"
                         {...registerBatch('received_at')}
-                        className="mt-2"
+                        className="h-10"
                         disabled={isLoading}
                       />
                       {errorsBatch.received_at && (
@@ -382,30 +394,34 @@ export default function ProductSerialModal({
                       )}
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Label>Números de Serie</Label>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Números de Serie</Label>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={addBatchSerialField}
                           disabled={isLoading}
+                          className="h-8 rounded-full"
                         >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Agregar
+                          <Plus className="w-3 h-3 mr-1.5" />
+                          Agregar Mas
                         </Button>
                       </div>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-2 scrollbar-thin">
                         {batchSerialNumbers.map((serialNumber, index) => (
-                          <div key={index} className="flex items-center gap-2">
+                          <div key={index} className="flex items-center gap-2 group">
+                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground flex-shrink-0">
+                              {index + 1}
+                            </div>
                             <Input
                               value={serialNumber}
                               onChange={(e) => updateBatchSerialNumber(index, e.target.value)}
-                              placeholder={`Serial ${index + 1}`}
+                              placeholder="Ingrese número de serie"
                               maxLength={200}
                               disabled={isLoading}
-                              className="flex-1"
+                              className="h-9 font-mono text-sm"
                             />
                             {batchSerialNumbers.length > 1 && (
                               <Button
@@ -414,9 +430,9 @@ export default function ProductSerialModal({
                                 size="icon"
                                 onClick={() => removeBatchSerialField(index)}
                                 disabled={isLoading}
-                                className="h-10 w-10"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                               >
-                                <X className="w-4 h-4" />
+                                <X className="w-3.5 h-3.5" />
                               </Button>
                             )}
                           </div>
@@ -431,20 +447,20 @@ export default function ProductSerialModal({
                   </div>
                 </div>
 
-                <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-muted/10 backdrop-blur-sm">
+                  <div className="flex flex-col-reverse sm:flex-row gap-3">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={onClose}
-                      className="flex-1"
+                      className="flex-1 h-11"
                       disabled={isLoading}
                     >
                       Cancelar
                     </Button>
                     <Button
                       type="submit"
-                      className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                       disabled={
                         isLoading ||
                         batchSerialNumbers.filter((sn) => sn.trim() !== '').length === 0
@@ -452,13 +468,13 @@ export default function ProductSerialModal({
                     >
                       {isLoading ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                          <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
                           Guardando...
                         </>
                       ) : (
                         <>
-                          <Save className="w-5 h-5 mr-2" />
-                          Crear Seriales ({batchSerialNumbers.filter((sn) => sn.trim() !== '').length})
+                          <Save className="w-4 h-4 mr-2" />
+                          Crear {batchSerialNumbers.filter((sn) => sn.trim() !== '').length} Seriales
                         </>
                       )}
                     </Button>
@@ -468,8 +484,7 @@ export default function ProductSerialModal({
             </TabsContent>
           </Tabs>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }
-

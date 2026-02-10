@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Hash, Plus, Edit, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Hash, Plus, Edit, RotateCcw, AlertTriangle, Boxes } from 'lucide-react'
 import {
   productSerialsService,
   ProductSerial,
@@ -10,7 +10,6 @@ import {
 } from '@/services/product-serials.service'
 import toast from '@/lib/toast'
 import ProductSerialModal from './ProductSerialModal'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -40,6 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
 
 interface ProductSerialsListProps {
   productId: string
@@ -50,13 +50,6 @@ const statusLabels: Record<SerialStatus, string> = {
   sold: 'Vendido',
   returned: 'Devuelto',
   damaged: 'Dañado',
-}
-
-const statusColors: Record<SerialStatus, string> = {
-  available: 'default',
-  sold: 'secondary',
-  returned: 'default',
-  damaged: 'destructive',
 }
 
 export default function ProductSerialsList({ productId }: ProductSerialsListProps) {
@@ -74,7 +67,7 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
         productId,
         statusFilter === 'all' ? undefined : statusFilter
       ),
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   })
 
   const createMutation = useMutation({
@@ -149,154 +142,158 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <Skeleton className="h-4 w-32" />
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-[300px] w-full rounded-xl" />
+      </div>
     )
   }
 
   const availableCount = serials?.filter((s) => s.status === 'available').length || 0
   const soldCount = serials?.filter((s) => s.status === 'sold').length || 0
-  const returnedCount = serials?.filter((s) => s.status === 'returned').length || 0
   const damagedCount = serials?.filter((s) => s.status === 'damaged').length || 0
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-lg sm:text-xl flex items-center">
-            <Hash className="w-5 h-5 mr-2" />
-            Seriales del Producto ({serials?.length || 0})
-          </CardTitle>
-          <Button onClick={handleAdd} size="sm">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground flex items-center">
+            <Hash className="w-5 h-5 mr-2 text-primary" />
+            Seriales Registrados ({serials?.length || 0})
+          </h2>
+          <div className="flex gap-4 mt-1">
+            <p className="text-xs font-medium text-green-600 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              {availableCount} Disponibles
+            </p>
+            <p className="text-xs font-medium text-blue-600 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              {soldCount} Vendidos
+            </p>
+            <p className="text-xs font-medium text-destructive flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+              {damagedCount} Dañados
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as SerialStatus | 'all')}
+          >
+            <SelectTrigger className="h-9 w-[140px] bg-background">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="available">Disponibles</SelectItem>
+              <SelectItem value="sold">Vendidos</SelectItem>
+              <SelectItem value="returned">Devueltos</SelectItem>
+              <SelectItem value="damaged">Dañados</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={handleAdd} size="sm" className="shadow-sm">
             <Plus className="w-4 h-4 mr-2" />
-            Agregar Serial
+            Nuevo Serial
           </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          {serials && serials.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground">
-              No hay seriales configurados. Agrega seriales para rastrear productos individuales
-              por número de serie.
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
+        {serials && serials.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <Hash className="w-8 h-8 text-muted-foreground/50" />
             </div>
-          ) : (
-            <>
-              <div className="px-4 sm:px-6 py-3 border-b border-border">
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="default">{availableCount} Disponibles</Badge>
-                    <Badge variant="secondary">{soldCount} Vendidos</Badge>
-                    <Badge variant="default">{returnedCount} Devueltos</Badge>
-                    <Badge variant="destructive">{damagedCount} Dañados</Badge>
-                  </div>
-                  <Select
-                    value={statusFilter}
-                    onValueChange={(value) => setStatusFilter(value as SerialStatus | 'all')}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filtrar por estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="available">Disponibles</SelectItem>
-                      <SelectItem value="sold">Vendidos</SelectItem>
-                      <SelectItem value="returned">Devueltos</SelectItem>
-                      <SelectItem value="damaged">Dañados</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Número de Serie</TableHead>
-                      <TableHead className="hidden sm:table-cell">Recepción</TableHead>
-                      <TableHead className="hidden md:table-cell">Venta</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {serials?.map((serial) => (
-                      <TableRow key={serial.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-foreground font-mono">
-                              {serial.serial_number}
-                            </p>
-                            {serial.note && (
-                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                {serial.note}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(serial.received_at), 'dd/MM/yyyy')}
-                          </p>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {serial.sold_at ? (
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(serial.sold_at), 'dd/MM/yyyy')}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">-</p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusColors[serial.status] as any}>
-                            {statusLabels[serial.status]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {serial.status === 'sold' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSerialToReturn(serial)}
-                                className="text-primary hover:text-primary hover:bg-primary/10"
-                                title="Devolver"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {serial.status === 'available' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSerialToMarkDamaged(serial)}
-                                className="text-amber-600 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10"
-                                title="Marcar como dañado"
-                              >
-                                <AlertTriangle className="w-4 h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(serial)}
-                              className="text-primary hover:text-primary hover:bg-primary/10"
-                            >
-                              <Edit className="w-4 h-4 mr-1.5" />
-                              Editar
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            <h3 className="font-medium text-foreground">No hay seriales</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-[250px] mx-auto">
+              Registra números de serie para llevar un control individual de cada unidad.
+            </p>
+            <Button onClick={handleAdd} variant="outline" size="sm" className="mt-4">
+              <Plus className="w-4 h-4 mr-2" />
+              Crear primer serial
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead className="w-1/3">Número de Serie</TableHead>
+                  <TableHead className="hidden sm:table-cell">Recepción</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {serials?.map((serial) => (
+                  <TableRow key={serial.id} className="group hover:bg-muted/20">
+                    <TableCell>
+                      <div className="space-y-1">
+                        <p className="font-mono font-bold text-foreground tracking-tight">{serial.serial_number}</p>
+                        {serial.note && (
+                          <p className="text-[10px] text-muted-foreground truncate max-w-[180px]">{serial.note}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      {format(new Date(serial.received_at), 'dd/MM/yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "font-medium",
+                          serial.status === 'available' ? "text-green-600 bg-green-50 border-green-200" :
+                            serial.status === 'sold' ? "text-blue-600 bg-blue-50 border-blue-200" :
+                              serial.status === 'returned' ? "text-purple-600 bg-purple-50 border-purple-200" :
+                                "text-destructive bg-destructive/5 border-destructive/20"
+                        )}
+                      >
+                        {statusLabels[serial.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {serial.status === 'sold' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSerialToReturn(serial)}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            title="Devolver"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {serial.status === 'available' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSerialToMarkDamaged(serial)}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            title="Marcar como dañado"
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(serial)}
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
 
       <ProductSerialModal
         isOpen={isModalOpen}
@@ -319,11 +316,10 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
               Esta acción marcará el serial{' '}
               {serialToReturn && (
                 <>
-                  <strong>{serialToReturn.serial_number}</strong> como devuelto y lo dejará
-                  disponible nuevamente.
+                  <strong className="text-foreground">{serialToReturn.serial_number}</strong>
                 </>
               )}{' '}
-              ¿Estás seguro?
+              como devuelto y lo dejará disponible nuevamente en el inventario.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -332,7 +328,7 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
               onClick={() => serialToReturn && returnMutation.mutate(serialToReturn.id)}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Devolver
+              Devolver a Inventario
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -349,10 +345,10 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
               Esta acción marcará el serial{' '}
               {serialToMarkDamaged && (
                 <>
-                  <strong>{serialToMarkDamaged.serial_number}</strong> como dañado.
+                  <strong className="text-foreground">{serialToMarkDamaged.serial_number}</strong>
                 </>
               )}{' '}
-              ¿Estás seguro?
+              como no apto para la venta.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -363,12 +359,11 @@ export default function ProductSerialsList({ productId }: ProductSerialsListProp
               }
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Marcar como Dañado
+              Confirmar Daño
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   )
 }
-
