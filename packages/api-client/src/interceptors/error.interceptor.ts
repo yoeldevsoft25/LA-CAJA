@@ -77,7 +77,7 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
 
             // Si el error es un timeout y estamos en el endpoint público, dar más margen antes de saltar.
             const isTimeout = error.code === 'ECONNABORTED' || error.message.includes('timeout');
-            const isPublicEndpoint = currentBaseUrl.includes('.onrender.com') || currentBaseUrl.includes('veloxpos.app');
+            const isPublicEndpoint = currentBaseUrl.includes('.onrender.com') || currentBaseUrl.includes('.koyeb.app') || currentBaseUrl.includes('veloxpos.app');
 
             if (isPublicRuntime && isPublicEndpoint && isTimeout && currentRetry === 0) {
                 // Si es el primer intento en producción y dio timeout, dar una oportunidad más con 10s
@@ -101,7 +101,7 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
 
             // Timeout balanceado: 10s para producción, 2s para local (que debería ser rápido)
             // CRÍTICO: No sobreescribir si el request ya tiene un timeout superior (ej: ventas 60s)
-            const nextIsPublic = nextBaseUrl.includes('.onrender.com') || nextBaseUrl.includes('veloxpos.app');
+            const nextIsPublic = nextBaseUrl.includes('.onrender.com') || nextBaseUrl.includes('.koyeb.app') || nextBaseUrl.includes('veloxpos.app');
             const failoverTimeout = nextIsPublic ? 10000 : 2000;
 
             if (!originalRequest.timeout || originalRequest.timeout < failoverTimeout) {

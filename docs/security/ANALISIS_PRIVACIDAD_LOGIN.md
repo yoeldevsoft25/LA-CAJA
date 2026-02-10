@@ -46,7 +46,7 @@ async getStores(): Promise<
 
 **Cualquier persona puede acceder a:**
 ```http
-GET https://la-caja-8i4h.onrender.com/auth/stores
+GET https://naughty-clem-veloxpos-ee21de4c.koyeb.app/auth/stores
 
 Response:
 [

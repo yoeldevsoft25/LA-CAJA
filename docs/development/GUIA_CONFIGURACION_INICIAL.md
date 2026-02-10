@@ -240,7 +240,7 @@ Antes de generar ventas, el cajero debe abrir una sesión de caja.
 
 ```bash
 # Endpoint para verificar configuración
-curl -X GET "https://la-caja-8i4h.onrender.com/config/status" \
+curl -X GET "https://naughty-clem-veloxpos-ee21de4c.koyeb.app/config/status" \
   -H "Authorization: Bearer TU_TOKEN_JWT"
 ```
 

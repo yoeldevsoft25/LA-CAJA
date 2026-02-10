@@ -10,7 +10,7 @@ El frontend solo necesita **una variable de entorno**:
 
 **Tu URL**: 
 ```
-https://la-caja-8i4h.onrender.com
+https://naughty-clem-veloxpos-ee21de4c.koyeb.app
 ```
 
 **⚠️ IMPORTANTE**: 
@@ -30,7 +30,7 @@ https://la-caja-8i4h.onrender.com
 4. Haz clic en **Add variable**
 5. Agrega:
    - **Key**: `VITE_API_URL`
-   - **Value**: `https://la-caja-8i4h.onrender.com`
+   - **Value**: `https://naughty-clem-veloxpos-ee21de4c.koyeb.app`
 6. Haz clic en **Save**
 7. **Redeploy** el sitio para que tome efecto:
    - Ve a **Deploys**
@@ -40,7 +40,7 @@ https://la-caja-8i4h.onrender.com
 ### Opción 2: Desde Netlify CLI
 
 ```bash
-netlify env:set VITE_API_URL "https://la-caja-8i4h.onrender.com"
+netlify env:set VITE_API_URL "https://naughty-clem-veloxpos-ee21de4c.koyeb.app"
 ```
 
 ---
@@ -90,7 +90,7 @@ Después de configurar las variables:
 
 ### En Netlify:
 ```
-VITE_API_URL = https://la-caja-8i4h.onrender.com
+VITE_API_URL = https://naughty-clem-veloxpos-ee21de4c.koyeb.app
 ```
 
 ### En Render (actualizar ALLOWED_ORIGINS):

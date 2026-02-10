@@ -47,25 +47,25 @@ async function bootstrap() {
     contentSecurityPolicy: isDevelopment
       ? false
       : {
-          directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline para el dashboard
-            imgSrc: ["'self'", 'data:', 'https:'],
-            connectSrc: ["'self'"],
-            fontSrc: ["'self'"],
-            objectSrc: ["'none'"],
-            mediaSrc: ["'self'"],
-            frameSrc: ["'none'"],
-          },
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline para el dashboard
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
         },
+      },
     hsts: isDevelopment
       ? false
       : {
-          maxAge: 31536000, // 1 año
-          includeSubDomains: true,
-          preload: true,
-        },
+        maxAge: 31536000, // 1 año
+        includeSubDomains: true,
+        preload: true,
+      },
     frameguard: {
       action: 'deny',
     },
@@ -110,10 +110,10 @@ async function bootstrap() {
   const originList = allowedOrigins
     ? allowedOrigins.split(',').map((origin) => normalizeOrigin(origin))
     : [
-        'http://localhost:5173',
-        'http://localhost:4173',
-        'http://localhost:3000',
-      ]; // Defaults para desarrollo (5173) y preview (4173)
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'http://localhost:3000',
+    ]; // Defaults para desarrollo (5173) y preview (4173)
   const origins = Array.from(
     new Set([
       ...originList,
@@ -226,8 +226,8 @@ async function bootstrap() {
       )
       .addServer('http://localhost:3000', 'Servidor de desarrollo')
       .addServer(
-        'https://la-caja-8i4h.onrender.com',
-        'Servidor de Producción (Render)',
+        'https://naughty-clem-veloxpos-ee21de4c.koyeb.app',
+        'Servidor de Producción (Koyeb)',
       )
       .build();
 
