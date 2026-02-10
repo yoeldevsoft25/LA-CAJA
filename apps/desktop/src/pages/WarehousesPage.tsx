@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus,
@@ -9,7 +9,8 @@ import {
   AlertTriangle,
   MapPin,
   User,
-  Phone
+  Phone,
+  Search
 } from 'lucide-react'
 import {
   warehousesService,
@@ -23,6 +24,9 @@ import toast from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -77,6 +81,9 @@ export default function WarehousesPage() {
   const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null)
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null)
   const [showStock, setShowStock] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'STORE' | 'MAIN' | 'SHOWROOM' | 'TRANSIT' | 'DAMAGED'>('all')
 
   // Delete states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -239,14 +246,38 @@ export default function WarehousesPage() {
     }
   }
 
+  const filteredWarehouses = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return warehouses.filter((w) => {
+      if (statusFilter === 'active' && !w.is_active) return false
+      if (statusFilter === 'inactive' && w.is_active) return false
+      if (typeFilter !== 'all' && (w.type || 'STORE') !== typeFilter) return false
+      if (!q) return true
+      const haystack = [
+        w.name,
+        w.code,
+        w.city,
+        w.address,
+        w.manager_name,
+        w.contact_phone,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [warehouses, searchQuery, statusFilter, typeFilter])
+
   return (
-    <div className="h-full max-w-7xl mx-auto space-y-8 p-4 sm:p-6 lg:p-8">
+    <div className="h-full max-w-7xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Gestión de Bodegas</h1>
           <p className="text-muted-foreground mt-1">
-            Administra tus almacenes, sucursales y puntos de stock
+            {filteredWarehouses.length}{' '}
+            {filteredWarehouses.length === 1 ? 'bodega' : 'bodegas'}{' '}
+            {statusFilter === 'inactive' ? 'inactivas' : statusFilter === 'all' ? 'en total' : 'activas'}
           </p>
         </div>
         <Button onClick={handleCreate} className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all">
@@ -254,6 +285,68 @@ export default function WarehousesPage() {
           Nueva Bodega
         </Button>
       </div>
+
+      {/* Toolbar (Mobile-first, sticky) */}
+      <Card className="border-none bg-background/85 backdrop-blur-md sticky top-0 z-40 ring-1 ring-border/50 shadow-sm">
+        <CardContent className="p-3 sm:p-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 w-5 h-5" />
+            <Input
+              type="text"
+              placeholder="Buscar por nombre, código, ciudad o teléfono..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 sm:h-12 border-muted/40 bg-muted/40 focus:bg-background transition-colors"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="w-full">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Estado</Label>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger className="mt-1 border-muted/40 bg-muted/40">
+                  <SelectValue placeholder="Activas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Activas</SelectItem>
+                  <SelectItem value="inactive">Inactivas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Tipo</Label>
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+                <SelectTrigger className="mt-1 border-muted/40 bg-muted/40">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="STORE">Tienda</SelectItem>
+                  <SelectItem value="MAIN">Principal</SelectItem>
+                  <SelectItem value="SHOWROOM">Showroom</SelectItem>
+                  <SelectItem value="TRANSIT">Tránsito</SelectItem>
+                  <SelectItem value="DAMAGED">Merma</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full flex items-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-border/60"
+                onClick={() => {
+                  setSearchQuery('')
+                  setStatusFilter('active')
+                  setTypeFilter('all')
+                }}
+                disabled={!searchQuery && statusFilter === 'active' && typeFilter === 'all'}
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Grid Content */}
       {isLoading ? (
@@ -265,25 +358,45 @@ export default function WarehousesPage() {
             </Card>
           ))}
         </div>
-      ) : warehouses.length === 0 ? (
+      ) : filteredWarehouses.length === 0 ? (
         <Card className="border-dashed border-2">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <div className="p-4 rounded-full bg-primary/10 mb-4">
               <WarehouseIcon className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-lg font-semibold">No hay bodegas registradas</h3>
+            <h3 className="text-lg font-semibold">
+              {searchQuery || statusFilter !== 'active' || typeFilter !== 'all'
+                ? 'No hay resultados con esos filtros'
+                : 'No hay bodegas registradas'}
+            </h3>
             <p className="text-muted-foreground mt-2 mb-6 max-w-sm">
-              Comienza creando tu primera bodega o almacén para gestionar tu inventario correctamente.
+              {searchQuery || statusFilter !== 'active' || typeFilter !== 'all'
+                ? 'Ajusta la búsqueda o limpia los filtros para ver más bodegas.'
+                : 'Comienza creando tu primera bodega para gestionar inventario con claridad.'}
             </p>
-            <Button onClick={handleCreate}>
-              Crear primera bodega
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button onClick={handleCreate} className="w-full sm:w-auto">Nueva bodega</Button>
+              {(searchQuery || statusFilter !== 'active' || typeFilter !== 'all') && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setStatusFilter('active')
+                    setTypeFilter('all')
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-          {warehouses.map((warehouse) => (
-            <Card key={warehouse.id} className="group hover:shadow-lg transition-all duration-300 border-border/60">
+          {filteredWarehouses.map((warehouse) => (
+            <Card key={warehouse.id} className="group transition-all duration-300 border-border/60 hover:shadow-md">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -350,9 +463,9 @@ export default function WarehousesPage() {
                   Ver Stock
                 </Button>
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
-                  className="flex-1"
+                  className="flex-1 border-[hsl(var(--primary)_/_0.25)]"
                   onClick={() => handleEdit(warehouse)}
                 >
                   <Edit className="w-3.5 h-3.5 mr-2" />
@@ -450,7 +563,7 @@ export default function WarehousesPage() {
             <AlertDialogDescription className="space-y-3 pt-2">
               {isCheckingStock ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <span className="loading loading-spinner loading-xs"></span>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/25 border-t-muted-foreground/70" />
                   Verificando inventario...
                 </div>
               ) : stockCount > 0 ? (

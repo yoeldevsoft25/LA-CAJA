@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 type NavItem = {
     readonly path: string
@@ -47,21 +47,20 @@ export const SidebarContent = React.memo(({
     setOpenSections,
     handleNavClick
 }: SidebarContentProps) => {
-    // Estado para controlar qué popover está abierto
     const [openPopover, setOpenPopover] = useState<string | null>(null)
 
-    // Cuando está colapsado, mostrar secciones con popovers
+    // ──────────────────────────────────────
+    // COLLAPSED STATE — Icon rail con popovers
+    // ──────────────────────────────────────
     if (sidebarCollapsed && !isMobile) {
         return (
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col h-full min-h-0 bg-background/80 backdrop-blur-xl border-r border-white/10"
+                className="flex flex-col h-full min-h-0"
             >
-                <div className="h-4"></div>
-                <div className="h-4"></div>
-                <ScrollArea className="flex-1 min-h-0 px-2 py-4">
-                    <nav className="space-y-2">
+                <ScrollArea className="flex-1 min-h-0 px-2 py-3">
+                    <nav className="space-y-1">
                         {filteredNavSections.map((section) => {
                             const SectionIcon = section.icon
                             const hasActiveItem = section.items.some((item) => isActive(item.path))
@@ -79,36 +78,41 @@ export const SidebarContent = React.memo(({
                                             <TooltipTrigger asChild>
                                                 <PopoverTrigger asChild>
                                                     <motion.button
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
+                                                        whileHover={{ scale: 1.08 }}
+                                                        whileTap={{ scale: 0.92 }}
                                                         className={cn(
-                                                            "relative w-full flex items-center justify-center px-2 py-3 rounded-xl text-sm font-medium transition-all duration-300",
+                                                            "relative w-full flex items-center justify-center p-2.5 rounded-xl text-sm font-medium transition-all duration-200",
                                                             hasActiveItem
-                                                                ? "bg-primary text-primary-foreground shadow-[0_4px_20px_-4px_rgba(99,102,241,0.5)]"
-                                                                : "text-muted-foreground hover:text-foreground hover:bg-white/10"
+                                                                ? "bg-primary/15 text-primary shadow-sm"
+                                                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                                         )}
                                                     >
-                                                        <SectionIcon className="w-5 h-5 flex-shrink-0" strokeWidth={hasActiveItem ? 2.5 : 2} />
+                                                        <SectionIcon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={hasActiveItem ? 2.5 : 1.75} />
+                                                        {/* Active indicator dot */}
                                                         {hasActiveItem && (
-                                                            <motion.div
-                                                                layoutId="active-pill"
-                                                                className="absolute inset-0 rounded-xl bg-primary z-[-1]"
-                                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                                            <motion.span
+                                                                layoutId="collapsed-active"
+                                                                className="absolute -right-0.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-primary"
+                                                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                             />
                                                         )}
                                                     </motion.button>
                                                 </PopoverTrigger>
                                             </TooltipTrigger>
                                             {!isOpen && (
-                                                <TooltipContent side="right" className="bg-popover/90 backdrop-blur-md border-white/10 text-popover-foreground">
-                                                    <p className="font-medium">{section.label}</p>
+                                                <TooltipContent side="right" className="text-xs font-medium">
+                                                    {section.label}
                                                 </TooltipContent>
                                             )}
                                         </Tooltip>
                                     </TooltipProvider>
-                                    <PopoverContent side="right" align="start" className="w-60 p-2 bg-background/90 backdrop-blur-xl border-white/10 shadow-2xl rounded-2xl ml-2">
-                                        <div className="space-y-1">
-                                            <div className="px-3 py-2 text-xs font-bold text-muted-foreground/70 uppercase tracking-wider">
+                                    <PopoverContent
+                                        side="right"
+                                        align="start"
+                                        className="w-56 p-1.5 shadow-xl rounded-xl ml-1"
+                                    >
+                                        <div className="space-y-0.5">
+                                            <div className="px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                                 {section.label}
                                             </div>
                                             {section.items.map((item) => {
@@ -116,23 +120,34 @@ export const SidebarContent = React.memo(({
                                                 const active = isActive(item.path)
 
                                                 return (
-                                                    <motion.button
+                                                    <button
                                                         key={item.path}
                                                         onClick={() => {
                                                             handleNavClick(item.path)
                                                             setOpenPopover(null)
                                                         }}
-                                                        whileHover={{ x: 4 }}
                                                         className={cn(
-                                                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                                                            "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors",
                                                             active
-                                                                ? "bg-primary/10 text-primary"
-                                                                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                                                ? "bg-primary/10 text-primary font-medium"
+                                                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                                         )}
                                                     >
-                                                        <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 2} />
+                                                        <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 1.75} />
                                                         <span className="flex-1 text-left truncate">{item.label}</span>
-                                                    </motion.button>
+                                                        {item.badge && (
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className={cn(
+                                                                    "text-[9px] h-4 px-1 flex-shrink-0",
+                                                                    item.badge === 'Nuevo' && "bg-primary/15 text-primary border-0",
+                                                                    item.badge === 'Beta' && "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0"
+                                                                )}
+                                                            >
+                                                                {item.badge}
+                                                            </Badge>
+                                                        )}
+                                                    </button>
                                                 )
                                             })}
                                         </div>
@@ -143,43 +158,33 @@ export const SidebarContent = React.memo(({
                     </nav>
                 </ScrollArea>
 
-                <div className="p-3 flex-shrink-0 border-t border-white/10">
-                    {!isMobile ? (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            className="w-full hover:bg-white/5 text-muted-foreground hover:text-foreground justify-center h-10 rounded-xl"
-                        >
-                            <ChevronLeft className="w-5 h-5 rotate-180 transition-transform" />
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setMobileOpen(false)}
-                            className="w-full hover:bg-white/5 text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 h-10 rounded-xl"
-                        >
-                            <ChevronLeft className="w-5 h-5 transition-transform" />
-                            <span className="font-medium">Ocultar Menú</span>
-                        </Button>
-                    )}
+                {/* Expand button */}
+                <div className="p-2 flex-shrink-0 border-t border-border/30">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSidebarCollapsed(false)}
+                        className="w-full h-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    >
+                        <ChevronsRight className="w-4 h-4" />
+                    </Button>
                 </div>
             </motion.div>
         );
     }
 
+    // ──────────────────────────────────────
+    // EXPANDED STATE — Full sidebar con accordion
+    // ──────────────────────────────────────
     return (
-        <div className="flex flex-col h-full min-h-0 bg-background/80 backdrop-blur-xl border-r border-white/10">
-            <div className="h-4"></div>
-
-            <ScrollArea className="flex-1 min-h-0 px-4 py-2">
-                <nav className="space-y-4">
+        <div className="flex flex-col h-full min-h-0">
+            <ScrollArea className="flex-1 min-h-0 px-3 py-2">
+                <nav className="space-y-1">
                     <Accordion
                         type="multiple"
                         value={openSections}
                         onValueChange={setOpenSections}
-                        className="w-full space-y-4"
+                        className="w-full space-y-1"
                     >
                         {filteredNavSections.map((section) => {
                             const SectionIcon = section.icon
@@ -189,20 +194,27 @@ export const SidebarContent = React.memo(({
                                 <AccordionItem key={section.id} value={section.id} className="border-0">
                                     <AccordionTrigger
                                         className={cn(
-                                            "px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:no-underline group",
+                                            "px-3 py-2.5 rounded-lg text-sm font-medium transition-all hover:no-underline group",
                                             hasActiveItem
-                                                ? "bg-primary/5 text-primary shadow-sm"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                                ? "text-primary"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                                         )}
                                     >
-                                        <div className="flex items-center gap-3 flex-1">
-                                            <SectionIcon className={cn("w-5 h-5 flex-shrink-0 transition-colors", hasActiveItem ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} strokeWidth={2.5} />
-                                            <span className="flex-1 text-left">{section.label}</span>
+                                        <div className="flex items-center gap-2.5 flex-1">
+                                            <SectionIcon
+                                                className={cn(
+                                                    "w-[18px] h-[18px] flex-shrink-0 transition-colors",
+                                                    hasActiveItem ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground"
+                                                )}
+                                                strokeWidth={hasActiveItem ? 2.5 : 1.75}
+                                            />
+                                            <span className="flex-1 text-left text-[13px]">{section.label}</span>
                                         </div>
                                     </AccordionTrigger>
-                                    <AccordionContent className="pt-2 pb-0">
-                                        <div className="space-y-1 pl-4 relative">
-                                            <div className="absolute left-6 top-2 bottom-2 w-[1px] bg-border/50" />
+                                    <AccordionContent className="pt-0.5 pb-1">
+                                        <div className="space-y-0.5 ml-3 pl-3 relative">
+                                            {/* Vertical guide line */}
+                                            <div className="absolute left-0 top-1 bottom-1 w-px bg-border/40" />
 
                                             {section.items.map((item) => {
                                                 const Icon = item.icon
@@ -212,28 +224,32 @@ export const SidebarContent = React.memo(({
                                                     <motion.button
                                                         key={item.path}
                                                         onClick={() => handleNavClick(item.path)}
-                                                        whileHover={{ x: 4 }}
+                                                        whileHover={{ x: 2 }}
+                                                        transition={{ duration: 0.15 }}
                                                         className={cn(
-                                                            "relative w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ml-2",
+                                                            "relative w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all",
                                                             active
-                                                                ? "bg-primary/10 text-primary"
-                                                                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                                                ? "bg-primary/10 text-primary font-medium"
+                                                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                                                         )}
                                                     >
-                                                        <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 2} />
-                                                        <span className="flex-1 text-left">{item.label}</span>
+                                                        {/* Active indicator bar */}
                                                         {active && (
                                                             <motion.div
-                                                                layoutId="active-dot"
-                                                                className="absolute left-0 w-1 h-5 bg-primary rounded-full -ml-[9px]"
+                                                                layoutId="active-indicator"
+                                                                className="absolute -left-3 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-full"
+                                                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                             />
                                                         )}
+                                                        <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 1.75} />
+                                                        <span className="flex-1 text-left truncate">{item.label}</span>
                                                         {item.badge && (
                                                             <Badge
                                                                 variant="secondary"
                                                                 className={cn(
-                                                                    "text-[10px] h-5 px-1.5 flex-shrink-0",
-                                                                    item.badge === 'Nuevo' ? "bg-indigo-500/20 text-indigo-400" : ""
+                                                                    "text-[9px] h-4 px-1.5 flex-shrink-0 font-semibold",
+                                                                    item.badge === 'Nuevo' && "bg-primary/15 text-primary border-0",
+                                                                    item.badge === 'Beta' && "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0"
                                                                 )}
                                                             >
                                                                 {item.badge}
@@ -251,25 +267,26 @@ export const SidebarContent = React.memo(({
                 </nav>
             </ScrollArea>
 
-            <div className="p-4 flex-shrink-0 border-t border-white/5">
+            {/* Collapse/Close button */}
+            <div className="p-3 flex-shrink-0 border-t border-border/30">
                 {!isMobile ? (
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="w-full h-12 rounded-xl border border-border/50 hover:bg-accent/50 hover:border-border transition-all text-muted-foreground group"
+                        className="w-full h-9 rounded-lg border border-border/40 hover:bg-muted/50 text-muted-foreground hover:text-foreground group transition-all text-xs gap-2"
                     >
-                        <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-                        <span className="ml-2 font-medium">Contraer Menú</span>
+                        <ChevronsLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+                        <span className="font-medium">Contraer</span>
                     </Button>
                 ) : (
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => setMobileOpen(false)}
-                        className="w-full h-12 rounded-xl bg-background/50 border-white/10 hover:bg-white/5 text-muted-foreground hover:text-foreground group flex items-center justify-center gap-2"
+                        className="w-full h-9 rounded-lg border border-border/40 hover:bg-muted/50 text-muted-foreground hover:text-foreground group transition-all text-xs gap-2"
                     >
-                        <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+                        <ChevronsLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
                         <span className="font-medium">Ocultar Menú</span>
                     </Button>
                 )}

@@ -119,7 +119,7 @@ export default function MainLayout() {
       />
 
       {/* Layout: Sidebar + Content */}
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex h-[calc(100vh-3.5rem)]">
         {/* Desktop Sidebar */}
         <aside
           id="main-navigation"
