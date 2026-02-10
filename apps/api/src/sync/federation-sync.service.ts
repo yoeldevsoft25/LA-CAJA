@@ -38,17 +38,17 @@ export interface FederationStatus {
     failed: number;
   };
   remoteProbe:
-    | {
-        ok: boolean;
-        latencyMs: number;
-        statusCode: number;
-      }
-    | {
-        ok: false;
-        latencyMs: number;
-        error: string;
-      }
-    | null;
+  | {
+    ok: boolean;
+    latencyMs: number;
+    statusCode: number;
+  }
+  | {
+    ok: false;
+    latencyMs: number;
+    error: string;
+  }
+  | null;
   lastRelayError: {
     eventId: string;
     message: string;
@@ -248,7 +248,7 @@ export class FederationSyncService implements OnModuleInit {
 
     const waitingThreshold = Number(
       this.configService.get<string>('FEDERATION_HEAL_WAITING_THRESHOLD') ||
-        100,
+      100,
     );
     const failedThreshold = Number(
       this.configService.get<string>('FEDERATION_HEAL_FAILED_THRESHOLD') || 1,
@@ -1408,6 +1408,9 @@ export class FederationSyncService implements OnModuleInit {
       },
     );
 
+    // Use table-based IDs (not event-based) so local comparison matches
+    // the same source the remote endpoint exposes. This avoids phantom diffs
+    // for records that exist in domain tables but lack SaleCreated/etc. events.
     const [
       localSales,
       localInventory,
@@ -1416,12 +1419,12 @@ export class FederationSyncService implements OnModuleInit {
       localDebtPayments,
       localVoids,
     ] = await Promise.all([
-      this.getSalesEventIds(storeId, dateFrom, dateTo),
-      this.getInventoryMovementEventIds(storeId, dateFrom, dateTo),
-      this.getSessionEventIds(storeId, dateFrom, dateTo),
-      this.getDebtEventIds(storeId, dateFrom, dateTo),
-      this.getDebtPaymentEventIds(storeId, dateFrom, dateTo),
-      this.getVoidedSalesEventIds(storeId, dateFrom, dateTo),
+      this.getSalesIds(storeId, dateFrom, dateTo),
+      this.getInventoryMovementIds(storeId, dateFrom, dateTo),
+      this.getSessionIds(storeId, dateFrom, dateTo),
+      this.getDebtIds(storeId, dateFrom, dateTo),
+      this.getDebtPaymentIds(storeId, dateFrom, dateTo),
+      this.getVoidedSalesIds(storeId, dateFrom, dateTo),
     ]);
 
     const [
