@@ -13,6 +13,7 @@ interface SwipeableItemProps {
     enabled?: boolean
     requireHandle?: boolean
     className?: string
+    contentClassName?: string
 }
 
 /**
@@ -28,6 +29,7 @@ export function SwipeableItem({
     enabled = true,
     requireHandle = false,
     className,
+    contentClassName,
 }: SwipeableItemProps) {
     const [isDragging, setIsDragging] = useState(false)
     const x = useMotionValue(0)
@@ -180,7 +182,8 @@ export function SwipeableItem({
                 className={cn(
                     'relative bg-background touch-pan-y',
                     isDragging && 'cursor-grabbing',
-                    !enabled && 'cursor-default'
+                    !enabled && 'cursor-default',
+                    contentClassName
                 )}
                 whileTap={enabled && !shouldReduceMotion ? { scale: 0.98 } : undefined}
                 onPointerDown={!requireHandle ? handlePointerDown : undefined}

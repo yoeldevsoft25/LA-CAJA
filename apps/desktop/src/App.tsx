@@ -27,13 +27,12 @@ const PageLoader = () => (
   </div>
 )
 
-// Lazy loading de páginas - Críticas (login/landing)
+// Lazy loading de páginas - Críticas (auth)
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const ForgotPinPage = lazy(() => import('./pages/ForgotPinPage'))
 const ResetPinPage = lazy(() => import('./pages/ResetPinPage'))
-const LandingPageEnhanced = lazy(() => import('./pages/LandingPageEnhanced'))
 
 // POS Page - eager load to prevent blank screen on navigation
 import POSPage from './pages/POSPage'
@@ -428,8 +427,8 @@ function AppRoutes() {
                 )
               }
             />
-            {/* Keep landing reachable for parity/debug, but not as the root entry point in Desktop */}
-            <Route path="/landing" element={<LandingPageEnhanced />} />
+            {/* Desktop: landing disabled */}
+            <Route path="/landing" element={<Navigate to="/login" replace />} />
             <Route
               path="/login"
               element={

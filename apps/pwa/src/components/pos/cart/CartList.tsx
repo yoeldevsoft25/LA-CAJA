@@ -54,6 +54,7 @@ export function CartList({
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 transition={{ duration: 0.2 }}
+                                className="mb-2"
                             >
                                 <SwipeableItem
                                     onSwipeLeft={allowSwipe ? () => onRemoveItem(item.id) : undefined}
@@ -66,7 +67,8 @@ export function CartList({
                                     enabled={allowSwipe}
                                     requireHandle={isMobile}
                                     threshold={80}
-                                    className=""
+                                    className="rounded-2xl overflow-hidden"
+                                    contentClassName="rounded-2xl"
                                 >
                                     <CartItemRow
                                         item={item}
