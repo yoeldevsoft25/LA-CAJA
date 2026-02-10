@@ -69,7 +69,7 @@ const POSCart = memo(function POSCart({
     return (
         <div className={cn("h-full min-h-0 flex flex-col", !isTabletLandscape && "lg:col-span-1")}>
             <Card className={cn(
-                "bg-white rounded-2xl border border-border/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden h-full min-h-0",
+                "bg-white dark:bg-slate-900 rounded-2xl border border-border/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden h-full min-h-0",
                 "grid grid-rows-[auto_auto_minmax(0,1fr)_auto]"
             )}>
                 {/* Tabs de Carrito */}

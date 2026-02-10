@@ -160,7 +160,7 @@ export const ProductCatalog = memo(function ProductCatalog({
     }
 
     return (
-        <div className="h-full w-full relative bg-white rounded-2xl border border-border/40 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="h-full w-full relative bg-white dark:bg-slate-900 rounded-2xl border border-border/40 dark:border-white/10 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <ScrollArea
                 className="h-full"
                 viewportRef={listViewportRef}
@@ -194,7 +194,7 @@ export const ProductCatalog = memo(function ProductCatalog({
                             >
                                 <button
                                     onClick={() => onProductClick(product)}
-                                    className="w-full h-[104px] text-left group relative bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-border/50 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200 will-change-transform"
+                                    className="w-full h-[104px] text-left group relative bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800 rounded-2xl border border-border/50 dark:border-white/5 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200 will-change-transform"
                                 >
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-[background-color] duration-300" />
 
@@ -227,7 +227,7 @@ export const ProductCatalog = memo(function ProductCatalog({
 
                                         <div className="flex items-center gap-2 mt-auto">
                                             {product.category && (
-                                                <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[100px] hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/30 border border-white/5">
+                                                <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[100px] hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/30 dark:bg-white/5 border border-white/5">
                                                     {product.category}
                                                 </span>
                                             )}

@@ -6,6 +6,7 @@ interface SimpleLoaderProps {
   onComplete?: () => void
   duration?: number
   userName?: string | null
+  className?: string
 }
 
 /**
@@ -16,6 +17,7 @@ export default function SimpleLoader({
   onComplete,
   duration = 3500,
   userName,
+  className,
 }: SimpleLoaderProps) {
   const getFirstName = (fullName: string | null | undefined): string => {
     if (!fullName) return ''
@@ -72,7 +74,7 @@ export default function SimpleLoader({
     <AnimatePresence>
       {!isComplete && (
         <motion.div
-          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
+          className={`fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden ${className || ''}`}
           style={{
             background: 'linear-gradient(135deg, #fafbfc 0%, #f0f4f8 100%)',
           }}

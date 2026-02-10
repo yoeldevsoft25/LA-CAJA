@@ -33,7 +33,7 @@ export function CartSummary({
     const subtotalUsd = totalUsd + totalDiscountUsd
 
     return (
-        <div className="flex-none p-4 sm:p-5 border-t border-white/10 bg-gradient-to-t from-background via-background/95 to-background/50 backdrop-blur-sm space-y-4">
+        <div className="flex-none p-4 sm:p-5 border-t border-border/40 dark:border-white/10 bg-white dark:bg-slate-900 space-y-4">
             {!hasOpenCash && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center justify-center shadow-sm">
                     ⚠️ Debes abrir caja para procesar ventas
@@ -46,7 +46,7 @@ export function CartSummary({
             )}
 
             <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border border-border/60 bg-slate-50 px-4 py-2.5 shadow-sm">
+                <div className="flex items-center justify-between rounded-xl border border-border/60 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5 shadow-sm">
                     <div className="space-y-0.5">
                         <Label className="text-sm font-semibold text-foreground/80">Imprimir ticket</Label>
                         <p className="text-[10px] text-muted-foreground">
@@ -57,7 +57,7 @@ export function CartSummary({
                 </div>
 
                 {/* Tarjeta de Totales Flotante Premium */}
-                <div className="rounded-2xl bg-slate-50 border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative group">
+                <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-border/60 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative group">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/30 via-primary/60 to-primary/30 opacity-70" />
 
                     <div className="p-5 space-y-4 relative">
@@ -82,7 +82,7 @@ export function CartSummary({
                         <div className="flex items-end justify-between">
                             <div className="space-y-1">
                                 <span className="text-sm font-bold text-muted-foreground/80 uppercase tracking-wider block">Total a Pagar</span>
-                                <div className="text-sm font-medium text-muted-foreground tabular-nums flex items-center gap-1.5 bg-muted/30 px-2 py-0.5 rounded-md w-fit">
+                                <div className="text-sm font-medium text-muted-foreground tabular-nums flex items-center gap-1.5 bg-muted/30 dark:bg-white/5 px-2 py-0.5 rounded-md w-fit">
                                     <span>Bs</span>
                                     <span>{totalBs.toFixed(2)}</span>
                                 </div>

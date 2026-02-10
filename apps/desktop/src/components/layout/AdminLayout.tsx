@@ -140,7 +140,7 @@ export default function AdminLayout() {
             <div className="flex flex-col h-full min-h-0 bg-background/80 backdrop-blur-xl border-r border-white/10">
                 {!isMobile && <div className="h-16 flex items-center px-6 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                        <ShieldCheck className="w-8 h-8 text-emerald-500" />
+                        <ShieldCheck className="w-8 h-8 text-[hsl(var(--success))]" />
                         <div>
                             <h1 className="font-bold text-lg leading-tight">Admin</h1>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Panel de Control</p>
@@ -211,7 +211,7 @@ export default function AdminLayout() {
             <SkipLinks />
 
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40">
+            <header className="sticky top-0 z-40 bg-sidebar-background/95 backdrop-blur-xl border-b border-sidebar-border">
                 <div className="flex h-16 items-center gap-4 px-4 sm:px-6">
                     {/* Logo (Desktop) */}
                     <div className="hidden lg:flex items-center gap-3">
@@ -245,7 +245,7 @@ export default function AdminLayout() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="gap-2">
-                                    <div className="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 font-bold border border-emerald-500/30">
+                                    <div className="h-8 w-8 rounded-full bg-[hsl(var(--success)_/_0.18)] flex items-center justify-center text-[hsl(var(--success))] font-bold border border-[hsl(var(--success)_/_0.28)]">
                                         A
                                     </div>
                                     <span className="hidden sm:inline-block font-medium">Super Admin</span>
@@ -254,7 +254,7 @@ export default function AdminLayout() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Cuenta Administrativa</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 focus:bg-red-500/10">
+                                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                     <LogOut className="w-4 h-4 mr-2" />
                                     Cerrar Sesión
                                 </DropdownMenuItem>
@@ -274,7 +274,7 @@ export default function AdminLayout() {
                 </div>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-auto bg-slate-50/50">
+                <main className="flex-1 overflow-auto bg-background">
                     <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <Outlet />
                     </div>
