@@ -41,7 +41,7 @@ export class SplitBrainMonitorService {
     private dataSource: DataSource,
     private federationSyncService: FederationSyncService,
     private federationAlertsService: FederationAlertsService,
-  ) {}
+  ) { }
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async takeHealthSnapshot() {
@@ -53,7 +53,7 @@ export class SplitBrainMonitorService {
 
         if (report.overallHealth !== 'healthy') {
           this.logger.warn(
-            `⚠️ Federation Health Issue [${storeId}]: ${report.overallHealth} - Lag: ${report.metrics.eventLagCount}, StockDiv: ${report.metrics.stockDivergenceCount}, Gaps: ${report.metrics.projectionGapCount}`,
+            `⚠️ Federation Health Issue [${storeId}]: ${report.overallHealth} - Lag: ${report.metrics.eventLagCount}, StockDiv: ${report.metrics.stockDivergenceCount}, Gaps: ${report.metrics.projectionGapCount}, Remote: ${report.metrics.remoteReachable ? 'OK' : 'FAIL'} (${report.metrics.remoteLatencyMs}ms), FailedJobs: ${report.metrics.failedJobs}`,
           );
         }
 
