@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CreditCard, Clock, CheckCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ArrowDown, ShoppingBag } from 'lucide-react'
+import { CreditCard, Clock, CheckCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ArrowUp, ShoppingBag } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals } from '@/services/debts.service'
 import { format } from 'date-fns'
@@ -459,7 +459,22 @@ export default function CustomerDebtCard({
                     if (!chainAudit.items.length) return null
 
                     const chainItems = chainAudit.items
-                    const displayItems = [...chainItems].reverse()
+                    const displayItems = [...chainItems].sort((a: any, b: any) => {
+                      const dateDiff = Number(b.occurredAtMs || 0) - Number(a.occurredAtMs || 0)
+                      if (dateDiff !== 0) return dateDiff
+
+                      const priority = (item: any) => {
+                        if (item?.type === 'debt' && item?.data?.status !== 'paid') return 0
+                        if (item?.type === 'payment' && item?.data?.method === 'ROLLOVER') return 1
+                        if (item?.type === 'payment') return 2
+                        if (item?.type === 'debt') return 3
+                        return 4
+                      }
+
+                      const priorityDiff = priority(a) - priority(b)
+                      if (priorityDiff !== 0) return priorityDiff
+                      return String(b?.id || '').localeCompare(String(a?.id || ''))
+                    })
                     const chainSummary = chainAudit.summary
                     const firstItemDate = new Date(chainSummary.firstDateMs)
                     const lastItemDate = new Date(chainSummary.lastDateMs)
@@ -607,7 +622,7 @@ export default function CustomerDebtCard({
                                         {item.data.note && <p className="italic border-l-2 border-slate-300 pl-2 mb-2">"{item.data.note}"</p>}
                                         {item.data.method === 'ROLLOVER' && (
                                           <div className="flex items-center gap-2 mt-2 text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
-                                            <ArrowDown className="w-3 h-3" />
+                                            <ArrowUp className="w-3 h-3" />
                                             <span>Saldo trasladado a nueva deuda superior.</span>
                                           </div>
                                         )}
