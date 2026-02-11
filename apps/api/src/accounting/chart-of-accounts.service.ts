@@ -256,6 +256,7 @@ export class ChartOfAccountsService {
         level: acc.level,
         is_active: true,
         allows_entries: acc.level >= 3, // Solo cuentas de nivel 3+ permiten asientos
+        metadata: acc.metadata ?? null,
         created_by: userId,
       });
 
@@ -270,13 +271,21 @@ export class ChartOfAccountsService {
     const existingMappings = await this.mappingRepository.find({
       where: { store_id: storeId, is_active: true },
     });
-    const existingMappingTypes = new Set(
-      existingMappings.map((mapping) => mapping.transaction_type),
+    const existingMappingKeys = new Set(
+      existingMappings.map((m) => {
+        const conditionsKey = JSON.stringify(m.conditions || null);
+        const defaultKey = m.is_default ? '1' : '0';
+        return `${m.transaction_type}:${conditionsKey}:${defaultKey}`;
+      }),
     );
     let mappingsCreated = 0;
 
     for (const mapping of mappingsToCreate) {
-      if (existingMappingTypes.has(mapping.transaction_type)) {
+      const desiredIsDefault = mapping.is_default ?? true;
+      const desiredConditions = mapping.conditions ?? null;
+      const desiredKey = `${mapping.transaction_type}:${JSON.stringify(desiredConditions)}:${desiredIsDefault ? '1' : '0'}`;
+
+      if (existingMappingKeys.has(desiredKey)) {
         continue;
       }
 
@@ -294,13 +303,14 @@ export class ChartOfAccountsService {
         transaction_type: mapping.transaction_type,
         account_id: accountId,
         account_code: mapping.account_code,
-        is_default: true,
+        is_default: desiredIsDefault,
+        conditions: desiredConditions,
         is_active: true,
         created_by: userId,
       });
 
       await this.mappingRepository.save(mappingEntity);
-      existingMappingTypes.add(mapping.transaction_type);
+      existingMappingKeys.add(desiredKey);
       mappingsCreated += 1;
     }
 

@@ -13,6 +13,9 @@ export type PaymentMethod =
   | 'CASH_USD'
   | 'PAGO_MOVIL'
   | 'TRANSFER'
+  | 'POINT_OF_SALE'
+  | 'ZELLE'
+  | 'FIAO'
   | 'OTHER';
 
 @Entity('fast_checkout_configs')

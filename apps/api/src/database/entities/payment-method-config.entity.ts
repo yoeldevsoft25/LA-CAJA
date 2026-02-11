@@ -13,6 +13,8 @@ export type PaymentMethod =
   | 'CASH_USD'
   | 'PAGO_MOVIL'
   | 'TRANSFER'
+  | 'POINT_OF_SALE'
+  | 'ZELLE'
   | 'OTHER'
   | 'SPLIT'
   | 'FIAO';

@@ -35,6 +35,7 @@ import { BankStatement } from '../database/entities/bank-statement.entity';
 import { BankTransaction } from '../database/entities/bank-transaction.entity';
 import { AccountingAuditLog } from '../database/entities/accounting-audit-log.entity';
 import { LicensesModule } from '../licenses/licenses.module';
+import { ExchangeModule } from '../exchange/exchange.module';
 
 import { BankReconciliationController } from './bank-reconciliation.controller'; // Import
 
@@ -65,6 +66,7 @@ import { BankReconciliationController } from './bank-reconciliation.controller';
       AccountingAuditLog,
     ]),
     LicensesModule,
+    ExchangeModule,
   ],
   controllers: [AccountingController, BudgetController, BankReconciliationController],
   providers: [

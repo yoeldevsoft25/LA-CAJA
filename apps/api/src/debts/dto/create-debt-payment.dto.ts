@@ -31,10 +31,21 @@ export class CreateDebtPaymentDto {
   amount_usd: number;
 
   @IsString({ message: 'method debe ser una cadena de texto' })
-  @IsIn(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER'], {
-    message:
-      'method debe ser uno de: CASH_BS, CASH_USD, PAGO_MOVIL, TRANSFER, OTHER',
-  })
+  @IsIn(
+    [
+      'CASH_BS',
+      'CASH_USD',
+      'PAGO_MOVIL',
+      'TRANSFER',
+      'POINT_OF_SALE',
+      'ZELLE',
+      'OTHER',
+    ],
+    {
+      message:
+        'method debe ser uno de: CASH_BS, CASH_USD, PAGO_MOVIL, TRANSFER, POINT_OF_SALE, ZELLE, OTHER',
+    },
+  )
   method: string;
 
   @Transform(({ value }) => {

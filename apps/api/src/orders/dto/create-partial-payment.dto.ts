@@ -20,7 +20,17 @@ export class CreatePartialPaymentDto {
   amount_usd: number;
 
   @IsString()
-  @IsIn(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER', 'SPLIT'])
+  @IsIn([
+    'CASH_BS',
+    'CASH_USD',
+    'PAGO_MOVIL',
+    'TRANSFER',
+    'POINT_OF_SALE',
+    'ZELLE',
+    'OTHER',
+    'SPLIT',
+    'FIAO',
+  ])
   payment_method: string;
 
   @IsString()

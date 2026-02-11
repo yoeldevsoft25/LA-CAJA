@@ -19,6 +19,10 @@ export enum TransactionType {
   ACCOUNTS_PAYABLE = 'accounts_payable',
   EXPENSE = 'expense',
   INCOME = 'income',
+  FX_GAIN_REALIZED = 'fx_gain_realized',
+  FX_LOSS_REALIZED = 'fx_loss_realized',
+  FX_GAIN_UNREALIZED = 'fx_gain_unrealized',
+  FX_LOSS_UNREALIZED = 'fx_loss_unrealized',
   TRANSFER = 'transfer',
   ADJUSTMENT = 'adjustment',
 }

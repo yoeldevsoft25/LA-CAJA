@@ -24,6 +24,10 @@ export type TransactionType =
   | 'accounts_payable'
   | 'expense'
   | 'income'
+  | 'fx_gain_realized'
+  | 'fx_loss_realized'
+  | 'fx_gain_unrealized'
+  | 'fx_loss_unrealized'
   | 'transfer'
   | 'adjustment';
 
