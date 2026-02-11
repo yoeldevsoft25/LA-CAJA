@@ -107,18 +107,30 @@ export class OutboxService {
                   oe.target,
                   oe.retry_count
                 FROM outbox_entries oe
-                -- events.event_id is UUID while outbox_entries.event_id is VARCHAR in current schema.
-                -- Compare as text to avoid uuid=varchar operator errors across environments.
-                LEFT JOIN events e ON e.event_id::text = oe.event_id
                 WHERE oe.status = 'pending'
                   AND oe.retry_count < ${this.maxRetries}
                 ORDER BY
-                  e.created_at ASC NULLS LAST,
-                  e.device_id ASC NULLS LAST,
-                  e.seq ASC NULLS LAST,
+                  (
+                    SELECT e.created_at
+                    FROM events e
+                    WHERE e.event_id::text = oe.event_id
+                    LIMIT 1
+                  ) ASC NULLS LAST,
+                  (
+                    SELECT e.device_id
+                    FROM events e
+                    WHERE e.event_id::text = oe.event_id
+                    LIMIT 1
+                  ) ASC NULLS LAST,
+                  (
+                    SELECT e.seq
+                    FROM events e
+                    WHERE e.event_id::text = oe.event_id
+                    LIMIT 1
+                  ) ASC NULLS LAST,
                   oe.created_at ASC
                 LIMIT 50
-                FOR UPDATE SKIP LOCKED
+                FOR UPDATE OF oe SKIP LOCKED
               `);
 
         if (entries.length === 0) return;
