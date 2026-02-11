@@ -4,16 +4,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import ChartOfAccountsTree from '@/components/accounting/ChartOfAccountsTree'
-// ⚡ OPTIMIZACIÓN: Lazy load de modales grandes - solo cargar cuando se abren
-const AccountFormModal = lazy(() => import('@/components/accounting/AccountFormModal'))
+import AccountFormModal from '@/components/accounting/AccountFormModal'
+
 import EntriesList from '@/components/accounting/EntriesList'
-const EntryFormModal = lazy(() => import('@/components/accounting/EntryFormModal'))
+import EntryFormModal from '@/components/accounting/EntryFormModal'
 import EntryDetailModal from '@/components/accounting/EntryDetailModal'
 import AccountMappingsList from '@/components/accounting/AccountMappingsList'
-const MappingFormModal = lazy(() => import('@/components/accounting/MappingFormModal'))
+import MappingFormModal from '@/components/accounting/MappingFormModal'
 import ExportsList from '@/components/accounting/ExportsList'
-const ExportFormModal = lazy(() => import('@/components/accounting/ExportFormModal'))
+import ExportFormModal from '@/components/accounting/ExportFormModal'
 import AccountBalanceView from '@/components/accounting/AccountBalanceView'
+
 import BalanceSheetReport from '@/components/accounting/BalanceSheetReport'
 import IncomeStatementReport from '@/components/accounting/IncomeStatementReport'
 import TrialBalanceReport from '@/components/accounting/TrialBalanceReport'
@@ -269,42 +270,23 @@ export default function AccountingPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Modales - Lazy loaded para reducir bundle inicial */}
       {isAccountFormOpen && (
-        <Suspense fallback={
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">Cargando...</p>
-            </div>
-          </div>
-        }>
-          <AccountFormModal
-            isOpen={isAccountFormOpen}
-            onClose={() => setIsAccountFormOpen(false)}
-            onSuccess={() => setIsAccountFormOpen(false)}
-          />
-        </Suspense>
+        <AccountFormModal
+          isOpen={isAccountFormOpen}
+          onClose={() => setIsAccountFormOpen(false)}
+          onSuccess={() => setIsAccountFormOpen(false)}
+        />
       )}
 
       {isEntryFormOpen && (
-        <Suspense fallback={
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">Cargando...</p>
-            </div>
-          </div>
-        }>
-          <EntryFormModal
-            isOpen={isEntryFormOpen}
-            onClose={() => setIsEntryFormOpen(false)}
-            onSuccess={() => {
-              setIsEntryFormOpen(false)
-              queryClient.invalidateQueries({ queryKey: ['accounting', 'entries'] })
-            }}
-          />
-        </Suspense>
+        <EntryFormModal
+          isOpen={isEntryFormOpen}
+          onClose={() => setIsEntryFormOpen(false)}
+          onSuccess={() => {
+            setIsEntryFormOpen(false)
+            queryClient.invalidateQueries({ queryKey: ['accounting', 'entries'] })
+          }}
+        />
       )}
 
       <EntryDetailModal
@@ -321,44 +303,26 @@ export default function AccountingPage() {
       />
 
       {isMappingFormOpen && (
-        <Suspense fallback={
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">Cargando...</p>
-            </div>
-          </div>
-        }>
-          <MappingFormModal
-            isOpen={isMappingFormOpen}
-            onClose={() => {
-              setIsMappingFormOpen(false)
-              setEditingMapping(null)
-            }}
-            mapping={editingMapping}
-            onSuccess={() => {
-              setIsMappingFormOpen(false)
-              setEditingMapping(null)
-            }}
-          />
-        </Suspense>
+        <MappingFormModal
+          isOpen={isMappingFormOpen}
+          onClose={() => {
+            setIsMappingFormOpen(false)
+            setEditingMapping(null)
+          }}
+          mapping={editingMapping}
+          onSuccess={() => {
+            setIsMappingFormOpen(false)
+            setEditingMapping(null)
+          }}
+        />
       )}
 
       {isExportFormOpen && (
-        <Suspense fallback={
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">Cargando...</p>
-            </div>
-          </div>
-        }>
-          <ExportFormModal
-            isOpen={isExportFormOpen}
-            onClose={() => setIsExportFormOpen(false)}
-            onSuccess={() => setIsExportFormOpen(false)}
-          />
-        </Suspense>
+        <ExportFormModal
+          isOpen={isExportFormOpen}
+          onClose={() => setIsExportFormOpen(false)}
+          onSuccess={() => setIsExportFormOpen(false)}
+        />
       )}
     </div>
   )

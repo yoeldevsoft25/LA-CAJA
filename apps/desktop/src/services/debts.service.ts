@@ -3,6 +3,7 @@ import { Customer, customersService } from './customers.service'
 import { syncService } from './sync.service'
 import { db } from '@/db/database'
 import { BaseEvent } from '@la-caja/domain'
+import { projectionManager } from './projection.manager'
 
 export type DebtStatus = 'open' | 'partial' | 'paid'
 
@@ -220,11 +221,6 @@ export const debtsService = {
       await syncService.enqueueEvent(event)
 
       // 3. Proyectar localmente (optimistic update)
-      // Ya que enqueueEvent guarda en DB, projectionManager lo podria tomar si escuchase cambios,
-      // pero aqui lo forzamos o dejamos que ProjectionManager.applyDebtPaymentAdded lo haga si sync lo llama.
-      // SyncService llama a saveEventToDB pero NO llama a ProjectionManager automáticamente para eventos propios (aun).
-      // Deberíamos llamar manualmente a la proyección para updatear la UI inmediata.
-      const { projectionManager } = await import('./projection.manager')
       await projectionManager.applyDebtPaymentAdded(event)
 
       // 4. Retornar Mock
@@ -332,7 +328,6 @@ export const debtsService = {
 
       await syncService.enqueueEvent(event)
 
-      const { projectionManager } = await import('./projection.manager')
       await projectionManager.applyDebtCreated(event)
 
       // Mock return

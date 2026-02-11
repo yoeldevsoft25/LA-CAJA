@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react'
 import { useAuth } from '@/stores/auth.store'
+import toast from '@/lib/toast'
 
 /**
  * Hook para rastrear actividad del usuario y renovar tokens automáticamente
@@ -40,23 +41,20 @@ export function useActivityTracker() {
         const timeRemaining = Math.ceil(
           (INACTIVITY_TIMEOUT_MS - WARNING_BEFORE_TIMEOUT_MS) / 1000 / 60,
         )
-        import('@/lib/toast').then(({ default: toast }) => {
-          toast(
-            `Tu sesión expirará por inactividad en ${timeRemaining} minutos. Mueve el mouse o toca la pantalla para mantenerte conectado.`,
-            {
-              duration: 10000,
-            },
-          )
-        })
+        toast(
+          `Tu sesión expirará por inactividad en ${timeRemaining} minutos. Mueve el mouse o toca la pantalla para mantenerte conectado.`,
+          {
+            duration: 10000,
+          },
+        )
       }, INACTIVITY_TIMEOUT_MS - WARNING_BEFORE_TIMEOUT_MS)
 
       // Timer de timeout (30 minutos)
       inactivityTimer = setTimeout(() => {
-        import('@/lib/toast').then(({ default: toast }) => {
-          toast.error('Tu sesión ha expirado por inactividad. Serás redirigido al login.', {
-            duration: 5000,
-          })
+        toast.error('Tu sesión ha expirado por inactividad. Serás redirigido al login.', {
+          duration: 5000,
         })
+
 
         // Cerrar sesión y redirigir
         const auth = useAuth.getState()

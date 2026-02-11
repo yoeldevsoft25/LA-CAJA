@@ -1,5 +1,6 @@
 import { useAuth, type AuthState } from '@la-caja/app-core';
 import { db } from '@/db/database';
+import { api } from '@/lib/api';
 
 // Re-export hook and types
 export { useAuth };
@@ -14,11 +15,10 @@ useAuth.subscribe((state: AuthState, prevState: AuthState) => {
     if (state.token) {
       db.kv.put({ key: 'auth_token', value: state.token }).catch(console.error);
       // Persist API URL for SW usage
-      import('@/lib/api').then(({ api }) => {
-        if (api.defaults.baseURL) {
-          db.kv.put({ key: 'api_url', value: api.defaults.baseURL }).catch(console.error);
-        }
-      });
+      if (api.defaults.baseURL) {
+        db.kv.put({ key: 'api_url', value: api.defaults.baseURL }).catch(console.error);
+      }
+
       // Try to recover device_id if missing in SW context
       const deviceId = localStorage.getItem('device_id');
       if (deviceId) {

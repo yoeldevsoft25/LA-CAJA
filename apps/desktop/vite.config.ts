@@ -38,9 +38,7 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react';
-            }
+            // Group extremely heavy or stable libraries
             if (id.includes('recharts') || id.includes('d3')) {
               return 'vendor-charts';
             }
@@ -50,6 +48,8 @@ export default defineConfig({
             if (id.includes('framer-motion')) {
               return 'vendor-animation';
             }
+            // Everything else in node_modules goes to vendor.
+            // Explicitly including react/react-dom here to avoid circularity if they are split.
             return 'vendor';
           }
         },

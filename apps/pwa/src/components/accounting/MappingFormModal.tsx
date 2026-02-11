@@ -29,6 +29,10 @@ const mappingSchema = z.object({
     'income',
     'transfer',
     'adjustment',
+    'fx_gain_realized',
+    'fx_loss_realized',
+    'fx_gain_unrealized',
+    'fx_loss_unrealized',
   ]),
   account_id: z.string().min(1, 'Cuenta requerida'),
   is_default: z.boolean(),
@@ -58,6 +62,10 @@ const transactionTypeLabels: Record<MappingTransactionType, string> = {
   income: 'Ingreso',
   transfer: 'Transferencia',
   adjustment: 'Ajuste',
+  fx_gain_realized: 'Diferencial Cambiario - Ganancia Realizada',
+  fx_loss_realized: 'Diferencial Cambiario - Pérdida Realizada',
+  fx_gain_unrealized: 'Diferencial Cambiario - Ganancia No Realizada',
+  fx_loss_unrealized: 'Diferencial Cambiario - Pérdida No Realizada',
 }
 
 export default function MappingFormModal({

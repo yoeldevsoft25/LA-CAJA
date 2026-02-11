@@ -28,6 +28,10 @@ const transactionTypeLabels: Record<MappingTransactionType, string> = {
   income: 'Ingreso',
   transfer: 'Transferencia',
   adjustment: 'Ajuste',
+  fx_gain_realized: 'Diferencial Cambiario - Ganancia Realizada',
+  fx_loss_realized: 'Diferencial Cambiario - Pérdida Realizada',
+  fx_gain_unrealized: 'Diferencial Cambiario - Ganancia No Realizada',
+  fx_loss_unrealized: 'Diferencial Cambiario - Pérdida No Realizada',
 }
 
 interface AccountMappingsListProps {
