@@ -101,6 +101,15 @@ class SyncServiceClass {
     'CRDT_ERROR',
     'INTEGRITY_ERROR',
   ]);
+  private readonly RETRY_LIMIT_BY_ERROR_CODE: Record<string, number> = {
+    INTEGRITY_ERROR: 3,
+    CRDT_ERROR: 3,
+    VALIDATION_ERROR: 12,
+    SECURITY_ERROR: 12,
+    FISCAL_ERROR: 12,
+  };
+  private readonly DEFAULT_RETRY_LIMIT = 25;
+  private readonly DEFAULT_DEAD_RECOVERY_LIMIT = 25;
 
   private onSyncCompleteCallbacks: Array<(syncedCount: number) => void> = [];
   private onSyncErrorCallbacks: Array<(error: Error) => void> = [];
@@ -875,10 +884,23 @@ class SyncServiceClass {
    * Genera un hash SHA-256 de un objeto de forma determinista
    * ✅ CRDT MAX: Requerido para integridad del delta sync
    */
+  private sortDeep(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map((item) => this.sortDeep(item));
+    if (typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj.toISOString();
+
+    const sorted: Record<string, any> = {};
+    for (const key of Object.keys(obj).sort()) {
+      sorted[key] = this.sortDeep(obj[key]);
+    }
+    return sorted;
+  }
+
   private async generatePayloadHash(payload: any): Promise<string> {
     try {
-      // 1. Serializar de forma determinista (ordenar keys)
-      const json = JSON.stringify(payload, Object.keys(payload || {}).sort());
+      // 1. Serializar de forma determinista (deep sort, igual que backend)
+      const json = JSON.stringify(this.sortDeep(payload));
 
       // 2. Usar Web Crypto API para SHA-256
       const msgUint8 = new TextEncoder().encode(json);
@@ -1182,9 +1204,9 @@ class SyncServiceClass {
         })
         .filter((evt): evt is Omit<BaseEvent, 'store_id' | 'device_id'> => evt !== null);
 
-      // Inyectar hashes de forma asíncrona para todos los eventos que lo requieran
+      // Recalcular hash de forma canónica en cada push para evitar drift entre versiones previas.
       for (const event of sanitizedEvents as any[]) {
-        if (criticalEventTypes.includes(event.type) && !event.full_payload_hash) {
+        if (criticalEventTypes.includes(event.type)) {
           event.full_payload_hash = await this.generatePayloadHash(event.delta_payload || event.payload);
         }
       }
@@ -1247,6 +1269,16 @@ class SyncServiceClass {
 
       // Manejar eventos rechazados
       if (response.data.rejected.length > 0) {
+        const rejectedCodes = response.data.rejected.reduce((acc, r) => {
+          const code = String(r.code || 'UNKNOWN');
+          acc[code] = (acc[code] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        this.logger.warn('Eventos rechazados por servidor', {
+          rejected_count: response.data.rejected.length,
+          rejected_codes: rejectedCodes,
+        });
+
         for (const rejected of response.data.rejected) {
           const error = new Error(`${rejected.code}: ${rejected.message}`);
           error.name = rejected.code;
@@ -1450,9 +1482,10 @@ class SyncServiceClass {
         if (!metadata?.offline_created) return false;
 
         const attempts = Number(evt.sync_attempts || 0);
-        if (attempts >= 25) return false;
-
         const code = String(evt.last_error_code || '').toUpperCase();
+        const maxRecoveryAttempts = this.getDeadRecoveryLimitForCode(code);
+        if (attempts >= maxRecoveryAttempts) return false;
+
         const message = String(evt.last_error || '').toLowerCase();
         const recoverableByCode = this.RECOVERABLE_DEAD_ERROR_CODES.has(code);
         const recoverableByMessage =
@@ -1478,6 +1511,19 @@ class SyncServiceClass {
     }
 
     return recovered;
+  }
+
+  private getRetryLimitForErrorCode(errorCode: string): number {
+    const normalized = String(errorCode || '').toUpperCase();
+    return this.RETRY_LIMIT_BY_ERROR_CODE[normalized] ?? this.DEFAULT_RETRY_LIMIT;
+  }
+
+  private getDeadRecoveryLimitForCode(errorCode: string): number {
+    const normalized = String(errorCode || '').toUpperCase();
+    if (normalized === 'INTEGRITY_ERROR' || normalized === 'CRDT_ERROR') {
+      return 3;
+    }
+    return this.RETRY_LIMIT_BY_ERROR_CODE[normalized] ?? this.DEFAULT_DEAD_RECOVERY_LIMIT;
   }
 
   /**
@@ -1593,14 +1639,26 @@ class SyncServiceClass {
     const event = await db.localEvents.where('event_id').equals(eventId).first();
     if (event) {
       const attempts = (event.sync_attempts || 0) + 1;
+      const retryLimit = this.getRetryLimitForErrorCode(error?.name || '');
+      const exhaustedRetries = attempts >= retryLimit;
+      const shouldMarkDead = isValidationError || exhaustedRetries;
       const nextRetryAt = Date.now() + this.computeRetryDelay(attempts);
       await db.localEvents.update(event.id!, {
-        sync_status: isValidationError ? 'dead' : 'retrying',
+        sync_status: shouldMarkDead ? 'dead' : 'retrying',
         sync_attempts: attempts,
-        next_retry_at: isValidationError ? 0 : nextRetryAt,
+        next_retry_at: shouldMarkDead ? 0 : nextRetryAt,
         last_error: error.message || null,
         last_error_code: error.name || null,
       });
+
+      if (exhaustedRetries) {
+        this.logger.error('Evento marcado como dead por límite de reintentos', {
+          event_id: eventId,
+          error_code: error?.name || 'UNKNOWN',
+          attempts,
+          retry_limit: retryLimit,
+        });
+      }
     }
   }
 

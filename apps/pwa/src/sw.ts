@@ -142,9 +142,32 @@ const RETRYABLE_REJECTION_CODES = new Set([
     'INTEGRITY_ERROR',
 ]);
 
+const RETRY_LIMIT_BY_CODE: Record<string, number> = {
+    INTEGRITY_ERROR: 3,
+    CRDT_ERROR: 3,
+    VALIDATION_ERROR: 12,
+    SECURITY_ERROR: 12,
+    FISCAL_ERROR: 12,
+};
+
+const DEFAULT_RETRY_LIMIT = 8;
+
+function sortDeep(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map((item) => sortDeep(item));
+    if (typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj.toISOString();
+
+    const sorted: Record<string, any> = {};
+    for (const key of Object.keys(obj).sort()) {
+        sorted[key] = sortDeep(obj[key]);
+    }
+    return sorted;
+}
+
 async function generatePayloadHash(payload: any): Promise<string> {
     try {
-        const json = JSON.stringify(payload, Object.keys(payload || {}).sort());
+        const json = JSON.stringify(sortDeep(payload));
         const msgUint8 = new TextEncoder().encode(json);
         const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -176,8 +199,9 @@ async function prepareEventsForPush(events: any[]) {
 
         // ⚡ CRDT MAX: Asegurar delta_payload y full_payload_hash para eventos críticos
         if (CRITICAL_EVENT_TYPES.includes(baseEvent.type)) {
-            baseEvent.delta_payload = event.delta_payload || payload;
-            baseEvent.full_payload_hash = event.full_payload_hash || await generatePayloadHash(baseEvent.delta_payload);
+            // Recalcular siempre para evitar drift con hashes generados por versiones anteriores.
+            baseEvent.delta_payload = payload;
+            baseEvent.full_payload_hash = await generatePayloadHash(baseEvent.delta_payload);
         }
 
         prepared.push(baseEvent);
@@ -189,9 +213,12 @@ function shouldRetryRejectedEvent(event: any, rejection: any): boolean {
     const code = String(rejection?.code || '').toUpperCase();
     const message = String(rejection?.message || '').toLowerCase();
     const offlineCreated = Boolean(event?.payload?.metadata?.offline_created);
+    const nextAttempt = Number(event?.sync_attempts || 0) + 1;
+    const retryLimit = RETRY_LIMIT_BY_CODE[code] ?? DEFAULT_RETRY_LIMIT;
 
     if (!offlineCreated) return false;
     if (event?.type !== 'SaleCreated') return false;
+    if (nextAttempt > retryLimit) return false;
     if (RETRYABLE_REJECTION_CODES.has(code)) return true;
 
     return (
@@ -371,6 +398,11 @@ async function performSync() {
                 rejectedCount = result.rejected.length;
                 let retryingCount = 0;
                 let deadCount = 0;
+                const rejectedCodes = result.rejected.reduce((acc: Record<string, number>, rej: any) => {
+                    const code = String(rej?.code || 'UNKNOWN');
+                    acc[code] = (acc[code] || 0) + 1;
+                    return acc;
+                }, {});
                 await Promise.all(result.rejected.map((rej: any) => {
                     const originalEvent = pendingEvents.find((evt) => evt.event_id === rej.event_id);
                     const shouldRetry = shouldRetryRejectedEvent(originalEvent, rej);
@@ -389,6 +421,7 @@ async function performSync() {
                     total: result.rejected.length,
                     retrying: retryingCount,
                     dead: deadCount,
+                    by_code: rejectedCodes,
                     details: result.rejected,
                 });
             }
