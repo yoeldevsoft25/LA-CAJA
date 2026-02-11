@@ -6,6 +6,24 @@ import { randomUUID } from '../lib/uuid';
 
 const logger = createLogger('InventoryService');
 
+function getCurrentStoreId(): string {
+    if (typeof localStorage === 'undefined') return '';
+    return localStorage.getItem('store_id') || '';
+}
+
+async function refreshLocalStockSnapshot(productId: string, currentStock: number): Promise<void> {
+    const { db } = await import('../db/database');
+    const now = Date.now();
+    await db.localStock.put({
+        id: `${productId}:null`,
+        store_id: getCurrentStoreId(),
+        product_id: productId,
+        variant_id: null,
+        stock: Number(currentStock || 0),
+        updated_at: now,
+    });
+}
+
 function getDeviceId(): string {
     if (typeof localStorage === 'undefined') return 'unknown';
     let deviceId = localStorage.getItem('device_id');
@@ -145,13 +163,20 @@ export const inventoryService = {
             '/inventory/stock/status',
             { params }
         );
-        return Array.isArray(response.data) ? response.data : response.data.items;
+        const items = Array.isArray(response.data) ? response.data : response.data.items;
+        void this.cacheStock(items).catch((error) => {
+            logger.warn('Error cacheando stock local desde getStockStatus', { error });
+        });
+        return items;
     },
 
     async getStockStatusPaged(
         params: StockStatusSearchParams
     ): Promise<StockStatusResponse> {
         const response = await api.get<StockStatusResponse>('/inventory/stock/status', { params });
+        void this.cacheStock(response.data.items || []).catch((error) => {
+            logger.warn('Error cacheando stock local desde getStockStatusPaged', { error });
+        });
         return response.data;
     },
 
@@ -162,6 +187,9 @@ export const inventoryService = {
 
     async getProductStock(productId: string): Promise<ProductStock> {
         const response = await api.get<ProductStock>(`/inventory/stock/${productId}`);
+        void refreshLocalStockSnapshot(productId, Number(response.data.current_stock || 0)).catch((error) => {
+            logger.warn('Error actualizando snapshot local de stock', { productId, error });
+        });
         return response.data;
     },
 

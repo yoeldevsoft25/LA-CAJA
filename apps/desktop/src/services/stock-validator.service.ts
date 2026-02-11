@@ -1,4 +1,5 @@
 import { db } from '@la-caja/app-core';
+import { inventoryService } from '@/services/inventory.service';
 
 export interface StockWarning {
     product_id: string;
@@ -23,6 +24,27 @@ export interface StockValidationResult {
 }
 
 class StockValidatorService {
+    private async verifyLiveStockIfNeeded(
+        productId: string,
+        requestedQty: number,
+        localAvailable: number,
+        escrow: number
+    ): Promise<{ available: number; stock: number }> {
+        if (!navigator.onLine || localAvailable >= requestedQty) {
+            return { available: localAvailable, stock: Math.max(0, localAvailable - escrow) };
+        }
+
+        try {
+            const liveStock = await inventoryService.getProductStock(productId);
+            const stock = Number(liveStock.current_stock || 0);
+            const available = stock + escrow;
+            return { available, stock };
+        } catch (error) {
+            console.warn('Live stock verification failed, using local cache', { productId, error });
+            return { available: localAvailable, stock: Math.max(0, localAvailable - escrow) };
+        }
+    }
+
     /**
      * Valida stock contra IndexedDB antes de permitir una venta.
      * Política Fail-Open: Si hay error leyendo DB, permite la venta.
@@ -66,9 +88,18 @@ class StockValidatorService {
                     available += escrow;
                 }
 
+                const liveCheck = await this.verifyLiveStockIfNeeded(
+                    item.product_id,
+                    item.qty,
+                    available,
+                    escrow
+                );
+                available = liveCheck.available;
+                const effectiveStock = liveCheck.stock;
+
                 // 3. Validar
                 if (available < item.qty) {
-                    const msg = `Stock insuficiente: ${available} disponible (Stock: ${stockEntry?.stock || 0}, Cuota: ${escrow}), ${item.qty} solicitado.`;
+                    const msg = `Stock insuficiente: ${available} disponible (Stock: ${effectiveStock}, Cuota: ${escrow}), ${item.qty} solicitado.`;
 
                     if (isOnline) {
                         // Online: Warning (Fail Open, el server validará final)
