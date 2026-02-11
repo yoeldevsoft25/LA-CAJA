@@ -299,8 +299,8 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    // Chunk size warning límite (500kb es razonable para PWAs)
-    chunkSizeWarningLimit: 500,
+    // Chunk size warning límite (2000kb para proyectos grandes)
+    chunkSizeWarningLimit: 2000,
     // Minificación automática (Vite usa terser/esbuild por defecto)
     minify: 'esbuild', // Más rápido que terser
     // Source maps para producción (deshabilitar si no son necesarios para reducir tamaño)

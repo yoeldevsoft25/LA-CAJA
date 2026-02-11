@@ -20,6 +20,7 @@ import { api } from '../runtime/api';
 import { db, LocalEvent } from '../db/database';
 import { createLogger } from '../lib/logger';
 import { projectionManager } from './projection.manager';
+import { conflictResolutionService } from './conflict-resolution.service';
 import toast from '../lib/toast';
 import { randomUUID } from '../lib/uuid';
 
@@ -1250,7 +1251,6 @@ class SyncServiceClass {
 
         // Intentar resolver conflictos automáticamente
         try {
-          const { conflictResolutionService } = await import('./conflict-resolution.service');
           const resolved = await conflictResolutionService.processPendingConflicts();
           if (resolved > 0) {
             this.logger.info('Conflictos resueltos automáticamente', { count: resolved });
