@@ -858,7 +858,7 @@ export class AccountingService {
     if (conditions && Object.keys(conditions).length > 0) {
       // JSONB match: el contexto de consulta debe contener las condiciones del mapping.
       // Ej: contexto {method:'TRANSFER', currency:'BS'} matchea mapping {method:'TRANSFER'}.
-      mapping = await this.mappingRepository
+      const specificMappings = await this.mappingRepository
         .createQueryBuilder('mapping')
         .leftJoinAndSelect('mapping.account', 'account')
         .where('mapping.store_id = :storeId', { storeId })
@@ -870,9 +870,14 @@ export class AccountingService {
         .andWhere(':conditions::jsonb @> mapping.conditions', {
           conditions: JSON.stringify(conditions),
         })
-        .orderBy('jsonb_object_length(mapping.conditions)', 'DESC')
-        .addOrderBy('mapping.created_at', 'DESC')
-        .getOne();
+        .orderBy('mapping.created_at', 'DESC')
+        .getMany();
+
+      if (specificMappings.length > 0) {
+        mapping = specificMappings.sort((a, b) =>
+          this.compareMappingsBySpecificityThenRecency(a, b),
+        )[0];
+      }
 
       if (mapping) {
         // Guardar en caché
@@ -948,22 +953,30 @@ export class AccountingService {
         .andWhere(':conditions::jsonb @> mapping.conditions', {
           conditions: JSON.stringify(conditions),
         })
-        // Preferir el mapping mas especifico (mas keys) y mas reciente
+        // Preferimos especificidad en memoria para evitar dependencia de funciones JSONB no soportadas por algunos motores.
         .orderBy('mapping.transaction_type', 'ASC')
-        .addOrderBy('jsonb_object_length(mapping.conditions)', 'DESC')
         .addOrderBy('mapping.created_at', 'DESC')
         .getMany();
 
       const foundTypes = new Set<TransactionType>();
+      const bestByType = new Map<TransactionType, AccountingAccountMapping>();
       for (const mapping of specificMappings) {
-        if (foundTypes.has(mapping.transaction_type)) {
-          continue;
+        const currentBest = bestByType.get(mapping.transaction_type);
+        if (
+          !currentBest ||
+          this.compareMappingsBySpecificityThenRecency(mapping, currentBest) < 0
+        ) {
+          bestByType.set(mapping.transaction_type, mapping);
         }
+      }
 
-        foundTypes.add(mapping.transaction_type);
-        result.set(mapping.transaction_type, mapping);
+      for (const [transactionType, mapping] of bestByType.entries()) {
+        foundTypes.add(transactionType);
+        result.set(transactionType, mapping);
 
-        const cacheKey = `${storeId}:${mapping.transaction_type}:${JSON.stringify(conditions)}`;
+        const cacheKey = `${storeId}:${transactionType}:${JSON.stringify(
+          conditions,
+        )}`;
         this.accountMappingCache.set(cacheKey, mapping);
         this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
       }
@@ -1030,6 +1043,30 @@ export class AccountingService {
     }
 
     return result;
+  }
+
+  private getMappingSpecificity(
+    mapping: AccountingAccountMapping | null | undefined,
+  ): number {
+    const conditions = mapping?.conditions;
+    if (!conditions || typeof conditions !== 'object' || Array.isArray(conditions)) {
+      return 0;
+    }
+    return Object.keys(conditions).length;
+  }
+
+  private compareMappingsBySpecificityThenRecency(
+    a: AccountingAccountMapping,
+    b: AccountingAccountMapping,
+  ): number {
+    const specificityDiff = this.getMappingSpecificity(b) - this.getMappingSpecificity(a);
+    if (specificityDiff !== 0) {
+      return specificityDiff;
+    }
+
+    const aCreatedAt = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bCreatedAt = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return bCreatedAt - aCreatedAt;
   }
 
   /**
