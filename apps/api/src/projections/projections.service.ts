@@ -234,6 +234,90 @@ export class ProjectionsService {
     }
   }
 
+  private async ensureCustomerExistsForSale(
+    manager: EntityManager,
+    storeId: string,
+    customerId: string,
+    payload: SaleCreatedPayload,
+    eventId: string,
+  ): Promise<void> {
+    const customerRepo = manager.getRepository(Customer);
+    const customer = await customerRepo.findOne({
+      where: { id: customerId, store_id: storeId },
+      select: ['id'],
+    });
+
+    if (customer) return;
+
+    const rawPayload = payload as Record<string, any>;
+    const customerPayload =
+      rawPayload?.customer && typeof rawPayload.customer === 'object'
+        ? (rawPayload.customer as Record<string, any>)
+        : {};
+
+    const resolvedNameCandidates = [
+      customerPayload.name,
+      rawPayload.customer_name,
+      rawPayload.customerName,
+    ];
+    const resolvedName =
+      resolvedNameCandidates.find(
+        (value) => typeof value === 'string' && value.trim().length > 0,
+      ) || `Cliente offline ${customerId.slice(0, 8)}`;
+
+    const resolvedPhone =
+      (typeof customerPayload.phone === 'string' &&
+      customerPayload.phone.trim().length > 0
+        ? customerPayload.phone.trim()
+        : null) ||
+      (typeof rawPayload.customer_phone === 'string' &&
+      rawPayload.customer_phone.trim().length > 0
+        ? rawPayload.customer_phone.trim()
+        : null);
+
+    const resolvedDocumentId =
+      (typeof customerPayload.document_id === 'string' &&
+      customerPayload.document_id.trim().length > 0
+        ? customerPayload.document_id.trim()
+        : null) ||
+      (typeof rawPayload.customer_document_id === 'string' &&
+      rawPayload.customer_document_id.trim().length > 0
+        ? rawPayload.customer_document_id.trim()
+        : null);
+
+    const resolvedEmail =
+      (typeof customerPayload.email === 'string' &&
+      customerPayload.email.trim().length > 0
+        ? customerPayload.email.trim()
+        : null) ||
+      (typeof rawPayload.customer_email === 'string' &&
+      rawPayload.customer_email.trim().length > 0
+        ? rawPayload.customer_email.trim()
+        : null);
+
+    await manager.query(
+      `
+      INSERT INTO customers (
+        id, store_id, name, phone, document_id, email, credit_limit, note, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, NOW(), NOW())
+      ON CONFLICT (id) DO NOTHING
+      `,
+      [
+        customerId,
+        storeId,
+        String(resolvedName).trim(),
+        resolvedPhone,
+        resolvedDocumentId,
+        resolvedEmail,
+        `Auto-creado por proyeccion de venta (${eventId})`,
+      ],
+    );
+
+    this.logger.warn(
+      `Customer placeholder auto-creado para venta. customer_id=${customerId}, store_id=${storeId}, event_id=${eventId}`,
+    );
+  }
+
   async projectEvent(event: Event): Promise<void> {
     switch (event.type) {
       case 'ProductCreated':
@@ -634,9 +718,6 @@ export class ProjectionsService {
     }
 
     const customerId = payload.customer?.customer_id || payload.customer_id;
-    if (customerId) {
-      await this.ensureCustomerExists(event.store_id, customerId, event.event_id);
-    }
 
     // ⚡ CRITICAL: Shared Transaction for Atomicity
     const savedSale = await this.dataSource.transaction(async (manager) => {
@@ -650,6 +731,16 @@ export class ProjectionsService {
         event.store_id,
         payload.warehouse_id ?? null,
       );
+
+      if (customerId) {
+        await this.ensureCustomerExistsForSale(
+          manager,
+          event.store_id,
+          customerId,
+          payload,
+          event.event_id,
+        );
+      }
 
       // 🔢 GENERACIÓN DE SECUENCIA DE VENTA (Robust & Transactional)
       const result = await manager.query(
