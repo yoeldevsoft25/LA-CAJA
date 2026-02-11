@@ -242,6 +242,7 @@ export interface SaleCreatedPayload {
     customer_id: string | null;
   };
   note?: string;
+  generate_fiscal_invoice?: boolean;
   invoice_series_id?: string;
   invoice_number?: string;
   fiscal_number?: number | string;

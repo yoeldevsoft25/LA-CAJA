@@ -23,6 +23,7 @@ import { WarehousesService } from '../warehouses/warehouses.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
 import { InvoiceSeriesService } from '../invoice-series/invoice-series.service';
+import { AccountingService } from '../accounting/accounting.service';
 
 // Mock WhatsApp to avoid ESM issues
 jest.mock('../whatsapp/whatsapp-messaging.service');
@@ -73,6 +74,12 @@ const mockRepo = {
         getCount: jest.fn().mockResolvedValue(0),
         select: jest.fn().mockReturnThis(),
     })),
+};
+
+const mockAccountingService = {
+    findEntriesBySale: jest.fn().mockResolvedValue([]),
+    generateEntryFromFiscalInvoice: jest.fn().mockResolvedValue(null),
+    generateEntryFromSale: jest.fn().mockResolvedValue(null),
 };
 
 describe('Sprint 6.1A Final Hardening Verification', () => {
@@ -129,6 +136,7 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
                         getDefaultSeries: jest.fn().mockResolvedValue({ id: 'series-1', code: 'A' }),
                     },
                 },
+                { provide: AccountingService, useValue: mockAccountingService },
             ],
         }).compile();
 
@@ -210,7 +218,12 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
         // Mock dependencies for projectSaleCreated
         (mockEntityManager.getRepository as jest.Mock).mockReturnValue(mockRepo); // Return repo for create/save
         mockRepo.save.mockResolvedValue({ id: 's1', customer_id: null }); // sale saved
-        mockRepo.findOne.mockResolvedValue(null); // Sale doesn't exist yet
+        mockRepo.findOne.mockImplementation((query: any) => {
+            const id = query?.where?.id;
+            if (id === 's1') return Promise.resolve(null); // Sale doesn't exist yet
+            if (id === 'p1') return Promise.resolve({ id: 'p1' }); // Product exists
+            return Promise.resolve(null);
+        });
         mockRepo.createQueryBuilder.mockReturnValue({
             where: jest.fn().mockReturnThis(),
             andWhere: jest.fn().mockReturnThis(),
@@ -255,6 +268,12 @@ describe('Sprint 6.1A Final Hardening Verification', () => {
             return mockRepo;
         });
         mockRepo.save.mockResolvedValue({ id: 's1', customer_id: 'c1' });
+        mockRepo.findOne.mockImplementation((query: any) => {
+            const id = query?.where?.id;
+            if (id === 's1') return Promise.resolve(null);
+            if (id === 'c1') return Promise.resolve({ id: 'c1' }); // Customer exists
+            return Promise.resolve(null);
+        });
 
         // Assert throws
         await expect(projectionsService.projectEvent(event)).rejects.toThrow('Debt Fail');

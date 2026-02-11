@@ -282,6 +282,7 @@ export const salesService = {
                 },
                 customer: data.customer_id ? { customer_id: data.customer_id } : undefined,
                 note: data.note || undefined,
+                generate_fiscal_invoice: Boolean(data.generate_fiscal_invoice),
                 invoice_series_id: data.invoice_series_id || undefined,
                 fiscal_number: fiscalNumber,
                 request_id: requestId,

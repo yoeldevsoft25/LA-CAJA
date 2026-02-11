@@ -21,12 +21,14 @@ import { DebtPayment } from '../database/entities/debt-payment.entity';
 import { DebtStatus } from '../database/entities/debt.entity';
 import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
 import { StockEscrow } from '../database/entities/stock-escrow.entity';
+import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { randomUUID } from 'crypto';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { InvoiceSeriesService } from '../invoice-series/invoice-series.service';
 import { SyncMetricsService } from '../observability/services/sync-metrics.service';
+import { AccountingService } from '../accounting/accounting.service';
 import {
   SaleCreatedPayload,
   ProductCreatedPayload,
@@ -87,6 +89,7 @@ export class ProjectionsService {
     private dataSource: DataSource,
     private whatsappMessagingService: WhatsAppMessagingService,
     private fiscalInvoicesService: FiscalInvoicesService,
+    private accountingService: AccountingService,
     private warehousesService: WarehousesService,
     private metricsService: SyncMetricsService,
     private invoiceSeriesService: InvoiceSeriesService,
@@ -880,8 +883,10 @@ export class ProjectionsService {
       return s;
     });
 
-    // ⚡ OPTIMIZACIÓN: Facturación y notificaciones (fuera de la transacción pesada)
+    // ⚡ OPTIMIZACIÓN: Facturación y contabilidad (fuera de la transacción pesada)
     // Estos son side-effects que NO deben bloquear la transacción principal si fallan
+    let fiscalInvoiceForAccounting: FiscalInvoice | null = null;
+
     try {
       const [hasFiscalConfig, existingInvoice] = await Promise.all([
         this.fiscalInvoicesService.hasActiveFiscalConfig(event.store_id),
@@ -891,10 +896,12 @@ export class ProjectionsService {
       if (hasFiscalConfig && this.toBoolean(payload.generate_fiscal_invoice)) {
         if (existingInvoice) {
           if (existingInvoice.status === 'draft') {
-            await this.fiscalInvoicesService.issue(
+            fiscalInvoiceForAccounting = await this.fiscalInvoicesService.issue(
               event.store_id,
               existingInvoice.id,
             );
+          } else {
+            fiscalInvoiceForAccounting = existingInvoice;
           }
         } else {
           const createdInvoice =
@@ -903,7 +910,7 @@ export class ProjectionsService {
               savedSale.id,
               event.actor_user_id || null,
             );
-          await this.fiscalInvoicesService.issue(
+          fiscalInvoiceForAccounting = await this.fiscalInvoicesService.issue(
             event.store_id,
             createdInvoice.id,
           );
@@ -912,6 +919,50 @@ export class ProjectionsService {
     } catch (error) {
       this.logger.error(
         `Error en factura fiscal automática para venta ${payload.sale_id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    try {
+      const existingEntries = await this.accountingService.findEntriesBySale(
+        event.store_id,
+        savedSale.id,
+      );
+
+      if (existingEntries.length === 0) {
+        const issuedInvoice =
+          fiscalInvoiceForAccounting?.status === 'issued'
+            ? fiscalInvoiceForAccounting
+            : await this.fiscalInvoicesService.findBySale(
+                event.store_id,
+                savedSale.id,
+              );
+
+        if (issuedInvoice && issuedInvoice.status === 'issued') {
+          await this.accountingService.generateEntryFromFiscalInvoice(
+            event.store_id,
+            issuedInvoice,
+          );
+        } else {
+          const saleForAccounting = await this.saleRepository.findOne({
+            where: { id: savedSale.id, store_id: event.store_id },
+            relations: ['items', 'items.product', 'customer'],
+          });
+
+          if (!saleForAccounting) {
+            this.logger.warn(
+              `Venta ${savedSale.id} no encontrada para generar asiento contable post-proyección`,
+            );
+          } else {
+            await this.accountingService.generateEntryFromSale(
+              event.store_id,
+              saleForAccounting,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error generando asiento contable automático para venta ${payload.sale_id}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
 

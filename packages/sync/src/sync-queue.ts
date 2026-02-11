@@ -224,8 +224,16 @@ export class SyncQueue {
       const bytes = JSON.stringify(events).length;
 
       if (result.success) {
-        this.markAsSynced(eventIds);
-        this.metrics.recordSync(duration, events.length, bytes);
+        // Permite callback con resultado parcial (aceptados/rechazados) sin pisar estados ya actualizados.
+        const stillSyncingIds = eventIds.filter(
+          (eventId) => this.queue.get(eventId)?.status === 'syncing'
+        );
+        if (stillSyncingIds.length > 0) {
+          this.markAsSynced(stillSyncingIds);
+        } else {
+          this.updateMetricsPendingCount();
+        }
+        this.metrics.recordSync(duration, stillSyncingIds.length, bytes);
         return { success: true };
       } else {
         const error = result.error || new Error('Unknown sync error');
@@ -287,6 +295,7 @@ export class SyncQueue {
    * Fuerza el flush del batch actual (útil para testing o cierre de app)
    */
   async flush(): Promise<void> {
+    await this.rehydrateBatchFromPendingQueue();
     await this.batchSync.flush();
   }
 
@@ -296,5 +305,31 @@ export class SyncQueue {
   clear(): void {
     this.queue.clear();
     this.updateMetricsPendingCount();
+  }
+
+  /**
+   * Rehidrata el batch desde la cola en memoria para evitar eventos "atascados"
+   * en estado pending cuando el batch interno quedó vacío tras un error transitorio.
+   */
+  private async rehydrateBatchFromPendingQueue(): Promise<void> {
+    if (this.batchSync.getPendingCount() > 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const pending = this.getPendingEvents().filter((queuedEvent) => {
+      if (!queuedEvent.lastAttemptAt || queuedEvent.attemptCount <= 0) {
+        return true;
+      }
+
+      const retryDelay = this.retryStrategy.calculateDelay(queuedEvent.attemptCount);
+      return now - queuedEvent.lastAttemptAt >= retryDelay;
+    });
+
+    if (pending.length === 0) {
+      return;
+    }
+
+    await this.batchSync.addEvents(pending.map((queuedEvent) => queuedEvent.event));
   }
 }

@@ -16,6 +16,7 @@ import { FiscalInvoicesModule } from '../fiscal-invoices/fiscal-invoices.module'
 import { WarehousesModule } from '../warehouses/warehouses.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
+import { AccountingModule } from '../accounting/accounting.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { InvoiceSeriesModule } from '../invoice-series/invoice-series.module';
     WarehousesModule,
     ObservabilityModule,
     InvoiceSeriesModule,
+    AccountingModule,
   ],
   providers: [ProjectionsService],
   exports: [ProjectionsService],

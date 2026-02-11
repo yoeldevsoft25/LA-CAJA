@@ -25,6 +25,7 @@ import { WhatsAppMessagingService } from '../../whatsapp/whatsapp-messaging.serv
 import { FiscalInvoicesService } from '../../fiscal-invoices/fiscal-invoices.service';
 import { InvoiceSeriesService } from '../../invoice-series/invoice-series.service';
 import { FederationSyncService } from '../../sync/federation-sync.service';
+import { AccountingService } from '../../accounting/accounting.service';
 import { getMetadataArgsStorage } from 'typeorm';
 
 // Mock WhatsApp to avoid ESM issues in Jest
@@ -105,8 +106,24 @@ describe('Stock Convergence Integration (Offline -> Sync -> Projections)', () =>
                 { provide: FederationSyncService, useValue: { queueRelay: jest.fn().mockResolvedValue(true) } },
                 { provide: SyncMetricsService, useValue: { trackOutOfOrderEvent: jest.fn(), trackProjectionRetry: jest.fn(), trackProjectionFailureFatal: jest.fn() } },
                 { provide: WhatsAppMessagingService, useValue: { sendSaleNotification: jest.fn() } },
-                { provide: FiscalInvoicesService, useValue: { hasActiveFiscalConfig: jest.fn().mockResolvedValue(false), createFromSale: jest.fn() } },
+                {
+                    provide: FiscalInvoicesService,
+                    useValue: {
+                        hasActiveFiscalConfig: jest.fn().mockResolvedValue(false),
+                        findBySale: jest.fn().mockResolvedValue(null),
+                        createFromSale: jest.fn(),
+                        issue: jest.fn(),
+                    }
+                },
                 { provide: InvoiceSeriesService, useValue: { generateNextInvoiceNumber: jest.fn().mockResolvedValue({ series: { id: 's1' }, invoice_number: '1', invoice_full_number: 'F1' }) } },
+                {
+                    provide: AccountingService,
+                    useValue: {
+                        findEntriesBySale: jest.fn().mockResolvedValue([]),
+                        generateEntryFromFiscalInvoice: jest.fn().mockResolvedValue(null),
+                        generateEntryFromSale: jest.fn().mockResolvedValue(null),
+                    }
+                },
             ]
         }).compile();
 
@@ -127,6 +144,13 @@ describe('Stock Convergence Integration (Offline -> Sync -> Projections)', () =>
     beforeEach(() => {
         jest.clearAllMocks();
         (mockEntityManager.getRepository as jest.Mock).mockReturnValue(mockRepo);
+        mockRepo.findOne.mockImplementation((query: any) => {
+            const id = query?.where?.id;
+            if (id === productId) {
+                return Promise.resolve({ id: productId, store_id: storeId });
+            }
+            return Promise.resolve(null);
+        });
     });
 
     it('should correctly balance stock between warehouse and escrow after multiple sales', async () => {
@@ -158,8 +182,11 @@ describe('Stock Convergence Integration (Offline -> Sync -> Projections)', () =>
 
         // Setup mocks for this specific operation
         mockRepo.find.mockResolvedValue([currentEscrow]);
-        mockRepo.findOne.mockImplementation((entity) => {
-            if (entity === Sale) return Promise.resolve(null);
+        mockRepo.findOne.mockImplementation((query: any) => {
+            const id = query?.where?.id;
+            if (id === productId) {
+                return Promise.resolve({ id: productId, store_id: storeId });
+            }
             return Promise.resolve(null);
         });
 
