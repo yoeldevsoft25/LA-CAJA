@@ -107,7 +107,9 @@ export class OutboxService {
                   oe.target,
                   oe.retry_count
                 FROM outbox_entries oe
-                LEFT JOIN events e ON e.event_id = oe.event_id
+                -- events.event_id is UUID while outbox_entries.event_id is VARCHAR in current schema.
+                -- Compare as text to avoid uuid=varchar operator errors across environments.
+                LEFT JOIN events e ON e.event_id::text = oe.event_id
                 WHERE oe.status = 'pending'
                   AND oe.retry_count < ${this.maxRetries}
                 ORDER BY
