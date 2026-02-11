@@ -459,6 +459,7 @@ export default function CustomerDebtCard({
                     if (!chainAudit.items.length) return null
 
                     const chainItems = chainAudit.items
+                    const displayItems = [...chainItems].reverse()
                     const chainSummary = chainAudit.summary
                     const firstItemDate = new Date(chainSummary.firstDateMs)
                     const lastItemDate = new Date(chainSummary.lastDateMs)
@@ -507,10 +508,10 @@ export default function CustomerDebtCard({
                         </div>
 
                         <div className="p-4 pl-8 space-y-0">
-                          {chainItems.map((item: any, itemIndex: number) => {
+                          {displayItems.map((item: any, itemIndex: number) => {
                             const isDebt = item.type === 'debt'
                             const date = new Date(item.occurredAtMs)
-                            const isLast = itemIndex === chainItems.length - 1
+                            const isLast = itemIndex === displayItems.length - 1
                             const iconBg = isDebt ? 'bg-orange-100 text-orange-600 border-orange-200' :
                               (item.data.method === 'ROLLOVER' ? 'bg-blue-100 text-blue-600 border-blue-200' : 'bg-green-100 text-green-600 border-green-200')
                             const Icon = isDebt ? CreditCard : (item.data.method === 'ROLLOVER' ? Clock : CheckCircle)
