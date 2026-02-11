@@ -943,6 +943,11 @@ export class DebtsService {
         `El monto del pago ($${paymentUsd.toFixed(2)}) excede el total seleccionado ($${totalRemainingUsd.toFixed(2)})`,
       );
     }
+    if (!isSelective && paymentUsd > totalRemainingUsd + tolerance) {
+      throw new BadRequestException(
+        `El monto del pago ($${paymentUsd.toFixed(2)}) excede el total pendiente ($${totalRemainingUsd.toFixed(2)})`,
+      );
+    }
 
     // Obtener tasa BCV actual para calcular el equivalente en Bs (solo referencia)
     let exchangeRate = 36;
@@ -955,10 +960,15 @@ export class DebtsService {
       // fallback
     }
 
-    const sortedDebts = debts.sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
+    // Regla de negocio: en abono general aplicamos primero a las deudas más viejas.
+    // Esto preserva el comportamiento esperado en tienda y mantiene trazabilidad
+    // del corte automático cuando el monto no alcanza para cubrir todo.
+    const sortedDebts = debts.sort((a, b) => {
+      const byCreatedAt =
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (byCreatedAt !== 0) return byCreatedAt;
+      return a.id.localeCompare(b.id);
+    });
 
     const distribution =
       dto.distribution === 'PROPORTIONAL' ? 'PROPORTIONAL' : 'SEQUENTIAL';
@@ -966,6 +976,18 @@ export class DebtsService {
     // Procesar pagos en una transacción
     const payments: DebtPayment[] = [];
     const updatedDebts: Debt[] = [];
+    const paymentEventsToEmit: Array<{
+      storeId: string;
+      paymentId: string;
+      debtId: string;
+      amountBs: number;
+      amountUsd: number;
+      method: string;
+      paidAt: Date;
+      note?: string | null;
+    }> = [];
+    const debtCreatedEventsToEmit: Debt[] = [];
+    let appliedDistribution: 'SEQUENTIAL' | 'PROPORTIONAL' = 'SEQUENTIAL';
 
     await this.dataSource.transaction(async (manager) => {
       const paymentRepository = manager.getRepository(DebtPayment);
@@ -996,6 +1018,7 @@ export class DebtsService {
         paymentUsd < totalRemainingUsd - tolerance;
 
       if (useProportional) {
+        appliedDistribution = 'PROPORTIONAL';
         const paymentCents = Math.round(paymentUsd * 100);
         const totalRemainingCents = Math.round(totalRemainingUsd * 100);
         const allocations = debtBalances.map((entry) =>
@@ -1051,6 +1074,16 @@ export class DebtsService {
               dto.note || 'Pago de deudas seleccionadas (proporcional)',
             ],
           );
+          paymentEventsToEmit.push({
+            storeId,
+            paymentId,
+            debtId: entry.debt.id,
+            amountBs: payBs,
+            amountUsd: payUsd,
+            method: dto.method,
+            paidAt,
+            note: dto.note || 'Pago de deudas seleccionadas (proporcional)',
+          });
 
           const willBePaid = isFullForDebt;
           const newStatus = willBePaid ? DebtStatus.PAID : DebtStatus.PARTIAL;
@@ -1106,9 +1139,24 @@ export class DebtsService {
               dto.note ||
               (isSelective
                 ? 'Pago de deudas seleccionadas'
-                : 'Pago completo de todas las deudas'),
+                : 'Pago general (prioridad: deudas más viejas)'),
             ],
           );
+          const paymentNote =
+            dto.note ||
+            (isSelective
+              ? 'Pago de deudas seleccionadas'
+              : 'Pago general (prioridad: deudas más viejas)');
+          paymentEventsToEmit.push({
+            storeId,
+            paymentId,
+            debtId: entry.debt.id,
+            amountBs: payBs,
+            amountUsd: payUsd,
+            method: dto.method,
+            paidAt,
+            note: paymentNote,
+          });
 
           const willBePaid = isFullForDebt;
           const newStatus = willBePaid ? DebtStatus.PAID : DebtStatus.PARTIAL;
@@ -1165,6 +1213,19 @@ export class DebtsService {
                   entry.debt.id, // ID de la deuda padre
                 ],
               );
+              const rolloverDebt = manager.create(Debt, {
+                id: rolloverDebtId,
+                store_id: storeId,
+                sale_id: null,
+                customer_id: customerId,
+                created_at: paidAt,
+                amount_bs: remainingDebtBs,
+                amount_usd: remainingDebtUsd,
+                note: `Saldo traslado de deuda ${entry.debt.sale_id ? 'Venta' : ''} (${new Date(entry.debt.created_at).toLocaleDateString()})`,
+                status: DebtStatus.OPEN,
+                parent_debt_id: entry.debt.id,
+              });
+              debtCreatedEventsToEmit.push(rolloverDebt);
 
               // 2. Registrar el pago interno "ROLLOVER" para cerrar la deuda original
               const rolloverPaymentId = randomUUID();
@@ -1182,6 +1243,16 @@ export class DebtsService {
                   `Traslado a nueva deuda (Corte)`,
                 ],
               );
+              paymentEventsToEmit.push({
+                storeId,
+                paymentId: rolloverPaymentId,
+                debtId: entry.debt.id,
+                amountBs: remainingDebtBs,
+                amountUsd: remainingDebtUsd,
+                method: 'ROLLOVER',
+                paidAt,
+                note: 'Traslado a nueva deuda (Corte)',
+              });
 
               // 3. Marcar la deuda original como PAGADA
               await manager
@@ -1210,8 +1281,24 @@ export class DebtsService {
       }
     });
 
+    for (const debt of debtCreatedEventsToEmit) {
+      await this.emitDebtCreatedEvent(debt);
+    }
+    for (const paymentEvent of paymentEventsToEmit) {
+      await this.emitDebtPaymentRecordedEvent(
+        paymentEvent.storeId,
+        paymentEvent.paymentId,
+        paymentEvent.debtId,
+        paymentEvent.amountBs,
+        paymentEvent.amountUsd,
+        paymentEvent.method,
+        paymentEvent.paidAt,
+        paymentEvent.note,
+      );
+    }
+
     this.logger.log(
-      `${isSelective ? 'Pago selectivo' : 'Pago completo'} realizado para cliente ${customerId}: ${payments.length} pagos, ${updatedDebts.length} deudas actualizadas`,
+      `${isSelective ? 'Pago selectivo' : 'Pago general'} realizado para cliente ${customerId}: ${payments.length} pagos, ${updatedDebts.length} deudas actualizadas, estrategia=${appliedDistribution}, prioridad=OLDEST_FIRST`,
     );
 
     return { debts: updatedDebts, payments };

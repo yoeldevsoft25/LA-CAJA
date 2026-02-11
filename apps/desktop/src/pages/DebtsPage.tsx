@@ -122,6 +122,11 @@ export default function DebtsPage() {
     let overdueCount = 0
     let overdueAmount = 0
     const customersWithDebtSet = new Set<string>()
+    const now = new Date()
+    const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const endOfTodayMs = startOfTodayMs + (24 * 60 * 60 * 1000) - 1
+    let todayRecoveredUsd = 0
+    let todayPaymentsCount = 0
 
     allDebts.forEach((debt) => {
       const calc = calculateDebtTotals(debt)
@@ -147,6 +152,16 @@ export default function DebtsPage() {
           overdueCount++
         }
       }
+
+      const debtPayments = debt.payments || []
+      debtPayments.forEach((payment) => {
+        if (payment.method === 'ROLLOVER') return
+        const paidAtMs = new Date(payment.paid_at).getTime()
+        if (paidAtMs >= startOfTodayMs && paidAtMs <= endOfTodayMs) {
+          todayRecoveredUsd += Number(payment.amount_usd || 0)
+          todayPaymentsCount++
+        }
+      })
     })
 
     return {
@@ -159,7 +174,9 @@ export default function DebtsPage() {
       totalCount: allDebts.length,
       customersWithDebt: customersWithDebtSet.size,
       overdueAmount,
-      overdueCount
+      overdueCount,
+      todayRecoveredUsd,
+      todayPaymentsCount,
     }
   }, [allDebts])
 
@@ -252,13 +269,13 @@ export default function DebtsPage() {
             <div className="flex flex-col gap-1">
               <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Recuperado Hoy</span>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-emerald-700">$0.00</span>
+                <span className="text-2xl font-bold text-emerald-700">${stats.todayRecoveredUsd.toFixed(2)}</span>
                 <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
                   <CheckCircle className="h-4 w-4 text-emerald-600" />
                 </div>
               </div>
               <p className="text-xs text-emerald-600/80 mt-1">
-                0 pagos recibidos
+                {stats.todayPaymentsCount} pago{stats.todayPaymentsCount !== 1 ? 's' : ''} recibido{stats.todayPaymentsCount !== 1 ? 's' : ''}
               </p>
             </div>
           </CardContent>
