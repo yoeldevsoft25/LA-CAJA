@@ -15,6 +15,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Event } from '../database/entities/event.entity';
 import { InventoryEscrowService } from '../inventory/escrow/inventory-escrow.service';
 import axios from 'axios';
+import { createHash } from 'crypto';
 
 import { CircuitBreaker } from '../common/circuit-breaker';
 import { DistributedLockService } from '../common/distributed-lock.service';
@@ -77,6 +78,29 @@ export interface FederationIdsResult {
   ids: string[];
 }
 
+interface SyntheticRelayEvent {
+  event_id: string;
+  seq: number;
+  type: string;
+  version: number;
+  created_at: number;
+  actor: {
+    user_id: string;
+    role: 'owner' | 'cashier';
+  };
+  payload: Record<string, unknown>;
+  vector_clock: Record<string, number>;
+  causal_dependencies: string[];
+  delta_payload: Record<string, unknown>;
+  full_payload_hash: string;
+}
+
+interface SyntheticPushResult {
+  acceptedEventIds: string[];
+  rejected: number;
+  conflicted: number;
+}
+
 export interface FederationAutoReconcileResult {
   storeId: string;
   sessions?: {
@@ -129,6 +153,10 @@ export class FederationSyncService implements OnModuleInit {
   private readonly logger = new Logger(FederationSyncService.name);
   private readonly remoteUrl: string | undefined;
   private readonly adminKey: string | undefined;
+  private readonly syntheticRelayDeviceId =
+    '00000000-0000-0000-0000-000000000001';
+  private readonly syntheticRelayActorId =
+    '00000000-0000-0000-0000-000000000002';
   private lastRelayError: {
     eventId: string;
     message: string;
@@ -548,7 +576,7 @@ export class FederationSyncService implements OnModuleInit {
     const foundIds = new Set<string>(
       rows.map((row: { debt_id: string }) => row.debt_id),
     );
-    const missingIds = uniqueDebtIds.filter((id) => !foundIds.has(id));
+    let missingIds = uniqueDebtIds.filter((id) => !foundIds.has(id));
 
     let queued = 0;
     for (const row of rows as Array<{ event_id: string }>) {
@@ -558,6 +586,56 @@ export class FederationSyncService implements OnModuleInit {
       if (!event) continue;
       await this.queueRelay(event);
       queued += 1;
+    }
+
+    if (missingIds.length > 0) {
+      const debtRows = await this.dataSource.query(
+        `
+          SELECT id, sale_id, customer_id, created_at, amount_bs, amount_usd, note
+          FROM debts
+          WHERE store_id = $1
+            AND id = ANY($2)
+        `,
+        [storeId, missingIds],
+      );
+
+      if (debtRows.length > 0) {
+        const syntheticEvents = (debtRows as Array<Record<string, unknown>>).map(
+          (row) => this.buildSyntheticDebtCreatedEvent(storeId, row),
+        );
+        const eventToDebtId = new Map(
+          syntheticEvents.map((event, idx) => [
+            event.event_id,
+            String(debtRows[idx].id),
+          ]),
+        );
+
+        try {
+          const pushResult = await this.pushSyntheticEvents(
+            storeId,
+            syntheticEvents,
+          );
+          const replayedDebtIds = new Set(
+            pushResult.acceptedEventIds
+              .map((eventId) => eventToDebtId.get(eventId))
+              .filter((value): value is string => Boolean(value)),
+          );
+
+          queued += replayedDebtIds.size;
+          missingIds = missingIds.filter((id) => !replayedDebtIds.has(id));
+
+          if (pushResult.rejected > 0 || pushResult.conflicted > 0) {
+            this.logger.warn(
+              `Debt synthetic replay had rejects/conflicts for store ${storeId}: rejected=${pushResult.rejected}, conflicted=${pushResult.conflicted}`,
+            );
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `Debt synthetic replay failed for store ${storeId}: ${msg}`,
+          );
+        }
+      }
     }
 
     return {
@@ -599,7 +677,7 @@ export class FederationSyncService implements OnModuleInit {
     const foundIds = new Set<string>(
       rows.map((row: { payment_id: string }) => row.payment_id),
     );
-    const missingIds = uniquePaymentIds.filter((id) => !foundIds.has(id));
+    let missingIds = uniquePaymentIds.filter((id) => !foundIds.has(id));
 
     let queued = 0;
     for (const row of rows as Array<{ event_id: string }>) {
@@ -609,6 +687,56 @@ export class FederationSyncService implements OnModuleInit {
       if (!event) continue;
       await this.queueRelay(event);
       queued += 1;
+    }
+
+    if (missingIds.length > 0) {
+      const paymentRows = await this.dataSource.query(
+        `
+          SELECT id, debt_id, amount_bs, amount_usd, method, paid_at, note
+          FROM debt_payments
+          WHERE store_id = $1
+            AND id = ANY($2)
+        `,
+        [storeId, missingIds],
+      );
+
+      if (paymentRows.length > 0) {
+        const syntheticEvents = (
+          paymentRows as Array<Record<string, unknown>>
+        ).map((row) => this.buildSyntheticDebtPaymentEvent(storeId, row));
+        const eventToPaymentId = new Map(
+          syntheticEvents.map((event, idx) => [
+            event.event_id,
+            String(paymentRows[idx].id),
+          ]),
+        );
+
+        try {
+          const pushResult = await this.pushSyntheticEvents(
+            storeId,
+            syntheticEvents,
+          );
+          const replayedPaymentIds = new Set(
+            pushResult.acceptedEventIds
+              .map((eventId) => eventToPaymentId.get(eventId))
+              .filter((value): value is string => Boolean(value)),
+          );
+
+          queued += replayedPaymentIds.size;
+          missingIds = missingIds.filter((id) => !replayedPaymentIds.has(id));
+
+          if (pushResult.rejected > 0 || pushResult.conflicted > 0) {
+            this.logger.warn(
+              `Debt payment synthetic replay had rejects/conflicts for store ${storeId}: rejected=${pushResult.rejected}, conflicted=${pushResult.conflicted}`,
+            );
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `Debt payment synthetic replay failed for store ${storeId}: ${msg}`,
+          );
+        }
+      }
     }
 
     return {
@@ -1696,6 +1824,144 @@ export class FederationSyncService implements OnModuleInit {
   private diff(source: string[], target: string[]): string[] {
     const targetSet = new Set(target);
     return source.filter((id) => !targetSet.has(id));
+  }
+
+  private buildSyntheticDebtCreatedEvent(
+    storeId: string,
+    row: Record<string, unknown>,
+  ): SyntheticRelayEvent {
+    const createdAt = new Date(String(row.created_at));
+    const seq = createdAt.getTime();
+    const payload = {
+      debt_id: String(row.id),
+      sale_id: row.sale_id ? String(row.sale_id) : null,
+      customer_id: String(row.customer_id),
+      created_at: createdAt.toISOString(),
+      amount_bs: Number(row.amount_bs || 0),
+      amount_usd: Number(row.amount_usd || 0),
+      note: row.note ? String(row.note) : null,
+    };
+    const vectorClock = { [this.syntheticRelayDeviceId]: seq };
+
+    return {
+      event_id: this.deterministicUuid(
+        `federation:synthetic:debt-created:${storeId}:${payload.debt_id}`,
+      ),
+      seq,
+      type: 'DebtCreated',
+      version: 1,
+      created_at: seq,
+      actor: {
+        user_id: this.syntheticRelayActorId,
+        role: 'owner',
+      },
+      payload,
+      vector_clock: vectorClock,
+      causal_dependencies: [],
+      delta_payload: payload,
+      full_payload_hash: this.hashPayload(payload),
+    };
+  }
+
+  private buildSyntheticDebtPaymentEvent(
+    storeId: string,
+    row: Record<string, unknown>,
+  ): SyntheticRelayEvent {
+    const paidAt = new Date(String(row.paid_at));
+    const seq = paidAt.getTime();
+    const payload = {
+      payment_id: String(row.id),
+      debt_id: String(row.debt_id),
+      amount_bs: Number(row.amount_bs || 0),
+      amount_usd: Number(row.amount_usd || 0),
+      method: String(row.method || 'cash'),
+      paid_at: paidAt.toISOString(),
+      note: row.note ? String(row.note) : null,
+    };
+    const vectorClock = { [this.syntheticRelayDeviceId]: seq };
+
+    return {
+      event_id: this.deterministicUuid(
+        `federation:synthetic:debt-payment:${storeId}:${payload.payment_id}`,
+      ),
+      seq,
+      type: 'DebtPaymentRecorded',
+      version: 1,
+      created_at: seq,
+      actor: {
+        user_id: this.syntheticRelayActorId,
+        role: 'owner',
+      },
+      payload,
+      vector_clock: vectorClock,
+      causal_dependencies: [],
+      delta_payload: payload,
+      full_payload_hash: this.hashPayload(payload),
+    };
+  }
+
+  private deterministicUuid(seed: string): string {
+    const hash = createHash('sha256').update(seed).digest('hex');
+    const variant = ((parseInt(hash.slice(16, 17), 16) & 0x3) | 0x8).toString(
+      16,
+    );
+    return [
+      hash.slice(0, 8),
+      hash.slice(8, 12),
+      `4${hash.slice(13, 16)}`,
+      `${variant}${hash.slice(17, 20)}`,
+      hash.slice(20, 32),
+    ].join('-');
+  }
+
+  private hashPayload(payload: Record<string, unknown>): string {
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
+  private async pushSyntheticEvents(
+    storeId: string,
+    events: SyntheticRelayEvent[],
+  ): Promise<SyntheticPushResult> {
+    if (!this.remoteUrl || events.length === 0) {
+      return { acceptedEventIds: [], rejected: 0, conflicted: 0 };
+    }
+
+    const response = await this.circuitBreaker.execute(() =>
+      axios.post(
+        `${this.remoteUrl}/sync/push`,
+        {
+          store_id: storeId,
+          device_id: this.syntheticRelayDeviceId,
+          client_version: 'federation-synthetic-relay-1.0',
+          events,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.adminKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000,
+        },
+      ),
+    );
+
+    const accepted = Array.isArray(response.data?.accepted)
+      ? response.data.accepted
+      : [];
+    const rejected = Array.isArray(response.data?.rejected)
+      ? response.data.rejected.length
+      : 0;
+    const conflicted = Array.isArray(response.data?.conflicted)
+      ? response.data.conflicted.length
+      : 0;
+
+    return {
+      acceptedEventIds: accepted
+        .map((item: { event_id?: string }) => item.event_id)
+        .filter((id: unknown): id is string => typeof id === 'string'),
+      rejected,
+      conflicted,
+    };
   }
 
   private async fetchRemoteIds(
