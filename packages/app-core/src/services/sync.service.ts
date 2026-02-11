@@ -249,7 +249,8 @@ class SyncServiceClass {
     // Check if there's anything to sync
     const stats = this.syncQueue?.getStats();
     const dbPending = await db.getPendingEvents(1).then(e => e.length).catch(() => 0);
-    if (stats?.pending === 0 && dbPending === 0) {
+    const hasRecoverableDead = await this.hasRecoverableDeadEvents();
+    if (stats?.pending === 0 && dbPending === 0 && !hasRecoverableDead) {
       this.logger.debug(`Recovery skipped (nothing pending), source=${source}`);
       return;
     }
@@ -265,6 +266,61 @@ class SyncServiceClass {
       this.logger.error(`Recovery falló, source=${source}`, err);
     } finally {
       this.isRecoveryRunning = false;
+    }
+  }
+
+  private async hasRecoverableDeadEvents(): Promise<boolean> {
+    try {
+      const transientDead = await db.localEvents
+        .where('sync_status')
+        .equals('dead')
+        .and((evt) => {
+          const code = String(evt.last_error_code || '').toLowerCase();
+          const message = String(evt.last_error || '').toLowerCase();
+          return (
+            code === 'transientautherror' ||
+            message.includes('http 401') ||
+            message.includes('http 403') ||
+            message.includes('forbidden') ||
+            message.includes('network') ||
+            message.includes('timeout')
+          );
+        })
+        .first();
+
+      if (transientDead) return true;
+
+      const retriableOfflineSaleDead = await db.localEvents
+        .where('sync_status')
+        .equals('dead')
+        .and((evt) => {
+          if (evt.type !== 'SaleCreated') return false;
+          const metadata = (evt.payload as any)?.metadata || {};
+          if (!metadata?.offline_created) return false;
+
+          const attempts = Number(evt.sync_attempts || 0);
+          const code = String(evt.last_error_code || '').toUpperCase();
+          const maxRecoveryAttempts = this.getDeadRecoveryLimitForCode(code);
+          if (attempts >= maxRecoveryAttempts) return false;
+
+          const message = String(evt.last_error || '').toLowerCase();
+          const recoverableByCode = this.RECOVERABLE_DEAD_ERROR_CODES.has(code);
+          const recoverableByMessage =
+            message.includes('no hay una sesión de caja abierta') ||
+            message.includes('precio') ||
+            message.includes('fiscal') ||
+            message.includes('usuario del evento');
+
+          return recoverableByCode || recoverableByMessage;
+        })
+        .first();
+
+      return Boolean(retriableOfflineSaleDead);
+    } catch (error) {
+      this.logger.debug('No se pudo evaluar eventos dead recuperables', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
     }
   }
 
@@ -545,6 +601,7 @@ class SyncServiceClass {
 
       // 1. Recargar pendientes desde IndexedDB (por si hay eventos que no están en cola)
       const pendingEvents = await db.getPendingEvents(1000);
+      const pendingBeforeFlushCount = pendingEvents.length;
       const queueDepthBefore = queue.getStats().pending;
 
       this.logger.info(`📊 Pendientes en IndexedDB: ${pendingEvents.length}, en cola: ${queueDepthBefore}`);
@@ -564,16 +621,6 @@ class SyncServiceClass {
       this.logger.info('⬆️ Ejecutando flush de eventos pendientes...');
       await queue.flush();
 
-      const queueDepthAfter = queue.getStats().pending;
-      const syncedCount = queueDepthBefore - queueDepthAfter;
-
-      this.metrics.recordEvent('push_success', {
-        synced_count: syncedCount,
-        queue_depth_after: queueDepthAfter,
-        recovered_dead_count: recoveredDead,
-        duration_ms: Date.now() - startTime
-      });
-
       // 3. Pull de eventos del servidor
       this.logger.info('⬇️ Ejecutando pull de eventos del servidor...');
       await this.pullFromServer();
@@ -583,10 +630,20 @@ class SyncServiceClass {
 
       const totalDuration = Date.now() - startTime;
       const finalQueueDepth = queue.getStats().pending;
+      const dbPendingAfter = await db.getPendingEvents(1000).then((evts) => evts.length).catch(() => finalQueueDepth);
+      const syncedCount = Math.max(0, pendingBeforeFlushCount - dbPendingAfter);
+
+      this.metrics.recordEvent('push_success', {
+        synced_count: syncedCount,
+        queue_depth_after: finalQueueDepth,
+        recovered_dead_count: recoveredDead,
+        duration_ms: totalDuration
+      });
+
       this.logger.info(`✅ Hard Recovery completado en ${totalDuration}ms (${syncedCount} eventos sincronizados, queue=${finalQueueDepth})`);
 
       // 5. Emitir evento global para notificar a la UI (solo en browser)
-      if (typeof window !== 'undefined' && (syncedCount > 0 || queueDepthAfter !== finalQueueDepth)) {
+      if (typeof window !== 'undefined' && syncedCount > 0) {
         window.dispatchEvent(new CustomEvent('sync:completed', {
           detail: {
             syncedCount,

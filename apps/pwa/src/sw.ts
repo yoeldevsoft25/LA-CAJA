@@ -229,6 +229,30 @@ function shouldRetryRejectedEvent(event: any, rejection: any): boolean {
     );
 }
 
+async function notifyClientsSyncCompleted(payload: {
+    syncedCount: number;
+    queueDepthAfter: number;
+    totalBatches: number;
+    durationMs: number;
+}) {
+    const clients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+    });
+
+    for (const client of clients) {
+        client.postMessage({
+            type: 'SW_SYNC_COMPLETED',
+            source: 'sw_background_sync',
+            syncedCount: payload.syncedCount,
+            queueDepthAfter: payload.queueDepthAfter,
+            totalBatches: payload.totalBatches,
+            durationMs: payload.durationMs,
+            timestamp: Date.now(),
+        });
+    }
+}
+
 async function syncEvents() {
     // 1. Web Locks API: Garantizar que solo un proceso de sincronización ocurra a la vez
     if (!navigator.locks) {
@@ -257,6 +281,7 @@ async function performSync() {
     }
 
     let batchCount = 0;
+    let totalAccepted = 0;
     const MAX_BATCHES = 20; // ⚡ SEGURIDAD: Máximo 1000 eventos (20 * 50) por sesión de lock
 
     try {
@@ -386,6 +411,7 @@ async function performSync() {
 
             if (result.accepted && result.accepted.length > 0) {
                 acceptedCount = result.accepted.length;
+                totalAccepted += acceptedCount;
                 await Promise.all(result.accepted.map((ack: any) =>
                     db.localEvents.where('event_id').equals(ack.event_id).modify({
                         sync_status: 'synced',
@@ -464,6 +490,16 @@ async function performSync() {
             console.log('[SW] 📊 Telemetría: sync_limit_reached', {
                 max_batches: MAX_BATCHES,
                 total_duration_ms: Date.now() - startTime
+            });
+        }
+
+        const queueDepthAfter = await db.getPendingEvents(1000).then((events) => events.length).catch(() => 0);
+        if (totalAccepted > 0) {
+            await notifyClientsSyncCompleted({
+                syncedCount: totalAccepted,
+                queueDepthAfter,
+                totalBatches: batchCount,
+                durationMs: Date.now() - startTime,
             });
         }
 

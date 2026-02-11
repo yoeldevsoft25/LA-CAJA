@@ -212,13 +212,41 @@ function App() {
       }
     };
 
+    // Bridge: notificación cuando la sincronización la completa el Service Worker en background.
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      const data = event?.data as {
+        type?: string;
+        syncedCount?: number;
+        queueDepthAfter?: number;
+        durationMs?: number;
+        source?: string;
+      } | undefined;
+
+      if (!data || data.type !== 'SW_SYNC_COMPLETED') return;
+
+      window.dispatchEvent(new CustomEvent('sync:completed', {
+        detail: {
+          syncedCount: Number(data.syncedCount || 0),
+          queueDepthAfter: Number(data.queueDepthAfter || 0),
+          duration: Number(data.durationMs || 0),
+          source: data.source || 'sw_background_sync',
+        }
+      }));
+    };
+
     window.addEventListener('sync:completed', handleSyncCompleted);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    }
 
     // Cleanup: desuscribirse cuando el componente se desmonte
     return () => {
       unsubscribeComplete();
       unsubscribeError();
       window.removeEventListener('sync:completed', handleSyncCompleted);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      }
     };
   }, [isAuthenticated, queryClient])
 
