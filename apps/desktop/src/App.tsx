@@ -41,7 +41,6 @@ import POSPage from './pages/POSPage'
 const preloadCriticalRoutes = () => {
   // Precargar rutas más usadas después de login
   Promise.all([
-    import('./pages/POSPage'),
     import('./pages/SalesPage'),
     import('./pages/CashPage'),
   ]).catch(() => {
@@ -278,7 +277,7 @@ function App() {
       released = true
       document.removeEventListener('visibilitychange', onVisibilityChange)
       if (wakeLock && typeof wakeLock.release === 'function') {
-        void wakeLock.release().catch(() => {})
+        void wakeLock.release().catch(() => { })
       }
       wakeLock = null
     }

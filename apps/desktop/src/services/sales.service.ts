@@ -5,6 +5,8 @@ import { exchangeService } from './exchange.service'
 import { connectivityService } from './connectivity.service'
 import { BaseEvent, SaleCreatedPayload, SaleItem as DomainSaleItem, PricingCalculator, WeightUnit } from '@la-caja/domain'
 import { createLogger } from '@/lib/logger'
+import { db } from '@/db/database'
+import { productRepository } from '@/db/repositories'
 import type { Product } from './products.service'
 
 const logger = createLogger('SalesService')
@@ -381,7 +383,6 @@ export const salesService = {
       }
 
       // Obtener productos del cache para calcular totales y precios
-      const { db } = await import('@/db/database')
       let subtotalBs = 0
       let subtotalUsd = 0
       let discountBs = 0
@@ -485,7 +486,6 @@ export const salesService = {
         logger.error('Error guardando venta en syncService', error)
         // Intentar guardar directamente en IndexedDB como fallback
         try {
-          const { db } = await import('@/db/database')
           await db.localEvents.add({
             ...event,
             sync_status: 'pending',
@@ -582,8 +582,6 @@ export const salesService = {
         }
       }
 
-      const { db } = await import('@/db/database')
-      const { productRepository } = await import('@/db/repositories')
       let subtotalBs = 0
       let subtotalUsd = 0
       let discountBs = 0
