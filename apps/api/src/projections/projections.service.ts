@@ -50,6 +50,13 @@ import {
   SaleVoidedPayload,
 } from '../sync/dto/sync-types';
 
+export class ProjectionDependencyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProjectionDependencyError';
+  }
+}
+
 @Injectable()
 export class ProjectionsService {
   private readonly logger = new Logger(ProjectionsService.name);
@@ -159,6 +166,40 @@ export class ProjectionsService {
         `No se pudo resolver bodega por defecto para store ${storeId}`,
       );
       return null;
+    }
+  }
+
+  private async ensureProductExists(
+    storeId: string,
+    productId: string,
+    eventId: string,
+  ): Promise<void> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId, store_id: storeId },
+      select: ['id'],
+    });
+
+    if (!product) {
+      throw new ProjectionDependencyError(
+        `Dependency not ready: product ${productId} missing for event ${eventId}`,
+      );
+    }
+  }
+
+  private async ensureCustomerExists(
+    storeId: string,
+    customerId: string,
+    eventId: string,
+  ): Promise<void> {
+    const customer = await this.customerRepository.findOne({
+      where: { id: customerId, store_id: storeId },
+      select: ['id'],
+    });
+
+    if (!customer) {
+      throw new ProjectionDependencyError(
+        `Dependency not ready: customer ${customerId} missing for event ${eventId}`,
+      );
     }
   }
 
@@ -440,6 +481,12 @@ export class ProjectionsService {
       return; // Ya existe, idempotente
     }
 
+    await this.ensureProductExists(
+      event.store_id,
+      payload.product_id,
+      event.event_id,
+    );
+
     const qty = Number(payload.qty) || 0;
     const warehouseId = await this.resolveWarehouseId(
       event.store_id,
@@ -483,6 +530,12 @@ export class ProjectionsService {
     if (exists) {
       return; // Ya existe, idempotente
     }
+
+    await this.ensureProductExists(
+      event.store_id,
+      payload.product_id,
+      event.event_id,
+    );
 
     const qtyDelta = Number(payload.qty_delta) || 0;
     const warehouseId = await this.resolveWarehouseId(
@@ -539,6 +592,18 @@ export class ProjectionsService {
       }
 
       this.logger.warn(`Reparando venta parcial detectada: ${payload.sale_id}`);
+    }
+
+    const productIds = Array.from(
+      new Set((payload.items || []).map((item) => item.product_id).filter(Boolean)),
+    );
+    for (const productId of productIds) {
+      await this.ensureProductExists(event.store_id, productId, event.event_id);
+    }
+
+    const customerId = payload.customer?.customer_id || payload.customer_id;
+    if (customerId) {
+      await this.ensureCustomerExists(event.store_id, customerId, event.event_id);
     }
 
     // ⚡ CRITICAL: Shared Transaction for Atomicity
@@ -991,6 +1056,12 @@ export class ProjectionsService {
       return; // Ya existe, idempotente
     }
 
+    await this.ensureCustomerExists(
+      event.store_id,
+      payload.customer_id,
+      event.event_id,
+    );
+
     const debt = this.debtRepository.create({
       id: payload.debt_id,
       store_id: event.store_id,
@@ -1174,6 +1245,12 @@ export class ProjectionsService {
       return;
     }
 
+    await this.ensureProductExists(
+      event.store_id,
+      payload.product_id,
+      event.event_id,
+    );
+
     const warehouseId = await this.resolveWarehouseId(
       event.store_id,
       payload.warehouse_id || null,
@@ -1252,6 +1329,12 @@ export class ProjectionsService {
     });
     if (exists) return;
 
+    await this.ensureProductExists(
+      event.store_id,
+      payload.product_id,
+      event.event_id,
+    );
+
     const qty = Number(payload.qty_granted) || 0;
 
     // Update Escrow
@@ -1322,6 +1405,12 @@ export class ProjectionsService {
       where: { id: movementId, store_id: event.store_id },
     });
     if (exists) return;
+
+    await this.ensureProductExists(
+      event.store_id,
+      payload.product_id,
+      event.event_id,
+    );
 
     const qty = Number(payload.qty) || 0;
 
@@ -1396,6 +1485,12 @@ export class ProjectionsService {
       where: { id: movementId, store_id: event.store_id },
     });
     if (exists) return;
+
+    await this.ensureProductExists(
+      event.store_id,
+      payload.product_id,
+      event.event_id,
+    );
 
     const qty = Number(payload.qty_reclaimed) || 0;
 

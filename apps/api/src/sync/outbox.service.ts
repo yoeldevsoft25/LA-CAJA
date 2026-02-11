@@ -1,15 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Event } from '../database/entities/event.entity';
-import { ProjectionsService } from '../projections/projections.service';
+import {
+  ProjectionDependencyError,
+  ProjectionsService,
+} from '../projections/projections.service';
 import { FederationSyncService } from './federation-sync.service';
 
 @Injectable()
 export class OutboxService {
   private readonly logger = new Logger(OutboxService.name);
   private processing = false;
+  private readonly maxRetries = 10;
 
   constructor(
     private dataSource: DataSource,
@@ -90,11 +99,22 @@ export class OutboxService {
       await this.dataSource.transaction(async (manager) => {
         // 1. Fetch pending entries with lock
         const entries = await manager.query(`
-                SELECT id, event_id, event_type, store_id, target, retry_count
-                FROM outbox_entries
-                WHERE status = 'pending'
-                  AND retry_count < 10
-                ORDER BY created_at ASC
+                SELECT
+                  oe.id,
+                  oe.event_id,
+                  oe.event_type,
+                  oe.store_id,
+                  oe.target,
+                  oe.retry_count
+                FROM outbox_entries oe
+                LEFT JOIN events e ON e.event_id = oe.event_id
+                WHERE oe.status = 'pending'
+                  AND oe.retry_count < ${this.maxRetries}
+                ORDER BY
+                  e.created_at ASC NULLS LAST,
+                  e.device_id ASC NULLS LAST,
+                  e.seq ASC NULLS LAST,
+                  oe.created_at ASC
                 LIMIT 50
                 FOR UPDATE SKIP LOCKED
               `);
@@ -140,21 +160,33 @@ export class OutboxService {
             );
           } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
+            const isDependencyError = this.isDependencyRetryable(error, msg);
+            const nextRetryCount = Number(entry.retry_count) + 1;
+            const reachedMaxRetries = nextRetryCount >= this.maxRetries;
+            const nextStatus = reachedMaxRetries ? 'failed' : 'pending';
+
             this.logger.error(
               `Failed to process outbox entry ${entry.id}: ${msg}`,
             );
 
             if (entry.target === 'projection') {
-              // Mark projection as failed so healer/health checks can see it.
+              // Dependency errors are transient; keep event pending until max retries.
               await manager.getRepository(Event).update(entry.event_id, {
-                projection_status: 'failed',
+                projection_status:
+                  isDependencyError && !reachedMaxRetries
+                    ? 'pending'
+                    : 'failed',
                 projection_error: msg,
               });
             }
 
             await manager.query(
-              `UPDATE outbox_entries SET retry_count = retry_count + 1, error = $2 WHERE id = $1`,
-              [entry.id, msg],
+              `UPDATE outbox_entries
+                 SET retry_count = retry_count + 1,
+                     error = $2,
+                     status = $3
+               WHERE id = $1`,
+              [entry.id, msg, nextStatus],
             );
           }
         }
@@ -165,5 +197,37 @@ export class OutboxService {
     } finally {
       this.processing = false;
     }
+  }
+
+  private isDependencyRetryable(error: unknown, message: string): boolean {
+    if (error instanceof ProjectionDependencyError) {
+      return true;
+    }
+
+    if (error instanceof QueryFailedError) {
+      const driverError = error.driverError as
+        | { code?: string; constraint?: string }
+        | undefined;
+      if (driverError?.code === '23503') {
+        return true;
+      }
+      const constraint = driverError?.constraint ?? '';
+      if (
+        constraint.includes('_product_id_fkey') ||
+        constraint.includes('_customer_id_fkey') ||
+        constraint.includes('_debt_id_fkey') ||
+        constraint.includes('_sale_id_fkey')
+      ) {
+        return true;
+      }
+    }
+
+    return (
+      message.includes('foreign key constraint') &&
+      (message.includes('_product_id_fkey') ||
+        message.includes('_customer_id_fkey') ||
+        message.includes('_debt_id_fkey') ||
+        message.includes('_sale_id_fkey'))
+    );
   }
 }

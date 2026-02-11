@@ -69,8 +69,7 @@ export class OrphanHealerService {
         AND e.type = 'SaleCreated'
         AND e.created_at > NOW() - INTERVAL '7 days'
         AND s.id IS NULL
-        AND (e.projection_status IS NULL 
-             OR e.projection_status != 'processed')
+        AND e.projection_status = 'failed'
       ORDER BY e.created_at ASC
       LIMIT 50
     `,
@@ -87,8 +86,7 @@ export class OrphanHealerService {
         AND e.type = 'DebtCreated'
         AND e.created_at > NOW() - INTERVAL '7 days'
         AND d.id IS NULL
-        AND (e.projection_status IS NULL 
-             OR e.projection_status != 'processed')
+        AND e.projection_status = 'failed'
       ORDER BY e.created_at ASC
       LIMIT 50
     `,
@@ -106,8 +104,7 @@ export class OrphanHealerService {
         AND e.type IN ('DebtPaymentRecorded', 'DebtPaymentAdded')
         AND e.created_at > NOW() - INTERVAL '7 days'
         AND dp.id IS NULL
-        AND (e.projection_status IS NULL 
-             OR e.projection_status != 'processed')
+        AND e.projection_status = 'failed'
       ORDER BY e.created_at ASC
       LIMIT 50
     `,
@@ -124,8 +121,7 @@ export class OrphanHealerService {
         AND e.type = 'SaleVoided'
         AND e.created_at > NOW() - INTERVAL '7 days'
         AND s.voided_at IS NULL
-        AND (e.projection_status IS NULL 
-             OR e.projection_status != 'processed')
+        AND e.projection_status = 'failed'
       ORDER BY e.created_at ASC
       LIMIT 50
     `,
