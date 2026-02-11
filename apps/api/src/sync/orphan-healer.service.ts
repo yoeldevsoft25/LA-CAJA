@@ -182,6 +182,10 @@ export class OrphanHealerService {
           projection_error: msg,
         });
 
+        this.logger.warn(
+          `🩹 Orphan still failing ${orphan.type} (${orphan.event_id}) for store ${storeId}: ${msg}`,
+        );
+
         result.details.push({
           event_id: orphan.event_id,
           type: orphan.type,
@@ -196,6 +200,11 @@ export class OrphanHealerService {
       this.logger.log(
         `🩹 Healed ${result.healed}/${result.checked} orphaned projections ` +
           `for store ${storeId} (${result.failed} failed)`,
+      );
+    } else if (result.failed > 0) {
+      this.logger.warn(
+        `🩹 No orphaned projections healed for store ${storeId}. ` +
+          `Failed ${result.failed}/${result.checked}. First: ${result.details[0]?.event_id || 'n/a'}`,
       );
     }
 

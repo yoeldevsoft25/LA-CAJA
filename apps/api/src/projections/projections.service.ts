@@ -146,6 +146,34 @@ export class ProjectionsService {
     return normalized as unknown as Sale['payment'];
   }
 
+  private resolveSaleActorUserId(
+    event: Event,
+    payload: SaleCreatedPayload,
+  ): string | null {
+    const extendedPayload = payload as Record<string, any>;
+    const metadata =
+      extendedPayload?.metadata && typeof extendedPayload.metadata === 'object'
+        ? (extendedPayload.metadata as Record<string, any>)
+        : {};
+
+    const candidates: Array<unknown> = [
+      event.actor_user_id,
+      extendedPayload.sold_by_user_id,
+      extendedPayload.user_id,
+      metadata.user_id,
+      metadata.actor_user_id,
+      metadata.sold_by_user_id,
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
   private async resolveWarehouseId(
     storeId: string,
     candidateWarehouseId?: string | null,
@@ -576,6 +604,7 @@ export class ProjectionsService {
 
   private async projectSaleCreated(event: Event): Promise<void> {
     const payload = event.payload as unknown as SaleCreatedPayload;
+    const saleActorUserId = this.resolveSaleActorUserId(event, payload);
     const exists = await this.saleRepository.findOne({
       where: { id: payload.sale_id, store_id: event.store_id },
       relations: ['items'],
@@ -611,10 +640,9 @@ export class ProjectionsService {
 
     // ⚡ CRITICAL: Shared Transaction for Atomicity
     const savedSale = await this.dataSource.transaction(async (manager) => {
-      // ⚠️ VALIDACIÓN CRÍTICA: Verificar que el evento tiene actor_user_id
-      if (!event.actor_user_id) {
-        throw new Error(
-          `No se puede crear la venta ${payload.sale_id}: el evento no contiene información del responsable (actor_user_id).`,
+      if (!saleActorUserId) {
+        this.logger.warn(
+          `SaleCreated ${payload.sale_id} sin actor_user_id. Se proyectará con sold_by_user_id = NULL para evitar gap de proyección.`,
         );
       }
 
@@ -688,7 +716,7 @@ export class ProjectionsService {
         payment: this.toSalePayment(payload.payment),
         customer_id:
           payload.customer?.customer_id || payload.customer_id || null,
-        sold_by_user_id: event.actor_user_id,
+        sold_by_user_id: saleActorUserId,
         note: payload.note || null,
         // ✅ FIX: Asignar invoice_full_number y fiscal_number a ventas sincronizadas
         invoice_series_id: invoiceSeriesId,
@@ -908,7 +936,7 @@ export class ProjectionsService {
             await this.fiscalInvoicesService.createFromSale(
               event.store_id,
               savedSale.id,
-              event.actor_user_id || null,
+              saleActorUserId,
             );
           fiscalInvoiceForAccounting = await this.fiscalInvoicesService.issue(
             event.store_id,
