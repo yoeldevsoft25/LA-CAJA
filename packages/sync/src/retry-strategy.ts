@@ -57,12 +57,16 @@ export class RetryStrategy {
       return true;
     }
 
+    // Errores de auth transitorios (ej: failover o refresco de token en curso)
+    // deben reintentarse para no enterrar ventas offline en memoria.
+    if (error.name === 'TransientAuthError') {
+      return true;
+    }
+
     // No reintentar errores de validación (4xx) - son errores del cliente
     if (
       error.name === 'ValidationError' ||
       error.message.includes('400') ||
-      error.message.includes('401') ||
-      error.message.includes('403') ||
       error.message.includes('404') ||
       error.message.includes('validation')
     ) {

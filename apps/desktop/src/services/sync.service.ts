@@ -8,6 +8,7 @@ import {
   SyncQueue,
   SyncQueueConfig,
   SyncMetricsCollector,
+  RetryStrategy,
 } from '@la-caja/sync';
 import {
   VectorClockManager,
@@ -76,6 +77,7 @@ class SyncServiceClass {
   private readonly SYNC_BATCH_SIZE = 500; // 🚀 ULTRA CAPACITY: Pushing 500 events at once to Ryzen 7700X
   private readonly SYNC_BATCH_TIMEOUT_MS = 150; // ms
   private readonly SYNC_PRIORITIZE_CRITICAL = false; // Agrupar eventos crítica mejora rendimiento (evita 1 request por venta)
+  private readonly SYNC_QUEUE_MAX_ATTEMPTS = 25;
   private onlineListener: (() => void) | null = null;
   private offlineListener: (() => void) | null = null;
   private pendingSyncOnInit = false; // Bandera para sincronizar después de inicializar si hubo evento online
@@ -355,6 +357,9 @@ class SyncServiceClass {
             batchSize: this.SYNC_BATCH_SIZE,
             batchTimeout: this.SYNC_BATCH_TIMEOUT_MS,
             prioritizeCritical: this.SYNC_PRIORITIZE_CRITICAL,
+            retryStrategy: new RetryStrategy({
+              maxAttempts: this.SYNC_QUEUE_MAX_ATTEMPTS,
+            }),
           },
           this.metrics
         );
@@ -1098,6 +1103,14 @@ class SyncServiceClass {
       } else if (status === 401 || status === 403) {
         // Keep retrying on auth/access during outages/failover transitions.
         err.name = 'TransientAuthError';
+      }
+
+      try {
+        await Promise.all(events.map((evt) => this.markEventAsFailed(evt.event_id, err)));
+      } catch (persistError) {
+        this.logger.warn('No se pudo persistir estado fallido del lote', {
+          error: persistError instanceof Error ? persistError.message : String(persistError),
+        });
       }
 
       // 🔔 Notificar error de sincronización
