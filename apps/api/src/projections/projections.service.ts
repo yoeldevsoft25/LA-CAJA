@@ -1226,6 +1226,18 @@ export class ProjectionsService {
       return; // Ya existe, idempotente
     }
 
+    // Guard adicional: una venta FIAO no debe generar múltiples deudas activas
+    // por divergencia de debt_id entre nodos.
+    if (payload.sale_id) {
+      const existsBySale = await this.debtRepository.findOne({
+        where: { sale_id: payload.sale_id, store_id: event.store_id },
+      });
+
+      if (existsBySale) {
+        return;
+      }
+    }
+
     await this.ensureCustomerExists(
       event.store_id,
       payload.customer_id,

@@ -189,4 +189,35 @@ describe('ProjectionsService DebtPaymentRecorded projection', () => {
       }),
     );
   });
+
+  it('does not create a duplicate debt when DebtCreated arrives with same sale_id but different debt_id', async () => {
+    const existingDebtForSale = {
+      id: 'debt-existing',
+      store_id: 'store-1',
+      sale_id: 'sale-1',
+      customer_id: 'customer-1',
+      amount_usd: 10,
+      amount_bs: 0,
+      status: DebtStatus.OPEN,
+    };
+
+    debtRepo.findOne
+      .mockResolvedValueOnce(null) // by debt_id
+      .mockResolvedValueOnce(existingDebtForSale); // by sale_id
+
+    await (service as any).projectDebtCreated({
+      event_id: 'evt-debt-created',
+      store_id: 'store-1',
+      created_at: new Date('2026-02-11T21:30:00.000Z'),
+      payload: {
+        debt_id: 'debt-new-from-replay',
+        sale_id: 'sale-1',
+        customer_id: 'customer-1',
+        amount_usd: 10,
+        amount_bs: 0,
+      },
+    });
+
+    expect(debtRepo.save).not.toHaveBeenCalled();
+  });
 });
