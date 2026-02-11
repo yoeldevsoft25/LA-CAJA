@@ -220,6 +220,10 @@ const QUEUES_ENABLED =
             'false' &&
             !isLocalDbHost(resolvedDb.host));
 
+        const isSupabase =
+          resolvedDb.host.includes('supabase.co') ||
+          resolvedDb.host.includes('pooler.supabase.com');
+
         // Configuración SSL: servicios cloud (Supabase, Render) requieren SSL incluso en desarrollo
         // En produccion, SIEMPRE rechazar certificados no autorizados
         // En desarrollo, se puede usar DB_SSL_REJECT_UNAUTHORIZED=true para forzar verificacion
@@ -259,11 +263,14 @@ const QUEUES_ENABLED =
         const connectionTimeout =
           connectionTimeoutEnv || (isDevelopment ? 30000 : 10000); // 30s en dev, 10s en prod
 
-        // Pool configurable: más conservador en desarrollo local
+        // Pool configurable: Supabase free tier tiene limites bajos de conexiones.
+        // Default conservador en cloud para evitar timeouts por pool saturation.
         const poolMax =
-          configService.get<number>('DB_POOL_MAX') || (isDevelopment ? 5 : 20);
+          configService.get<number>('DB_POOL_MAX') ||
+          (isDevelopment ? 5 : isSupabase ? 3 : 20);
         const poolMin =
-          configService.get<number>('DB_POOL_MIN') || (isDevelopment ? 1 : 2);
+          configService.get<number>('DB_POOL_MIN') ||
+          (isDevelopment ? 1 : isSupabase ? 1 : 2);
 
         return {
           type: 'postgres',

@@ -121,6 +121,12 @@ export class OutboxService {
 
             if (entry.target === 'projection') {
               await this.projectionsService.projectEvent(event);
+
+              // Keep events.projection_status in sync when projecting from outbox.
+              await manager.getRepository(Event).update(event.event_id, {
+                projection_status: 'processed',
+                projection_error: null,
+              });
             } else if (entry.target === 'federation-relay') {
               // For Phase 1, we still use the queueing mechanism of FederationSyncService
               // but driven by the outbox processor.
@@ -137,6 +143,15 @@ export class OutboxService {
             this.logger.error(
               `Failed to process outbox entry ${entry.id}: ${msg}`,
             );
+
+            if (entry.target === 'projection') {
+              // Mark projection as failed so healer/health checks can see it.
+              await manager.getRepository(Event).update(entry.event_id, {
+                projection_status: 'failed',
+                projection_error: msg,
+              });
+            }
+
             await manager.query(
               `UPDATE outbox_entries SET retry_count = retry_count + 1, error = $2 WHERE id = $1`,
               [entry.id, msg],

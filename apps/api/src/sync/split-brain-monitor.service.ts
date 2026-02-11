@@ -97,6 +97,7 @@ export class SplitBrainMonitorService {
             WHERE e.store_id = $1 
               AND e.type = 'SaleCreated' 
               AND e.created_at < NOW() - INTERVAL '1 minute'
+              AND e.projection_status IN ('processed', 'failed')
               AND s.id IS NULL
             `,
       [storeId],
@@ -114,6 +115,7 @@ export class SplitBrainMonitorService {
                 WHERE e.store_id = $1 
                   AND e.type = 'DebtCreated' 
                   AND e.created_at < NOW() - INTERVAL '1 minute'
+                  AND e.projection_status IN ('processed', 'failed')
                   AND d.id IS NULL
                 `,
         [storeId],
