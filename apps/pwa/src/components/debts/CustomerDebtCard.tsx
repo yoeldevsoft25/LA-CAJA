@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CreditCard, Clock, CheckCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ArrowDown, ShoppingBag } from 'lucide-react'
+import { CreditCard, Clock, CheckCircle, MessageCircle, Receipt, AlertTriangle, ShieldCheck, ArrowUp, ShoppingBag } from 'lucide-react'
 import { Customer } from '@/services/customers.service'
 import { debtsService, Debt, calculateDebtTotals } from '@/services/debts.service'
 import { format } from 'date-fns'
@@ -358,6 +358,24 @@ export default function CustomerDebtCard({
                   {timelineData.map((chain: any, chainIndex: number) => {
                     const firstItemDate = chain.items.length > 0 ? new Date(chain.items[chain.items.length - 1].data.created_at || chain.items[chain.items.length - 1].data.paid_at) : new Date();
                     const chainStatus = chain.items.find((i: any) => i.type === 'debt' && i.data.status !== 'paid') ? 'Activo' : 'Completado';
+                    const displayItems = [...(chain.items || [])].sort((a: any, b: any) => {
+                      const getDateMs = (item: any) => new Date(item?.data?.created_at || item?.data?.paid_at || 0).getTime()
+                      const dateDiff = getDateMs(b) - getDateMs(a)
+                      if (dateDiff !== 0) return dateDiff
+
+                      const getPriority = (item: any) => {
+                        if (item?.type === 'debt' && item?.data?.status !== 'paid') return 0
+                        if (item?.type === 'payment' && item?.data?.method === 'ROLLOVER') return 1
+                        if (item?.type === 'payment') return 2
+                        if (item?.type === 'debt') return 3
+                        return 4
+                      }
+
+                      const priorityDiff = getPriority(a) - getPriority(b)
+                      if (priorityDiff !== 0) return priorityDiff
+
+                      return String(b?.data?.id || '').localeCompare(String(a?.data?.id || ''))
+                    })
 
                     return (
                       <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-muted/30 border-border opacity-75' : 'bg-card border-blue-500/20 ring-1 ring-blue-500/5')}>
@@ -374,10 +392,10 @@ export default function CustomerDebtCard({
                         </div>
 
                         <div className="p-4 pl-8 space-y-0"> {/* Reduced space-y within chain, handled manually for structure */}
-                          {chain.items.map((item: any, itemIndex: number) => {
+                          {displayItems.map((item: any, itemIndex: number) => {
                             const isDebt = item.type === 'debt'
                             const date = new Date(item.data.created_at || item.data.paid_at)
-                            const isLast = itemIndex === chain.items.length - 1
+                            const isLast = itemIndex === displayItems.length - 1
                             // Determine styling based on type
                             const iconBg = isDebt ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' :
                               (item.data.method === 'ROLLOVER' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20')
@@ -459,7 +477,7 @@ export default function CustomerDebtCard({
                                         {item.data.note && <p className="italic border-l-2 border-muted pl-2 mb-2">"{item.data.note}"</p>}
                                         {item.data.method === 'ROLLOVER' && (
                                           <div className="flex items-center gap-2 mt-2 text-blue-600 dark:text-blue-400 bg-blue-500/10 p-2 rounded border border-blue-500/20">
-                                            <ArrowDown className="w-3 h-3" />
+                                            <ArrowUp className="w-3 h-3" />
                                             <span>Saldo trasladado a nueva deuda superior.</span>
                                           </div>
                                         )}
