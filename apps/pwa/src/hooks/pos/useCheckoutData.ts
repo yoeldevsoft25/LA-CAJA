@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { exchangeService } from '@la-caja/app-core'
+import { exchangeService, fiscalSequenceService } from '@la-caja/app-core'
 import { customersService } from '@/services/customers.service'
 import { paymentsService } from '@/services/payments.service'
 import { invoiceSeriesService } from '@/services/invoice-series.service'
@@ -59,6 +60,23 @@ export function useCheckoutData(options: {
         enabled: isOpen && !!storeId,
         staleTime: 1000 * 60 * 10,
     })
+
+    useEffect(() => {
+        if (!isOpen) return
+        if (!invoiceSeriesQuery.data || invoiceSeriesQuery.data.length === 0) return
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return
+
+        const activeSeriesIds = invoiceSeriesQuery.data
+            .filter((series) => series.is_active)
+            .map((series) => series.id)
+            .filter((seriesId): seriesId is string => typeof seriesId === 'string' && seriesId.length > 0)
+
+        if (activeSeriesIds.length === 0) return
+
+        fiscalSequenceService.prefetchForSeries(activeSeriesIds).catch((error) => {
+            console.warn('[Checkout] Prefetch fiscal ranges failed', error)
+        })
+    }, [isOpen, invoiceSeriesQuery.data])
 
     // Price lists
     const priceListsQuery = useQuery({

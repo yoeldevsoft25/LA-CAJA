@@ -608,6 +608,8 @@ class SyncServiceClass {
       const pendingEvents = await db.getPendingEvents(1000);
       const pendingBeforeFlushCount = pendingEvents.length;
       const queueDepthBefore = queue.getStats().pending;
+      const queuePendingIdsBefore = this.getQueuePendingEventIds(queue);
+      const dbPendingIdsBefore = pendingEvents.map((evt) => evt.event_id);
 
       this.logger.info(`📊 Pendientes en IndexedDB: ${pendingEvents.length}, en cola: ${queueDepthBefore}`);
       this.metrics.recordEvent('pending_loaded', {
@@ -615,11 +617,24 @@ class SyncServiceClass {
         queue_depth: queueDepthBefore
       });
 
-      // Si hay eventos en DB que no están en cola, agregarlos
-      if (pendingEvents.length > queueDepthBefore) {
-        const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
-        queue.enqueueBatch(baseEvents);
-        this.logger.info(`➕ Agregados ${pendingEvents.length - queueDepthBefore} eventos a la cola`);
+      // Si la cola en memoria no refleja EXACTAMENTE los IDs de IndexedDB, reconstruir desde DB.
+      // Esto evita eventos "atascados" que solo se corrigen tras recargar la app.
+      const shouldRebuildQueue =
+        pendingEvents.length !== queueDepthBefore ||
+        !this.hasSameEventIds(queuePendingIdsBefore, dbPendingIdsBefore);
+
+      if (shouldRebuildQueue) {
+        queue.clear();
+        if (pendingEvents.length > 0) {
+          const baseEvents = pendingEvents.map((le) => this.localEventToBaseEvent(le));
+          queue.enqueueBatch(baseEvents);
+        }
+        this.logger.info('🔁 Cola en memoria reconstruida desde IndexedDB antes de flush', {
+          db_count: pendingEvents.length,
+          queue_count: queueDepthBefore,
+          db_ids_sample: dbPendingIdsBefore.slice(0, 5),
+          queue_ids_sample: queuePendingIdsBefore.slice(0, 5),
+        });
       }
 
       // 2. Flush inmediato con retry
@@ -701,6 +716,8 @@ class SyncServiceClass {
       // Use getPendingEvents which is optimized with index
       const dbPendingEvents = await db.getPendingEvents(1000);
       const dbPendingCount = dbPendingEvents.length;
+      const dbPendingIds = dbPendingEvents.map((evt) => evt.event_id);
+      const memoryPendingIds = this.getQueuePendingEventIds(this.syncQueue);
 
       this.logger.debug(`[Reconcile] memory=${memoryPending}, db=${dbPendingCount}`);
 
@@ -714,10 +731,15 @@ class SyncServiceClass {
         return;
       }
 
-      // Case 2: Count mismatch (DB vs Memory).
+      // Case 2: Mismatch por conteo o por IDs.
       // ACTION: Rebuild memory queue from DB (Source of Truth).
-      if (dbPendingCount !== memoryPending) {
-        this.logger.warn(`[Reconcile] Count mismatch! DB=${dbPendingCount}, Mem=${memoryPending}. Rebuilding memory queue.`);
+      if (
+        dbPendingCount !== memoryPending ||
+        !this.hasSameEventIds(memoryPendingIds, dbPendingIds)
+      ) {
+        this.logger.warn(
+          `[Reconcile] Queue mismatch! DB=${dbPendingCount}, Mem=${memoryPending}. Rebuilding memory queue.`,
+        );
         this.syncQueue.clear();
 
         if (dbPendingCount > 0) {
@@ -729,12 +751,28 @@ class SyncServiceClass {
           action: 'rebuilt_mismatch',
           memory_before: memoryPending,
           db: dbPendingCount,
+          memory_ids_sample: memoryPendingIds.slice(0, 5),
+          db_ids_sample: dbPendingIds.slice(0, 5),
           memory_after: this.syncQueue.getStats().pending
         });
       }
     } catch (error) {
       this.logger.error('[Reconcile] Failed to reconcile queue state', error);
     }
+  }
+
+  private getQueuePendingEventIds(queue: SyncQueue): string[] {
+    return queue.getPendingEvents(2000).map((queued) => queued.event.event_id);
+  }
+
+  private hasSameEventIds(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) return false;
+    const leftSet = new Set(left);
+    if (leftSet.size !== right.length) return false;
+    for (const id of right) {
+      if (!leftSet.has(id)) return false;
+    }
+    return true;
   }
 
   /**
