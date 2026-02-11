@@ -134,6 +134,14 @@ const CRITICAL_EVENT_TYPES = [
     'CashLedgerEntryCreated',
 ];
 
+const RETRYABLE_REJECTION_CODES = new Set([
+    'SECURITY_ERROR',
+    'FISCAL_ERROR',
+    'VALIDATION_ERROR',
+    'CRDT_ERROR',
+    'INTEGRITY_ERROR',
+]);
+
 async function generatePayloadHash(payload: any): Promise<string> {
     try {
         const json = JSON.stringify(payload, Object.keys(payload || {}).sort());
@@ -175,6 +183,23 @@ async function prepareEventsForPush(events: any[]) {
         prepared.push(baseEvent);
     }
     return prepared;
+}
+
+function shouldRetryRejectedEvent(event: any, rejection: any): boolean {
+    const code = String(rejection?.code || '').toUpperCase();
+    const message = String(rejection?.message || '').toLowerCase();
+    const offlineCreated = Boolean(event?.payload?.metadata?.offline_created);
+
+    if (!offlineCreated) return false;
+    if (event?.type !== 'SaleCreated') return false;
+    if (RETRYABLE_REJECTION_CODES.has(code)) return true;
+
+    return (
+        message.includes('no hay una sesión de caja abierta') ||
+        message.includes('precio') ||
+        message.includes('fiscal') ||
+        message.includes('usuario del evento')
+    );
 }
 
 async function syncEvents() {
@@ -344,15 +369,28 @@ async function performSync() {
 
             if (result.rejected && result.rejected.length > 0) {
                 rejectedCount = result.rejected.length;
-                await Promise.all(result.rejected.map((rej: any) =>
-                    db.localEvents.where('event_id').equals(rej.event_id).modify({
-                        sync_status: 'dead',
-                        last_error: rej.message,
-                        last_error_code: rej.code || 'REJECTED',
-                        next_retry_at: 0,
-                    })
-                ));
-                console.warn('[SW] ⚠️ Eventos rechazados en servidor:', result.rejected);
+                let retryingCount = 0;
+                let deadCount = 0;
+                await Promise.all(result.rejected.map((rej: any) => {
+                    const originalEvent = pendingEvents.find((evt) => evt.event_id === rej.event_id);
+                    const shouldRetry = shouldRetryRejectedEvent(originalEvent, rej);
+                    if (shouldRetry) retryingCount++;
+                    else deadCount++;
+
+                    return db.localEvents.where('event_id').equals(rej.event_id).modify((evt: any) => {
+                        evt.sync_status = shouldRetry ? 'retrying' : 'dead';
+                        evt.last_error = rej.message;
+                        evt.last_error_code = rej.code || 'REJECTED';
+                        evt.next_retry_at = shouldRetry ? Date.now() + 5000 : 0;
+                        evt.sync_attempts = Number(evt.sync_attempts || 0) + 1;
+                    });
+                }));
+                console.warn('[SW] ⚠️ Eventos rechazados en servidor:', {
+                    total: result.rejected.length,
+                    retrying: retryingCount,
+                    dead: deadCount,
+                    details: result.rejected,
+                });
             }
 
             if (result.conflicted && result.conflicted.length > 0) {

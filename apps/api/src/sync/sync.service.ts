@@ -195,6 +195,7 @@ export class SyncService {
     // 1. Verificar dedupe y prefetch de datos críticos para validación batch
     const eventIds = dto.events.map((e) => e.event_id).filter(Boolean);
     const requestIds = dto.events
+      .filter((e) => this.shouldUseRequestIdDedupe(e.type))
       .map((e) => e.request_id || (e.payload as any)?.request_id)
       .filter(Boolean);
 
@@ -281,6 +282,10 @@ export class SyncService {
     // 2. Procesar cada evento
     for (const event of dto.events) {
       try {
+        let pendingSoftValidation:
+          | { code?: string; message?: string }
+          | null = null;
+
         // 2a. Validación básica
         if (!this.isEventValid(event)) {
           this.logger.warn(
@@ -326,16 +331,29 @@ export class SyncService {
           );
 
           if (!validation.valid) {
-            this.logger.warn(
-              `Event ${event.event_id} rejected: ${validation.code} - ${validation.message}`,
+            const shouldSoftAccept = this.shouldSoftAcceptOfflineSaleValidation(
+              event,
+              validation,
+              authenticatedUserId,
             );
-            rejected.push({
-              event_id: event.event_id,
-              seq: event.seq,
-              code: validation.code || 'VALIDATION_ERROR',
-              message: validation.message || 'Error de validación',
-            });
-            continue;
+
+            if (!shouldSoftAccept) {
+              this.logger.warn(
+                `Event ${event.event_id} rejected: ${validation.code} - ${validation.message}`,
+              );
+              rejected.push({
+                event_id: event.event_id,
+                seq: event.seq,
+                code: validation.code || 'VALIDATION_ERROR',
+                message: validation.message || 'Error de validación',
+              });
+              continue;
+            }
+
+            pendingSoftValidation = validation;
+            this.logger.warn(
+              `Event ${event.event_id} soft-accepted despite ${validation.code}: ${validation.message}`,
+            );
           }
         }
 
@@ -404,7 +422,11 @@ export class SyncService {
 
         // 2d. Dedupe por request_id físico (Batch prefetch)
         const payload = event.payload as any;
-        const requestId = event.request_id || payload?.request_id;
+        const requestId =
+          this.shouldUseRequestIdDedupe(event.type) &&
+          (event.request_id || payload?.request_id)
+            ? (event.request_id || payload?.request_id)
+            : null;
         if (requestId && existingRequestIdMap.has(requestId)) {
           this.updateServerVectorClock(serverVectorClock, event, dto.device_id);
           accepted.push({ event_id: event.event_id, seq: event.seq });
@@ -446,6 +468,14 @@ export class SyncService {
         const fullPayloadHash = this.hashPayload(
           event.delta_payload || event.payload,
         );
+
+        if (pendingSoftValidation) {
+          this.attachSoftValidationMetadata(
+            event.payload as Record<string, any>,
+            pendingSoftValidation,
+            authenticatedUserId,
+          );
+        }
 
         // 6. Crear entidad Event para persistencia
         const eventEntity = this.eventRepository.create({
@@ -1322,6 +1352,60 @@ export class SyncService {
       event.actor.user_id &&
       event.actor.role
     );
+  }
+
+  private shouldUseRequestIdDedupe(eventType: string): boolean {
+    return eventType === 'SaleCreated';
+  }
+
+  private shouldSoftAcceptOfflineSaleValidation(
+    event: any,
+    validation: { code?: string; message?: string },
+    authenticatedUserId?: string,
+  ): boolean {
+    if (authenticatedUserId === 'system-federation') return false;
+
+    const metadata = event?.payload?.metadata || {};
+    if (!metadata?.offline_created) return false;
+
+    const code = String(validation.code || '').toUpperCase();
+    const message = String(validation.message || '').toLowerCase();
+
+    if (code === 'SECURITY_ERROR' || code === 'FISCAL_ERROR') {
+      return true;
+    }
+
+    if (code === 'VALIDATION_ERROR') {
+      return (
+        message.includes('subtotales') ||
+        message.includes('totales') ||
+        message.includes('descuentos')
+      );
+    }
+
+    return false;
+  }
+
+  private attachSoftValidationMetadata(
+    payload: Record<string, any>,
+    validation: { code?: string; message?: string },
+    authenticatedUserId?: string,
+  ): void {
+    const existingMetadata =
+      payload?.metadata && typeof payload.metadata === 'object'
+        ? payload.metadata
+        : {};
+
+    payload.metadata = {
+      ...existingMetadata,
+      sync_soft_validation: {
+        accepted: true,
+        code: validation.code || 'VALIDATION_ERROR',
+        message: validation.message || 'Soft validation acceptance',
+        authenticated_user_id: authenticatedUserId || null,
+        at: new Date().toISOString(),
+      },
+    };
   }
 
   /**

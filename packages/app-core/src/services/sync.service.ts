@@ -94,6 +94,13 @@ class SyncServiceClass {
   private isRecoveryRunning = false;
   private lastRecoveryTime = 0;
   private readonly RECOVERY_COOLDOWN_MS = 8000; // 8 segundos entre recoveries
+  private readonly RECOVERABLE_DEAD_ERROR_CODES = new Set([
+    'SECURITY_ERROR',
+    'FISCAL_ERROR',
+    'VALIDATION_ERROR',
+    'CRDT_ERROR',
+    'INTEGRITY_ERROR',
+  ]);
 
   private onSyncCompleteCallbacks: Array<(syncedCount: number) => void> = [];
   private onSyncErrorCallbacks: Array<(error: Error) => void> = [];
@@ -524,6 +531,9 @@ class SyncServiceClass {
     this.logger.info('🚀 Iniciando Hard Recovery Sync');
 
     try {
+      // 0. Rehidratar eventos dead recuperables antes de calcular pendientes
+      const recoveredDead = await this.recoverRetriableDeadEvents();
+
       // 1. Recargar pendientes desde IndexedDB (por si hay eventos que no están en cola)
       const pendingEvents = await db.getPendingEvents(1000);
       const queueDepthBefore = queue.getStats().pending;
@@ -551,6 +561,7 @@ class SyncServiceClass {
       this.metrics.recordEvent('push_success', {
         synced_count: syncedCount,
         queue_depth_after: queueDepthAfter,
+        recovered_dead_count: recoveredDead,
         duration_ms: Date.now() - startTime
       });
 
@@ -832,6 +843,7 @@ class SyncServiceClass {
    */
   async forceSync(): Promise<void> {
     await db.resetFailedEventsToPending();
+    await this.recoverRetriableDeadEvents();
     await this.syncNow();
   }
 
@@ -1421,6 +1433,54 @@ class SyncServiceClass {
   }
 
   /**
+   * Recupera eventos dead de ventas offline para reintento si el rechazo es recuperable.
+   * Evita que ventas válidas queden enterradas permanentemente tras una validación temporal.
+   */
+  private async recoverRetriableDeadEvents(): Promise<number> {
+    const now = Date.now();
+    let recovered = 0;
+
+    await db.localEvents
+      .where('sync_status')
+      .equals('dead')
+      .and((evt) => {
+        if (evt.type !== 'SaleCreated') return false;
+
+        const metadata = (evt.payload as any)?.metadata || {};
+        if (!metadata?.offline_created) return false;
+
+        const attempts = Number(evt.sync_attempts || 0);
+        if (attempts >= 25) return false;
+
+        const code = String(evt.last_error_code || '').toUpperCase();
+        const message = String(evt.last_error || '').toLowerCase();
+        const recoverableByCode = this.RECOVERABLE_DEAD_ERROR_CODES.has(code);
+        const recoverableByMessage =
+          message.includes('no hay una sesión de caja abierta') ||
+          message.includes('precio') ||
+          message.includes('fiscal') ||
+          message.includes('usuario del evento');
+
+        return recoverableByCode || recoverableByMessage;
+      })
+      .modify((evt: LocalEvent) => {
+        evt.sync_status = 'retrying';
+        evt.next_retry_at = now;
+        recovered++;
+      });
+
+    if (recovered > 0) {
+      this.logger.warn(`♻️ Recuperados ${recovered} eventos dead de ventas offline para reintento`);
+      this.metrics.recordEvent('dead_events_recovered', {
+        count: recovered,
+        reason: 'retriable_offline_sale_validation',
+      });
+    }
+
+    return recovered;
+  }
+
+  /**
    * ✅ SPRINT 6.1B: Helper para telemetría de UX
    */
   private recordUXTelemetry(event: string, metadata: Record<string, any> = {}): void {
@@ -1437,6 +1497,7 @@ class SyncServiceClass {
 
     try {
       await this.recoverTransientDeadEvents();
+      await this.recoverRetriableDeadEvents();
 
       // Cargar TODOS los eventos pendientes, no solo 100
       const pendingEvents = await db.getPendingEvents(1000); // Aumentado a 1000

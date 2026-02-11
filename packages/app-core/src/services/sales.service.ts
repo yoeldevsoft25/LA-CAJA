@@ -265,7 +265,11 @@ export const salesService = {
                 currency: data.currency,
                 items: saleItems,
                 totals,
-                metadata: isEmergencySale ? { is_emergency: true } : undefined,
+                metadata: {
+                    offline_created: true,
+                    offline_created_at: now,
+                    ...(isEmergencySale ? { is_emergency: true } : {}),
+                },
                 payment: {
                     method: data.payment_method,
                     split: data.split ? {
@@ -304,9 +308,10 @@ export const salesService = {
             await syncService.enqueueEvent(saleEvent);
 
             if (data.payment_method !== 'FIAO') {
+                const ledgerRequestId = randomUUID();
                 const ledgerPayload: CashLedgerEntryCreatedPayload = {
                     entry_id: saleId,
-                    request_id: requestId,
+                    request_id: ledgerRequestId,
                     entry_type: 'sale',
                     amount_bs: totals.total_bs,
                     amount_usd: totals.total_usd,
@@ -316,6 +321,8 @@ export const salesService = {
                     metadata: {
                         sale_id: saleId,
                         payment_method: data.payment_method,
+                        sale_request_id: requestId,
+                        offline_created: true,
                     },
                 };
 
