@@ -59,6 +59,17 @@ export class Debt {
   @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
   amount_usd: number;
 
+  /**
+   * Tasa BCV de libro usada para valorar la deuda en Bs.
+   * Permite registrar diferencia cambiaria realizada al cobrar y
+   * actualizarla con revaluacion de cierre (no realizada).
+   */
+  @Column({ type: 'numeric', precision: 18, scale: 6, nullable: true })
+  book_rate_bcv: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  book_rate_as_of: Date | null;
+
   @Column({ type: 'text', nullable: true })
   note: string | null;
 

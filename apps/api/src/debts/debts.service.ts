@@ -162,15 +162,27 @@ export class DebtsService {
       throw new NotFoundException('Cliente no encontrado');
     }
 
-    // Crear la deuda
+    // Crear la deuda (moneda de referencia USD; libro en Bs a tasa BCV del dia)
+    const totalUsd = Number(sale.totals?.total_usd || 0);
+    const totalBs = Number(sale.totals?.total_bs || 0);
+    const inferredRate =
+      sale.exchange_rate && sale.exchange_rate > 0
+        ? Number(sale.exchange_rate)
+        : totalUsd > 0
+          ? totalBs / totalUsd
+          : null;
+    const roundSix = (v: number) => Math.round(v * 1_000_000) / 1_000_000;
+
     const debt = this.debtRepository.create({
       id: randomUUID(),
       store_id: storeId,
       sale_id: saleId,
       customer_id: customerId,
       created_at: sale.sold_at,
-      amount_bs: sale.totals.total_bs,
-      amount_usd: sale.totals.total_usd,
+      amount_bs: totalBs,
+      amount_usd: totalUsd,
+      book_rate_bcv: inferredRate && inferredRate > 0 ? roundSix(inferredRate) : null,
+      book_rate_as_of: sale.sold_at,
       note: null,
       status: DebtStatus.OPEN,
     });
@@ -209,14 +221,20 @@ export class DebtsService {
       throw new NotFoundException('Cliente no encontrado');
     }
 
+    const legacyRate = dto.amount_usd > 0 ? 36 : 36;
+    const amountBs = dto.amount_usd * legacyRate;
+    const createdAt = dto.created_at ? new Date(dto.created_at) : new Date();
+
     const debt = this.debtRepository.create({
       id: randomUUID(),
       store_id: storeId,
       sale_id: null,
       customer_id: dto.customer_id,
-      created_at: dto.created_at ? new Date(dto.created_at) : new Date(),
-      amount_bs: dto.amount_usd * 36,
+      created_at: createdAt,
+      amount_bs: amountBs,
       amount_usd: dto.amount_usd,
+      book_rate_bcv: legacyRate,
+      book_rate_as_of: createdAt,
       note: dto.note ?? null,
       status: DebtStatus.OPEN,
     });
@@ -261,7 +279,7 @@ export class DebtsService {
         // Obtener tasa BCV actual para calcular el equivalente en Bs
         let exchangeRate = 36; // Fallback por defecto
         try {
-          const bcvRateData = await this.exchangeService.getBCVRate();
+          const bcvRateData = await this.exchangeService.getBCVRate(storeId);
           if (bcvRateData && bcvRateData.rate && bcvRateData.rate > 0) {
             exchangeRate = bcvRateData.rate;
           }
@@ -284,7 +302,20 @@ export class DebtsService {
         let paymentAmountBs = paymentAmountUsd * exchangeRate;
         paymentAmountBs = Math.round(paymentAmountBs * 100) / 100;
 
+        // Tasa libro de la deuda (si no existe, inferir de amount_bs/amount_usd original)
         const debtAmountUsd = Number(debt.amount_usd) || 0;
+        const debtAmountBs = Number(debt.amount_bs) || 0;
+        const inferredBookRate =
+          debtAmountUsd > 0 ? debtAmountBs / debtAmountUsd : exchangeRate;
+        const bookRateBcv =
+          debt.book_rate_bcv && Number(debt.book_rate_bcv) > 0
+            ? Number(debt.book_rate_bcv)
+            : inferredBookRate;
+
+        const roundTwo = (v: number) => Math.round(v * 100) / 100;
+        const roundSix = (v: number) => Math.round(v * 1_000_000) / 1_000_000;
+        const paymentBookRateBcv = roundSix(bookRateBcv);
+        const fxGainLossBs = roundTwo(paymentAmountBs - paymentAmountUsd * paymentBookRateBcv);
 
         // Obtener pagos existentes directamente sin usar la relación
         const existingPayments = await manager.find(DebtPayment, {
@@ -395,8 +426,8 @@ export class DebtsService {
 
         // Usar SQL directo para evitar problemas con relaciones TypeORM
         await manager.query(
-          `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, bcv_rate, book_rate_bcv, fx_gain_loss_bs, method, note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             paymentId,
             storeId,
@@ -404,6 +435,9 @@ export class DebtsService {
             paidAt,
             paymentAmountBs,
             paymentAmountUsd,
+            exchangeRate,
+            paymentBookRateBcv,
+            fxGainLossBs,
             dto.method,
             dto.note || null,
           ],
@@ -440,8 +474,8 @@ export class DebtsService {
             Math.round(rolloverAmountUsd * exchangeRate * 100) / 100;
 
           await manager.query(
-            `INSERT INTO debts (id, store_id, sale_id, customer_id, created_at, amount_bs, amount_usd, note, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            `INSERT INTO debts (id, store_id, sale_id, customer_id, created_at, amount_bs, amount_usd, book_rate_bcv, book_rate_as_of, note, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [
               rolloverDebtId,
               storeId,
@@ -450,6 +484,8 @@ export class DebtsService {
               paidAt,
               rolloverAmountBs,
               rolloverAmountUsd,
+              exchangeRate,
+              paidAt,
               `Saldo restante de deuda ${debtId}`,
               DebtStatus.OPEN,
             ],
@@ -469,8 +505,8 @@ export class DebtsService {
 
           const rolloverPaymentId = randomUUID();
           await manager.query(
-            `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, method, note)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            `INSERT INTO debt_payments (id, store_id, debt_id, paid_at, amount_bs, amount_usd, bcv_rate, book_rate_bcv, fx_gain_loss_bs, method, note)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [
               rolloverPaymentId,
               storeId,
@@ -478,6 +514,9 @@ export class DebtsService {
               paidAt,
               rolloverAmountBs,
               rolloverAmountUsd,
+              exchangeRate,
+              null,
+              null,
               'ROLLOVER',
               `Saldo trasladado a nueva deuda ${rolloverDebtId}`,
             ],
@@ -547,6 +586,9 @@ export class DebtsService {
                 paid_at: savedPayment.paid_at,
                 amount_bs: Number(savedPayment.amount_bs),
                 amount_usd: Number(savedPayment.amount_usd),
+                bcv_rate: savedPayment.bcv_rate ? Number(savedPayment.bcv_rate) : exchangeRate,
+                book_rate_bcv: savedPayment.book_rate_bcv ? Number(savedPayment.book_rate_bcv) : paymentBookRateBcv,
+                fx_gain_loss_bs: savedPayment.fx_gain_loss_bs ? Number(savedPayment.fx_gain_loss_bs) : fxGainLossBs,
                 method: savedPayment.method,
               },
             );

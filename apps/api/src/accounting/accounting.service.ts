@@ -30,6 +30,7 @@ import { InventoryMovement } from '../database/entities/inventory-movement.entit
 import { ProductLot } from '../database/entities/product-lot.entity';
 import { Product } from '../database/entities/product.entity';
 import { FiscalConfig } from '../database/entities/fiscal-config.entity';
+import { Debt, DebtStatus } from '../database/entities/debt.entity';
 import {
   AccountingPeriod,
   AccountingPeriodStatus,
@@ -43,6 +44,7 @@ import { AccountingPeriodService } from './accounting-period.service';
 import { AccountingSharedService } from './accounting-shared.service';
 import { AccountingReportingService } from './accounting-reporting.service';
 import { AccountingAuditService } from './accounting-audit.service';
+import { ExchangeService } from '../exchange/exchange.service';
 
 @Injectable()
 export class AccountingService {
@@ -81,12 +83,15 @@ export class AccountingService {
     private productLotRepository: Repository<ProductLot>,
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    @InjectRepository(Debt)
+    private debtRepository: Repository<Debt>,
     @InjectRepository(AccountingPeriod)
     private periodRepository: Repository<AccountingPeriod>,
     @InjectRepository(FiscalConfig)
     private fiscalConfigRepository: Repository<FiscalConfig>,
     private sharedService: AccountingSharedService,
     private reportingService: AccountingReportingService,
+    private exchangeService: ExchangeService,
     @Inject(forwardRef(() => AccountingPeriodService))
     private periodService: AccountingPeriodService,
     private auditService: AccountingAuditService,
@@ -397,12 +402,12 @@ export class AccountingService {
           'adjustment',
           'sale_tax', // Tipo de mapeo correcto según la entidad
         ],
-        sale.payment,
+        sale.payment?.method ? { method: sale.payment.method } : undefined,
       );
       const revenueMapping = mappings.get('sale_revenue');
       const costMapping = mappings.get('sale_cost');
-      const cashMapping = mappings.get('cash_asset');
-      const receivableMapping = mappings.get('accounts_receivable');
+      const cashMapping = mappings.get('cash_asset') || null;
+      const receivableMapping = mappings.get('accounts_receivable') || null;
       const inventoryMapping = mappings.get('inventory_asset');
       const incomeMapping = mappings.get('income');
       const adjustmentMapping = mappings.get('adjustment');
@@ -473,34 +478,157 @@ export class AccountingService {
 
       // 1. LÍNEA DE COBRO O CUENTA POR COBRAR (DEBE)
       if (sale.payment.method === 'FIAO') {
-        if (receivableMapping) {
-          lines.push({
-            account_id: receivableMapping.account_id,
-            account_code: receivableMapping.account_code,
-            account_name:
-              receivableMapping.account?.account_name ||
-              receivableMapping.account_code,
-            debit_amount_bs: totalAmountBs,
-            credit_amount_bs: 0,
-            debit_amount_usd: totalAmountUsd,
-            credit_amount_usd: 0,
-            description: `Venta FIAO - ${sale.invoice_full_number || sale.id}`,
-          });
+        if (!receivableMapping) {
+          this.logger.warn(
+            `No se encontró mapeo accounts_receivable para venta FIAO ${sale.id}`,
+          );
+          return null;
         }
+        lines.push({
+          account_id: receivableMapping.account_id,
+          account_code: receivableMapping.account_code,
+          account_name:
+            receivableMapping.account?.account_name ||
+            receivableMapping.account_code,
+          debit_amount_bs: totalAmountBs,
+          credit_amount_bs: 0,
+          debit_amount_usd: totalAmountUsd,
+          credit_amount_usd: 0,
+          description: `Venta FIAO - ${sale.invoice_full_number || sale.id}`,
+        });
+      } else if (
+        sale.payment.method === 'SPLIT' &&
+        Array.isArray(sale.payment.split_payments) &&
+        sale.payment.split_payments.length > 0
+      ) {
+        // Pagos divididos: debitar multiples cuentas de activo segun split_payments[]
+        const split = sale.payment.split_payments;
+        const round = (value: number) => Math.round(value * 100) / 100;
+
+        const debitLines: typeof lines = [];
+        let sumBs = 0;
+        let sumUsd = 0;
+
+        for (const sp of split) {
+          const method = String((sp as any).method || '').trim();
+          if (!method) continue;
+
+          const amountBs = round(Number((sp as any).amount_bs || 0));
+          const amountUsd = round(Number((sp as any).amount_usd || 0));
+          if (amountBs <= 0 && amountUsd <= 0) continue;
+
+          let assetMapping = await this.getAccountMapping(storeId, 'cash_asset', {
+            method,
+          });
+          if (!assetMapping) {
+            // Fallback: usar el mapping default de caja si existe
+            assetMapping = cashMapping;
+          }
+          if (!assetMapping) {
+            this.logger.warn(
+              `No se encontró mapeo de activo para split method=${method} en venta ${sale.id}`,
+            );
+            continue;
+          }
+
+          debitLines.push({
+            account_id: assetMapping.account_id,
+            account_code: assetMapping.account_code,
+            account_name:
+              assetMapping.account?.account_name || assetMapping.account_code,
+            debit_amount_bs: amountBs,
+            credit_amount_bs: 0,
+            debit_amount_usd: amountUsd,
+            credit_amount_usd: 0,
+            description: `Cobro ${method} (Split) - ${sale.invoice_full_number || sale.id}`,
+          });
+
+          sumBs = round(sumBs + amountBs);
+          sumUsd = round(sumUsd + amountUsd);
+        }
+
+        // Si no se pudo construir ninguna linea (data corrupta o sin mapeos),
+        // hacer fallback a una sola cuenta para no generar asientos desbalanceados.
+        if (debitLines.length === 0) {
+          if (cashMapping) {
+            debitLines.push({
+              account_id: cashMapping.account_id,
+              account_code: cashMapping.account_code,
+              account_name:
+                cashMapping.account?.account_name || cashMapping.account_code,
+              debit_amount_bs: totalAmountBs,
+              credit_amount_bs: 0,
+              debit_amount_usd: totalAmountUsd,
+              credit_amount_usd: 0,
+              description: `Cobro de venta (Split fallback) - ${sale.invoice_full_number || sale.id}`,
+            });
+            sumBs = totalAmountBs;
+            sumUsd = totalAmountUsd;
+          } else {
+            this.logger.warn(
+              `Venta SPLIT ${sale.id} sin cash_asset mapping default. No se puede generar asiento.`,
+            );
+            return null;
+          }
+        }
+
+        // Ajuste de redondeo: si el split queda corto por centavos, ajustar el ultimo pago.
+        const diffBs = round(totalAmountBs - sumBs);
+        const diffUsd = round(totalAmountUsd - sumUsd);
+        const tolerance = 0.05;
+
+        if (
+          debitLines.length > 0 &&
+          Math.abs(diffBs) <= tolerance &&
+          Math.abs(diffUsd) <= tolerance
+        ) {
+          const last = debitLines[debitLines.length - 1];
+          last.debit_amount_bs = round(last.debit_amount_bs + diffBs);
+          last.debit_amount_usd = round(last.debit_amount_usd + diffUsd);
+        } else if (
+          Math.abs(diffBs) > 0.01 ||
+          Math.abs(diffUsd) > 0.01
+        ) {
+          this.logger.warn(
+            `Split payments no cuadran para venta ${sale.id}. total_bs=${totalAmountBs}, sum_bs=${sumBs}, total_usd=${totalAmountUsd}, sum_usd=${sumUsd}. Usando mapping default.`,
+          );
+
+          // Fallback: si el split es invalido, registrar el total a una sola cuenta para no romper la contabilidad.
+          if (cashMapping) {
+            debitLines.length = 0;
+            debitLines.push({
+              account_id: cashMapping.account_id,
+              account_code: cashMapping.account_code,
+              account_name:
+                cashMapping.account?.account_name || cashMapping.account_code,
+              debit_amount_bs: totalAmountBs,
+              credit_amount_bs: 0,
+              debit_amount_usd: totalAmountUsd,
+              credit_amount_usd: 0,
+              description: `Cobro de venta (Split fallback) - ${sale.invoice_full_number || sale.id}`,
+            });
+          }
+        }
+
+        lines.push(...debitLines);
       } else {
-        if (cashMapping) {
-          lines.push({
-            account_id: cashMapping.account_id,
-            account_code: cashMapping.account_code,
-            account_name:
-              cashMapping.account?.account_name || cashMapping.account_code,
-            debit_amount_bs: totalAmountBs,
-            credit_amount_bs: 0,
-            debit_amount_usd: totalAmountUsd,
-            credit_amount_usd: 0,
-            description: `Cobro de venta - ${sale.invoice_full_number || sale.id}`,
-          });
+        if (!cashMapping) {
+          this.logger.warn(
+            `No se encontró mapeo cash_asset para venta ${sale.id} (method=${sale.payment.method})`,
+          );
+          return null;
         }
+        lines.push({
+          account_id: cashMapping.account_id,
+          account_code: cashMapping.account_code,
+          account_name:
+            cashMapping.account?.account_name || cashMapping.account_code,
+          debit_amount_bs: totalAmountBs,
+          credit_amount_bs: 0,
+          debit_amount_usd: totalAmountUsd,
+          credit_amount_usd: 0,
+          description: `Cobro de venta - ${sale.invoice_full_number || sale.id}`,
+        });
       }
 
       // 2. LÍNEA DE INGRESO (HABER - NETO)
@@ -727,16 +855,24 @@ export class AccountingService {
     // Buscar mapeo con condiciones específicas primero
     let mapping: AccountingAccountMapping | null = null;
 
-    if (conditions) {
-      mapping = await this.mappingRepository.findOne({
-        where: {
-          store_id: storeId,
-          transaction_type: transactionType,
-          is_active: true,
-          conditions: conditions,
-        },
-        relations: ['account'],
-      });
+    if (conditions && Object.keys(conditions).length > 0) {
+      // JSONB match: el contexto de consulta debe contener las condiciones del mapping.
+      // Ej: contexto {method:'TRANSFER', currency:'BS'} matchea mapping {method:'TRANSFER'}.
+      mapping = await this.mappingRepository
+        .createQueryBuilder('mapping')
+        .leftJoinAndSelect('mapping.account', 'account')
+        .where('mapping.store_id = :storeId', { storeId })
+        .andWhere('mapping.transaction_type = :transactionType', {
+          transactionType,
+        })
+        .andWhere('mapping.is_active = :isActive', { isActive: true })
+        .andWhere('mapping.conditions IS NOT NULL')
+        .andWhere(':conditions::jsonb @> mapping.conditions', {
+          conditions: JSON.stringify(conditions),
+        })
+        .orderBy('jsonb_object_length(mapping.conditions)', 'DESC')
+        .addOrderBy('mapping.created_at', 'DESC')
+        .getOne();
 
       if (mapping) {
         // Guardar en caché
@@ -798,29 +934,40 @@ export class AccountingService {
     }
 
     // ⚡ OPTIMIZACIÓN: Batch query para tipos no cacheados
-    if (conditions) {
-      // Buscar mapeos con condiciones específicas
-      const specificMappings = await this.mappingRepository.find({
-        where: {
-          store_id: storeId,
-          transaction_type: In(uncachedTypes),
-          is_active: true,
-          conditions: conditions,
-        },
-        relations: ['account'],
-      });
+    if (conditions && Object.keys(conditions).length > 0) {
+      // Buscar mapeos con condiciones específicas (JSONB containment)
+      const specificMappings = await this.mappingRepository
+        .createQueryBuilder('mapping')
+        .leftJoinAndSelect('mapping.account', 'account')
+        .where('mapping.store_id = :storeId', { storeId })
+        .andWhere('mapping.transaction_type IN (:...transactionTypes)', {
+          transactionTypes: uncachedTypes,
+        })
+        .andWhere('mapping.is_active = :isActive', { isActive: true })
+        .andWhere('mapping.conditions IS NOT NULL')
+        .andWhere(':conditions::jsonb @> mapping.conditions', {
+          conditions: JSON.stringify(conditions),
+        })
+        // Preferir el mapping mas especifico (mas keys) y mas reciente
+        .orderBy('mapping.transaction_type', 'ASC')
+        .addOrderBy('jsonb_object_length(mapping.conditions)', 'DESC')
+        .addOrderBy('mapping.created_at', 'DESC')
+        .getMany();
 
+      const foundTypes = new Set<TransactionType>();
       for (const mapping of specificMappings) {
+        if (foundTypes.has(mapping.transaction_type)) {
+          continue;
+        }
+
+        foundTypes.add(mapping.transaction_type);
         result.set(mapping.transaction_type, mapping);
+
         const cacheKey = `${storeId}:${mapping.transaction_type}:${JSON.stringify(conditions)}`;
         this.accountMappingCache.set(cacheKey, mapping);
         this.cacheExpiry.set(cacheKey, now + this.CACHE_TTL);
       }
 
-      // Filtrar tipos que ya se encontraron
-      const foundTypes = new Set(
-        specificMappings.map((m) => m.transaction_type),
-      );
       const remainingTypes = uncachedTypes.filter((t) => !foundTypes.has(t));
 
       if (remainingTypes.length > 0) {
@@ -1354,7 +1501,7 @@ export class AccountingService {
       const revenueMapping = mappings.get('sale_revenue');
       const taxMapping = mappings.get('sale_tax');
       const receivableMapping = mappings.get('accounts_receivable');
-      const cashMapping = mappings.get('cash_asset');
+      const cashMapping = mappings.get('cash_asset') || null;
       const costMapping = mappings.get('sale_cost');
       const inventoryMapping = mappings.get('inventory_asset');
 
@@ -1400,38 +1547,164 @@ export class AccountingService {
         costUsd = costs.costUsd * multiplier;
       }
 
-      // Determinar método de pago (si está vinculada a una venta)
-      const isCash =
-        fiscalInvoice.payment_method === 'CASH_BS' ||
-        fiscalInvoice.payment_method === 'CASH_USD';
-      const isCredit =
-        fiscalInvoice.payment_method === 'FIAO' || fiscalInvoice.customer_id;
+      // Determinar método de pago (prioridad: sale.payment > fiscal_invoice.payment_method)
+      let paymentMethod: string | null = fiscalInvoice.payment_method || null;
+      let salePayment: any | null = null;
+
+      if (fiscalInvoice.sale_id) {
+        const sale = await this.saleRepository.findOne({
+          where: { store_id: storeId, id: fiscalInvoice.sale_id },
+          select: { id: true, payment: true },
+        });
+        if (sale?.payment) {
+          salePayment = sale.payment;
+          paymentMethod = sale.payment?.method || paymentMethod;
+        }
+      }
+
+      const isCredit = paymentMethod === 'FIAO' || Boolean(fiscalInvoice.customer_id);
+      const isSplit =
+        salePayment?.method === 'SPLIT' &&
+        Array.isArray(salePayment?.split_payments) &&
+        salePayment.split_payments.length > 0;
+
+      const absTotalBs = Math.abs(totalBs);
+      const absTotalUsd = Math.abs(totalUsd);
 
       // Activo (cobro o cuenta por cobrar)
-      if (isCash && cashMapping) {
-        lines.push({
-          account_id: cashMapping.account_id,
-          account_code: cashMapping.account_code,
-          account_name:
-            cashMapping.account?.account_name || cashMapping.account_code,
-          debit_amount_bs: multiplier > 0 ? totalBs : 0,
-          credit_amount_bs: multiplier < 0 ? Math.abs(totalBs) : 0,
-          debit_amount_usd: multiplier > 0 ? totalUsd : 0,
-          credit_amount_usd: multiplier < 0 ? Math.abs(totalUsd) : 0,
-          description: `${typeLabel} ${fiscalInvoice.invoice_number} - Cobro`,
-        });
-      } else if (isCredit && receivableMapping) {
+      if (isCredit) {
+        if (!receivableMapping) {
+          this.logger.warn(
+            `No se encontró mapeo accounts_receivable para factura ${fiscalInvoice.id}`,
+          );
+          return null;
+        }
         lines.push({
           account_id: receivableMapping.account_id,
           account_code: receivableMapping.account_code,
           account_name:
             receivableMapping.account?.account_name ||
             receivableMapping.account_code,
-          debit_amount_bs: multiplier > 0 ? totalBs : 0,
-          credit_amount_bs: multiplier < 0 ? Math.abs(totalBs) : 0,
-          debit_amount_usd: multiplier > 0 ? totalUsd : 0,
-          credit_amount_usd: multiplier < 0 ? Math.abs(totalUsd) : 0,
+          debit_amount_bs: multiplier > 0 ? absTotalBs : 0,
+          credit_amount_bs: multiplier < 0 ? absTotalBs : 0,
+          debit_amount_usd: multiplier > 0 ? absTotalUsd : 0,
+          credit_amount_usd: multiplier < 0 ? absTotalUsd : 0,
           description: `${typeLabel} ${fiscalInvoice.invoice_number} - Cuenta por cobrar`,
+        });
+      } else if (isSplit) {
+        const splitPayments = salePayment.split_payments;
+        const round = (value: number) => Math.round(value * 100) / 100;
+
+        const debitLines: typeof lines = [];
+        let sumBs = 0;
+        let sumUsd = 0;
+
+        for (const sp of splitPayments) {
+          const method = String((sp as any).method || '').trim();
+          if (!method) continue;
+
+          const amountBs = round(Number((sp as any).amount_bs || 0));
+          const amountUsd = round(Number((sp as any).amount_usd || 0));
+          if (amountBs <= 0 && amountUsd <= 0) continue;
+
+          let assetMapping = await this.getAccountMapping(storeId, 'cash_asset', {
+            method,
+          });
+          if (!assetMapping) {
+            assetMapping = cashMapping;
+          }
+          if (!assetMapping) {
+            this.logger.warn(
+              `No se encontró mapeo de activo para split method=${method} en factura ${fiscalInvoice.id}`,
+            );
+            continue;
+          }
+
+          debitLines.push({
+            account_id: assetMapping.account_id,
+            account_code: assetMapping.account_code,
+            account_name:
+              assetMapping.account?.account_name || assetMapping.account_code,
+            debit_amount_bs: multiplier > 0 ? amountBs : 0,
+            credit_amount_bs: multiplier < 0 ? amountBs : 0,
+            debit_amount_usd: multiplier > 0 ? amountUsd : 0,
+            credit_amount_usd: multiplier < 0 ? amountUsd : 0,
+            description: `${typeLabel} ${fiscalInvoice.invoice_number} - Cobro ${method} (Split)`,
+          });
+
+          sumBs = round(sumBs + amountBs);
+          sumUsd = round(sumUsd + amountUsd);
+        }
+
+        if (debitLines.length === 0) {
+          // Fallback seguro: usar mapping default para no generar asiento desbalanceado
+          if (cashMapping) {
+            debitLines.push({
+              account_id: cashMapping.account_id,
+              account_code: cashMapping.account_code,
+              account_name:
+                cashMapping.account?.account_name || cashMapping.account_code,
+              debit_amount_bs: multiplier > 0 ? absTotalBs : 0,
+              credit_amount_bs: multiplier < 0 ? absTotalBs : 0,
+              debit_amount_usd: multiplier > 0 ? absTotalUsd : 0,
+              credit_amount_usd: multiplier < 0 ? absTotalUsd : 0,
+              description: `${typeLabel} ${fiscalInvoice.invoice_number} - Cobro (Split fallback)`,
+            });
+          } else {
+            this.logger.warn(
+              `Factura ${fiscalInvoice.id} (split) sin cash_asset mapping default. No se puede generar asiento.`,
+            );
+            return null;
+          }
+        } else {
+          // Ajuste de redondeo de split
+          const diffBs = round(absTotalBs - sumBs);
+          const diffUsd = round(absTotalUsd - sumUsd);
+          const tolerance = 0.05;
+
+          if (Math.abs(diffBs) <= tolerance && Math.abs(diffUsd) <= tolerance) {
+            const last = debitLines[debitLines.length - 1];
+            if (multiplier > 0) {
+              last.debit_amount_bs = round(last.debit_amount_bs + diffBs);
+              last.debit_amount_usd = round(last.debit_amount_usd + diffUsd);
+            } else {
+              last.credit_amount_bs = round(last.credit_amount_bs + diffBs);
+              last.credit_amount_usd = round(last.credit_amount_usd + diffUsd);
+            }
+          } else if (Math.abs(diffBs) > 0.01 || Math.abs(diffUsd) > 0.01) {
+            this.logger.warn(
+              `Split payments no cuadran para factura ${fiscalInvoice.id}. total_bs=${absTotalBs}, sum_bs=${sumBs}, total_usd=${absTotalUsd}, sum_usd=${sumUsd}.`,
+            );
+          }
+        }
+
+        lines.push(...debitLines);
+      } else {
+        // Pago directo (un solo método): usar mapping por método si existe
+        let assetMapping: AccountingAccountMapping | null = null;
+        if (paymentMethod) {
+          assetMapping = await this.getAccountMapping(storeId, 'cash_asset', {
+            method: paymentMethod,
+          });
+        }
+        assetMapping = assetMapping || cashMapping;
+
+        if (!assetMapping) {
+          this.logger.warn(
+            `Factura ${fiscalInvoice.id} sin cash_asset mapping (method=${paymentMethod || 'N/A'}). No se puede generar asiento.`,
+          );
+          return null;
+        }
+        lines.push({
+          account_id: assetMapping.account_id,
+          account_code: assetMapping.account_code,
+          account_name:
+            assetMapping.account?.account_name || assetMapping.account_code,
+          debit_amount_bs: multiplier > 0 ? absTotalBs : 0,
+          credit_amount_bs: multiplier < 0 ? absTotalBs : 0,
+          debit_amount_usd: multiplier > 0 ? absTotalUsd : 0,
+          credit_amount_usd: multiplier < 0 ? absTotalUsd : 0,
+          description: `${typeLabel} ${fiscalInvoice.invoice_number} - Cobro`,
         });
       }
 
@@ -1993,6 +2266,9 @@ export class AccountingService {
       paid_at: Date;
       amount_bs: number;
       amount_usd: number;
+      bcv_rate?: number | null;
+      book_rate_bcv?: number | null;
+      fx_gain_loss_bs?: number | null;
       method: string;
     },
   ): Promise<JournalEntry | null> {
@@ -2015,12 +2291,21 @@ export class AccountingService {
         'accounts_receivable',
         null,
       );
-      const cashMapping = await this.getAccountMapping(storeId, 'cash_asset', {
+      const assetMapping = await this.getAccountMapping(storeId, 'cash_asset', {
         method: payment.method,
       });
-      const bankMapping = await this.getAccountMapping(storeId, 'cash_asset', {
-        method: 'TRANSFER',
-      });
+      const incomeMapping = await this.getAccountMapping(storeId, 'income', null);
+      const expenseMapping = await this.getAccountMapping(storeId, 'expense', null);
+      const fxGainMapping = await this.getAccountMapping(
+        storeId,
+        'fx_gain_realized',
+        null,
+      );
+      const fxLossMapping = await this.getAccountMapping(
+        storeId,
+        'fx_loss_realized',
+        null,
+      );
 
       if (!receivableMapping) {
         this.logger.warn(
@@ -2029,13 +2314,7 @@ export class AccountingService {
         return null;
       }
 
-      // Determinar cuenta de destino según método de pago
-      let assetAccount = cashMapping;
-      if (payment.method === 'TRANSFER' || payment.method === 'PAGO_MOVIL') {
-        assetAccount = bankMapping || cashMapping;
-      }
-
-      if (!assetAccount) {
+      if (!assetMapping) {
         this.logger.warn(
           `No se encontró mapeo de cuenta de activo para método ${payment.method} en pago ${payment.id}`,
         );
@@ -2045,8 +2324,40 @@ export class AccountingService {
       const entryDate = payment.paid_at || new Date();
       const entryNumber = await this.generateEntryNumber(storeId, entryDate);
 
-      const paymentAmountBs = Number(payment.amount_bs);
-      const paymentAmountUsd = Number(payment.amount_usd);
+      const roundTwo = (value: number) => Math.round(value * 100) / 100;
+      const roundSix = (value: number) => Math.round(value * 1_000_000) / 1_000_000;
+
+      const paymentAmountBs = roundTwo(Number(payment.amount_bs));
+      const paymentAmountUsd = roundTwo(Number(payment.amount_usd));
+
+      // Valorar CxC al valor libro para evitar saldos negativos por variacion de tasa.
+      // Si no viene book_rate_bcv en el pago, intentar tomarlo de la deuda.
+      let bookRateBcv =
+        payment.book_rate_bcv && Number(payment.book_rate_bcv) > 0
+          ? Number(payment.book_rate_bcv)
+          : null;
+
+      if (!bookRateBcv) {
+        const debtRecord = await this.debtRepository.findOne({
+          where: { id: debt.id, store_id: storeId },
+        });
+        if (debtRecord) {
+          if (debtRecord.book_rate_bcv && Number(debtRecord.book_rate_bcv) > 0) {
+            bookRateBcv = Number(debtRecord.book_rate_bcv);
+          } else if (Number(debtRecord.amount_usd) > 0) {
+            bookRateBcv = Number(debtRecord.amount_bs) / Number(debtRecord.amount_usd);
+          }
+        }
+      }
+
+      if (!bookRateBcv) {
+        // Ultimo fallback: usar tasa efectiva del cobro
+        bookRateBcv = paymentAmountUsd > 0 ? paymentAmountBs / paymentAmountUsd : 0;
+      }
+
+      bookRateBcv = roundSix(bookRateBcv);
+      const bookAmountBs = roundTwo(paymentAmountUsd * bookRateBcv);
+      const fxDiffBs = roundTwo(paymentAmountBs - bookAmountBs);
 
       const lines: Array<{
         account_id: string;
@@ -2061,10 +2372,10 @@ export class AccountingService {
 
       // Débito: Caja/Bancos (aumenta activo)
       lines.push({
-        account_id: assetAccount.account_id,
-        account_code: assetAccount.account_code,
+        account_id: assetMapping.account_id,
+        account_code: assetMapping.account_code,
         account_name:
-          assetAccount.account?.account_name || assetAccount.account_code,
+          assetMapping.account?.account_name || assetMapping.account_code,
         debit_amount_bs: paymentAmountBs,
         credit_amount_bs: 0,
         debit_amount_usd: paymentAmountUsd,
@@ -2072,7 +2383,7 @@ export class AccountingService {
         description: `Pago de deuda - ${payment.method}`,
       });
 
-      // Crédito: Cuentas por Cobrar (disminuye activo)
+      // Crédito: Cuentas por Cobrar (disminuye activo) - al valor libro
       lines.push({
         account_id: receivableMapping.account_id,
         account_code: receivableMapping.account_code,
@@ -2080,11 +2391,46 @@ export class AccountingService {
           receivableMapping.account?.account_name ||
           receivableMapping.account_code,
         debit_amount_bs: 0,
-        credit_amount_bs: paymentAmountBs,
+        credit_amount_bs: bookAmountBs,
         debit_amount_usd: 0,
         credit_amount_usd: paymentAmountUsd,
         description: `Cobro de deuda`,
       });
+
+      // Diferencia cambiaria realizada (solo Bs)
+      if (Math.abs(fxDiffBs) > 0.01) {
+        if (fxDiffBs > 0) {
+          const gainAccount = fxGainMapping || incomeMapping;
+          if (gainAccount) {
+            lines.push({
+              account_id: gainAccount.account_id,
+              account_code: gainAccount.account_code,
+              account_name:
+                gainAccount.account?.account_name || gainAccount.account_code,
+              debit_amount_bs: 0,
+              credit_amount_bs: Math.abs(fxDiffBs),
+              debit_amount_usd: 0,
+              credit_amount_usd: 0,
+              description: `Ganancia cambiaria realizada - Cobro deuda`,
+            });
+          }
+        } else {
+          const lossAccount = fxLossMapping || expenseMapping;
+          if (lossAccount) {
+            lines.push({
+              account_id: lossAccount.account_id,
+              account_code: lossAccount.account_code,
+              account_name:
+                lossAccount.account?.account_name || lossAccount.account_code,
+              debit_amount_bs: Math.abs(fxDiffBs),
+              credit_amount_bs: 0,
+              debit_amount_usd: 0,
+              credit_amount_usd: 0,
+              description: `Pérdida cambiaria realizada - Cobro deuda`,
+            });
+          }
+        }
+      }
 
       // Crear asiento
       const entry = this.journalEntryRepository.create({
@@ -2097,12 +2443,24 @@ export class AccountingService {
         source_id: payment.id,
         description: `Pago de deuda - Método: ${payment.method}`,
         reference_number: null,
-        total_debit_bs: paymentAmountBs,
-        total_credit_bs: paymentAmountBs,
-        total_debit_usd: paymentAmountUsd,
-        total_credit_usd: paymentAmountUsd,
+        total_debit_bs: roundTwo(
+          lines.reduce((sum, l) => sum + l.debit_amount_bs, 0),
+        ),
+        total_credit_bs: roundTwo(
+          lines.reduce((sum, l) => sum + l.credit_amount_bs, 0),
+        ),
+        total_debit_usd: roundTwo(
+          lines.reduce((sum, l) => sum + l.debit_amount_usd, 0),
+        ),
+        total_credit_usd: roundTwo(
+          lines.reduce((sum, l) => sum + l.credit_amount_usd, 0),
+        ),
         exchange_rate:
-          paymentAmountUsd > 0 ? paymentAmountBs / paymentAmountUsd : null,
+          payment.bcv_rate && Number(payment.bcv_rate) > 0
+            ? Number(payment.bcv_rate)
+            : paymentAmountUsd > 0
+              ? paymentAmountBs / paymentAmountUsd
+              : null,
         currency: 'MIXED',
         status: 'posted',
         is_auto_generated: true,
@@ -2111,6 +2469,9 @@ export class AccountingService {
           debt_id: debt.id,
           payment_id: payment.id,
           method: payment.method,
+          book_rate_bcv: bookRateBcv,
+          book_amount_bs: bookAmountBs,
+          fx_gain_loss_bs: fxDiffBs,
         },
       });
 
@@ -3481,6 +3842,259 @@ export class AccountingService {
   }
 
   /**
+   * Genera asiento idempotente de revaluacion FX (no realizada) para un periodo.
+   * Ajusta SOLO Bs para cuentas monetarias USD marcadas en chart_of_accounts.metadata.fx_revaluation.enabled = true.
+   */
+  private async generatePeriodFxRevaluationEntry(
+    storeId: string,
+    period: AccountingPeriod,
+    periodEnd: Date,
+    userId: string,
+  ): Promise<JournalEntry | null> {
+    // Idempotencia: un asiento por periodo
+    const existing = await this.journalEntryRepository.findOne({
+      where: {
+        store_id: storeId,
+        source_type: 'period_fx_revaluation',
+        source_id: period.id,
+      },
+      relations: ['lines'],
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Cuentas revaluables
+    const accountsToRevalue = await this.accountRepository
+      .createQueryBuilder('account')
+      .where('account.store_id = :storeId', { storeId })
+      .andWhere('account.is_active = :active', { active: true })
+      .andWhere(
+        "account.metadata -> 'fx_revaluation' ->> 'enabled' = 'true'",
+      )
+      .orderBy('account.account_code', 'ASC')
+      .getMany();
+
+    if (accountsToRevalue.length === 0) {
+      return null;
+    }
+
+    // Tasa BCV al cierre
+    const bcvRate =
+      (await this.exchangeService.getRateByTypeAtDate(
+        storeId,
+        'BCV',
+        periodEnd,
+      )) || (await this.exchangeService.getCurrentRate(storeId, 36));
+
+    if (!bcvRate || bcvRate <= 0) {
+      this.logger.warn(
+        `No se pudo obtener tasa BCV para revaluacion de periodo ${period.period_code}.`,
+      );
+      return null;
+    }
+
+    const accountIds = accountsToRevalue.map((a) => a.id);
+    const balances = await this.sharedService.calculateAccountBalancesBatch(
+      storeId,
+      accountIds,
+      periodEnd,
+    );
+
+    const fxGainMapping = await this.getAccountMapping(
+      storeId,
+      'fx_gain_unrealized',
+      null,
+    );
+    const fxLossMapping = await this.getAccountMapping(
+      storeId,
+      'fx_loss_unrealized',
+      null,
+    );
+    const incomeFallback = await this.getAccountMapping(storeId, 'income', null);
+    const expenseFallback = await this.getAccountMapping(
+      storeId,
+      'expense',
+      null,
+    );
+
+    const roundTwo = (value: number) => Math.round(value * 100) / 100;
+
+    const lines: Array<{
+      account_id: string;
+      account_code: string;
+      account_name: string;
+      debit_amount_bs: number;
+      credit_amount_bs: number;
+      debit_amount_usd: number;
+      credit_amount_usd: number;
+      description?: string;
+    }> = [];
+
+    for (const account of accountsToRevalue) {
+      const bal = balances.get(account.id) || { balance_bs: 0, balance_usd: 0 };
+      const balanceUsd = roundTwo(Number(bal.balance_usd || 0));
+      if (Math.abs(balanceUsd) <= 0.01) {
+        continue;
+      }
+
+      const currentBs = roundTwo(Number(bal.balance_bs || 0));
+      const expectedBs = roundTwo(balanceUsd * bcvRate);
+      const delta = roundTwo(expectedBs - currentBs);
+
+      if (Math.abs(delta) <= 0.01) {
+        continue;
+      }
+
+      const isAssetLike =
+        account.account_type === 'asset' || account.account_type === 'expense';
+
+      const accountDebitBs =
+        isAssetLike && delta > 0
+          ? Math.abs(delta)
+          : !isAssetLike && delta < 0
+            ? Math.abs(delta)
+            : 0;
+      const accountCreditBs =
+        isAssetLike && delta < 0
+          ? Math.abs(delta)
+          : !isAssetLike && delta > 0
+            ? Math.abs(delta)
+            : 0;
+
+      // Para FX: ganancia siempre es credito, perdida siempre es debito.
+      const isGain = isAssetLike ? delta > 0 : delta < 0;
+      const fxAmount = Math.abs(delta);
+      const fxAccount = isGain
+        ? fxGainMapping || incomeFallback
+        : fxLossMapping || expenseFallback;
+
+      if (!fxAccount) {
+        this.logger.warn(
+          `No se encontró cuenta para ${isGain ? 'ganancia' : 'pérdida'} cambiaria (no realizada) en store ${storeId}.`,
+        );
+        continue;
+      }
+
+      lines.push({
+        account_id: account.id,
+        account_code: account.account_code,
+        account_name: account.account_name,
+        debit_amount_bs: accountDebitBs,
+        credit_amount_bs: accountCreditBs,
+        debit_amount_usd: 0,
+        credit_amount_usd: 0,
+        description: `Revaluación BCV cierre ${period.period_code}`,
+      });
+
+      lines.push({
+        account_id: fxAccount.account_id,
+        account_code: fxAccount.account_code,
+        account_name: fxAccount.account?.account_name || fxAccount.account_code,
+        debit_amount_bs: isGain ? 0 : fxAmount,
+        credit_amount_bs: isGain ? fxAmount : 0,
+        debit_amount_usd: 0,
+        credit_amount_usd: 0,
+        description: `Diferencia cambiaria no realizada - ${period.period_code}`,
+      });
+    }
+
+    if (lines.length === 0) {
+      // Aun sin asiento, podemos actualizar tasa libro de deudas si CxC esta marcada revaluable.
+      // Se decide no hacerlo para evitar cambios silenciosos sin asiento.
+      return null;
+    }
+
+    const entryDate = periodEnd;
+    const entryNumber = await this.generateEntryNumber(storeId, entryDate);
+
+    const entry = this.journalEntryRepository.create({
+      id: randomUUID(),
+      store_id: storeId,
+      entry_number: entryNumber,
+      entry_date: entryDate,
+      entry_type: 'manual',
+      source_type: 'period_fx_revaluation',
+      source_id: period.id,
+      description: `Revaluación FX (BCV) - Período ${period.period_code}`,
+      reference_number: period.period_code,
+      total_debit_bs: roundTwo(lines.reduce((sum, l) => sum + l.debit_amount_bs, 0)),
+      total_credit_bs: roundTwo(
+        lines.reduce((sum, l) => sum + l.credit_amount_bs, 0),
+      ),
+      total_debit_usd: 0,
+      total_credit_usd: 0,
+      exchange_rate: bcvRate,
+      currency: 'BS',
+      status: 'posted',
+      is_auto_generated: true,
+      posted_at: new Date(),
+      posted_by: userId,
+      metadata: {
+        period_id: period.id,
+        period_code: period.period_code,
+        rate_type: 'BCV',
+        bcv_rate: bcvRate,
+      },
+    });
+
+    const savedEntry = await this.journalEntryRepository.save(entry);
+
+    const entryLines = lines.map((line, index) =>
+      this.journalEntryLineRepository.create({
+        id: randomUUID(),
+        entry_id: savedEntry.id,
+        line_number: index + 1,
+        account_id: line.account_id,
+        account_code: line.account_code,
+        account_name: line.account_name,
+        description: line.description,
+        debit_amount_bs: line.debit_amount_bs,
+        credit_amount_bs: line.credit_amount_bs,
+        debit_amount_usd: 0,
+        credit_amount_usd: 0,
+      }),
+    );
+
+    await this.journalEntryLineRepository.save(entryLines);
+    await this.sharedService.updateAccountBalances(storeId, entryDate, lines);
+
+    // Si la cuenta de CxC esta marcada revaluable, actualizar tasa libro de deudas abiertas
+    try {
+      const arMapping = await this.getAccountMapping(
+        storeId,
+        'accounts_receivable',
+        null,
+      );
+      if (arMapping) {
+        const revaluableAccountIds = new Set(accountIds);
+        if (revaluableAccountIds.has(arMapping.account_id)) {
+          await this.debtRepository
+            .createQueryBuilder()
+            .update(Debt)
+            .set({ book_rate_bcv: bcvRate, book_rate_as_of: entryDate })
+            .where('store_id = :storeId', { storeId })
+            .andWhere('status IN (:...statuses)', {
+              statuses: [DebtStatus.OPEN, DebtStatus.PARTIAL],
+            })
+            .execute();
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo actualizar tasa libro de deudas en revaluación de periodo ${period.period_code}`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    return this.journalEntryRepository.findOne({
+      where: { id: savedEntry.id },
+      relations: ['lines'],
+    }) as Promise<JournalEntry>;
+  }
+
+  /**
    * Cerrar un período contable (Delegado a AccountingPeriodService)
    */
   async closePeriod(
@@ -3490,6 +4104,17 @@ export class AccountingService {
     userId: string,
     note?: string,
   ): Promise<{ period: AccountingPeriod; closingEntry: JournalEntry | null }> {
+    // Generar revaluacion FX antes del cierre para que impacte el estado de resultados del periodo.
+    try {
+      const period = await this.getOrCreatePeriod(storeId, periodStart, periodEnd);
+      await this.generatePeriodFxRevaluationEntry(storeId, period, periodEnd, userId);
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo generar revaluación FX para cierre ${periodStart.toISOString()}..${periodEnd.toISOString()}`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
     return this.periodService.closePeriod(
       storeId,
       periodStart,

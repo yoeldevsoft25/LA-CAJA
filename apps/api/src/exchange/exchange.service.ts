@@ -304,6 +304,62 @@ export class ExchangeService {
   }
 
   /**
+   * Obtiene la tasa efectiva para una fecha especifica (para cierres / revaluaciones).
+   * No usa API externa: se basa en la BD y hace fallback al ultimo registro <= fecha.
+   */
+  async getRateByTypeAtDate(
+    storeId: string,
+    rateType: ExchangeRateType,
+    at: Date,
+  ): Promise<number | null> {
+    try {
+      const when = new Date(at);
+
+      const rate = await this.exchangeRateRepository
+        .createQueryBuilder('rate')
+        .where('rate.store_id = :storeId', { storeId })
+        .andWhere('rate.rate_type = :rateType', { rateType })
+        .andWhere('rate.is_active = :isActive', { isActive: true })
+        .andWhere('rate.effective_from <= :when', { when })
+        .andWhere(
+          '(rate.effective_until IS NULL OR rate.effective_until >= :when)',
+          { when },
+        )
+        .orderBy('rate.is_preferred', 'DESC')
+        .addOrderBy('rate.effective_from', 'DESC')
+        .getOne();
+
+      if (rate) {
+        return Number(rate.rate);
+      }
+
+      // Fallback a BCV si el tipo solicitado no existe
+      if (rateType !== 'BCV') {
+        return this.getRateByTypeAtDate(storeId, 'BCV', at);
+      }
+
+      // Fallback final: ultimo registro <= fecha (ignora effective_until)
+      const lastRate = await this.exchangeRateRepository
+        .createQueryBuilder('rate')
+        .where('rate.store_id = :storeId', { storeId })
+        .andWhere('rate.rate_type = :rateType', { rateType })
+        .andWhere('rate.is_active = :isActive', { isActive: true })
+        .andWhere('rate.effective_from <= :when', { when })
+        .orderBy('rate.is_preferred', 'DESC')
+        .addOrderBy('rate.effective_from', 'DESC')
+        .getOne();
+
+      return lastRate ? Number(lastRate.rate) : null;
+    } catch (error) {
+      this.logger.error(
+        `Error al obtener tasa ${rateType} para fecha ${at.toISOString()}`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return null;
+    }
+  }
+
+  /**
    * Obtiene la tasa apropiada para un método de pago específico
    */
   async getRateForPaymentMethod(

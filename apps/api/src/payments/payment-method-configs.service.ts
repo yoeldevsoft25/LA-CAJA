@@ -24,6 +24,8 @@ export class PaymentMethodConfigsService {
       CASH_BS: 20,
       PAGO_MOVIL: 30,
       TRANSFER: 40,
+      POINT_OF_SALE: 50,
+      ZELLE: 60,
       OTHER: 50,
       SPLIT: 90,
       FIAO: 90,

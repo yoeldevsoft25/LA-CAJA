@@ -14,6 +14,9 @@ export type PaymentMethod =
   | 'CASH_USD'
   | 'PAGO_MOVIL'
   | 'TRANSFER'
+  | 'POINT_OF_SALE'
+  | 'ZELLE'
+  | 'FIAO'
   | 'OTHER';
 
 /**
@@ -21,7 +24,16 @@ export type PaymentMethod =
  */
 export class CreatePaymentMethodConfigDto {
   @IsString()
-  @IsIn(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER'])
+  @IsIn([
+    'CASH_BS',
+    'CASH_USD',
+    'PAGO_MOVIL',
+    'TRANSFER',
+    'POINT_OF_SALE',
+    'ZELLE',
+    'FIAO',
+    'OTHER',
+  ])
   method: PaymentMethod;
 
   @IsNumber({ maxDecimalPlaces: 2 })

@@ -111,6 +111,10 @@ export class SyncService {
     'RecipeIngredientsUpdated',
     'StockReceived',
     'StockAdjusted',
+    'StockDeltaApplied',
+    'StockQuotaGranted',
+    'StockQuotaTransferred',
+    'StockQuotaReclaimed',
     'SaleCreated',
     'CashSessionOpened',
     'CashSessionClosed',
@@ -268,6 +272,9 @@ export class SyncService {
     const productMap = new Map(products.map((p) => [p.id, p]));
     const sessionMap = new Map(sessions.map((s) => [s.id, s]));
     const isCrdtMaxEnabled = store?.settings?.crdt_max === true;
+    const isFederationTrustedRelay =
+      authenticatedUserId === 'system-federation' &&
+      process.env.FEDERATION_TRUSTED_RELAY?.toLowerCase() !== 'false';
 
     const eventsToSave: Event[] = [];
 
@@ -304,7 +311,9 @@ export class SyncService {
         }
 
         // 2b. OPTIMIZACIÓN: Validaciones en memoria para SaleCreated usando prefetch
-        if (event.type === 'SaleCreated') {
+        // Federation relay (trusted) debe ser "mirror": no validamos contra estado local (precios/sesion/etc)
+        // porque el receptor puede ir atras y eso generaria rechazos + gaps.
+        if (event.type === 'SaleCreated' && !isFederationTrustedRelay) {
           const payload = event.payload as any;
           const validation = await this.validateSaleCreatedEventBatch(
             dto.store_id,
@@ -596,6 +605,7 @@ export class SyncService {
     const payload = event.payload as SaleCreatedPayload;
     const actorUserId = event.actor?.user_id;
     const actorRole = event.actor?.role || 'cashier';
+    const isFederation = authenticatedUserId === 'system-federation';
 
     if (
       authenticatedUserId &&
@@ -648,30 +658,32 @@ export class SyncService {
       };
     }
 
-    const session = await this.cashSessionRepository.findOne({
-      where: { id: payload.cash_session_id, store_id: storeId },
-    });
+    if (!isFederation) {
+      const session = await this.cashSessionRepository.findOne({
+        where: { id: payload.cash_session_id, store_id: storeId },
+      });
 
-    if (!session || session.closed_at) {
-      return {
-        valid: false,
-        code: 'SECURITY_ERROR',
-        message: 'No hay una sesión de caja abierta para registrar la venta.',
-      };
-    }
+      if (!session || session.closed_at) {
+        return {
+          valid: false,
+          code: 'SECURITY_ERROR',
+          message: 'No hay una sesión de caja abierta para registrar la venta.',
+        };
+      }
 
-    if (
-      session.opened_by &&
-      actorUserId &&
-      session.opened_by !== actorUserId &&
-      actorRole !== 'owner'
-    ) {
-      return {
-        valid: false,
-        code: 'SECURITY_ERROR',
-        message:
-          'El usuario del evento no tiene permisos para registrar ventas en esta sesión.',
-      };
+      if (
+        session.opened_by &&
+        actorUserId &&
+        session.opened_by !== actorUserId &&
+        actorRole !== 'owner'
+      ) {
+        return {
+          valid: false,
+          code: 'SECURITY_ERROR',
+          message:
+            'El usuario del evento no tiene permisos para registrar ventas en esta sesión.',
+        };
+      }
     }
 
     const productIds = payload.items
@@ -722,57 +734,59 @@ export class SyncService {
       const unitPriceBs = Number(item.unit_price_bs ?? 0);
       const unitPriceUsd = Number(item.unit_price_usd ?? 0);
 
-      if (isWeightProduct) {
-        const productPriceBs = Number(product.price_per_weight_bs ?? 0);
-        const productPriceUsd = Number(product.price_per_weight_usd ?? 0);
+      if (!isFederation) {
+        if (isWeightProduct) {
+          const productPriceBs = Number(product.price_per_weight_bs ?? 0);
+          const productPriceUsd = Number(product.price_per_weight_usd ?? 0);
 
-        if (productPriceBs > 0 && unitPriceBs > 0) {
-          const deviationBs =
-            Math.abs(unitPriceBs - productPriceBs) / productPriceBs;
-          if (deviationBs > allowedDeviation && actorRole !== 'owner') {
+          if (productPriceBs > 0 && unitPriceBs > 0) {
+            const deviationBs =
+              Math.abs(unitPriceBs - productPriceBs) / productPriceBs;
+            if (deviationBs > allowedDeviation && actorRole !== 'owner') {
+              return {
+                valid: false,
+                code: 'SECURITY_ERROR',
+                message: `Precio modificado sin autorización para producto ${product.name}.`,
+              };
+            }
+          }
+
+          if (productPriceUsd > 0 && unitPriceUsd > 0) {
+            const deviationUsd =
+              Math.abs(unitPriceUsd - productPriceUsd) / productPriceUsd;
+            if (deviationUsd > allowedDeviation && actorRole !== 'owner') {
+              return {
+                valid: false,
+                code: 'SECURITY_ERROR',
+                message: `Precio modificado sin autorización para producto ${product.name}.`,
+              };
+            }
+          }
+        } else {
+          const productPriceBs = Number(product.price_bs ?? 0);
+          const productPriceUsd = Number(product.price_usd ?? 0);
+
+          if (
+            productPriceBs > 0 &&
+            Math.abs(unitPriceBs - productPriceBs) > tolerance
+          ) {
             return {
               valid: false,
               code: 'SECURITY_ERROR',
-              message: `Precio modificado sin autorización para producto ${product.name}.`,
+              message: `Precio de producto ${product.name} no coincide con el servidor.`,
             };
           }
-        }
 
-        if (productPriceUsd > 0 && unitPriceUsd > 0) {
-          const deviationUsd =
-            Math.abs(unitPriceUsd - productPriceUsd) / productPriceUsd;
-          if (deviationUsd > allowedDeviation && actorRole !== 'owner') {
+          if (
+            productPriceUsd > 0 &&
+            Math.abs(unitPriceUsd - productPriceUsd) > tolerance
+          ) {
             return {
               valid: false,
               code: 'SECURITY_ERROR',
-              message: `Precio modificado sin autorización para producto ${product.name}.`,
+              message: `Precio de producto ${product.name} no coincide con el servidor.`,
             };
           }
-        }
-      } else {
-        const productPriceBs = Number(product.price_bs ?? 0);
-        const productPriceUsd = Number(product.price_usd ?? 0);
-
-        if (
-          productPriceBs > 0 &&
-          Math.abs(unitPriceBs - productPriceBs) > tolerance
-        ) {
-          return {
-            valid: false,
-            code: 'SECURITY_ERROR',
-            message: `Precio de producto ${product.name} no coincide con el servidor.`,
-          };
-        }
-
-        if (
-          productPriceUsd > 0 &&
-          Math.abs(unitPriceUsd - productPriceUsd) > tolerance
-        ) {
-          return {
-            valid: false,
-            code: 'SECURITY_ERROR',
-            message: `Precio de producto ${product.name} no coincide con el servidor.`,
-          };
         }
       }
 
@@ -869,38 +883,39 @@ export class SyncService {
           ? (expectedDiscountUsd / expectedSubtotalUsd) * 100
           : 0;
 
-    const discountValidation =
-      await this.discountRulesService.requiresAuthorization(
-        storeId,
-        expectedDiscountBs,
-        expectedDiscountUsd,
-        discountPercentage,
-      );
+    if (!isFederation) {
+      const discountValidation =
+        await this.discountRulesService.requiresAuthorization(
+          storeId,
+          expectedDiscountBs,
+          expectedDiscountUsd,
+          discountPercentage,
+        );
 
-    if (discountValidation.error) {
-      return {
-        valid: false,
-        code: 'SECURITY_ERROR',
-        message: discountValidation.error,
-      };
-    }
-
-    if (
-      discountValidation.requires_authorization &&
-      !discountValidation.auto_approved
-    ) {
-      const config = await this.discountRulesService.getOrCreateConfig(storeId);
-      const canAuthorize = this.discountRulesService.validateAuthorizationRole(
-        actorRole,
-        config,
-      );
-
-      if (!canAuthorize) {
+      if (discountValidation.error) {
         return {
           valid: false,
           code: 'SECURITY_ERROR',
-          message: 'El descuento requiere autorización de un supervisor.',
+          message: discountValidation.error,
         };
+      }
+
+      if (
+        discountValidation.requires_authorization &&
+        !discountValidation.auto_approved
+      ) {
+        const config =
+          await this.discountRulesService.getOrCreateConfig(storeId);
+        const canAuthorize =
+          this.discountRulesService.validateAuthorizationRole(actorRole, config);
+
+        if (!canAuthorize) {
+          return {
+            valid: false,
+            code: 'SECURITY_ERROR',
+            message: 'El descuento requiere autorización de un supervisor.',
+          };
+        }
       }
     }
 
@@ -922,6 +937,7 @@ export class SyncService {
     const payload = event.payload as any;
     const actorUserId = event.actor?.user_id;
     const actorRole = event.actor?.role || 'cashier';
+    const isFederation = authenticatedUserId === 'system-federation';
 
     // Phase 5: Fiscal Validation
     if (
@@ -986,27 +1002,31 @@ export class SyncService {
     }
 
     // 3. Validación de Sesión de Caja (desde MAP pre-fetcheado)
-    const session = sessionMap.get(payload.cash_session_id);
+    // Federation relay debe "seguir al padre": aceptamos el evento y dejamos que
+    // las proyecciones creen el sale aunque la sesión aún no esté replicada.
+    if (!isFederation) {
+      const session = sessionMap.get(payload.cash_session_id);
 
-    if (!session || session.closed_at) {
-      return {
-        valid: false,
-        code: 'SECURITY_ERROR',
-        message: 'No hay una sesión de caja abierta para registrar la venta.',
-      };
-    }
+      if (!session || session.closed_at) {
+        return {
+          valid: false,
+          code: 'SECURITY_ERROR',
+          message: 'No hay una sesión de caja abierta para registrar la venta.',
+        };
+      }
 
-    if (
-      session.opened_by &&
-      actorUserId &&
-      session.opened_by !== actorUserId &&
-      actorRole !== 'owner'
-    ) {
-      return {
-        valid: false,
-        code: 'SECURITY_ERROR',
-        message: 'El usuario del evento no tiene permisos en esta sesión.',
-      };
+      if (
+        session.opened_by &&
+        actorUserId &&
+        session.opened_by !== actorUserId &&
+        actorRole !== 'owner'
+      ) {
+        return {
+          valid: false,
+          code: 'SECURITY_ERROR',
+          message: 'El usuario del evento no tiene permisos en esta sesión.',
+        };
+      }
     }
 
     // 4. Validación de Productos (desde MAP pre-fetcheado)
@@ -1055,7 +1075,9 @@ export class SyncService {
         ? Number(product.price_per_weight_usd ?? 0)
         : Number(product.price_usd ?? 0);
 
-      if (productPriceBs > 0) {
+      // Local/device sync: validar precios para evitar spoofing.
+      // Federation relay: el nodo receptor debe aceptar el precio del evento (source of truth del padre).
+      if (!isFederation && productPriceBs > 0) {
         if (isWeightProduct) {
           const deviationBs =
             Math.abs(unitPriceBs - productPriceBs) / productPriceBs;

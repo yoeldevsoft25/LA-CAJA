@@ -5,6 +5,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { JournalEntry } from '../database/entities/journal-entry.entity';
 import { JournalEntryLine } from '../database/entities/journal-entry-line.entity';
 import { ChartOfAccount } from '../database/entities/chart-of-accounts.entity';
+import { Debt } from '../database/entities/debt.entity';
+import { PurchaseOrder } from '../database/entities/purchase-order.entity';
+import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 
 describe('AccountingReportingService', () => {
     let service: AccountingReportingService;
@@ -39,6 +42,30 @@ describe('AccountingReportingService', () => {
                 },
                 {
                     provide: getRepositoryToken(ChartOfAccount),
+                    useValue: {
+                        find: jest.fn(),
+                        findOne: jest.fn(),
+                        createQueryBuilder: jest.fn(),
+                    },
+                },
+                {
+                    provide: getRepositoryToken(Debt),
+                    useValue: {
+                        find: jest.fn(),
+                        findOne: jest.fn(),
+                        createQueryBuilder: jest.fn(),
+                    },
+                },
+                {
+                    provide: getRepositoryToken(PurchaseOrder),
+                    useValue: {
+                        find: jest.fn(),
+                        findOne: jest.fn(),
+                        createQueryBuilder: jest.fn(),
+                    },
+                },
+                {
+                    provide: getRepositoryToken(FiscalInvoice),
                     useValue: {
                         find: jest.fn(),
                         findOne: jest.fn(),

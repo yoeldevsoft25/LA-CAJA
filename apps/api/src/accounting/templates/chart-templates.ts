@@ -7,6 +7,7 @@ interface AccountTemplate {
   type: AccountType;
   level: number;
   parent?: string;
+  metadata?: Record<string, any>;
 }
 
 export type BusinessType = 'retail' | 'services' | 'restaurant' | 'general';
@@ -34,7 +35,58 @@ export const retailTemplate: AccountTemplate[] = [
     level: 3,
     parent: '1.01',
   },
+  {
+    code: '1.01.01.01',
+    name: 'Caja Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+  },
+  {
+    code: '1.01.01.02',
+    name: 'Caja USD',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   { code: '1.01.02', name: 'Bancos', type: 'asset', level: 3, parent: '1.01' },
+  {
+    code: '1.01.02.01',
+    name: 'Banco/Transfer Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.02',
+    name: 'Pago Movil Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.03',
+    name: 'Punto de Venta',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
+  {
+    code: '1.01.02.04',
+    name: 'Zelle',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   {
     code: '1.01.03',
     name: 'Cuentas por Cobrar Clientes',
@@ -335,6 +387,20 @@ export const retailTemplate: AccountTemplate[] = [
     parent: '4.02',
   },
   {
+    code: '4.02.02.01',
+    name: 'Ganancia cambiaria realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.02',
+  },
+  {
+    code: '4.02.02.02',
+    name: 'Ganancia cambiaria no realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.02',
+  },
+  {
     code: '4.02.03',
     name: 'Otros Ingresos Operativos',
     type: 'revenue',
@@ -480,6 +546,20 @@ export const retailTemplate: AccountTemplate[] = [
     parent: '5.04',
   },
   {
+    code: '5.04.01.01',
+    name: 'Pérdida cambiaria realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.04.01',
+  },
+  {
+    code: '5.04.01.02',
+    name: 'Pérdida cambiaria no realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.04.01',
+  },
+  {
     code: '5.04.02',
     name: 'Gastos Extraordinarios',
     type: 'expense',
@@ -511,7 +591,58 @@ export const servicesTemplate: AccountTemplate[] = [
     level: 3,
     parent: '1.01',
   },
+  {
+    code: '1.01.01.01',
+    name: 'Caja Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+  },
+  {
+    code: '1.01.01.02',
+    name: 'Caja USD',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   { code: '1.01.02', name: 'Bancos', type: 'asset', level: 3, parent: '1.01' },
+  {
+    code: '1.01.02.01',
+    name: 'Banco/Transfer Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.02',
+    name: 'Pago Movil Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.03',
+    name: 'Punto de Venta',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
+  {
+    code: '1.01.02.04',
+    name: 'Zelle',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   {
     code: '1.01.03',
     name: 'Cuentas por Cobrar Clientes',
@@ -726,11 +857,46 @@ export const servicesTemplate: AccountTemplate[] = [
     parent: '4.02',
   },
   {
+    code: '4.02.01.01',
+    name: 'Ganancia cambiaria realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.01',
+  },
+  {
+    code: '4.02.01.02',
+    name: 'Ganancia cambiaria no realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.01',
+  },
+  {
     code: '4.02.02',
     name: 'Ingresos Varios',
     type: 'revenue',
     level: 3,
     parent: '4.02',
+  },
+  {
+    code: '4.02.03',
+    name: 'Ingresos Financieros',
+    type: 'revenue',
+    level: 3,
+    parent: '4.02',
+  },
+  {
+    code: '4.02.03.01',
+    name: 'Ganancia cambiaria realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.03',
+  },
+  {
+    code: '4.02.03.02',
+    name: 'Ganancia cambiaria no realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.03',
   },
 
   // ========== GASTOS ==========
@@ -850,6 +1016,20 @@ export const servicesTemplate: AccountTemplate[] = [
     level: 3,
     parent: '5.03',
   },
+  {
+    code: '5.03.01.01',
+    name: 'Pérdida cambiaria realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.03.01',
+  },
+  {
+    code: '5.03.01.02',
+    name: 'Pérdida cambiaria no realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.03.01',
+  },
 ];
 
 /**
@@ -875,7 +1055,58 @@ export const restaurantTemplate: AccountTemplate[] = [
     level: 3,
     parent: '1.01',
   },
+  {
+    code: '1.01.01.01',
+    name: 'Caja Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+  },
+  {
+    code: '1.01.01.02',
+    name: 'Caja USD',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   { code: '1.01.02', name: 'Bancos', type: 'asset', level: 3, parent: '1.01' },
+  {
+    code: '1.01.02.01',
+    name: 'Banco/Transfer Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.02',
+    name: 'Pago Movil Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.03',
+    name: 'Punto de Venta',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
+  {
+    code: '1.01.02.04',
+    name: 'Zelle',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   {
     code: '1.01.03',
     name: 'Cuentas por Cobrar',
@@ -1260,6 +1491,35 @@ export const restaurantTemplate: AccountTemplate[] = [
     level: 3,
     parent: '5.03',
   },
+  // Gastos No Operativos
+  {
+    code: '5.04',
+    name: 'Gastos No Operativos',
+    type: 'expense',
+    level: 2,
+    parent: '5',
+  },
+  {
+    code: '5.04.01',
+    name: 'Gastos Financieros',
+    type: 'expense',
+    level: 3,
+    parent: '5.04',
+  },
+  {
+    code: '5.04.01.01',
+    name: 'Pérdida cambiaria realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.04.01',
+  },
+  {
+    code: '5.04.01.02',
+    name: 'Pérdida cambiaria no realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.04.01',
+  },
 ];
 
 /**
@@ -1277,7 +1537,58 @@ export const generalTemplate: AccountTemplate[] = [
     parent: '1',
   },
   { code: '1.01.01', name: 'Caja', type: 'asset', level: 3, parent: '1.01' },
+  {
+    code: '1.01.01.01',
+    name: 'Caja Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+  },
+  {
+    code: '1.01.01.02',
+    name: 'Caja USD',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.01',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   { code: '1.01.02', name: 'Bancos', type: 'asset', level: 3, parent: '1.01' },
+  {
+    code: '1.01.02.01',
+    name: 'Banco/Transfer Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.02',
+    name: 'Pago Movil Bs',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+  },
+  {
+    code: '1.01.02.03',
+    name: 'Punto de Venta',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
+  {
+    code: '1.01.02.04',
+    name: 'Zelle',
+    type: 'asset',
+    level: 4,
+    parent: '1.01.02',
+    metadata: {
+      fx_revaluation: { enabled: true, currency: 'USD', rate_type: 'BCV' },
+    },
+  },
   {
     code: '1.01.03',
     name: 'Cuentas por Cobrar',
@@ -1429,6 +1740,20 @@ export const generalTemplate: AccountTemplate[] = [
     level: 3,
     parent: '4.02',
   },
+  {
+    code: '4.02.02.01',
+    name: 'Ganancia cambiaria realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.02',
+  },
+  {
+    code: '4.02.02.02',
+    name: 'Ganancia cambiaria no realizada',
+    type: 'revenue',
+    level: 4,
+    parent: '4.02.02',
+  },
 
   // Gastos
   { code: '5', name: 'GASTOS', type: 'expense', level: 1 },
@@ -1531,6 +1856,20 @@ export const generalTemplate: AccountTemplate[] = [
     level: 3,
     parent: '5.04',
   },
+  {
+    code: '5.04.01.01',
+    name: 'Pérdida cambiaria realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.04.01',
+  },
+  {
+    code: '5.04.01.02',
+    name: 'Pérdida cambiaria no realizada',
+    type: 'expense',
+    level: 4,
+    parent: '5.04.01',
+  },
 ];
 
 /**
@@ -1558,34 +1897,81 @@ export function getChartTemplate(
 export function getDefaultMappings(businessType: BusinessType): Array<{
   transaction_type: TransactionType;
   account_code: string;
+  is_default?: boolean;
+  conditions?: Record<string, any> | null;
 }> {
   const baseMappings: Array<{
     transaction_type: TransactionType;
     account_code: string;
+    is_default?: boolean;
+    conditions?: Record<string, any> | null;
   }> = [
       {
         transaction_type: 'cash_asset' as TransactionType,
         account_code: '1.01.01',
+        is_default: true,
+      },
+      // Mapeos por método de pago (no-default; se usan cuando conditions.method coincide)
+      {
+        transaction_type: 'cash_asset' as TransactionType,
+        account_code: '1.01.01.01',
+        is_default: false,
+        conditions: { method: 'CASH_BS' },
+      },
+      {
+        transaction_type: 'cash_asset' as TransactionType,
+        account_code: '1.01.01.02',
+        is_default: false,
+        conditions: { method: 'CASH_USD' },
+      },
+      {
+        transaction_type: 'cash_asset' as TransactionType,
+        account_code: '1.01.02.01',
+        is_default: false,
+        conditions: { method: 'TRANSFER' },
+      },
+      {
+        transaction_type: 'cash_asset' as TransactionType,
+        account_code: '1.01.02.02',
+        is_default: false,
+        conditions: { method: 'PAGO_MOVIL' },
+      },
+      {
+        transaction_type: 'cash_asset' as TransactionType,
+        account_code: '1.01.02.03',
+        is_default: false,
+        conditions: { method: 'POINT_OF_SALE' },
+      },
+      {
+        transaction_type: 'cash_asset' as TransactionType,
+        account_code: '1.01.02.04',
+        is_default: false,
+        conditions: { method: 'ZELLE' },
       },
       {
         transaction_type: 'accounts_receivable' as TransactionType,
         account_code: '1.01.03',
+        is_default: true,
       },
       {
         transaction_type: 'sale_tax' as TransactionType,
         account_code: '2.01.02',
+        is_default: true,
       },
       {
         transaction_type: 'purchase_tax' as TransactionType,
         account_code: '1.01.04',
+        is_default: true,
       },
       {
         transaction_type: 'accounts_payable' as TransactionType,
         account_code: '2.01.01',
+        is_default: true,
       },
       {
         transaction_type: 'transfer' as TransactionType,
         account_code: '1.01.02',
+        is_default: true,
       },
     ];
 
@@ -1621,7 +2007,28 @@ export function getDefaultMappings(businessType: BusinessType): Array<{
         {
           transaction_type: 'adjustment' as TransactionType,
           account_code: '5.02.08',
+          is_default: true,
         }, // Gastos Generales
+        {
+          transaction_type: 'fx_gain_realized' as TransactionType,
+          account_code: '4.02.02.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_gain_unrealized' as TransactionType,
+          account_code: '4.02.02.02',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_realized' as TransactionType,
+          account_code: '5.04.01.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_unrealized' as TransactionType,
+          account_code: '5.04.01.02',
+          is_default: true,
+        },
       ];
     case 'services':
       return [
@@ -1653,7 +2060,28 @@ export function getDefaultMappings(businessType: BusinessType): Array<{
         {
           transaction_type: 'adjustment' as TransactionType,
           account_code: '5.02.09',
+          is_default: true,
         }, // Gastos Generales
+        {
+          transaction_type: 'fx_gain_realized' as TransactionType,
+          account_code: '4.02.01.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_gain_unrealized' as TransactionType,
+          account_code: '4.02.01.02',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_realized' as TransactionType,
+          account_code: '5.03.01.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_unrealized' as TransactionType,
+          account_code: '5.03.01.02',
+          is_default: true,
+        },
       ];
     case 'restaurant':
       return [
@@ -1685,7 +2113,28 @@ export function getDefaultMappings(businessType: BusinessType): Array<{
         {
           transaction_type: 'adjustment' as TransactionType,
           account_code: '5.02.11',
+          is_default: true,
         }, // Mermas y Pérdidas
+        {
+          transaction_type: 'fx_gain_realized' as TransactionType,
+          account_code: '4.02.03.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_gain_unrealized' as TransactionType,
+          account_code: '4.02.03.02',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_realized' as TransactionType,
+          account_code: '5.04.01.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_unrealized' as TransactionType,
+          account_code: '5.04.01.02',
+          is_default: true,
+        },
       ];
     case 'general':
     default:
@@ -1710,15 +2159,38 @@ export function getDefaultMappings(businessType: BusinessType): Array<{
         {
           transaction_type: 'expense' as TransactionType,
           account_code: '5.02.01',
+          is_default: true,
         }, // Gastos Generales
         {
           transaction_type: 'income' as TransactionType,
           account_code: '4.02.01',
+          is_default: true,
         }, // Ingresos Varios
         {
           transaction_type: 'adjustment' as TransactionType,
           account_code: '5.02.01',
+          is_default: true,
         }, // Gastos Generales
+        {
+          transaction_type: 'fx_gain_realized' as TransactionType,
+          account_code: '4.02.02.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_gain_unrealized' as TransactionType,
+          account_code: '4.02.02.02',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_realized' as TransactionType,
+          account_code: '5.04.01.01',
+          is_default: true,
+        },
+        {
+          transaction_type: 'fx_loss_unrealized' as TransactionType,
+          account_code: '5.04.01.02',
+          is_default: true,
+        },
       ];
   }
 }

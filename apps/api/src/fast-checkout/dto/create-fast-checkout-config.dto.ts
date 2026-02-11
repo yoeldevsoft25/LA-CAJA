@@ -13,6 +13,9 @@ export type PaymentMethod =
   | 'CASH_USD'
   | 'PAGO_MOVIL'
   | 'TRANSFER'
+  | 'POINT_OF_SALE'
+  | 'ZELLE'
+  | 'FIAO'
   | 'OTHER';
 
 /**
@@ -38,7 +41,16 @@ export class CreateFastCheckoutConfigDto {
   allow_customer_selection?: boolean;
 
   @IsString()
-  @IsIn(['CASH_BS', 'CASH_USD', 'PAGO_MOVIL', 'TRANSFER', 'OTHER'])
+  @IsIn([
+    'CASH_BS',
+    'CASH_USD',
+    'PAGO_MOVIL',
+    'TRANSFER',
+    'POINT_OF_SALE',
+    'ZELLE',
+    'FIAO',
+    'OTHER',
+  ])
   @IsOptional()
   default_payment_method?: PaymentMethod | null;
 }
