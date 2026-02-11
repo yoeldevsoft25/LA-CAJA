@@ -1285,6 +1285,7 @@ export class ProjectionsService {
     });
 
     if (exists) {
+      await this.recalculateDebtStatus(event.store_id, payload.debt_id);
       return; // Ya existe, idempotente
     }
 
@@ -1319,6 +1320,63 @@ export class ProjectionsService {
         note: payload.note || null,
       }),
     );
+    await this.recalculateDebtStatus(event.store_id, payload.debt_id, debt);
+  }
+
+  private async recalculateDebtStatus(
+    storeId: string,
+    debtId: string,
+    existingDebt?: Debt,
+  ): Promise<void> {
+    const debt =
+      existingDebt ??
+      (await this.debtRepository.findOne({
+        where: { id: debtId, store_id: storeId },
+      }));
+
+    if (!debt) {
+      return;
+    }
+
+    // Recalcular estado de la deuda tras registrar/sincronizar abonos.
+    const rawTotals = await this.debtPaymentRepository
+      .createQueryBuilder('payment')
+      .select('COALESCE(SUM(payment.amount_usd), 0)', 'paid_usd')
+      .addSelect('COALESCE(SUM(payment.amount_bs), 0)', 'paid_bs')
+      .where('payment.store_id = :storeId', { storeId })
+      .andWhere('payment.debt_id = :debtId', { debtId })
+      .getRawOne<{ paid_usd: string; paid_bs: string }>();
+
+    const totalPaidUsd = Number(rawTotals?.paid_usd ?? 0);
+    const totalPaidBs = Number(rawTotals?.paid_bs ?? 0);
+    const debtAmountUsd = Number(debt.amount_usd ?? 0);
+    const debtAmountBs = Number(debt.amount_bs ?? 0);
+    const tolerance = 0.01;
+
+    const hasPayment = totalPaidUsd > tolerance || totalPaidBs > tolerance;
+    let isFullyPaid = false;
+
+    if (debtAmountUsd > tolerance) {
+      isFullyPaid = totalPaidUsd >= debtAmountUsd - tolerance;
+    } else if (debtAmountBs > tolerance) {
+      isFullyPaid = totalPaidBs >= debtAmountBs - tolerance;
+    } else {
+      isFullyPaid = hasPayment;
+    }
+
+    let nextStatus: DebtStatus = DebtStatus.OPEN;
+    if (isFullyPaid) {
+      nextStatus = DebtStatus.PAID;
+    } else if (hasPayment) {
+      nextStatus = DebtStatus.PARTIAL;
+    }
+
+    if (nextStatus !== debt.status) {
+      await this.debtRepository.save({
+        ...debt,
+        status: nextStatus,
+      });
+    }
   }
 
   private async projectCashLedgerEntryCreated(event: Event): Promise<void> {
