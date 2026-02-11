@@ -164,4 +164,14 @@ describe('FederationSyncService synthetic replay', () => {
       expect.any(Object),
     );
   });
+
+  it('uses deterministic sorted hash for synthetic payloads', () => {
+    const payloadA = { b: 2, a: 1, nested: { z: 9, y: 8 } } as any;
+    const payloadB = { nested: { y: 8, z: 9 }, a: 1, b: 2 } as any;
+
+    const hashA = (service as any).hashPayload(payloadA);
+    const hashB = (service as any).hashPayload(payloadB);
+
+    expect(hashA).toEqual(hashB);
+  });
 });

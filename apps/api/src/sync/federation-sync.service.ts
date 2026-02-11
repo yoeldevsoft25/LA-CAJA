@@ -1914,8 +1914,22 @@ export class FederationSyncService implements OnModuleInit {
     ].join('-');
   }
 
+  private sortDeep(value: unknown): unknown {
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) return value.map((item) => this.sortDeep(item));
+    if (typeof value !== 'object') return value;
+    if (value instanceof Date) return value.toISOString();
+
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      sorted[key] = this.sortDeep((value as Record<string, unknown>)[key]);
+    }
+    return sorted;
+  }
+
   private hashPayload(payload: Record<string, unknown>): string {
-    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+    const normalized = JSON.stringify(this.sortDeep(payload));
+    return createHash('sha256').update(normalized).digest('hex');
   }
 
   private async pushSyntheticEvents(
