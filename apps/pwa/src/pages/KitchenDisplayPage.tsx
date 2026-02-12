@@ -241,7 +241,7 @@ export default function KitchenDisplayPage() {
         </div>
 
         {orders && orders.length === 0 ? (
-          <div className="bg-muted/30 backdrop-blur-md rounded-3xl border-2 border-dashed border-border/60 py-20 text-center shadow-xl">
+          <div className="bg-muted rounded-3xl border-2 border-dashed border-border/60 py-20 text-center shadow-xl">
             <div className="bg-muted/50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
               <UtensilsCrossed className="w-12 h-12 text-muted-foreground/40" />
             </div>

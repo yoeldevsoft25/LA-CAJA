@@ -162,7 +162,8 @@
   --info: 199 89% 48%;
   --info-foreground: 0 0% 98%;
 
-  --border: 220 13% 88%; /* A touch stronger for definition */
+  --border: 220 13% 88%;
+  /* A touch stronger for definition */
   --input: 220 13% 88%;
   --ring: 204 89% 43%;
   --radius: 0.75rem;
@@ -179,7 +180,8 @@
 
   /* ⚡ PERF: Optimization variables */
   --glass-blur: 12px;
-  --glass-opacity: 0.95; /* Increased opacity for more solid look */
+  --glass-opacity: 0.95;
+  /* Increased opacity for more solid look */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -480,22 +482,22 @@
   /* ═════════════════════════════════════════════════════════════
      GLASS PANEL — Frosted glass effect
      ═════════════════════════════════════════════════════════════ */
+  /* ═════════════════════════════════════════════════════════════
+     ERP PANEL — Solid, clean, professional
+     Replaces "Glass Panel" with a standard solid card style
+     ═════════════════════════════════════════════════════════════ */
   .glass-panel {
-    background: hsl(var(--card) / 0.7);
-    backdrop-filter: blur(24px) saturate(1.2);
-    border: 1px solid hsl(var(--border) / 0.5);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: none;
   }
 
   .dark .glass-panel {
-    background: hsl(var(--card) / 0.6);
-    /* Slightly more opaque for better perf */
-    backdrop-filter: blur(16px) saturate(1.4);
-    /* Reduced blur radius */
-    border: 1px solid hsl(var(--border) / 0.4);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: none;
     box-shadow:
-      inset 0 1px 0 hsl(var(--primary) / 0.1),
-      0 4px 16px hsl(0 0% 0% / 0.35);
-    /* Reduced shadow spread */
+      0 1px 3px hsl(0 0% 0% / 0.2);
   }
 
   /* ═════════════════════════════════════════════════════════════
@@ -661,15 +663,15 @@
   }
 
   /* ⚡ PERF: Optimized Glass Effects */
+  /* ⚡ PERF: Standard Card Effects (formerly Glass) */
   .glass-panel {
-    background-color: hsl(var(--background) / var(--glass-opacity));
-    backdrop-filter: blur(calc(var(--glass-blur) * 1px));
-    /* Assuming it's a number, or just var if it has units */
-    border: 1px solid hsl(var(--border) / 0.4);
+    background-color: hsl(var(--card));
+    backdrop-filter: none;
+    border: 1px solid hsl(var(--border));
   }
 
   .premium-empty-state-glass {
-    @apply bg-card/60 backdrop-blur-sm border border-white/10;
+    @apply bg-card border border-border;
   }
 
   /* ⚡ PERF: Motion Hints */

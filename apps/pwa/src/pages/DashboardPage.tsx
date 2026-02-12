@@ -92,7 +92,7 @@ function KPICard({
 
   return (
     <Card className={cn(
-      "glass-panel premium-shadow-md hover:premium-shadow-lg transition-[transform,box-shadow] duration-300 border-white/20 will-change-transform",
+      "bg-card premium-shadow-md hover:premium-shadow-lg transition-[transform,box-shadow] duration-300 will-change-transform",
       className
     )}>
       <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-between">
@@ -529,7 +529,7 @@ export default function DashboardPage() {
             <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 grid-rows-2 auto-rows-fr gap-4">
               {/* Tendencia de ventas ahora ocupa el espacio principal (2x2) */}
               <StaggerItem className="lg:col-span-2 lg:row-span-2">
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                <Card className="bg-card premium-shadow-md h-full">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm font-bold flex items-center justify-between">
                       <span className="flex items-center gap-2">
@@ -603,7 +603,7 @@ export default function DashboardPage() {
             <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Inventario */}
               <StaggerItem>
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                <Card className="bg-card premium-shadow-md h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600">
@@ -660,7 +660,7 @@ export default function DashboardPage() {
 
               {/* Finanzas */}
               <StaggerItem>
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                <Card className="bg-card premium-shadow-md h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-green-500/10 text-green-600">
@@ -709,7 +709,7 @@ export default function DashboardPage() {
 
               {/* Compras */}
               <StaggerItem>
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                <Card className="bg-card premium-shadow-md h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-600">
@@ -752,7 +752,7 @@ export default function DashboardPage() {
 
               {/* Fiscal */}
               <StaggerItem>
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full">
+                <Card className="bg-card premium-shadow-md h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600">
@@ -801,7 +801,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Producto */}
               <FadeInUp>
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full overflow-hidden">
+                <Card className="bg-card premium-shadow-md h-full overflow-hidden">
                   <CardHeader className="bg-primary/5 border-b border-border/40">
                     <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5 text-primary" />
@@ -844,7 +844,7 @@ export default function DashboardPage() {
 
               {/* Categoría Más Vendida */}
               <FadeInUp>
-                <Card className="glass-panel premium-shadow-md border-white/20 h-full overflow-hidden">
+                <Card className="bg-card premium-shadow-md h-full overflow-hidden">
                   <CardHeader className="bg-green-500/5 border-b border-border/40">
                     <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                       <BarChart3 className="w-5 h-5 text-green-600" />
@@ -878,7 +878,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               {/* Gráfico: Productos por Peso */}
               <FadeInUp>
-                <Card className="glass-panel premium-shadow-md border-white/20">
+                <Card className="bg-card premium-shadow-md">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base sm:text-lg font-black flex items-center gap-2">
                       <Package className="w-4 h-4 text-primary" />
@@ -901,7 +901,7 @@ export default function DashboardPage() {
 
               {/* Gráfico: Productos por Cantidad */}
               <FadeInUp>
-                <Card className="glass-panel premium-shadow-md border-white/20">
+                <Card className="bg-card premium-shadow-md">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base sm:text-lg font-black flex items-center gap-2">
                       <ShoppingCart className="w-4 h-4 text-green-600" />
@@ -925,7 +925,7 @@ export default function DashboardPage() {
 
             {/* Tabla Detallada */}
             <FadeInUp>
-              <Card className="glass-panel premium-shadow-md border-white/20">
+              <Card className="bg-card premium-shadow-md">
                 <CardHeader>
                   <CardTitle className="text-base sm:text-lg font-black">
                     Detalle Top 10 Productos

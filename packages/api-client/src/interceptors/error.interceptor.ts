@@ -34,6 +34,15 @@ function onRefreshFailed(error: Error) {
 interface RequestConfigWithRetry extends InternalAxiosRequestConfig {
     _retry?: boolean;
     _apiFailoverRetryCount?: number;
+    _retriedWithLatestToken?: boolean;
+}
+
+function extractBearerToken(value: unknown): string | null {
+    if (!value) return null;
+    const asString = Array.isArray(value) ? value[0] : String(value);
+    if (!asString) return null;
+    const match = asString.match(/^Bearer\s+(.+)$/i);
+    return match ? match[1] : null;
 }
 
 function markServerUnavailable(reason: string): void {
@@ -119,9 +128,30 @@ export function createErrorInterceptor(api: AxiosInstance, config: ApiConfig, fa
         // 401 Unauthorized - Token refresh logic
         if (error.response?.status === 401 && !originalRequest._retry) {
             error.isAuthError = true;
-            originalRequest._retry = true;
 
             const refreshToken = localStorage.getItem('refresh_token');
+            const latestToken = config.getToken();
+            const requestToken = extractBearerToken(
+                (originalRequest.headers as Record<string, unknown> | undefined)?.Authorization
+            );
+
+            // Evita refresh duplicado cuando llega tarde una respuesta 401 de un request
+            // que salió con token viejo, pero ya existe token nuevo en memoria.
+            if (
+                latestToken &&
+                !originalRequest._retriedWithLatestToken &&
+                requestToken &&
+                requestToken !== latestToken
+            ) {
+                originalRequest._retriedWithLatestToken = true;
+                originalRequest.headers.Authorization = `Bearer ${latestToken}`;
+                if (config.logger) {
+                    config.logger.info('401 con token desactualizado; reintentando con token vigente');
+                }
+                return api(originalRequest);
+            }
+
+            originalRequest._retry = true;
 
             if (!refreshToken) {
                 if (config.logger) {
