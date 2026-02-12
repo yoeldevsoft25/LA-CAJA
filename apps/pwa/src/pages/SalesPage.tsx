@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { SalesSkeleton } from '@/components/ui/module-skeletons'
 import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
 import { useSmoothLoading } from '@/hooks/use-smooth-loading'
+import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
 import { printService } from '@/services/print.service'
@@ -118,6 +119,7 @@ export default function SalesPage() {
   const [maxAmountUsd, setMaxAmountUsd] = useState<string>('')
   const [customerSearch, setCustomerSearch] = useState<string>('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const debouncedCustomerSearch = useDebounce(customerSearch, 250)
 
   // Presets de fecha
   const setDatePreset = (preset: 'today' | 'yesterday' | 'week') => {
@@ -232,17 +234,19 @@ export default function SalesPage() {
       }
 
       // Aplicar filtro de rango de montos
-      const amountUsd = Number(sale.totals.total_usd)
-      if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
-        return false
-      }
-      if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
-        return false
+      if (!isAmountRangeInvalid) {
+        const amountUsd = Number(sale.totals.total_usd)
+        if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
+          return false
+        }
+        if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+          return false
+        }
       }
 
       // Aplicar filtro de búsqueda de cliente
-      if (customerSearch.trim()) {
-        const searchLower = customerSearch.toLowerCase().trim()
+      if (debouncedCustomerSearch.trim()) {
+        const searchLower = debouncedCustomerSearch.toLowerCase().trim()
         const customerName = sale.customer?.name?.toLowerCase() || ''
         const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
         if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
@@ -252,7 +256,7 @@ export default function SalesPage() {
 
       return true
     })
-  }, [allDaySalesData?.sales, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
+  }, [allDaySalesData?.sales, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, debouncedCustomerSearch, isAmountRangeInvalid])
 
   // Aplicar filtros avanzados (filtrado en frontend)
   const sales = useMemo(() => {
@@ -286,17 +290,19 @@ export default function SalesPage() {
       }
 
       // Filtro por rango de montos (USD)
-      const amountUsd = Number(sale.totals.total_usd)
-      if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
-        return false
-      }
-      if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
-        return false
+      if (!isAmountRangeInvalid) {
+        const amountUsd = Number(sale.totals.total_usd)
+        if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
+          return false
+        }
+        if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+          return false
+        }
       }
 
       // Filtro por búsqueda de cliente
-      if (customerSearch.trim()) {
-        const searchLower = customerSearch.toLowerCase().trim()
+      if (debouncedCustomerSearch.trim()) {
+        const searchLower = debouncedCustomerSearch.toLowerCase().trim()
         const customerName = sale.customer?.name?.toLowerCase() || ''
         const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
         if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
@@ -306,7 +312,7 @@ export default function SalesPage() {
 
       return true
     })
-  }, [rawSales, paymentMethodFilter, statusFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
+  }, [rawSales, paymentMethodFilter, statusFilter, debtFilter, minAmountUsd, maxAmountUsd, debouncedCustomerSearch, isAmountRangeInvalid])
 
   const totalPages = Math.ceil(total / limit)
 
@@ -328,6 +334,10 @@ export default function SalesPage() {
     minAmountUsd !== '' || maxAmountUsd !== '',
     customerSearch.trim() !== '',
   ].filter(Boolean).length
+  const isAmountRangeInvalid =
+    minAmountUsd !== '' &&
+    maxAmountUsd !== '' &&
+    Number(minAmountUsd) > Number(maxAmountUsd)
 
   const handleResetAdvancedFilters = () => {
     setPaymentMethodFilter('all')
@@ -470,7 +480,7 @@ export default function SalesPage() {
               </p>
               <span className="text-muted-foreground/30 hidden sm:inline">•</span>
               <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                <Cloud className="w-3 h-3 h-3" />
+                <Cloud className="w-3 h-3" />
                 Zona: {getTimeZoneLabel()}
               </p>
             </div>
@@ -671,13 +681,16 @@ export default function SalesPage() {
                       Cliente (Nombre o CI)
                     </Label>
                     <div className="relative">
-                      <X
-                        className={cn(
-                          "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors",
-                          !customerSearch && "hidden"
-                        )}
-                        onClick={() => setCustomerSearch('')}
-                      />
+                      {customerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomerSearch('')}
+                          aria-label="Limpiar búsqueda de cliente"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                       <Input
                         type="text"
                         value={customerSearch}
@@ -686,6 +699,38 @@ export default function SalesPage() {
                         className="h-11 border-muted/40 bg-muted/50 pr-10"
                       />
                     </div>
+                  </div>
+
+                  {/* Rango de monto en USD */}
+                  <div className="space-y-2">
+                    <Label className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                      Monto USD
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={minAmountUsd}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinAmountUsd(e.target.value)}
+                        placeholder="Mín."
+                        className="h-11 border-muted/40 bg-muted/50"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={maxAmountUsd}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxAmountUsd(e.target.value)}
+                        placeholder="Máx."
+                        className="h-11 border-muted/40 bg-muted/50"
+                      />
+                    </div>
+                    {isAmountRangeInvalid && (
+                      <p className="text-[11px] text-destructive font-medium px-1">
+                        El monto mínimo no puede ser mayor al máximo.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

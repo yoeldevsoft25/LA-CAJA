@@ -58,6 +58,19 @@ const formatNumber = (num: number) => {
   return new Intl.NumberFormat('es-VE').format(num)
 }
 
+const toInputDate = (date: Date) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return local.toISOString().split('T')[0]
+}
+
+const formatPeriodLabel = (start?: string, end?: string) => {
+  if (!start && !end) return 'Últimos datos disponibles'
+  if (start && !end) return `Desde ${start}`
+  if (!start && end) return `Hasta ${end}`
+  if (start === end) return start || 'Período actual'
+  return `${start} - ${end}`
+}
+
 interface KPICardProps {
   title: string
   value: string | number
@@ -83,11 +96,11 @@ function KPICard({
   className,
 }: KPICardProps) {
   const colorClasses = {
-    blue: 'text-blue-600',
-    green: 'text-green-600',
-    red: 'text-red-600',
-    orange: 'text-orange-600',
-    purple: 'text-purple-600',
+    blue: 'text-primary',
+    green: 'text-[hsl(var(--success))]',
+    red: 'text-destructive',
+    orange: 'text-[hsl(var(--warning))]',
+    purple: 'text-[hsl(var(--info))]',
   }
 
   return (
@@ -117,12 +130,12 @@ function KPICard({
           {trend && (
             <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-background/50 w-fit">
               {trend.value >= 0 ? (
-                <TrendingUp className="w-3.5 h-3.5 text-green-600 font-bold" />
+                <TrendingUp className="w-3.5 h-3.5 text-[hsl(var(--success))] font-bold" />
               ) : (
-                <TrendingDown className="w-3.5 h-3.5 text-red-600 font-bold" />
+                <TrendingDown className="w-3.5 h-3.5 text-destructive font-bold" />
               )}
               <p
-                className={`text-xs font-bold ${trend.value >= 0 ? 'text-green-600' : 'text-red-600'
+                className={`text-xs font-bold ${trend.value >= 0 ? 'text-[hsl(var(--success))]' : 'text-destructive'
                   }`}
               >
                 {trend.value >= 0 ? '+' : ''}
@@ -152,6 +165,44 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState<string>('')
   const [chartCurrency, setChartCurrency] = useState<'BS' | 'USD'>('BS')
   const printRef = useRef<HTMLDivElement>(null)
+  const periodLabel = formatPeriodLabel(startDate, endDate)
+  const hasDateFilters = Boolean(startDate || endDate)
+
+  const applyDatePreset = useCallback((preset: 'today' | 'last7' | 'last30' | 'month') => {
+    const now = new Date()
+
+    if (preset === 'today') {
+      const today = toInputDate(now)
+      setStartDate(today)
+      setEndDate(today)
+      return
+    }
+
+    if (preset === 'last7') {
+      const from = new Date(now)
+      from.setDate(now.getDate() - 6)
+      setStartDate(toInputDate(from))
+      setEndDate(toInputDate(now))
+      return
+    }
+
+    if (preset === 'last30') {
+      const from = new Date(now)
+      from.setDate(now.getDate() - 29)
+      setStartDate(toInputDate(from))
+      setEndDate(toInputDate(now))
+      return
+    }
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    setStartDate(toInputDate(monthStart))
+    setEndDate(toInputDate(now))
+  }, [])
+
+  const resetDateFilters = useCallback(() => {
+    setStartDate('')
+    setEndDate('')
+  }, [])
 
   // Validar estado de configuración (solo para owners)
   const { data: setupStatus } = useQuery({
@@ -405,6 +456,9 @@ export default function DashboardPage() {
               <p className="text-xs sm:text-sm lg:text-base text-muted-foreground mt-1">
                 Resumen de KPIs y métricas del negocio
               </p>
+              <p className="text-[11px] sm:text-xs text-muted-foreground/80 mt-1.5">
+                Período: <span className="font-semibold text-foreground/85">{periodLabel}</span>
+              </p>
             </div>
             {/* Estado de actualización */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
@@ -453,7 +507,9 @@ export default function DashboardPage() {
               <Label className="text-xs">Moneda Gráficos</Label>
               <div className="flex bg-muted rounded-md p-1">
                 <button
+                  type="button"
                   onClick={() => setChartCurrency('BS')}
+                  aria-pressed={chartCurrency === 'BS'}
                   className={cn(
                     "px-3 py-1 text-xs font-bold rounded transition-all",
                     chartCurrency === 'BS' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
@@ -462,7 +518,9 @@ export default function DashboardPage() {
                   BS
                 </button>
                 <button
+                  type="button"
                   onClick={() => setChartCurrency('USD')}
+                  aria-pressed={chartCurrency === 'USD'}
                   className={cn(
                     "px-3 py-1 text-xs font-bold rounded transition-all",
                     chartCurrency === 'USD' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
@@ -471,6 +529,26 @@ export default function DashboardPage() {
                   USD
                 </button>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center">
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => applyDatePreset('today')}>
+                Hoy
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => applyDatePreset('last7')}>
+                7 días
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => applyDatePreset('last30')}>
+                30 días
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => applyDatePreset('month')}>
+                Mes actual
+              </Button>
+              {hasDateFilters && (
+                <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={resetDateFilters}>
+                  Limpiar rango
+                </Button>
+              )}
             </div>
             {/* Botones de exportar */}
             <div className="flex gap-2 flex-shrink-0">

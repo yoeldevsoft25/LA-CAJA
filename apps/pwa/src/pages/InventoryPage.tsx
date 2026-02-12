@@ -29,6 +29,7 @@ import {
 import { InventorySkeleton } from '@/components/ui/module-skeletons'
 import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
 import { useSmoothLoading } from '@/hooks/use-smooth-loading'
+import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
@@ -93,6 +94,7 @@ export default function InventoryPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearchQuery = useDebounce(searchQuery, 250)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(20)
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
@@ -113,7 +115,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, showLowStockOnly, warehouseFilter])
+  }, [debouncedSearchQuery, showLowStockOnly, warehouseFilter])
 
   const offset = (currentPage - 1) * pageSize
 
@@ -129,7 +131,7 @@ export default function InventoryPage() {
     queryKey: [
       'inventory',
       'stock-status',
-      searchQuery,
+      debouncedSearchQuery,
       showLowStockOnly,
       warehouseFilter,
       currentPage,
@@ -138,7 +140,7 @@ export default function InventoryPage() {
     ],
     queryFn: () =>
       inventoryService.getStockStatusPaged({
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
         warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
         limit: pageSize,
         offset,
@@ -153,10 +155,10 @@ export default function InventoryPage() {
   const isSmoothLoading = useSmoothLoading(isLoading || isFetching)
 
   const { data: lowStockCountData } = useQuery({
-    queryKey: ['inventory', 'low-stock-count', searchQuery, warehouseFilter, user?.store_id],
+    queryKey: ['inventory', 'low-stock-count', debouncedSearchQuery, warehouseFilter, user?.store_id],
     queryFn: () =>
       inventoryService.getStockStatusPaged({
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
         warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
         low_stock_only: true,
         limit: 1,
@@ -176,6 +178,11 @@ export default function InventoryPage() {
   const stockItems = stockStatusData?.items || []
   const total = stockStatusData?.total || 0
   const lowStockCount = showLowStockOnly ? total : lowStockCountData?.total || 0
+  const activeFiltersCount = [
+    debouncedSearchQuery.trim().length > 0,
+    showLowStockOnly,
+    warehouseFilter !== 'all',
+  ].filter(Boolean).length
 
   // Mutaciones para vaciar stock (solo owners)
   const resetProductMutation = useMutation({
@@ -259,7 +266,7 @@ export default function InventoryPage() {
     setIsExporting(true)
     try {
       const items = await inventoryService.getStockStatus({
-        search: searchQuery.trim() || undefined,
+        search: debouncedSearchQuery.trim() || undefined,
         warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
         low_stock_only: showLowStockOnly || undefined,
       })
@@ -292,6 +299,13 @@ export default function InventoryPage() {
     if (item.low_stock_threshold === 0) return 100
     const percentage = (item.current_stock / (item.low_stock_threshold * 2)) * 100
     return Math.min(100, Math.max(0, percentage))
+  }
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setWarehouseFilter('all')
+    setShowLowStockOnly(false)
+    setCurrentPage(1)
   }
 
   return (
@@ -435,15 +449,33 @@ export default function InventoryPage() {
       {/* Filtros */}
       <Card className="mb-6 border-none shadow-md shadow-black/5 bg-background transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {activeFiltersCount > 0 ? `${activeFiltersCount} filtro(s) activo(s)` : 'Filtros rápidos de inventario'}
+            </p>
+            {activeFiltersCount > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                className="h-8 text-xs"
+              >
+                Limpiar filtros
+              </Button>
+            )}
+          </div>
+
           {/* Búsqueda */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-4 h-4 sm:w-5 sm:h-5 z-10" />
             <Input
               type="text"
-              placeholder="Buscar por nombre, SKU o código de barras..."
+              placeholder="Buscar por nombre, SKU o código de barras…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 sm:pl-10 h-11 sm:h-12 text-base border-muted/40 bg-muted/50 focus:bg-background transition-all shadow-sm focus:ring-primary/20"
+              aria-label="Buscar productos en inventario"
             />
           </div>
 
@@ -647,40 +679,48 @@ export default function InventoryPage() {
                             <TableCell className="w-32 sm:w-40 py-3 text-right pr-4">
                               <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 sm:opacity-100">
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleViewMovements(item)}
                                   className="h-8 w-8 hover:bg-muted text-muted-foreground rounded-full"
                                   title="Ver movimientos"
+                                  aria-label={`Ver movimientos de ${item.product_name}`}
                                 >
                                   <History className="w-4 h-4" />
                                 </Button>
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleReceiveStock(item)}
                                   className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 rounded-full"
                                   title="Recibir stock"
+                                  aria-label={`Recibir stock de ${item.product_name}`}
                                 >
                                   <TrendingUp className="w-4 h-4" />
                                 </Button>
                                 <Button
+                                  type="button"
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleAdjustStock(item)}
                                   className="h-8 w-8 text-purple-500 hover:text-purple-600 hover:bg-purple-500/10 rounded-full"
                                   title="Ajustar stock"
+                                  aria-label={`Ajustar stock de ${item.product_name}`}
                                 >
                                   <TrendingDown className="w-4 h-4" />
                                 </Button>
                                 {/* Solo owners pueden vaciar stock de un producto */}
                                 {isOwner && item.current_stock > 0 && (
                                   <Button
+                                    type="button"
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleResetProductStock(item)}
                                     className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
                                     title="Vaciar stock"
+                                    aria-label={`Vaciar stock de ${item.product_name}`}
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
