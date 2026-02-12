@@ -95,7 +95,7 @@ export default function ReservationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle>
             {reservation ? 'Editar Reserva' : 'Nueva Reserva'}
@@ -216,7 +216,7 @@ export default function ReservationModal({
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} className="btn-glass-neutral">
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>

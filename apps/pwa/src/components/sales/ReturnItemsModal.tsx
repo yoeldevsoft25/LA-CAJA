@@ -155,7 +155,7 @@ export default function ReturnItemsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col bg-card">
         <DialogHeader className="border-b pb-4 px-6 -mx-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500/10 dark:bg-amber-500/20 rounded-xl">
@@ -177,7 +177,7 @@ export default function ReturnItemsModal({
               variant="outline"
               size="sm"
               onClick={handleSelectAll}
-              className="text-xs font-semibold h-8 border-dashed hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+              className="text-xs font-semibold h-8 border-dashed hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors btn-glass-neutral"
             >
               <Package className="w-3.5 h-3.5 mr-2" />
               {Object.values(returnItems).every((item) => item.selected)
@@ -231,7 +231,7 @@ export default function ReturnItemsModal({
                                 {item.product?.name || 'Producto sin nombre'}
                               </p>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono px-1.5 py-0.5 bg-muted rounded">
+                                <span className="text-xs font-mono px-1.5 py-0.5 bg-card border border-border/60 rounded">
                                   SKU: {item.product?.sku || 'N/A'}
                                 </span>
                                 <Badge variant="outline" className="text-[10px] h-4 tracking-widest uppercase opacity-70">
@@ -270,7 +270,7 @@ export default function ReturnItemsModal({
                                       step={item.is_weight_product ? 0.001 : 1}
                                       value={state.qty}
                                       onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                      className="h-10 text-lg font-mono text-center bg-background border-2 focus-visible:ring-amber-500"
+                                      className="h-10 text-lg font-mono text-center bg-card border-2 border-border focus-visible:ring-amber-500"
                                     />
                                   </div>
                                 </div>
@@ -300,7 +300,7 @@ export default function ReturnItemsModal({
           </ScrollArea>
 
           {/* Razón de devolución y Resumen */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t bg-muted/30 -mx-6 px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t bg-card -mx-6 px-6">
             <div className="space-y-2">
               <Label htmlFor="return-reason" className="text-xs font-bold uppercase text-muted-foreground">
                 Explicación del Motivo
@@ -310,7 +310,7 @@ export default function ReturnItemsModal({
                 placeholder="Ej: Producto defectuoso, el cliente decidió cambiarlo o revertir la compra..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="bg-background min-h-[100px] border-2 focus-visible:ring-amber-500 resize-none text-sm p-3"
+                className="bg-card min-h-[100px] border-2 border-border focus-visible:ring-amber-500 resize-none text-sm p-3"
               />
             </div>
 
@@ -350,7 +350,7 @@ export default function ReturnItemsModal({
         </div>
 
         <DialogFooter className="mt-6 pt-6 border-t px-0 flex items-center justify-between sm:justify-between w-full">
-          <Button variant="outline" onClick={onClose} className="px-6 font-semibold uppercase tracking-widest text-xs hover:bg-muted transition-all">
+          <Button variant="outline" onClick={onClose} className="px-6 font-semibold uppercase tracking-widest text-xs transition-all btn-glass-neutral">
             Abandonar
           </Button>
           <Button

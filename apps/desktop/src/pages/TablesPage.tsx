@@ -111,26 +111,26 @@ export default function TablesPage() {
               <Plus className="w-4 h-4 mr-2" />
               Nueva Orden
             </Button>
-            <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl w-fit">
+            <div className="flex items-center gap-2 bg-card border border-border/60 p-1 rounded-xl w-fit">
               <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                variant="outline"
                 size="sm"
                 onClick={() => setViewMode('grid')}
                 className={cn(
-                  "h-8 sm:h-9 px-3 sm:px-4 rounded-lg font-semibold transition-all",
-                  viewMode === 'grid' && "shadow-sm bg-white text-primary hover:bg-white"
+                  "h-8 sm:h-9 px-3 sm:px-4 rounded-lg font-semibold transition-all btn-glass-neutral",
+                  viewMode === 'grid' && "bg-primary/10 border-primary/25 text-primary hover:bg-primary/10"
                 )}
               >
                 <LayoutGrid className="w-4 h-4 mr-2" />
                 Grid
               </Button>
               <Button
-                variant={viewMode === 'floor' ? 'default' : 'ghost'}
+                variant="outline"
                 size="sm"
                 onClick={() => setViewMode('floor')}
                 className={cn(
-                  "h-8 sm:h-9 px-3 sm:px-4 rounded-lg font-semibold transition-all",
-                  viewMode === 'floor' && "shadow-sm bg-white text-primary hover:bg-white"
+                  "h-8 sm:h-9 px-3 sm:px-4 rounded-lg font-semibold transition-all btn-glass-neutral",
+                  viewMode === 'floor' && "bg-primary/10 border-primary/25 text-primary hover:bg-primary/10"
                 )}
               >
                 <Grid3x3 className="w-4 h-4 mr-2" />
@@ -183,4 +183,3 @@ export default function TablesPage() {
     </div>
   )
 }
-

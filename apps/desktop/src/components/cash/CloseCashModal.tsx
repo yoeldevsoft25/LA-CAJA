@@ -137,7 +137,7 @@ export default function CloseCashModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl flex items-center">
             <AlertTriangle
@@ -176,7 +176,7 @@ export default function CloseCashModal({
                   </Alert>
 
                   {/* Montos esperados */}
-                  <Card className="bg-info/5 border-info/50">
+                  <Card className="bg-card border-border">
                     <CardHeader>
                       <CardTitle className="text-sm flex items-center text-info">
                         <Calculator className="w-4 h-4 mr-2" />
@@ -370,7 +370,7 @@ export default function CloseCashModal({
                         Por favor, revisa cuidadosamente:
                       </p>
 
-                      <Card className="bg-background border-border mt-4">
+                      <Card className="bg-card border-border mt-4">
                         <CardContent className="p-4 space-y-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -432,7 +432,7 @@ export default function CloseCashModal({
                         correctos:
                       </p>
 
-                      <Card className="bg-background border-border mt-4">
+                      <Card className="bg-card border-border mt-4">
                         <CardContent className="p-4 space-y-4">
                           <div>
                             <p className="text-xs text-muted-foreground mb-1">Apertura</p>
@@ -500,7 +500,7 @@ export default function CloseCashModal({
                 type="button"
                 variant="outline"
                 onClick={handleBack}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
                 disabled={isLoading}
               >
                 {confirmStep === 1 ? 'Cancelar' : 'Atrás'}
@@ -509,7 +509,7 @@ export default function CloseCashModal({
                 type="button"
                 variant="outline"
                 onClick={() => printService.printCashSessionSummary(sessionSummary)}
-                className="flex items-center justify-center gap-2"
+                className="flex items-center justify-center gap-2 btn-glass-neutral"
                 disabled={isLoading}
               >
                 <Printer className="w-4 h-4" />

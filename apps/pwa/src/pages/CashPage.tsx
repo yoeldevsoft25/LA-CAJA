@@ -145,7 +145,7 @@ export default function CashPage() {
         <CardContent>
           {!currentSession ? (
             <div className="text-center py-8 sm:py-12">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-full bg-card border border-border/60 flex items-center justify-center mx-auto mb-4">
                 <Lock className="w-8 h-8 text-muted-foreground" />
               </div>
               <p className="text-muted-foreground mb-6">No hay sesión de caja abierta</p>
@@ -175,7 +175,7 @@ export default function CashPage() {
               {isMobile ? (
                 <div className="space-y-2">
                   {/* Información compacta para móvil */}
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-card border border-border/60 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">Apertura:</span>
@@ -189,13 +189,13 @@ export default function CashPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                    <div className="p-3 bg-card border border-border rounded-lg">
                       <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mb-1">Apertura Bs</p>
                       <p className="text-base font-bold text-foreground">
                         {Number(currentSession.opening_amount_bs).toFixed(2)} Bs
                       </p>
                     </div>
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                    <div className="p-3 bg-card border border-border rounded-lg">
                       <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mb-1">Apertura USD</p>
                       <p className="text-base font-bold text-foreground">
                         ${Number(currentSession.opening_amount_usd).toFixed(2)}
@@ -204,7 +204,7 @@ export default function CashPage() {
                   </div>
 
                   {sessionSummary && (
-                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                    <div className="p-3 bg-card border border-border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-muted-foreground">Efectivo Esperado</span>
                         <Badge variant="secondary" className="text-[10px]">
@@ -231,7 +231,7 @@ export default function CashPage() {
               ) : (
                 /* Vista completa para desktop */
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Card className="bg-blue-500/10 border-blue-500/20 shadow-none">
+                  <Card className="bg-card border-border shadow-none">
                     <CardContent className="p-4">
                       <div className="flex items-center mb-2">
                         <Calendar className="w-4 h-4 text-blue-500 dark:text-blue-400 mr-2" />
@@ -243,7 +243,7 @@ export default function CashPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-emerald-500/10 border-emerald-500/20 shadow-none">
+                  <Card className="bg-card border-border shadow-none">
                     <CardContent className="p-4">
                       <div className="flex items-center mb-2">
                         <DollarSign className="w-4 h-4 text-emerald-500 dark:text-emerald-400 mr-2" />
@@ -255,7 +255,7 @@ export default function CashPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-emerald-500/10 border-emerald-500/20 shadow-none">
+                  <Card className="bg-card border-border shadow-none">
                     <CardContent className="p-4">
                       <div className="flex items-center mb-2">
                         <DollarSign className="w-4 h-4 text-emerald-500 dark:text-emerald-400 mr-2" />
@@ -267,7 +267,7 @@ export default function CashPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-purple-500/10 border-purple-500/20 shadow-none">
+                  <Card className="bg-card border-border shadow-none">
                     <CardContent className="p-4">
                       <div className="flex items-center mb-2">
                         <CheckCircle2 className="w-4 h-4 text-purple-500 dark:text-purple-400 mr-2" />
@@ -289,7 +289,7 @@ export default function CashPage() {
                     <Skeleton className="h-8 w-full" />
                   </div>
                 ) : sessionSummary ? (
-                  <Card className="bg-muted/50 border-border">
+                  <Card className="bg-card border-border">
                     <CardHeader>
                       <CardTitle className="text-base sm:text-lg">Resumen de Efectivo</CardTitle>
                     </CardHeader>

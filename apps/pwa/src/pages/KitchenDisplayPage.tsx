@@ -183,7 +183,7 @@ export default function KitchenDisplayPage() {
                   variant="outline"
                   onClick={() => publicLinkMutation.mutate()}
                   disabled={publicLinkMutation.isPending}
-                  className="h-12 border-muted/40 hover:bg-muted font-bold transition-all shadow-sm"
+                  className="h-12 btn-glass-neutral font-bold transition-all shadow-sm"
                 >
                   <LinkIcon className="w-4 h-4 mr-2 text-primary" />
                   Copiar Enlace
@@ -192,7 +192,7 @@ export default function KitchenDisplayPage() {
                   variant="outline"
                   onClick={() => rotateLinkMutation.mutate()}
                   disabled={rotateLinkMutation.isPending}
-                  className="h-12 border-muted/40 hover:bg-muted font-bold transition-all shadow-sm"
+                  className="h-12 btn-glass-neutral font-bold transition-all shadow-sm"
                 >
                   <RefreshCcw className="w-4 h-4 mr-2 text-primary" />
                   Regenerar Enlace
@@ -209,7 +209,7 @@ export default function KitchenDisplayPage() {
                     inputMode="numeric"
                     value={publicPin}
                     onChange={(e) => setPublicPin(e.target.value)}
-                    className="h-12 text-base border-muted/40 bg-muted/50 focus:bg-background shadow-sm font-mono tracking-widest"
+                    className="h-12 text-base border-border/60 bg-card focus:bg-card shadow-sm font-mono tracking-widest"
                     placeholder={hasPublicPin ? '••••••••' : 'Configurar PIN'}
                   />
                   {hasPublicPin && (
@@ -281,7 +281,7 @@ export default function KitchenDisplayPage() {
                         )}
                       </div>
                       <div className="text-right">
-                        <Badge variant="outline" className="font-black text-xs px-2 py-1 bg-background border-muted/40 shadow-sm rounded-lg">
+                        <Badge variant="outline" className="font-black text-xs px-2 py-1 bg-card border-border/60 shadow-sm rounded-lg">
                           #{order.order_number}
                         </Badge>
                         <div className="flex items-center justify-end gap-1.5 mt-2.5">
@@ -320,7 +320,7 @@ export default function KitchenDisplayPage() {
                             'p-3.5 rounded-2xl border-2 transition-all duration-300 relative overflow-hidden group',
                             item.status === 'ready' && 'bg-emerald-500/10 border-emerald-500/20 opacity-60 grayscale-[0.3]',
                             item.status === 'preparing' && 'bg-amber-500/10 border-amber-500/20 shadow-sm ring-1 ring-amber-500/10',
-                            item.status === 'pending' && 'bg-muted/50 border-border'
+                            item.status === 'pending' && 'bg-card border-border/60'
                           )}
                         >
                           {item.status === 'preparing' && (
@@ -335,7 +335,7 @@ export default function KitchenDisplayPage() {
                                   <span className="font-bold text-base text-foreground leading-tight">{item.product_name}</span>
                                 </div>
                                 {item.note && (
-                                  <div className="mt-2 p-2 bg-muted border border-border rounded-lg">
+                                  <div className="mt-2 p-2 bg-card border border-border rounded-lg">
                                     <p className="text-[11px] text-muted-foreground font-bold italic leading-tight uppercase tracking-tight">
                                       {item.note}
                                     </p>
@@ -343,7 +343,7 @@ export default function KitchenDisplayPage() {
                                 )}
                               </div>
 
-                              <div className="shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-background shadow-sm border border-border/40">
+                              <div className="shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-card shadow-sm border border-border/40">
                                 {item.status === 'pending' && <Clock className="w-5 h-5 text-muted-foreground" />}
                                 {item.status === 'preparing' && <ChefHat className="w-5 h-5 text-amber-500 animate-bounce" />}
                                 {item.status === 'ready' && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
@@ -389,7 +389,7 @@ export default function KitchenDisplayPage() {
                                   <Button
                                     size="lg"
                                     variant="outline"
-                                    className="h-11 flex-1 border-muted/30 font-bold text-xs uppercase text-muted-foreground active:scale-95 transition-all bg-background"
+                                    className="h-11 flex-1 btn-glass-neutral font-bold text-xs uppercase text-muted-foreground active:scale-95 transition-all"
                                     onClick={() =>
                                       handleStatusChange(order.id, item.id, item.status, 'prev')
                                     }
@@ -403,7 +403,7 @@ export default function KitchenDisplayPage() {
                                 <Button
                                   size="lg"
                                   variant="outline"
-                                  className="h-11 flex-1 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest hover:bg-emerald-500/10 active:scale-95 transition-all bg-background"
+                                  className="h-11 flex-1 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest hover:bg-emerald-500/10 active:scale-95 transition-all bg-card"
                                   onClick={() =>
                                     handleStatusChange(order.id, item.id, item.status, 'prev')
                                   }

@@ -58,7 +58,7 @@ export default function FastCheckoutPage() {
             Configura productos rápidos y reglas para ventas aceleradas
           </p>
         </div>
-        <Button onClick={() => setIsConfigModalOpen(true)}>
+        <Button onClick={() => setIsConfigModalOpen(true)} variant="outline" className="btn-glass-neutral">
           <Settings className="w-4 h-4 mr-2" />
           {config ? 'Editar Configuración' : 'Configurar Modo Rápido'}
         </Button>
@@ -66,7 +66,7 @@ export default function FastCheckoutPage() {
 
       {/* Configuración actual */}
       {config && (
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-lg sm:text-xl flex items-center">
               <Zap className="w-5 h-5 mr-2" />
@@ -110,8 +110,8 @@ export default function FastCheckoutPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="products" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="products" className="flex items-center">
+        <TabsList className="h-11 p-1 rounded-xl bg-card border border-border/70">
+          <TabsTrigger value="products" className="flex items-center data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
             <Zap className="w-4 h-4 mr-2" />
             Productos Rápidos
           </TabsTrigger>
@@ -133,4 +133,3 @@ export default function FastCheckoutPage() {
     </div>
   )
 }
-

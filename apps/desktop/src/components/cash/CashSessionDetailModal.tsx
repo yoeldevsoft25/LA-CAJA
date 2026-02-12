@@ -30,7 +30,7 @@ export default function CashSessionDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">Detalle de Sesión de Caja</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm mt-0.5">
@@ -48,7 +48,7 @@ export default function CashSessionDetailModal({
               {/* Estado */}
               <Card className={cn(
                 'border',
-                isOpenSession ? 'bg-success/5 border-success/50' : 'bg-muted/50 border-border'
+                isOpenSession ? 'bg-card border-success/40' : 'bg-card border-border'
               )}>
                 <CardContent className="p-4">
                   <div className="flex items-center">
@@ -66,7 +66,7 @@ export default function CashSessionDetailModal({
 
               {/* Información básica */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Card className="bg-info/5 border-info/50">
+                <Card className="bg-card border-border">
                   <CardContent className="p-4">
                     <div className="flex items-center mb-2">
                       <Calendar className="w-4 h-4 text-info mr-2" />
@@ -79,7 +79,7 @@ export default function CashSessionDetailModal({
                 </Card>
 
                 {session.closed_at && (
-                  <Card className="bg-muted/50 border-border">
+                  <Card className="bg-card border-border">
                     <CardContent className="p-4">
                       <div className="flex items-center mb-2">
                         <Lock className="w-4 h-4 text-muted-foreground mr-2" />
@@ -97,7 +97,7 @@ export default function CashSessionDetailModal({
               <div>
                 <h3 className="text-base font-semibold text-foreground mb-3">Montos de Apertura</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Card className="bg-success/5 border-success/50">
+                  <Card className="bg-card border-border">
                     <CardContent className="p-4">
                       <p className="text-sm text-success mb-1">Apertura en Bs</p>
                       <p className="text-xl font-bold text-foreground">
@@ -105,7 +105,7 @@ export default function CashSessionDetailModal({
                       </p>
                     </CardContent>
                   </Card>
-                  <Card className="bg-success/5 border-success/50">
+                  <Card className="bg-card border-border">
                     <CardContent className="p-4">
                       <p className="text-sm text-success mb-1">Apertura en USD</p>
                       <p className="text-xl font-bold text-foreground">
@@ -121,7 +121,7 @@ export default function CashSessionDetailModal({
                 <>
                   <div>
                     <h3 className="text-base font-semibold text-foreground mb-3">Resumen de Ventas</h3>
-                    <Card className="bg-muted/50 border-border">
+                    <Card className="bg-card border-border">
                       <CardContent className="p-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                           <div>
@@ -180,7 +180,7 @@ export default function CashSessionDetailModal({
                     <h3 className="text-base font-semibold text-foreground mb-3">
                       Flujo de Efectivo
                     </h3>
-                    <Card className="bg-info/5 border-info/50">
+                    <Card className="bg-card border-border">
                       <CardContent className="p-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
@@ -216,7 +216,7 @@ export default function CashSessionDetailModal({
               {session.closed_at && session.counted && session.expected && (
                 <div>
                   <h3 className="text-base font-semibold text-foreground mb-3">Información de Cierre</h3>
-                  <Card className="bg-muted/50 border-border">
+                  <Card className="bg-card border-border">
                     <CardContent className="p-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div>
@@ -294,7 +294,7 @@ export default function CashSessionDetailModal({
 
         {/* Footer */}
         <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-          <Button onClick={onClose} className="w-full">
+          <Button onClick={onClose} variant="outline" className="w-full btn-glass-neutral">
             Cerrar
           </Button>
         </div>

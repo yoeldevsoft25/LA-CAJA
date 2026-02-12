@@ -167,7 +167,7 @@ export default function SaleDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn(
-        "flex flex-col p-0 gap-0 overflow-hidden",
+        "flex flex-col p-0 gap-0 overflow-hidden bg-card",
         isMobile
           ? "max-w-full max-h-[95vh] rounded-t-2xl rounded-b-none top-auto bottom-0 translate-y-0"
           : "max-w-3xl max-h-[90vh]"
@@ -233,7 +233,7 @@ export default function SaleDetailModal({
                 Información de la Venta
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -259,7 +259,7 @@ export default function SaleDetailModal({
                   </Card>
                 )}
 
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <Package className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -332,7 +332,7 @@ export default function SaleDetailModal({
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="bg-muted/50 border-border">
+                  <Card className="bg-card border-border">
                     <CardContent className="p-3 sm:p-4">
                       <div className="flex items-center mb-2">
                         <UserCircle className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -352,7 +352,7 @@ export default function SaleDetailModal({
                 Información de Pago
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -366,7 +366,7 @@ export default function SaleDetailModal({
                   </CardContent>
                 </Card>
 
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -803,7 +803,7 @@ export default function SaleDetailModal({
             </div>
 
             {/* Totales */}
-            <Card className="bg-muted/50 border-border">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-sm sm:text-base">Resumen</CardTitle>
               </CardHeader>
@@ -853,7 +853,7 @@ export default function SaleDetailModal({
                             fiscalInvoice.status === 'issued'
                               ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                               : fiscalInvoice.status === 'draft'
-                                ? 'bg-muted text-muted-foreground'
+                                ? 'bg-card text-muted-foreground border border-border'
                                 : 'bg-destructive/20 text-destructive dark:text-red-400'
                           )}
                         >
@@ -892,7 +892,7 @@ export default function SaleDetailModal({
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground mb-3">
                       Esta venta no tiene factura fiscal asociada.
@@ -1032,7 +1032,7 @@ export default function SaleDetailModal({
       )}
 
       <AlertDialog open={showVoidDialog} onOpenChange={setShowVoidDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>Anular Venta</AlertDialogTitle>
             <AlertDialogDescription>

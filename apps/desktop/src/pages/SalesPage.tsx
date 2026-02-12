@@ -503,7 +503,7 @@ export default function SalesPage() {
               variant="outline"
               size="sm"
               onClick={handleExportExcel}
-              className="col-span-2 sm:col-auto h-10 sm:h-12 border-muted/40 hover:bg-muted shadow-sm font-semibold"
+              className="col-span-2 sm:col-auto h-10 sm:h-12 btn-glass-neutral font-semibold"
               disabled={sales.length === 0}
             >
               <Download className="w-4 h-4 mr-2" />
@@ -544,7 +544,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
+                    className="flex-1 h-10 btn-glass-neutral text-xs font-medium"
                     onClick={() => setDatePreset('today')}
                   >
                     Hoy
@@ -552,7 +552,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
+                    className="flex-1 h-10 btn-glass-neutral text-xs font-medium"
                     onClick={() => setDatePreset('yesterday')}
                   >
                     Ayer
@@ -560,7 +560,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
+                    className="flex-1 h-10 btn-glass-neutral text-xs font-medium"
                     onClick={() => setDatePreset('week')}
                   >
                     7 días
@@ -570,9 +570,9 @@ export default function SalesPage() {
 
               <div className="flex items-end">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   onClick={handleResetDates}
-                  className="w-full h-10 text-muted-foreground hover:text-foreground text-xs font-bold uppercase tracking-widest"
+                  className="w-full h-10 text-muted-foreground hover:text-foreground text-xs font-bold uppercase tracking-widest btn-glass-neutral"
                 >
                   Reiniciar Fechas
                 </Button>
@@ -583,10 +583,10 @@ export default function SalesPage() {
             <div className="border-t border-border pt-3 sm:pt-4 mt-3 sm:mt-4">
               <div className="flex items-center justify-between mb-3">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                  className="gap-2"
+                  className="gap-2 btn-glass-neutral"
                 >
                   <Filter className="w-4 h-4" />
                   Filtros Avanzados
@@ -598,10 +598,10 @@ export default function SalesPage() {
                 </Button>
                 {activeFiltersCount > 0 && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={handleResetAdvancedFilters}
-                    className="text-xs gap-1"
+                    className="text-xs gap-1 btn-glass-neutral"
                   >
                     <X className="w-3 h-3" />
                     Limpiar
@@ -620,7 +620,7 @@ export default function SalesPage() {
                       value={paymentMethodFilter}
                       onValueChange={setPaymentMethodFilter}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
+                      <SelectTrigger className="h-11 border-border/60 bg-card">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -643,7 +643,7 @@ export default function SalesPage() {
                       value={statusFilter}
                       onValueChange={(v) => setStatusFilter(v as 'all' | 'completed' | 'voided')}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
+                      <SelectTrigger className="h-11 border-border/60 bg-card">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -663,7 +663,7 @@ export default function SalesPage() {
                       value={debtFilter}
                       onValueChange={(v) => setDebtFilter(v as 'all' | 'with_debt' | 'without_debt' | 'paid')}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
+                      <SelectTrigger className="h-11 border-border/60 bg-card">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -686,7 +686,7 @@ export default function SalesPage() {
                           type="button"
                           onClick={() => setCustomerSearch('')}
                           aria-label="Limpiar búsqueda de cliente"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -696,7 +696,7 @@ export default function SalesPage() {
                         value={customerSearch}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
                         placeholder="Ej: Juan Perez o 12345678"
-                        className="h-11 border-muted/40 bg-muted/50 pr-10"
+                        className="h-11 border-border/60 bg-card pr-10"
                       />
                     </div>
                   </div>
@@ -714,7 +714,7 @@ export default function SalesPage() {
                         value={minAmountUsd}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinAmountUsd(e.target.value)}
                         placeholder="Mín."
-                        className="h-11 border-muted/40 bg-muted/50"
+                        className="h-11 border-border/60 bg-card"
                       />
                       <Input
                         type="number"
@@ -723,7 +723,7 @@ export default function SalesPage() {
                         value={maxAmountUsd}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxAmountUsd(e.target.value)}
                         placeholder="Máx."
-                        className="h-11 border-muted/40 bg-muted/50"
+                        className="h-11 border-border/60 bg-card"
                       />
                     </div>
                     {isAmountRangeInvalid && (
@@ -761,7 +761,7 @@ export default function SalesPage() {
                 )}
                 <Button
                   variant="outline"
-                  className="mt-4"
+                  className="mt-4 btn-glass-neutral"
                   onClick={() => refetch()}
                 >
                   Reintentar
@@ -779,7 +779,7 @@ export default function SalesPage() {
           ) : sales.length === 0 && activeFiltersCount > 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-card border border-border/60 flex items-center justify-center mb-4">
                   <Filter className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-sm sm:text-base font-medium text-foreground mb-1">
@@ -792,6 +792,7 @@ export default function SalesPage() {
                   variant="outline"
                   size="sm"
                   onClick={handleResetAdvancedFilters}
+                  className="btn-glass-neutral"
                 >
                   Limpiar filtros
                 </Button>
@@ -834,7 +835,7 @@ export default function SalesPage() {
                           <Card
                             className={cn(
                               'transition-all duration-200 cursor-pointer active:scale-[0.98]',
-                              isVoided && 'bg-muted/30 border-muted opacity-80',
+                              isVoided && 'bg-destructive/5 border-destructive/20 opacity-80',
                               isPending && 'bg-orange-500/10 border-orange-500/20 border-l-4 border-l-orange-500 shadow-sm',
                               isPaid && 'bg-emerald-500/10 border-emerald-500/20 border-l-4 border-l-emerald-500 shadow-sm',
                               !isVoided && !isPending && !isPaid && 'bg-card hover:border-primary/40'
@@ -846,7 +847,7 @@ export default function SalesPage() {
                                 <div className="flex items-center gap-2">
                                   <div className={cn(
                                     "w-8 h-8 rounded-full flex items-center justify-center",
-                                    isVoided ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                                    isVoided ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
                                   )}>
                                     <Receipt className="w-4 h-4" />
                                   </div>
@@ -874,11 +875,11 @@ export default function SalesPage() {
 
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex flex-wrap gap-1.5 flex-1">
-                                  <Badge variant="outline" className="bg-muted/50 border-none text-[10px] px-2 py-0">
+                                  <Badge variant="outline" className="bg-card border-border/70 text-[10px] px-2 py-0">
                                     {paymentMethodLabels[sale.payment.method] || sale.payment.method}
                                   </Badge>
                                   {itemCount > 0 && (
-                                    <Badge variant="outline" className="bg-muted/50 border-none text-[10px] px-2 py-0">
+                                    <Badge variant="outline" className="bg-card border-border/70 text-[10px] px-2 py-0">
                                       {itemCount} {itemCount === 1 ? 'item' : 'items'}
                                     </Badge>
                                   )}
@@ -906,7 +907,7 @@ export default function SalesPage() {
 
                               {sale.customer && (
                                 <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
-                                  <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+                                  <div className="w-5 h-5 rounded-full bg-card border border-border/60 flex items-center justify-center">
                                     <UserCircle className="w-3 h-3 text-muted-foreground" />
                                   </div>
                                   <p className="text-xs font-semibold text-muted-foreground truncate">
@@ -925,7 +926,7 @@ export default function SalesPage() {
                 /* Vista de tabla para desktop - Premium Grid */
                 <div className="rounded-xl overflow-x-auto border border-border/50 bg-card shadow-inner">
                   <Table>
-                    <TableHeader className="bg-muted/30">
+                    <TableHeader className="bg-card">
                       <TableRow className="hover:bg-transparent border-border/50">
                         <TableHead className="w-[180px]">
                           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -1006,7 +1007,7 @@ export default function SalesPage() {
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               {sale.invoice_full_number ? (
-                                <Badge variant="secondary" className="font-mono text-xs bg-muted/50 text-foreground border-border/50">
+                                <Badge variant="secondary" className="font-mono text-xs bg-card text-foreground border-border/50">
                                   {sale.invoice_full_number}
                                 </Badge>
                               ) : (
@@ -1029,7 +1030,7 @@ export default function SalesPage() {
                                   </div>
                                 ))}
                                 {sale.items.length > 4 && (
-                                  <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center text-[10px] font-bold z-0">
+                                  <div className="w-8 h-8 rounded-full bg-card border border-border/60 flex items-center justify-center text-[10px] font-bold z-0">
                                     +{sale.items.length - 4}
                                   </div>
                                 )}
@@ -1133,6 +1134,7 @@ export default function SalesPage() {
                         size="sm"
                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
+                        className="btn-glass-neutral"
                       >
                         Anterior
                       </Button>
@@ -1141,6 +1143,7 @@ export default function SalesPage() {
                         size="sm"
                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
+                        className="btn-glass-neutral"
                       >
                         Siguiente
                       </Button>

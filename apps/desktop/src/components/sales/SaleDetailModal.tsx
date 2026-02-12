@@ -167,7 +167,7 @@ export default function SaleDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn(
-        "flex flex-col p-0 gap-0 overflow-hidden",
+        "flex flex-col p-0 gap-0 overflow-hidden bg-card",
         isMobile
           ? "max-w-full max-h-[95vh] rounded-t-2xl rounded-b-none top-auto bottom-0 translate-y-0"
           : "max-w-3xl max-h-[90vh]"
@@ -209,15 +209,15 @@ export default function SaleDetailModal({
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-destructive/20 p-2">
-                      <Ban className="w-4 h-4 text-destructive" />
+                      <Ban className="w-4 h-4 text-destructive dark:text-red-400" />
                     </div>
                     <div>
-                      <p className="font-semibold text-destructive">Venta anulada</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-semibold text-destructive dark:text-red-400">Venta anulada</p>
+                      <p className="text-xs text-muted-foreground/80">
                         Anulada el {voidedAt ? format(new Date(voidedAt), 'dd/MM/yyyy HH:mm') : '-'}
                       </p>
                       {voidedReason && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground/80 mt-1">
                           Motivo: {voidedReason}
                         </p>
                       )}
@@ -233,7 +233,7 @@ export default function SaleDetailModal({
                 Información de la Venta
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -259,7 +259,7 @@ export default function SaleDetailModal({
                   </Card>
                 )}
 
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <Package className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -281,11 +281,11 @@ export default function SaleDetailModal({
                 Responsable y Cliente
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Card className="bg-info/5 border-info/50">
+                <Card className="bg-sky-500/5 border-sky-500/20">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
-                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-info mr-2" />
-                      <span className="text-xs sm:text-sm font-semibold text-info">Responsable</span>
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600 dark:text-sky-400 mr-2" />
+                      <span className="text-xs sm:text-sm font-semibold text-sky-600 dark:text-sky-400">Responsable</span>
                     </div>
                     {sale.sold_by_user ? (
                       <>
@@ -306,33 +306,33 @@ export default function SaleDetailModal({
                   <Card className={cn(
                     'border',
                     sale.payment.method === 'FIAO'
-                      ? 'bg-warning/5 border-warning/50'
-                      : 'bg-success/5 border-success/50'
+                      ? 'bg-amber-500/5 border-amber-500/20'
+                      : 'bg-emerald-500/5 border-emerald-500/20'
                   )}>
                     <CardContent className="p-3 sm:p-4">
                       <div className="flex items-center mb-2">
-                        <UserCircle className={cn('w-4 h-4 sm:w-5 sm:h-5 mr-2', sale.payment.method === 'FIAO' ? 'text-warning' : 'text-success')} />
-                        <span className={cn('text-xs sm:text-sm font-semibold', sale.payment.method === 'FIAO' ? 'text-warning' : 'text-success')}>
+                        <UserCircle className={cn('w-4 h-4 sm:w-5 sm:h-5 mr-2', sale.payment.method === 'FIAO' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')} />
+                        <span className={cn('text-xs sm:text-sm font-semibold', sale.payment.method === 'FIAO' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
                           Cliente {sale.payment.method === 'FIAO' && '(Fiado)'}
                         </span>
                       </div>
-                      <p className={cn('text-sm sm:text-base font-semibold', sale.payment.method === 'FIAO' ? 'text-warning' : 'text-success')}>
+                      <p className={cn('text-sm sm:text-base font-semibold', sale.payment.method === 'FIAO' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
                         {sale.customer.name}
                       </p>
                       {sale.customer.document_id && (
-                        <p className={cn('text-xs mt-1', sale.payment.method === 'FIAO' ? 'text-warning/80' : 'text-success/80')}>
+                        <p className={cn('text-xs mt-1', sale.payment.method === 'FIAO' ? 'text-amber-600/80 dark:text-amber-400/80' : 'text-emerald-600/80 dark:text-emerald-400/80')}>
                           CI: {sale.customer.document_id}
                         </p>
                       )}
                       {sale.customer.phone && (
-                        <p className={cn('text-xs mt-1', sale.payment.method === 'FIAO' ? 'text-warning/80' : 'text-success/80')}>
+                        <p className={cn('text-xs mt-1', sale.payment.method === 'FIAO' ? 'text-amber-600/80 dark:text-amber-400/80' : 'text-emerald-600/80 dark:text-emerald-400/80')}>
                           Tel: {sale.customer.phone}
                         </p>
                       )}
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card className="bg-muted/50 border-border">
+                  <Card className="bg-card border-border">
                     <CardContent className="p-3 sm:p-4">
                       <div className="flex items-center mb-2">
                         <UserCircle className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -352,7 +352,7 @@ export default function SaleDetailModal({
                 Información de Pago
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -366,7 +366,7 @@ export default function SaleDetailModal({
                   </CardContent>
                 </Card>
 
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center mb-2">
                       <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground mr-2" />
@@ -393,10 +393,8 @@ export default function SaleDetailModal({
                 <Card className={cn(
                   'border',
                   sale.debt.status === 'paid'
-                    ? 'bg-success/5 border-success/50'
-                    : sale.debt.status === 'partial'
-                      ? 'bg-warning/5 border-warning/50'
-                      : 'bg-warning/5 border-warning/50'
+                    ? 'bg-emerald-500/5 border-emerald-500/20'
+                    : 'bg-amber-500/5 border-amber-500/20'
                 )}>
                   <CardContent className="p-3 sm:p-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -406,10 +404,8 @@ export default function SaleDetailModal({
                           variant="secondary"
                           className={cn(
                             sale.debt.status === 'paid'
-                              ? 'bg-success text-white'
-                              : sale.debt.status === 'partial'
-                                ? 'bg-warning text-white'
-                                : 'bg-warning text-white'
+                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
                           )}
                         >
                           {sale.debt.status === 'paid'
@@ -429,14 +425,14 @@ export default function SaleDetailModal({
                         <>
                           <div>
                             <p className="text-xs sm:text-sm font-semibold text-foreground mb-1">Total Pagado</p>
-                            <p className="text-sm sm:text-base font-semibold text-success">
+                            <p className="text-sm sm:text-base font-semibold text-emerald-600 dark:text-emerald-400">
                               {Number(sale.debt.total_paid_bs).toFixed(2)} Bs / ${Number(sale.debt.total_paid_usd || 0).toFixed(2)} USD
                             </p>
                           </div>
                           {sale.debt.remaining_bs !== undefined && sale.debt.remaining_bs > 0 && (
                             <div>
                               <p className="text-xs sm:text-sm font-semibold text-foreground mb-1">Pendiente</p>
-                              <p className="text-sm sm:text-base font-semibold text-warning">
+                              <p className="text-sm sm:text-base font-semibold text-amber-600 dark:text-amber-400">
                                 {Number(sale.debt.remaining_bs).toFixed(2)} Bs / ${Number(sale.debt.remaining_usd || 0).toFixed(2)} USD
                               </p>
                             </div>
@@ -538,9 +534,9 @@ export default function SaleDetailModal({
               // Si no hay desglose pero debería mostrarse, mostrar mensaje
               if (!splitBreakdown) {
                 return (
-                  <Card className="bg-info/5 border-info/50">
+                  <Card className="bg-sky-500/5 border-sky-500/20">
                     <CardHeader>
-                      <CardTitle className="text-sm sm:text-base text-info">
+                      <CardTitle className="text-sm sm:text-base text-sky-600 dark:text-sky-400">
                         Desglose de Pago Mixto
                       </CardTitle>
                     </CardHeader>
@@ -562,9 +558,9 @@ export default function SaleDetailModal({
 
               if (!hasAnyAmount) {
                 return (
-                  <Card className="bg-info/5 border-info/50">
+                  <Card className="bg-sky-500/5 border-sky-500/20">
                     <CardHeader>
-                      <CardTitle className="text-sm sm:text-base text-info">
+                      <CardTitle className="text-sm sm:text-base text-sky-600 dark:text-sky-400">
                         Desglose de Pago Mixto
                       </CardTitle>
                     </CardHeader>
@@ -578,9 +574,9 @@ export default function SaleDetailModal({
               }
 
               return (
-                <Card className="bg-info/5 border-info/50">
+                <Card className="bg-sky-500/5 border-sky-500/20">
                   <CardHeader>
-                    <CardTitle className="text-sm sm:text-base text-info">
+                    <CardTitle className="text-sm sm:text-base text-sky-600 dark:text-sky-400">
                       Desglose de Pago Mixto
                     </CardTitle>
                   </CardHeader>
@@ -807,7 +803,7 @@ export default function SaleDetailModal({
             </div>
 
             {/* Totales */}
-            <Card className="bg-muted/50 border-border">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-sm sm:text-base">Resumen</CardTitle>
               </CardHeader>
@@ -823,7 +819,7 @@ export default function SaleDetailModal({
                   {(Number(sale.totals.discount_bs) > 0 || Number(sale.totals.discount_usd) > 0) && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Descuento:</span>
-                      <span className="font-semibold text-destructive">
+                      <span className="font-semibold text-destructive dark:text-red-400">
                         -${Number(sale.totals.discount_usd).toFixed(2)} USD / -{' '}
                         {Number(sale.totals.discount_bs).toFixed(2)} Bs
                       </span>
@@ -855,10 +851,10 @@ export default function SaleDetailModal({
                           variant="secondary"
                           className={cn(
                             fiscalInvoice.status === 'issued'
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                               : fiscalInvoice.status === 'draft'
-                                ? 'bg-gray-100 text-gray-800'
-                                : 'bg-red-100 text-red-800'
+                                ? 'bg-card text-muted-foreground border border-border'
+                                : 'bg-destructive/20 text-destructive dark:text-red-400'
                           )}
                         >
                           {fiscalInvoice.status === 'issued'
@@ -896,7 +892,7 @@ export default function SaleDetailModal({
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-muted/50 border-border">
+                <Card className="bg-card border-border">
                   <CardContent className="p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground mb-3">
                       Esta venta no tiene factura fiscal asociada.
@@ -905,7 +901,6 @@ export default function SaleDetailModal({
                       variant="default"
                       size="sm"
                       onClick={() => setShowCreateModal(true)}
-                      className="bg-green-600 hover:bg-green-700"
                     >
                       <ReceiptText className="w-4 h-4 mr-2" />
                       Generar Factura Fiscal
@@ -917,9 +912,9 @@ export default function SaleDetailModal({
 
             {/* Nota */}
             {sale.note && (
-              <Card className="bg-warning/5 border-warning/50">
+              <Card className="bg-amber-500/5 border-amber-500/20">
                 <CardHeader>
-                  <CardTitle className="text-sm sm:text-base text-warning">Nota</CardTitle>
+                  <CardTitle className="text-sm sm:text-base text-amber-600 dark:text-amber-400">Nota</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-foreground">{sale.note}</p>
@@ -946,7 +941,7 @@ export default function SaleDetailModal({
                 variant="outline"
                 onClick={() => setShowReturnModal(true)}
                 className={cn(
-                  "border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-semibold",
+                  "border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 font-semibold",
                   isMobile ? "w-full h-12 order-3" : "flex-1"
                 )}
               >
@@ -1005,7 +1000,7 @@ export default function SaleDetailModal({
                 }
               }}
               className={cn(
-                "border-green-500 text-green-600 hover:bg-green-50 font-semibold",
+                "border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold",
                 isMobile ? "w-full h-12 order-2" : "flex-1"
               )}
             >
@@ -1037,7 +1032,7 @@ export default function SaleDetailModal({
       )}
 
       <AlertDialog open={showVoidDialog} onOpenChange={setShowVoidDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>Anular Venta</AlertDialogTitle>
             <AlertDialogDescription>

@@ -196,7 +196,7 @@ export default function ReservationsPage() {
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   min={format(new Date(), 'yyyy-MM-dd')}
-                  className="w-full"
+                  className="w-full bg-card border-border"
                 />
               </div>
               <Button onClick={handleCreate} size="sm">
@@ -233,7 +233,7 @@ export default function ReservationsPage() {
                       <Card
                         key={reservation.id}
                         className={cn(
-                          'transition-all hover:shadow-lg',
+                          'transition-all hover:shadow-lg bg-card border-border',
                           reservation.status === 'cancelled' && 'opacity-60'
                         )}
                       >
@@ -288,6 +288,7 @@ export default function ReservationsPage() {
                                 size="sm"
                                 onClick={() => assignTableMutation.mutate(reservation.id)}
                                 disabled={assignTableMutation.isPending}
+                                className="btn-glass-neutral"
                               >
                                 Asignar Mesa
                               </Button>
@@ -298,6 +299,7 @@ export default function ReservationsPage() {
                                 size="sm"
                                 onClick={() => markAsSeatedMutation.mutate(reservation.id)}
                                 disabled={markAsSeatedMutation.isPending}
+                                className="btn-glass-neutral"
                               >
                                 <CheckCircle2 className="w-4 h-4 mr-1" />
                                 Marcar Sentada
@@ -309,6 +311,7 @@ export default function ReservationsPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleEdit(reservation)}
+                                  className="btn-glass-neutral"
                                 >
                                   <Edit className="w-4 h-4 mr-1" />
                                   Editar
@@ -319,7 +322,7 @@ export default function ReservationsPage() {
                                     size="sm"
                                     onClick={() => cancelMutation.mutate(reservation.id)}
                                     disabled={cancelMutation.isPending}
-                                    className="text-destructive hover:text-destructive"
+                                    className="btn-glass-neutral text-destructive hover:text-destructive"
                                   >
                                     <XCircle className="w-4 h-4 mr-1" />
                                     Cancelar
@@ -332,7 +335,7 @@ export default function ReservationsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setReservationToDelete(reservation)}
-                                className="text-destructive hover:text-destructive"
+                                className="btn-glass-neutral text-destructive hover:text-destructive"
                               >
                                 <Trash2 className="w-4 h-4 mr-1" />
                                 Eliminar
@@ -368,7 +371,7 @@ export default function ReservationsPage() {
         open={!!reservationToDelete}
         onOpenChange={(open) => !open && setReservationToDelete(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar reserva?</AlertDialogTitle>
             <AlertDialogDescription>

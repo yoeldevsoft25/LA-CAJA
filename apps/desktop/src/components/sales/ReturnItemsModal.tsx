@@ -155,11 +155,11 @@ export default function ReturnItemsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col bg-card">
         <DialogHeader className="border-b pb-4 px-6 -mx-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 dark:bg-orange-950/40 rounded-xl">
-              <Undo2 className="w-6 h-6 text-orange-600" />
+            <div className="p-2 bg-amber-500/10 dark:bg-amber-500/20 rounded-xl">
+              <Undo2 className="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <DialogTitle className="text-xl font-bold">Devolución de Venta</DialogTitle>
@@ -177,7 +177,7 @@ export default function ReturnItemsModal({
               variant="outline"
               size="sm"
               onClick={handleSelectAll}
-              className="text-xs font-semibold h-8 border-dashed hover:border-orange-500 hover:text-orange-600 transition-colors"
+              className="text-xs font-semibold h-8 border-dashed hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors btn-glass-neutral"
             >
               <Package className="w-3.5 h-3.5 mr-2" />
               {Object.values(returnItems).every((item) => item.selected)
@@ -186,7 +186,7 @@ export default function ReturnItemsModal({
             </Button>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground font-medium">Items seleccionados:</span>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 font-bold border-none">
+              <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border-none">
                 {totals.itemCount}
               </Badge>
             </div>
@@ -209,7 +209,7 @@ export default function ReturnItemsModal({
                       className={cn(
                         'group relative border-2 rounded-xl p-4 transition-all duration-200',
                         state.selected
-                          ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20 ring-4 ring-orange-500/10'
+                          ? 'border-amber-500 bg-amber-500/5 dark:bg-amber-500/10 ring-4 ring-amber-500/10'
                           : 'border-border bg-card hover:border-muted-foreground/30'
                       )}
                     >
@@ -220,7 +220,7 @@ export default function ReturnItemsModal({
                             onCheckedChange={(checked: boolean) =>
                               handleSelectItem(item.id, checked)
                             }
-                            className="w-5 h-5 border-2 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 transition-colors"
+                            className="w-5 h-5 border-2 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600 transition-colors"
                           />
                         </div>
 
@@ -231,7 +231,7 @@ export default function ReturnItemsModal({
                                 {item.product?.name || 'Producto sin nombre'}
                               </p>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono px-1.5 py-0.5 bg-muted rounded">
+                                <span className="text-xs font-mono px-1.5 py-0.5 bg-card border border-border/60 rounded">
                                   SKU: {item.product?.sku || 'N/A'}
                                 </span>
                                 <Badge variant="outline" className="text-[10px] h-4 tracking-widest uppercase opacity-70">
@@ -255,7 +255,7 @@ export default function ReturnItemsModal({
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
-                              className="mt-4 pt-4 border-t border-dashed border-orange-200 dark:border-orange-800"
+                              className="mt-4 pt-4 border-t border-dashed border-amber-500/30"
                             >
                               <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
@@ -270,7 +270,7 @@ export default function ReturnItemsModal({
                                       step={item.is_weight_product ? 0.001 : 1}
                                       value={state.qty}
                                       onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                      className="h-10 text-lg font-mono text-center bg-background border-2 focus-visible:ring-orange-500"
+                                      className="h-10 text-lg font-mono text-center bg-card border-2 border-border focus-visible:ring-amber-500"
                                     />
                                   </div>
                                 </div>
@@ -279,7 +279,7 @@ export default function ReturnItemsModal({
                                     Subtotal Dev.
                                   </Label>
                                   <div className="h-10 flex items-center justify-end">
-                                    <p className="text-xl font-black text-orange-600 tracking-tighter">
+                                    <p className="text-xl font-black text-amber-600 dark:text-amber-400 tracking-tighter">
                                       {formatCurrency(
                                         ((Number(item.unit_price_bs) * Number(item.qty) - Number(item.discount_bs || 0)) / Number(item.qty)) * state.qty,
                                         'BS'
@@ -300,7 +300,7 @@ export default function ReturnItemsModal({
           </ScrollArea>
 
           {/* Razón de devolución y Resumen */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t bg-muted/30 -mx-6 px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t bg-card -mx-6 px-6">
             <div className="space-y-2">
               <Label htmlFor="return-reason" className="text-xs font-bold uppercase text-muted-foreground">
                 Explicación del Motivo
@@ -310,7 +310,7 @@ export default function ReturnItemsModal({
                 placeholder="Ej: Producto defectuoso, el cliente decidió cambiarlo o revertir la compra..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="bg-background min-h-[100px] border-2 focus-visible:ring-orange-500 resize-none text-sm p-3"
+                className="bg-card min-h-[100px] border-2 border-border focus-visible:ring-amber-500 resize-none text-sm p-3"
               />
             </div>
 
@@ -320,20 +320,20 @@ export default function ReturnItemsModal({
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-5 bg-orange-600 text-white rounded-2xl shadow-xl shadow-orange-600/20 relative overflow-hidden"
+                    className="p-5 bg-amber-600 text-white rounded-2xl shadow-xl shadow-amber-600/20 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                       <Undo2 className="w-20 h-20 rotate-12" />
                     </div>
                     <div className="relative z-10">
                       <div className="flex items-center gap-2 mb-1">
-                        <AlertTriangle className="w-4 h-4 text-orange-200" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-orange-100">Cálculo de Devolución</span>
+                        <AlertTriangle className="w-4 h-4 text-amber-200" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-amber-100">Cálculo de Devolución</span>
                       </div>
                       <p className="text-3xl font-black tracking-tighter leading-none">
                         {formatCurrency(totals.totalBs, 'BS')}
                       </p>
-                      <p className="text-orange-200 text-sm font-medium mt-1">
+                      <p className="text-amber-200 text-sm font-medium mt-1">
                         Equivalente: {formatCurrency(totals.totalUsd, 'USD')}
                       </p>
                       <div className="mt-4 pt-4 border-t border-white/20">
@@ -350,13 +350,13 @@ export default function ReturnItemsModal({
         </div>
 
         <DialogFooter className="mt-6 pt-6 border-t px-0 flex items-center justify-between sm:justify-between w-full">
-          <Button variant="outline" onClick={onClose} className="px-6 font-semibold uppercase tracking-widest text-xs hover:bg-muted transition-all">
+          <Button variant="outline" onClick={onClose} className="px-6 font-semibold uppercase tracking-widest text-xs transition-all btn-glass-neutral">
             Abandonar
           </Button>
           <Button
             onClick={() => returnMutation.mutate()}
             disabled={!canSubmit || returnMutation.isPending}
-            className="px-8 h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl shadow-lg shadow-orange-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
+            className="px-8 h-12 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-lg shadow-amber-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
           >
             {returnMutation.isPending ? (
               <div className="flex items-center gap-2">

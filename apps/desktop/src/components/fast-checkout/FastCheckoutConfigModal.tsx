@@ -104,7 +104,7 @@ export default function FastCheckoutConfigModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
           <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
@@ -157,7 +157,7 @@ export default function FastCheckoutConfigModal({
                     min="1"
                     max="50"
                     {...register('max_items', { valueAsNumber: true })}
-                    className="h-12 text-base shadow-sm border-muted/40 focus:bg-white"
+                    className="h-12 text-base shadow-sm border-border/60 bg-card focus:bg-card"
                     placeholder="10"
                     disabled={isLoading}
                   />
@@ -220,7 +220,7 @@ export default function FastCheckoutConfigModal({
                   }
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-12 border-muted/40 bg-white/60 focus:bg-white shadow-sm">
+                  <SelectTrigger className="h-12 border-border/60 bg-card focus:bg-card shadow-sm">
                     <SelectValue placeholder="Sin método por defecto" />
                   </SelectTrigger>
                   <SelectContent>
@@ -246,7 +246,7 @@ export default function FastCheckoutConfigModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="w-full sm:flex-1"
+                className="w-full sm:flex-1 btn-glass-neutral"
                 disabled={isLoading}
               >
                 Cancelar
@@ -275,4 +275,3 @@ export default function FastCheckoutConfigModal({
     </Dialog>
   )
 }
-
