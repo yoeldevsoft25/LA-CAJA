@@ -66,7 +66,7 @@
   --brand-ink: 0 0% 24%;
   /* #3D3D3D */
 
-  --background: 218 14% 95%;
+  --background: 220 14% 94%;
   --foreground: 220 22% 16%;
 
   --card: 0 0% 100%;
@@ -108,7 +108,7 @@
   --shell-background: 220 15% 93%;
   --shell-chrome: 220 14% 90%;
   --shell-sidebar: 220 14% 88%;
-  --shell-main: 0 0% 99%;
+  --shell-main: 220 14% 94%;
   --shell-border: 220 11% 80%;
 
   --sidebar-background: 220 14% 88%;
