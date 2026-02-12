@@ -923,7 +923,7 @@ export default function SalesPage() {
                 </StaggerContainer>
               ) : (
                 /* Vista de tabla para desktop - Premium Grid */
-                <div className="rounded-xl overflow-x-auto border border-border/50 bg-background/50 backdrop-blur-md shadow-inner">
+                <div className="rounded-xl overflow-x-auto border border-border/50 bg-card shadow-inner">
                   <Table>
                     <TableHeader className="bg-muted/30">
                       <TableRow className="hover:bg-transparent border-border/50">

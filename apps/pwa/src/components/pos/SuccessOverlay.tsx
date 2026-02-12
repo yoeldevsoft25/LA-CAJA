@@ -67,7 +67,7 @@ export function SuccessOverlay({
                 >
                     {/* Fondo Backdrop Luminoso */}
                     <div
-                        className="absolute inset-0 bg-white/60 backdrop-blur-xl pointer-events-auto cursor-pointer"
+                        className="absolute inset-0 bg-background/70 pointer-events-auto cursor-pointer"
                         onClick={() => onAnimationCompleteRef.current?.()}
                     />
 
@@ -76,7 +76,7 @@ export function SuccessOverlay({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/40 border border-white/40 text-slate-800"
+                            className="h-10 w-10 rounded-full bg-card hover:bg-muted border border-border text-foreground"
                             onClick={() => onAnimationCompleteRef.current?.()}
                         >
                             <X className="h-6 w-6" />
@@ -165,7 +165,7 @@ export function SuccessOverlay({
                             initial={{ y: 20, opacity: 0, scale: 0.95 }}
                             animate={{ y: 0, opacity: 1, scale: 1 }}
                             transition={{ delay: 0.5, type: "spring", stiffness: 150 }}
-                            className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md border border-white/60 p-6 w-full text-center shadow-xl shadow-slate-200/50 pointer-events-auto"
+                            className="relative overflow-hidden rounded-2xl bg-card border border-border p-6 w-full text-center shadow-xl shadow-slate-200/50 pointer-events-auto"
                             role="status"
                             aria-live="polite"
                         >

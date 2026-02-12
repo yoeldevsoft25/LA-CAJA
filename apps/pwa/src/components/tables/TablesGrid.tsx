@@ -256,7 +256,7 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as TableStatus | 'all')}
           >
-            <SelectTrigger className="w-full sm:w-[200px] h-11 bg-background/60 dark:bg-muted/20 border-border/40 font-medium">
+            <SelectTrigger className="w-full sm:w-[200px] h-11 bg-card border-border/40 font-medium">
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
@@ -407,7 +407,7 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                             {/* Tiempo transcurrido */}
                             {elapsedTime > 0 ? (
                               <div className={cn(
-                                'flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full bg-background/80 dark:bg-card/80 shadow-sm border border-border/50',
+                                'flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-full bg-card shadow-sm border border-border/50',
                                 getTimeColor(elapsedTime)
                               )}>
                                 <Clock className="w-3.5 h-3.5" />
@@ -512,4 +512,3 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
     </>
   )
 }
-

@@ -241,8 +241,8 @@ export default function KitchenDisplayPage() {
         </div>
 
         {orders && orders.length === 0 ? (
-          <div className="bg-white/40 backdrop-blur-md rounded-3xl border-2 border-dashed border-border/60 py-20 text-center shadow-xl">
-            <div className="bg-white/60 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+          <div className="bg-card rounded-3xl border-2 border-dashed border-border/60 py-20 text-center shadow-xl">
+            <div className="bg-card border border-border/50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
               <UtensilsCrossed className="w-12 h-12 text-muted-foreground/40" />
             </div>
             <h3 className="text-xl font-bold text-foreground">Cocina Despejada</h3>

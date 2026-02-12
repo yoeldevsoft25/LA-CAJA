@@ -137,7 +137,7 @@
   /* #3D3D3D */
 
   /* Neutral canvas aligned with shell chrome (lighter than header/sidebar). */
-  --background: 220 14% 94%;
+  --background: 220 14% 95%;
   --foreground: 220 22% 16%;
 
   --card: 0 0% 100%;
@@ -179,7 +179,7 @@
   --shell-background: 220 15% 93%;
   --shell-chrome: 220 14% 90%;
   --shell-sidebar: 220 14% 88%;
-  --shell-main: 220 14% 94%;
+  --shell-main: 220 14% 95%;
   --shell-border: 220 11% 80%;
 
   /* Sidebar + Header share the same surface token for cohesion. */

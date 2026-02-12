@@ -219,7 +219,7 @@ export default function OrderItemModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-[95vh] sm:h-[85vh] flex flex-col p-0 gap-0 overflow-hidden border-none bg-background/95 backdrop-blur-xl shadow-2xl">
+        <DialogContent className="max-w-4xl h-[95vh] sm:h-[85vh] flex flex-col p-0 gap-0 overflow-hidden border-none bg-card shadow-2xl">
           <DialogHeader className="px-4 py-4 border-b border-border/40 flex-shrink-0 pr-12 bg-muted/30">
             <div className="flex items-center gap-3">
               {isConfiguring || showCart ? (
@@ -322,7 +322,7 @@ export default function OrderItemModal({
                       <button
                         key={product.id}
                         onClick={() => handleProductSelect(product)}
-                        className="group flex flex-col h-full bg-card hover:bg-white border border-transparent hover:border-primary/20 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden text-left active:scale-[0.98]"
+                        className="group flex flex-col h-full bg-card hover:bg-card border border-transparent hover:border-primary/20 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden text-left active:scale-[0.98]"
                       >
                         {/* Imagen o placeholder */}
                         <div className="h-28 bg-muted relative overflow-hidden flex items-center justify-center">
@@ -390,7 +390,7 @@ export default function OrderItemModal({
                 <div className="p-6 space-y-4 pb-24">
                   {cart.map((item) => (
                     <div key={item.id} className="flex items-center gap-4 p-4 rounded-3xl bg-muted/20 border border-muted/20 isolate relative group">
-                      <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-xl font-black text-primary border border-muted/20 shadow-sm">
+                      <div className="h-12 w-12 rounded-2xl bg-card flex items-center justify-center text-xl font-black text-primary border border-muted/20 shadow-sm">
                         {item.qty}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -454,7 +454,7 @@ export default function OrderItemModal({
 
                     <div className="flex-1 min-w-0 z-10">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-white/50 border-primary/30 text-primary font-black text-[10px] uppercase tracking-widest px-2.5">
+                        <Badge variant="outline" className="bg-card border-primary/30 text-primary font-black text-[10px] uppercase tracking-widest px-2.5">
                           {selectedProduct?.category || 'Sin Categoría'}
                         </Badge>
                         {selectedProduct?.sku && (
@@ -491,7 +491,7 @@ export default function OrderItemModal({
                         variant="ghost"
                         size="icon"
                         onClick={() => setValue('qty', Math.max(1, currentQty - 1))}
-                        className="h-14 w-14 rounded-2xl bg-white shadow-sm hover:bg-white active:scale-95 transition-all text-primary border border-muted/30"
+                        className="h-14 w-14 rounded-2xl bg-card shadow-sm hover:bg-card active:scale-95 transition-all text-primary border border-muted/30"
                       >
                         <Minus className="w-6 h-6" />
                       </Button>
@@ -508,7 +508,7 @@ export default function OrderItemModal({
                         variant="ghost"
                         size="icon"
                         onClick={() => setValue('qty', currentQty + 1)}
-                        className="h-14 w-14 rounded-2xl bg-white shadow-sm hover:bg-white active:scale-95 transition-all text-primary border border-muted/30"
+                        className="h-14 w-14 rounded-2xl bg-card shadow-sm hover:bg-card active:scale-95 transition-all text-primary border border-muted/30"
                       >
                         <Plus className="w-6 h-6" />
                       </Button>
@@ -564,7 +564,7 @@ export default function OrderItemModal({
                     <Textarea
                       {...register('note')}
                       placeholder="Ej: Sin cebolla, extra salsa, términos de cocción..."
-                      className="h-24 sm:h-32 rounded-[2rem] border-muted/40 bg-muted/20 focus:bg-white transition-all text-lg resize-none p-6 shadow-inner"
+                      className="h-24 sm:h-32 rounded-[2rem] border-muted/40 bg-muted/20 focus:bg-card transition-all text-lg resize-none p-6 shadow-inner"
                     />
                   </div>
                 </div>

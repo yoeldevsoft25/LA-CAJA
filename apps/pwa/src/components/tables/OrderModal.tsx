@@ -318,16 +318,16 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-[95vh] sm:h-[85vh] flex flex-col p-0 gap-0 overflow-hidden border-none bg-white shadow-2xl">
+        <DialogContent className="max-w-4xl h-[95vh] sm:h-[85vh] flex flex-col p-0 gap-0 overflow-hidden border-none bg-card shadow-2xl">
           {/* Header Glassmorphic */}
-          <DialogHeader className="px-6 py-4 flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-100 relative z-10 pr-14">
+          <DialogHeader className="px-6 py-4 flex-shrink-0 bg-card border-b border-border/60 relative z-10 pr-14">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                   <ReceiptText className="w-7 h-7" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
+                  <DialogTitle className="text-xl sm:text-2xl font-black text-foreground tracking-tight leading-none">
                     Orden #{currentOrder.order_number}
                   </DialogTitle>
                   <div className="flex items-center gap-2 mt-2">
@@ -336,7 +336,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                         "font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border-2",
                         currentOrder.status === 'open' ? "bg-green-100 text-green-700 border-green-200" :
                           currentOrder.status === 'paused' ? "bg-amber-100 text-amber-700 border-amber-200" :
-                            "bg-slate-100 text-slate-700 border-slate-200"
+                            "bg-muted text-muted-foreground border-border"
                       )}
                     >
                       {currentOrder.status === 'open' ? 'Activa' :
@@ -344,7 +344,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                           currentOrder.status.toUpperCase()}
                     </Badge>
                     {currentOrder.table && (
-                      <Badge variant="outline" className="bg-white/50 font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border-slate-200">
+                      <Badge variant="outline" className="bg-card font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border-border/60">
                         Mesa {currentOrder.table.table_number}
                       </Badge>
                     )}
@@ -387,7 +387,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
               <ScrollArea className="flex-1 -mx-2 px-2 mask-linear">
                 <div className="space-y-3 pb-6">
                   {orderItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-white/40 rounded-[2rem] border-2 border-dashed border-muted/30">
+                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-card rounded-[2rem] border-2 border-dashed border-muted/30">
                       <Coffee className="w-12 h-12 text-muted-foreground/20 mb-3" />
                       <p className="font-bold text-muted-foreground">No hay items registrados</p>
                     </div>
@@ -395,7 +395,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                     orderItems.map((item) => (
                       <div
                         key={item.id}
-                        className="group bg-white rounded-3xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-primary/20 transition-all flex items-center gap-4 relative isolate"
+                        className="group bg-card rounded-3xl p-4 shadow-sm border border-border/60 hover:shadow-md hover:border-primary/20 transition-all flex items-center gap-4 relative isolate"
                       >
                         {/* Cantidad Badge */}
                         <div className="h-12 w-12 rounded-2xl bg-muted/40 dark:bg-muted/10 flex items-center justify-center text-xl font-black text-foreground shrink-0 border border-muted/20">
@@ -435,7 +435,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                             variant="ghost"
                             size="icon"
                             onClick={() => handleUpdateQty(item.id, item.qty - 1)}
-                            className="h-8 w-8 rounded-full bg-slate-100/80 hover:bg-white transition-colors border border-slate-200"
+                            className="h-8 w-8 rounded-full bg-muted hover:bg-card transition-colors border border-border"
                             disabled={!canPause}
                           >
                             <Minus className="w-3.5 h-3.5" />
@@ -444,7 +444,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                             variant="ghost"
                             size="icon"
                             onClick={() => handleUpdateQty(item.id, item.qty + 1)}
-                            className="h-8 w-8 rounded-full bg-slate-100/80 hover:bg-white transition-colors border border-slate-200"
+                            className="h-8 w-8 rounded-full bg-muted hover:bg-card transition-colors border border-border"
                             disabled={!canPause}
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -467,14 +467,14 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
 
               {/* Pagos Parciales (Sutil) */}
               {orderPayments.length > 0 && (
-                <div className="mt-4 p-4 rounded-3xl bg-white/40 border border-slate-100">
+                <div className="mt-4 p-4 rounded-3xl bg-card border border-border/60">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
                     <DollarSign className="w-3.5 h-3.5" /> Pagos Parciales
                   </p>
                   <div className="space-y-1">
                     {orderPayments.map(p => (
                       <div key={p.id} className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-600">{p.payment_method}</span>
+                        <span className="font-bold text-muted-foreground">{p.payment_method}</span>
                         <span className="font-black text-foreground">${Number(p.amount_usd).toFixed(2)}</span>
                       </div>
                     ))}
@@ -484,7 +484,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
             </div>
 
             {/* Sidebar de Pago y Acciones */}
-            <div className="w-full sm:w-80 lg:w-96 flex flex-col flex-shrink-0 bg-white border-l border-slate-200 p-6 sm:p-8">
+            <div className="w-full sm:w-80 lg:w-96 flex flex-col flex-shrink-0 bg-card border-l border-border/60 p-6 sm:p-8">
               <div className="flex-1 space-y-8">
                 {/* Totales Reales */}
                 <div className="space-y-6">
@@ -498,10 +498,10 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                         <Badge className="bg-primary/10 text-primary border-none font-black text-xs px-3 py-1 rounded-lg">USD</Badge>
                       </div>
                       <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-muted/30">
-                        <span className="text-2xl font-bold text-slate-500 tabular-nums">
+                        <span className="text-2xl font-bold text-muted-foreground tabular-nums">
                           {totals.bs.toFixed(2)}
                         </span>
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">BOLÍVARES</span>
+                        <span className="text-xs font-black text-muted-foreground/80 uppercase tracking-widest">BOLÍVARES</span>
                       </div>
                     </div>
                   </div>
@@ -524,7 +524,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                         <Button
                           variant="outline"
                           onClick={() => setIsPaymentModalOpen(true)}
-                          className="h-14 rounded-2xl border-slate-200 bg-slate-50 font-bold hover:bg-white hover:border-primary/40 transition-all"
+                          className="h-14 rounded-2xl border-border bg-muted/40 font-bold hover:bg-card hover:border-primary/40 transition-all"
                         >
                           <DollarSign className="w-4 h-4 mr-2 text-primary" /> Pagos
                         </Button>
@@ -532,7 +532,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                           variant="outline"
                           onClick={() => setIsSplitBillModalOpen(true)}
                           disabled={orderItems.length === 0}
-                          className="h-14 rounded-2xl border-slate-200 bg-slate-50 font-bold hover:bg-white hover:border-primary/40 transition-all"
+                          className="h-14 rounded-2xl border-border bg-muted/40 font-bold hover:bg-card hover:border-primary/40 transition-all"
                         >
                           <Users className="w-4 h-4 mr-2 text-blue-500" /> Dividir
                         </Button>
@@ -579,7 +579,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                 </div>
               </div>
 
-              <div className="mt-6 flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <div className="mt-6 flex items-start gap-3 p-4 rounded-2xl bg-muted/40 border border-border/60">
                 <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[10px] text-muted-foreground font-medium leading-relaxed uppercase tracking-tight">
                   Pasa el mouse sobre los items para editarlos o eliminarlos rápidamente.
@@ -676,7 +676,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="rounded-2xl border-none bg-slate-100 hover:bg-slate-200 font-bold">Mantener Orden</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-2xl border-none bg-muted hover:bg-muted/80 font-bold">Mantener Orden</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black"

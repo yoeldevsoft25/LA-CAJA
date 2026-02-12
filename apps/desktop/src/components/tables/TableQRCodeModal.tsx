@@ -111,7 +111,7 @@ export default function TableQRCodeModal({
                       alt={`QR Code Mesa ${table.table_number}`}
                       className="w-full max-w-[240px] h-auto rounded-xl shadow-lg border-4 border-white"
                     />
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl backdrop-blur-[1px]">
+                    <div className="absolute inset-0 flex items-center justify-center bg-card/90 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
                       <QrCode className="w-12 h-12 text-primary animate-pulse" />
                     </div>
                   </div>

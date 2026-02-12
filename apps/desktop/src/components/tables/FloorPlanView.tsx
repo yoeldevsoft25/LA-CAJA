@@ -495,16 +495,16 @@ export default function FloorPlanView({
           })}
         </g>
       </svg>
-      <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-md rounded-2xl p-4 border border-slate-100 shadow-xl">
+      <div className="absolute bottom-4 left-4 bg-card rounded-2xl p-4 border border-slate-100 shadow-xl">
         <div className="flex flex-col gap-3 text-xs font-bold text-slate-600">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-white border border-slate-300 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-card border border-slate-300 flex items-center justify-center">
               <User className="w-3 h-3 text-slate-400" />
             </div>
             <span>Disponible</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-white border border-primary flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full bg-card border border-primary flex items-center justify-center">
               <UtensilsCrossed className="w-3 h-3 text-primary" />
             </div>
             <span>Ocupada</span>

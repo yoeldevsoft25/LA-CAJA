@@ -494,7 +494,7 @@ export default function FloorPlanView({
           })}
         </g>
       </svg>
-      <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-md rounded-2xl p-4 border border-border shadow-xl">
+      <div className="absolute bottom-4 left-4 bg-card rounded-2xl p-4 border border-border shadow-xl">
         <div className="flex flex-col gap-3 text-xs font-bold text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-card border border-border flex items-center justify-center">
