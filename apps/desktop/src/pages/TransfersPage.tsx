@@ -281,12 +281,12 @@ export default function TransfersPage() {
         </div>
       </CardContent>
       <CardFooter className="pt-0 flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={() => handleViewDetail(transfer)}>
+        <Button variant="outline" size="sm" className="btn-glass-neutral" onClick={() => handleViewDetail(transfer)}>
           Ver Detalles
         </Button>
         {transfer.status === 'pending' && (
           <>
-            <Button variant="outline" size="sm" onClick={() => handleShip(transfer)}>
+            <Button variant="outline" size="sm" className="btn-glass-neutral" onClick={() => handleShip(transfer)}>
               <Truck className="w-4 h-4 mr-2" />
               Enviar
             </Button>
@@ -300,7 +300,7 @@ export default function TransfersPage() {
           </>
         )}
         {transfer.status === 'in_transit' && (
-          <Button variant="default" size="sm" onClick={() => handleReceive(transfer)}>
+          <Button variant="outline" size="sm" className="btn-glass-neutral" onClick={() => handleReceive(transfer)}>
             <CheckCircle className="w-4 h-4 mr-2" />
             Recibir
           </Button>
@@ -319,16 +319,16 @@ export default function TransfersPage() {
             Movimientos de inventario entre bodegas
           </p>
         </div>
-        <Button onClick={handleCreate} className="shadow-lg hover:shadow-xl transition-all">
+        <Button onClick={handleCreate} variant="outline" className="btn-glass-neutral shadow-lg hover:shadow-xl transition-all">
           <Plus className="w-4 h-4 mr-2" />
           Nueva Transferencia
         </Button>
       </div>
 
       <Tabs defaultValue="active" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="active">Activas ({activeTransfers.length})</TabsTrigger>
-          <TabsTrigger value="history">Historial ({historyTransfers.length})</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-card border border-border/60">
+          <TabsTrigger value="active" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Activas ({activeTransfers.length})</TabsTrigger>
+          <TabsTrigger value="history" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Historial ({historyTransfers.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-4">
@@ -379,7 +379,7 @@ export default function TransfersPage() {
 
       {/* Modal de enviar */}
       <Dialog open={isShipOpen} onOpenChange={setIsShipOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-card">
           <DialogHeader className="pr-12">
             <DialogTitle className="text-base sm:text-lg">Enviar Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
@@ -440,10 +440,10 @@ export default function TransfersPage() {
               </div>
 
               <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsShipOpen(false)} className="w-full sm:w-auto">
+                <Button type="button" variant="outline" className="w-full sm:w-auto btn-glass-neutral" onClick={() => setIsShipOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={shipMutation.isPending} className="w-full sm:w-auto">
+                <Button type="submit" variant="outline" className="w-full sm:w-auto btn-glass-neutral" disabled={shipMutation.isPending}>
                   {shipMutation.isPending ? 'Enviando...' : 'Confirmar Envío'}
                 </Button>
               </DialogFooter>
@@ -454,7 +454,7 @@ export default function TransfersPage() {
 
       {/* Modal de recibir */}
       <Dialog open={isReceiveOpen} onOpenChange={setIsReceiveOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-card">
           <DialogHeader className="pr-12">
             <DialogTitle className="text-base sm:text-lg">Recibir Transferencia {selectedTransfer?.transfer_number}</DialogTitle>
             <DialogDescription>
@@ -493,10 +493,10 @@ export default function TransfersPage() {
                 <Textarea name="note" placeholder="Daños, faltantes o comentarios..." />
               </div>
               <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsReceiveOpen(false)} className="w-full sm:w-auto">
+                <Button type="button" variant="outline" className="w-full sm:w-auto btn-glass-neutral" onClick={() => setIsReceiveOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={receiveMutation.isPending} className="w-full sm:w-auto">
+                <Button type="submit" variant="outline" className="w-full sm:w-auto btn-glass-neutral" disabled={receiveMutation.isPending}>
                   {receiveMutation.isPending ? 'Procesando...' : 'Confirmar Recepción'}
                 </Button>
               </DialogFooter>
@@ -507,7 +507,7 @@ export default function TransfersPage() {
 
       {/* Modal de detalles (Solo lectura) */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl bg-card">
           <DialogHeader className="pr-12">
             <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
               <span className="text-base sm:text-lg">Transferencia {selectedTransfer?.transfer_number}</span>
@@ -563,7 +563,7 @@ export default function TransfersPage() {
               {/* Items Table */}
               <div className="border rounded-lg overflow-hidden">
                 {/* Header - Solo desktop */}
-                <div className="hidden sm:grid bg-muted px-4 py-2 text-xs font-medium grid-cols-12 gap-4">
+                <div className="hidden sm:grid bg-card border-b border-border/60 px-4 py-2 text-xs font-medium grid-cols-12 gap-4">
                   <div className="col-span-6">Producto</div>
                   <div className="col-span-2 text-center">Solicitado</div>
                   <div className="col-span-2 text-center">Enviado</div>

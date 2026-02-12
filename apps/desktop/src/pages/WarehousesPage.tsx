@@ -53,7 +53,7 @@ type Tone = 'primary' | 'info' | 'success' | 'warning' | 'destructive' | 'muted'
 
 function toneBadgeClass(tone: Tone) {
   // Uses design tokens only (no hardcoded palette). Works in light/dark.
-  if (tone === 'muted') return 'bg-muted text-muted-foreground border-border'
+  if (tone === 'muted') return 'bg-card text-muted-foreground border-border/60'
 
   const varName =
     tone === 'destructive'
@@ -280,7 +280,11 @@ export default function WarehousesPage() {
             {statusFilter === 'inactive' ? 'inactivas' : statusFilter === 'all' ? 'en total' : 'activas'}
           </p>
         </div>
-        <Button onClick={handleCreate} className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all">
+        <Button
+          onClick={handleCreate}
+          variant="outline"
+          className="w-full sm:w-auto btn-glass-neutral shadow-lg hover:shadow-xl transition-all"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nueva Bodega
         </Button>
@@ -296,14 +300,14 @@ export default function WarehousesPage() {
               placeholder="Buscar por nombre, código, ciudad o teléfono..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 sm:h-12 border-muted/40 bg-background transition-colors"
+              className="pl-10 h-11 sm:h-12 border-muted/40 bg-card transition-colors"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="w-full">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Estado</Label>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger className="mt-1 border-muted/40 bg-background">
+                <SelectTrigger className="mt-1 border-muted/40 bg-card">
                   <SelectValue placeholder="Activas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -316,7 +320,7 @@ export default function WarehousesPage() {
             <div className="w-full">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Tipo</Label>
               <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                <SelectTrigger className="mt-1 border-muted/40 bg-background">
+                <SelectTrigger className="mt-1 border-muted/40 bg-card">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -333,7 +337,7 @@ export default function WarehousesPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full border-border/60"
+                className="w-full btn-glass-neutral"
                 onClick={() => {
                   setSearchQuery('')
                   setStatusFilter('active')
@@ -353,7 +357,7 @@ export default function WarehousesPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
-              <CardHeader className="h-24 bg-muted/50" />
+              <CardHeader className="h-24 bg-card border-b border-border/60" />
               <CardContent className="h-32" />
             </Card>
           ))}
@@ -375,12 +379,12 @@ export default function WarehousesPage() {
                 : 'Comienza creando tu primera bodega para gestionar inventario con claridad.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button onClick={handleCreate} className="w-full sm:w-auto">Nueva bodega</Button>
+              <Button onClick={handleCreate} variant="outline" className="w-full sm:w-auto btn-glass-neutral">Nueva bodega</Button>
               {(searchQuery || statusFilter !== 'active' || typeFilter !== 'all') && (
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto btn-glass-neutral"
                   onClick={() => {
                     setSearchQuery('')
                     setStatusFilter('active')
@@ -456,7 +460,7 @@ export default function WarehousesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 bg-background hover:bg-muted/40"
+                  className="flex-1 btn-glass-neutral"
                   onClick={() => handleViewStock(warehouse)}
                 >
                   <Package className="w-3.5 h-3.5 mr-2" />
@@ -465,7 +469,7 @@ export default function WarehousesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 border-[hsl(var(--primary)_/_0.25)]"
+                  className="flex-1 btn-glass-neutral"
                   onClick={() => handleEdit(warehouse)}
                 >
                   <Edit className="w-3.5 h-3.5 mr-2" />
@@ -489,7 +493,7 @@ export default function WarehousesPage() {
 
       {/* Stock Preview Modal */}
       <Dialog open={showStock} onOpenChange={setShowStock}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" />
@@ -509,7 +513,7 @@ export default function WarehousesPage() {
               ) : (
                 <div className="divide-y overflow-x-hidden">
                   {warehouseStock.map((stock) => (
-                    <div key={stock.id} className="p-4 hover:bg-muted/30 transition-colors">
+                    <div key={stock.id} className="p-4 hover:bg-card transition-colors">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         {/* Producto Info */}
                         <div className="flex-1 min-w-0">
@@ -547,7 +551,7 @@ export default function WarehousesPage() {
             </ScrollArea>
           </div>
           <div className="bg-card -mx-6 -mb-6 p-4 border-t flex justify-end">
-            <Button variant="outline" onClick={() => setShowStock(false)}>Cerrar</Button>
+            <Button variant="outline" className="btn-glass-neutral" onClick={() => setShowStock(false)}>Cerrar</Button>
           </div>
         </DialogContent>
       </Dialog>

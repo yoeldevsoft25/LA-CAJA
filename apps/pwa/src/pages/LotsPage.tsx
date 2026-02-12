@@ -65,12 +65,12 @@ export default function LotsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="expiring" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="expiring" className="flex items-center">
+        <TabsList className="bg-card border border-border/60">
+          <TabsTrigger value="expiring" className="flex items-center data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
             <Clock className="w-4 h-4 mr-2" />
             Próximos a Vencer ({expiringLots?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="expired" className="flex items-center">
+          <TabsTrigger value="expired" className="flex items-center data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
             <AlertTriangle className="w-4 h-4 mr-2" />
             Vencidos ({expiredLots?.length || 0})
           </TabsTrigger>
@@ -276,4 +276,3 @@ export default function LotsPage() {
     </div>
   )
 }
-

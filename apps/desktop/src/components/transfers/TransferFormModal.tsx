@@ -169,11 +169,11 @@ export function TransferFormModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
-                <DialogHeader className="px-6 py-4 border-b bg-muted/20 pr-12">
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
+                <DialogHeader className="px-6 py-4 border-b bg-card pr-12">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <DialogTitle className="text-base sm:text-lg">Nueva Transferencia de Inventario</DialogTitle>
-                        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground bg-background px-2.5 sm:px-3 py-1 rounded-full border w-fit">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground bg-card px-2.5 sm:px-3 py-1 rounded-full border border-border/60 w-fit">
                             <span className={cn("font-medium whitespace-nowrap", step >= 1 ? "text-primary" : "")}>1. Ruta</span>
                             <ArrowRight className="w-3 h-3 shrink-0" />
                             <span className={cn("font-medium whitespace-nowrap", step >= 2 ? "text-primary" : "")}>2. Items</span>
@@ -220,12 +220,12 @@ export function TransferFormModal({
 
                                         {/* Flecha - Horizontal en mobile, vertical en desktop */}
                                         <div className="flex sm:hidden justify-center py-2">
-                                            <div className="p-2 bg-muted rounded-full rotate-90">
+                                            <div className="p-2 bg-card border border-border/60 rounded-full rotate-90">
                                                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
                                             </div>
                                         </div>
                                         <div className="hidden sm:flex justify-center pt-24">
-                                            <div className="p-2 bg-muted rounded-full">
+                                            <div className="p-2 bg-card border border-border/60 rounded-full">
                                                 <ArrowRight className="w-6 h-6 text-muted-foreground" />
                                             </div>
                                         </div>
@@ -328,7 +328,7 @@ export function TransferFormModal({
 
                                     <div className="border rounded-lg overflow-hidden">
                                         {/* Header - Solo visible en desktop */}
-                                        <div className="hidden sm:grid bg-muted/50 px-4 py-3 text-xs font-medium text-muted-foreground grid-cols-12 gap-4">
+                                        <div className="hidden sm:grid bg-card border-b border-border/60 px-4 py-3 text-xs font-medium text-muted-foreground grid-cols-12 gap-4">
                                             <div className="col-span-6">PRODUCTO</div>
                                             <div className="col-span-4 text-center">CANTIDAD</div>
                                             <div className="col-span-2 text-right">ACCIONES</div>
@@ -340,7 +340,7 @@ export function TransferFormModal({
                                                     <p className="text-sm">No hay items agregados a la transferencia</p>
                                                 </div>
                                             ) : items.map((item, index) => (
-                                                <div key={item.product_id} className="p-3 sm:p-4 hover:bg-muted/10 transition-colors">
+                                                <div key={item.product_id} className="p-3 sm:p-4 hover:bg-card transition-colors">
                                                     {/* Mobile Layout - Vertical */}
                                                     <div className="flex sm:hidden flex-col gap-3">
                                                         <div className="flex items-start justify-between">
@@ -504,25 +504,25 @@ export function TransferFormModal({
                             )}
                         </div>
 
-                        <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-muted/20">
+                        <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-card">
                             <div className="flex flex-col-reverse sm:flex-row w-full gap-2 sm:gap-0 sm:justify-between sm:items-center">
                                 <Button
                                     type="button"
-                                    variant="ghost"
+                                    variant="outline"
                                     onClick={() => step === 1 ? onOpenChange(false) : prevStep()}
-                                    className="w-full sm:w-auto"
+                                    className="w-full sm:w-auto btn-glass-neutral"
                                 >
                                     {step === 1 ? 'Cancelar' : 'Atrás'}
                                 </Button>
 
                                 <div className="flex gap-2 w-full sm:w-auto">
                                     {step < 3 ? (
-                                        <Button type="button" onClick={nextStep} className="flex-1 sm:flex-none">
+                                        <Button type="button" variant="outline" onClick={nextStep} className="flex-1 sm:flex-none btn-glass-neutral">
                                             Siguiente
                                             <ArrowRight className="ml-2 w-4 h-4" />
                                         </Button>
                                     ) : (
-                                        <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+                                        <Button type="submit" variant="outline" disabled={isSubmitting} className="flex-1 sm:flex-none btn-glass-neutral">
                                             {isSubmitting ? 'Creando...' : 'Confirmar'}
                                             <Check className="ml-2 w-4 h-4" />
                                         </Button>

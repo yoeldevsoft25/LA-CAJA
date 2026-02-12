@@ -154,8 +154,8 @@ export function WarehouseFormModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
-                <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0 bg-muted/40">
+            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
+                <DialogHeader className="px-6 py-4 border-b border-border flex-shrink-0 bg-card">
                     <DialogTitle className="text-xl flex items-center gap-2">
                         {initialData ? <Store className="w-5 h-5 text-primary" /> : <Package className="w-5 h-5 text-primary" />}
                         {initialData ? 'Editar Bodega' : 'Nueva Bodega'}
@@ -171,11 +171,11 @@ export function WarehouseFormModal({
                     <Form {...form}>
                         <form id="warehouse-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                             <Tabs defaultValue="general" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 h-auto">
-                                    <TabsTrigger value="general" className="text-xs sm:text-sm">General</TabsTrigger>
-                                    <TabsTrigger value="location" className="text-xs sm:text-sm">Ubicación</TabsTrigger>
-                                    <TabsTrigger value="operations" className="text-xs sm:text-sm">Operaciones</TabsTrigger>
-                                    <TabsTrigger value="notes" className="text-xs sm:text-sm">Notas</TabsTrigger>
+                                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 mb-4 h-auto bg-card border border-border/60">
+                                    <TabsTrigger value="general" className="text-xs sm:text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">General</TabsTrigger>
+                                    <TabsTrigger value="location" className="text-xs sm:text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Ubicación</TabsTrigger>
+                                    <TabsTrigger value="operations" className="text-xs sm:text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Operaciones</TabsTrigger>
+                                    <TabsTrigger value="notes" className="text-xs sm:text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Notas</TabsTrigger>
                                 </TabsList>
 
                                 {/* TAB: GENERAL */}
@@ -260,12 +260,12 @@ export function WarehouseFormModal({
                                         />
                                     </div>
 
-                                    <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/20">
+                                    <div className="flex flex-col gap-4 p-4 border border-border/60 rounded-lg bg-card">
                                         <FormField
                                             control={form.control}
                                             name="is_default"
                                             render={({ field }) => (
-                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-card">
                                                     <div className="space-y-0.5">
                                                         <FormLabel>Bodega Principal</FormLabel>
                                                         <FormDescription>
@@ -286,7 +286,7 @@ export function WarehouseFormModal({
                                             control={form.control}
                                             name="is_active"
                                             render={({ field }) => (
-                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background">
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-card">
                                                     <div className="space-y-0.5">
                                                         <FormLabel>Activo en Sistema</FormLabel>
                                                         <FormDescription>
@@ -493,7 +493,7 @@ export function WarehouseFormModal({
                     </Form>
                 </div>
 
-                <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0 bg-muted/40">
+                <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0 bg-card">
                     <div className="flex flex-col-reverse sm:flex-row w-full gap-2 sm:gap-0 sm:justify-between sm:items-center">
                         {/* Botón Eliminar - Izquierda en desktop, abajo en mobile */}
                         <div className="flex justify-center sm:justify-start">
@@ -512,22 +512,23 @@ export function WarehouseFormModal({
 
                         {/* Botones Cancelar/Guardar - Derecha en desktop, arriba en mobile */}
                         <div className="flex gap-2 w-full sm:w-auto">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => onOpenChange(false)}
-                                className="flex-1 sm:flex-none"
-                            >
-                                Cancelar
-                            </Button>
-                            <Button
-                                type="submit"
-                                form="warehouse-form"
-                                disabled={isSubmitting}
-                                className="flex-1 sm:flex-none"
-                            >
-                                {isSubmitting ? 'Guardando...' : (initialData ? 'Actualizar' : 'Crear')}
-                            </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => onOpenChange(false)}
+                                    className="flex-1 sm:flex-none btn-glass-neutral"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    form="warehouse-form"
+                                    disabled={isSubmitting}
+                                    className="flex-1 sm:flex-none btn-glass-neutral"
+                                >
+                                    {isSubmitting ? 'Guardando...' : (initialData ? 'Actualizar' : 'Crear')}
+                                </Button>
                         </div>
                     </div>
                 </DialogFooter>

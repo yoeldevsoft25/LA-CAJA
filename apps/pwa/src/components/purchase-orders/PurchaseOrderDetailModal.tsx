@@ -39,7 +39,7 @@ const statusLabels: Record<PurchaseOrderStatus, string> = {
 }
 
 const statusColors: Record<PurchaseOrderStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
+  draft: 'bg-card border border-border/60 text-muted-foreground',
   sent: 'bg-primary/10 text-primary',
   confirmed: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
   partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
@@ -145,7 +145,7 @@ export default function PurchaseOrderDetailModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
           <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
             <DialogTitle className="text-lg sm:text-xl">Orden de Compra {order.order_number}</DialogTitle>
             <DialogDescription>Detalles de la orden de compra</DialogDescription>
@@ -307,7 +307,7 @@ export default function PurchaseOrderDetailModal({
                 <Button
                   variant="outline"
                   onClick={() => setIsEditOpen(true)}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   Editar
@@ -316,7 +316,7 @@ export default function PurchaseOrderDetailModal({
                 <Button
                   variant="outline"
                   disabled
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                   title="No se puede editar una orden que ya tiene productos recibidos"
                 >
                   <Edit className="w-4 h-4 mr-2" />
@@ -325,10 +325,10 @@ export default function PurchaseOrderDetailModal({
               ) : null}
               {canSend && (
                 <Button
-                  variant="default"
+                  variant="outline"
                   onClick={handleSend}
                   disabled={sendMutation.isPending}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   <Send className="w-4 h-4 mr-2" />
                   {sendMutation.isPending ? 'Enviando...' : 'Enviar'}
@@ -336,10 +336,10 @@ export default function PurchaseOrderDetailModal({
               )}
               {canConfirm && (
                 <Button
-                  variant="default"
+                  variant="outline"
                   onClick={handleConfirm}
                   disabled={confirmMutation.isPending}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   {confirmMutation.isPending ? 'Confirmando...' : 'Confirmar'}
@@ -347,9 +347,9 @@ export default function PurchaseOrderDetailModal({
               )}
               {canReceive && (
                 <Button
-                  variant="default"
+                  variant="outline"
                   onClick={() => setIsReceptionOpen(true)}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   <Package className="w-4 h-4 mr-2" />
                   Recibir
@@ -409,4 +409,3 @@ export default function PurchaseOrderDetailModal({
     </>
   )
 }
-

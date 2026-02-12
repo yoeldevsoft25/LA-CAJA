@@ -86,7 +86,7 @@ export default function SupplierPriceImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
@@ -182,10 +182,10 @@ export default function SupplierPriceImportModal({
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" className="btn-glass-neutral" onClick={onClose}>
             Cerrar
           </Button>
-          <Button onClick={handleImport} disabled={isImporting}>
+          <Button variant="outline" className="btn-glass-neutral" onClick={handleImport} disabled={isImporting}>
             {isImporting ? 'Importando...' : (
               <>
                 <Upload className="w-4 h-4 mr-2" />

@@ -209,11 +209,11 @@ export default function SuppliersPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button onClick={() => setIsPriceImportOpen(true)} variant="outline">
+            <Button onClick={() => setIsPriceImportOpen(true)} variant="outline" className="btn-glass-neutral">
               <FileText className="w-5 h-5 mr-2" />
               Importar Lista CSV
             </Button>
-            <Button onClick={handleCreate} variant="default">
+            <Button onClick={handleCreate} variant="outline" className="btn-glass-neutral">
               <Plus className="w-5 h-5 mr-2" />
               Nuevo Proveedor
             </Button>
@@ -230,7 +230,7 @@ export default function SuppliersPage() {
             placeholder="Buscar por nombre, código, teléfono o email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2.5 sm:py-3 text-base sm:text-lg"
+            className="pl-10 pr-4 py-2.5 sm:py-3 text-base sm:text-lg border-muted/40 bg-card"
             autoFocus
           />
         </div>
@@ -238,12 +238,12 @@ export default function SuppliersPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="list">Lista</TabsTrigger>
+        <TabsList className="bg-card border border-border/60">
+          <TabsTrigger value="list" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Lista</TabsTrigger>
           {selectedSupplier && (
             <>
-              <TabsTrigger value="statistics">Estadísticas</TabsTrigger>
-              <TabsTrigger value="orders">Órdenes</TabsTrigger>
+              <TabsTrigger value="statistics" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Estadísticas</TabsTrigger>
+              <TabsTrigger value="orders" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Órdenes</TabsTrigger>
             </>
           )}
         </TabsList>
@@ -262,7 +262,7 @@ export default function SuppliersPage() {
               ) : filteredSuppliers.length === 0 ? (
                 <div className="p-8 text-center">
                   <div className="flex flex-col items-center justify-center py-8">
-                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <div className="w-16 h-16 rounded-full bg-card border border-border/60 flex items-center justify-center mb-4">
                       <Truck className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <p className="text-lg font-medium text-foreground mb-1">
@@ -296,7 +296,7 @@ export default function SuppliersPage() {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-background divide-y divide-border">
+                      <tbody className="bg-card divide-y divide-border">
                         {filteredSuppliers.map((supplier) => (
                           <tr key={supplier.id} className="hover:bg-accent/50 transition-colors">
                             <td className="px-4 py-3">
@@ -527,6 +527,8 @@ export default function SuppliersPage() {
                   <Button
                     onClick={() => navigate(`/purchase-orders?supplier_id=${selectedSupplier.id}`)}
                     size="sm"
+                    variant="outline"
+                    className="btn-glass-neutral"
                   >
                     <ShoppingBag className="w-4 h-4 mr-2" />
                     Nueva Orden
@@ -581,7 +583,7 @@ export default function SuppliersPage() {
 
       {/* Form Modal */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
           <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
             <DialogTitle className="text-lg sm:text-xl">{editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>
             <DialogDescription>
@@ -648,10 +650,10 @@ export default function SuppliersPage() {
               </div>
             </div>
             <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>
+              <Button type="button" variant="outline" className="btn-glass-neutral" onClick={() => setIsFormOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              <Button type="submit" variant="outline" className="btn-glass-neutral" disabled={createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending
                   ? 'Guardando...'
                   : editingSupplier

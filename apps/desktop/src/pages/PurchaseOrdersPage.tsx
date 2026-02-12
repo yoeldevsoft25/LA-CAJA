@@ -41,7 +41,7 @@ const statusLabels: Record<PurchaseOrderStatus, string> = {
 }
 
 const statusColors: Record<PurchaseOrderStatus, string> = {
-  draft: 'bg-muted text-muted-foreground',
+  draft: 'bg-card border border-border/60 text-muted-foreground',
   sent: 'bg-primary/10 text-primary',
   confirmed: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
   partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
@@ -157,14 +157,14 @@ export default function PurchaseOrdersPage() {
             Gestiona órdenes de compra a proveedores
           </p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} variant="outline" className="btn-glass-neutral">
           <Plus className="w-4 h-4 mr-2" />
           Nueva Orden
         </Button>
       </div>
 
       {/* Filtros */}
-      <Card>
+      <Card className="bg-card border border-border/60">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
@@ -174,7 +174,7 @@ export default function PurchaseOrdersPage() {
                 placeholder="Buscar por número, proveedor..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="mt-1"
+                className="mt-1 border-muted/40 bg-card"
               />
             </div>
             <div>
@@ -183,7 +183,7 @@ export default function PurchaseOrdersPage() {
                 value={statusFilter}
                 onValueChange={(v) => setStatusFilter(v as PurchaseOrderStatus | 'all')}
               >
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 border-muted/40 bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -200,7 +200,7 @@ export default function PurchaseOrdersPage() {
             <div>
               <Label>Proveedor</Label>
               <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 border-muted/40 bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -218,7 +218,7 @@ export default function PurchaseOrdersPage() {
             <div>
               <Label>Bodega</Label>
               <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 border-muted/40 bg-card">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -253,7 +253,7 @@ export default function PurchaseOrdersPage() {
                 ? 'No se encontraron órdenes'
                 : 'No hay órdenes de compra'}
             </p>
-            <Button onClick={handleCreate} className="mt-4">
+            <Button onClick={handleCreate} variant="outline" className="mt-4 btn-glass-neutral">
               Crear primera orden
             </Button>
           </CardContent>
@@ -283,6 +283,7 @@ export default function PurchaseOrdersPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="btn-glass-neutral"
                       onClick={() => handleDuplicate(order)}
                       title="Duplicar orden anterior"
                     >
@@ -292,6 +293,7 @@ export default function PurchaseOrdersPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="btn-glass-neutral"
                       onClick={() => handleViewDetail(order)}
                     >
                       <Eye className="w-4 h-4 mr-2" />
@@ -374,4 +376,3 @@ export default function PurchaseOrdersPage() {
     </div>
   )
 }
-

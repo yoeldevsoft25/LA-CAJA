@@ -302,7 +302,7 @@ export default function PurchaseOrderFormModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">
             {isEditing ? 'Editar Orden de Compra' : 'Nueva Orden de Compra'}
@@ -393,7 +393,7 @@ export default function PurchaseOrderFormModal({
                   onChange={(e) => setProductSearch(e.target.value)}
                 />
                 {productSearch.length >= 2 && productsData?.products && (
-                  <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
                     {productsData.products.map((product) => (
                       <button
                         key={product.id}
@@ -534,10 +534,10 @@ export default function PurchaseOrderFormModal({
             </div>
           </div>
           <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" className="btn-glass-neutral" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button type="submit" variant="outline" className="btn-glass-neutral" disabled={createMutation.isPending}>
               {createMutation.isPending ? 'Creando...' : 'Crear Orden'}
             </Button>
           </DialogFooter>
@@ -546,4 +546,3 @@ export default function PurchaseOrderFormModal({
     </Dialog>
   )
 }
-

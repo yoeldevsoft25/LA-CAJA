@@ -177,7 +177,7 @@ export default function PurchaseOrderReceptionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">Recibir Orden de Compra {order.order_number}</DialogTitle>
           <DialogDescription>
@@ -324,10 +324,10 @@ export default function PurchaseOrderReceptionModal({
             </div>
           </div>
           <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" className="btn-glass-neutral" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={receiveMutation.isPending}>
+            <Button type="submit" variant="outline" className="btn-glass-neutral" disabled={receiveMutation.isPending}>
               {receiveMutation.isPending ? 'Recibiendo...' : 'Confirmar Recepción'}
             </Button>
           </DialogFooter>
@@ -336,4 +336,3 @@ export default function PurchaseOrderReceptionModal({
     </Dialog>
   )
 }
-
