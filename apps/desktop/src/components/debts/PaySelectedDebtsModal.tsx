@@ -254,7 +254,7 @@ export default function PaySelectedDebtsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ListChecks className="w-5 h-5 text-success" />
@@ -267,7 +267,7 @@ export default function PaySelectedDebtsModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          <Card className="bg-muted/30">
+          <Card className="bg-card">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-semibold">Resumen de selección</Label>

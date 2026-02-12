@@ -90,7 +90,7 @@ const CustomTooltip = ({ active, payload, currency }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload
     return (
-      <div className="bg-popover border border-border rounded-lg shadow-xl p-4 min-w-[220px] backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-lg shadow-xl p-4 min-w-[220px] ">
         <p className="font-semibold text-foreground mb-3 text-base line-clamp-2 border-b border-border pb-2">
           {data.fullName}
         </p>

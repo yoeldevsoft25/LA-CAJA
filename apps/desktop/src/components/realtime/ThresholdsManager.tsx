@@ -43,12 +43,12 @@ import { Badge } from '@/components/ui/badge'
 // Helper para formatear severidad de alertas
 const formatAlertSeverity = (severity: string): { label: string; bgColor: string } => {
   const severityMap: Record<string, { label: string; bgColor: string }> = {
-    low: { label: 'Baja', bgColor: 'bg-gray-100' },
+    low: { label: 'Baja', bgColor: 'bg-card border border-border' },
     medium: { label: 'Media', bgColor: 'bg-yellow-100' },
     high: { label: 'Alta', bgColor: 'bg-orange-100' },
     critical: { label: 'Crítica', bgColor: 'bg-red-100' },
   }
-  return severityMap[severity] || { label: severity, bgColor: 'bg-gray-100' }
+  return severityMap[severity] || { label: severity, bgColor: 'bg-card border border-border' }
 }
 
 const alertTypeLabels: Record<AlertType, string> = {

@@ -37,7 +37,7 @@ export default function CustomerHistoryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-4 md:px-6 py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-xl">
             Historial de Compras
@@ -137,7 +137,7 @@ export default function CustomerHistoryModal({
                       {history.recent_sales.map((sale) => (
                         <div
                           key={sale.id}
-                          className="px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                          className="px-4 py-3 flex items-center justify-between hover:bg-card transition-colors"
                         >
                           <div>
                             <div className="flex items-center gap-2">

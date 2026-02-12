@@ -256,7 +256,7 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as TableStatus | 'all')}
           >
-            <SelectTrigger className="w-full sm:w-[200px] h-11 bg-card border-muted/40 font-medium">
+            <SelectTrigger className="w-full sm:w-[200px] h-11 bg-card border-border/60 font-medium">
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
@@ -304,7 +304,7 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                       : table.status === 'reserved'
                         ? 'border-amber-400 bg-amber-50/50'
                         : table.status === 'out_of_service'
-                          ? 'border-muted bg-muted/20 opacity-60 grayscale'
+                          ? 'border-border bg-card opacity-60 grayscale'
                           : 'border-border bg-white hover:border-primary/50'
                   )}
                 >

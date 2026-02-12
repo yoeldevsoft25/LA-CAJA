@@ -211,7 +211,7 @@ export default function SplitBillModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
           <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
@@ -220,7 +220,7 @@ export default function SplitBillModal({
         </DialogHeader>
 
         <Tabs value={splitMode} onValueChange={(v) => setSplitMode(v as SplitMode)} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-3 h-11 bg-muted/50 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-3 h-11 bg-card border border-border/60 p-1 rounded-xl">
             <TabsTrigger value="items" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
               <List className="w-3.5 h-3.5 mr-1.5" />
               Items
@@ -237,7 +237,7 @@ export default function SplitBillModal({
 
           <div className="flex-1 min-h-0 overflow-y-auto mt-4">
             <TabsContent value="items" className="space-y-4 mt-0 px-1">
-              <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-2xl border border-border/50">
+              <div className="flex items-center gap-4 bg-card p-3 rounded-2xl border border-border/50">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground shrink-0">Comensales:</Label>
                 <Input
                   type="number"
@@ -261,7 +261,7 @@ export default function SplitBillModal({
                     const remaining = item.qty - totalAssigned
 
                     return (
-                      <Card key={item.id} className="border-none bg-muted/20 shadow-none rounded-2xl">
+                      <Card key={item.id} className="border-none bg-card shadow-none rounded-2xl">
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex-1 min-w-0 pr-2">
@@ -512,7 +512,7 @@ export default function SplitBillModal({
           </div>
         </Tabs>
 
-        <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-muted/20">
+        <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-card">
           <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
             <Button
               type="button"

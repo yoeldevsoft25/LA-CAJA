@@ -21,7 +21,7 @@ export default function DebtItemsModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0">
+            <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0 bg-card">
                 <DialogHeader className="px-6 py-4 border-b">
                     <DialogTitle className="flex items-center gap-2">
                         <ShoppingBag className="w-5 h-5 text-primary" />
@@ -52,7 +52,7 @@ export default function DebtItemsModal({
                                             </p>
                                         )}
                                         <div className="flex items-center gap-2 mt-1">
-                                            <Badge variant="outline" className="text-[10px] h-5 px-1 bg-slate-50">
+                                            <Badge variant="outline" className="text-[10px] h-5 px-1 bg-card">
                                                 x{item.qty}
                                             </Badge>
                                             <span className="text-xs text-muted-foreground">
@@ -70,7 +70,7 @@ export default function DebtItemsModal({
                 </div>
 
                 {totalAmount > 0 && (
-                    <div className="p-4 bg-muted/30 border-t flex justify-between items-center">
+                    <div className="p-4 bg-card border-t flex justify-between items-center">
                         <span className="font-semibold text-sm">Total Artículos:</span>
                         <Badge variant="default" className="text-base px-3 py-1">
                             ${totalAmount.toFixed(2)}

@@ -304,7 +304,7 @@ export default function TablesGrid({ onTableClick, onCreateOrder }: TablesGridPr
                       : table.status === 'reserved'
                         ? 'border-amber-400 bg-amber-500/10'
                         : table.status === 'out_of_service'
-                          ? 'border-muted bg-muted/20 opacity-60 grayscale'
+                          ? 'border-border bg-card opacity-60 grayscale'
                           : 'border-border bg-card hover:border-primary/50'
                   )}
                 >

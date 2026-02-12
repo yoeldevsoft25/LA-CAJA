@@ -89,7 +89,7 @@ export default function LegacyDebtModal({ isOpen, onClose, customer }: LegacyDeb
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] bg-card">
                 <DialogHeader>
                     <DialogTitle>Registrar Deuda Antigua</DialogTitle>
                     <DialogDescription>

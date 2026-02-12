@@ -95,7 +95,7 @@ export default function PartialPaymentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
           <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
@@ -140,7 +140,7 @@ export default function PartialPaymentModal({
                   min="0"
                   max={orderTotal.bs}
                   {...register('amount_bs', { valueAsNumber: true })}
-                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white shadow-sm font-bold"
+                  className="h-12 text-base border-border/60 bg-white/60 focus:bg-white shadow-sm font-bold"
                   placeholder="0.00"
                   disabled={isLoading}
                 />
@@ -167,7 +167,7 @@ export default function PartialPaymentModal({
                   min="0"
                   max={orderTotal.usd}
                   {...register('amount_usd', { valueAsNumber: true })}
-                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white shadow-sm font-bold"
+                  className="h-12 text-base border-border/60 bg-white/60 focus:bg-white shadow-sm font-bold"
                   placeholder="0.00"
                   disabled={isLoading}
                 />
@@ -193,7 +193,7 @@ export default function PartialPaymentModal({
                   }
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-12 text-base border-muted/40 bg-white/60 shadow-sm font-medium">
+                  <SelectTrigger className="h-12 text-base border-border/60 bg-white/60 shadow-sm font-medium">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -214,7 +214,7 @@ export default function PartialPaymentModal({
                   id="note"
                   {...register('note')}
                   rows={2}
-                  className="text-base border-muted/40 bg-white/60 focus:bg-white shadow-sm resize-none"
+                  className="text-base border-border/60 bg-white/60 focus:bg-white shadow-sm resize-none"
                   placeholder="Notas sobre el pago parcial..."
                   maxLength={500}
                   disabled={isLoading}

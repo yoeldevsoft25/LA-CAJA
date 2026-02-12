@@ -14,12 +14,12 @@ import { AlertTriangle, CheckCircle2, Bell } from 'lucide-react'
 // Helper para formatear severidad de alertas
 const formatAlertSeverity = (severity: string): { label: string; bgColor: string } => {
   const severityMap: Record<string, { label: string; bgColor: string }> = {
-    low: { label: 'Baja', bgColor: 'bg-gray-100' },
+    low: { label: 'Baja', bgColor: 'bg-card border border-border' },
     medium: { label: 'Media', bgColor: 'bg-yellow-100' },
     high: { label: 'Alta', bgColor: 'bg-orange-100' },
     critical: { label: 'Crítica', bgColor: 'bg-red-100' },
   }
-  return severityMap[severity] || { label: severity, bgColor: 'bg-gray-100' }
+  return severityMap[severity] || { label: severity, bgColor: 'bg-card border border-border' }
 }
 import { format } from 'date-fns'
 import { AlertSeverity } from '@/types/realtime-analytics.types'
@@ -120,7 +120,7 @@ export default function AlertsPanel({
                 <div
                   key={alert.id}
                   className={`p-3 border rounded-lg ${
-                    !alert.is_read ? 'bg-muted/50 border-primary/50' : ''
+                    !alert.is_read ? 'bg-card border-primary/30' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">

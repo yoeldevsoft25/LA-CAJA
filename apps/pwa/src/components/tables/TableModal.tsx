@@ -124,7 +124,7 @@ export default function TableModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
           <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <Square className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
@@ -153,7 +153,7 @@ export default function TableModal({
                 <Input
                   id="table_number"
                   {...register('table_number')}
-                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm"
+                  className="h-12 text-base border-border/60 bg-white/60 focus:bg-white transition-all shadow-sm"
                   placeholder="Ej: 1, A, Barra 1"
                   maxLength={20}
                   disabled={isLoading}
@@ -173,7 +173,7 @@ export default function TableModal({
                   onValueChange={(value) => setValue('type', value as any)}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm">
+                  <SelectTrigger className="h-12 text-base border-border/60 bg-white/60 focus:bg-white transition-all shadow-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -194,7 +194,7 @@ export default function TableModal({
                 <Input
                   id="name"
                   {...register('name')}
-                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm"
+                  className="h-12 text-base border-border/60 bg-white/60 focus:bg-white transition-all shadow-sm"
                   placeholder="Ej: Mesa VIP, Barra Principal"
                   maxLength={100}
                   disabled={isLoading}
@@ -216,7 +216,7 @@ export default function TableModal({
                   step="1"
                   min="1"
                   {...register('capacity', { valueAsNumber: true })}
-                  className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm"
+                  className="h-12 text-base border-border/60 bg-white/60 focus:bg-white transition-all shadow-sm"
                   placeholder="Ej: 4"
                   disabled={isLoading}
                 />
@@ -238,7 +238,7 @@ export default function TableModal({
                   onValueChange={(value) => setValue('status', value as TableStatus)}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm">
+                  <SelectTrigger className="h-12 text-base border-border/60 bg-white/60 focus:bg-white transition-all shadow-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -260,7 +260,7 @@ export default function TableModal({
                   id="note"
                   {...register('note')}
                   rows={3}
-                  className="text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm resize-none"
+                  className="text-base border-border/60 bg-white/60 focus:bg-white transition-all shadow-sm resize-none"
                   placeholder="Notas adicionales sobre la mesa..."
                   maxLength={1000}
                   disabled={isLoading}
@@ -273,7 +273,7 @@ export default function TableModal({
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-muted/20">
+          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-card">
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 type="button"

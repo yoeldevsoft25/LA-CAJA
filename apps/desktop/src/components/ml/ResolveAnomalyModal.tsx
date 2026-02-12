@@ -49,7 +49,7 @@ export default function ResolveAnomalyModal({
 
   return (
     <Dialog open={isOpen && !!anomaly} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-card">
         <DialogHeader>
           <DialogTitle>Resolver Anomalía</DialogTitle>
           <DialogDescription>
@@ -61,7 +61,7 @@ export default function ResolveAnomalyModal({
           <>
             <div className="space-y-4">
               {/* Detalles de la anomalía */}
-              <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="bg-card border border-border p-4 rounded-lg space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Tipo:</span>
                   <span className="font-medium">{formatAnomalyType(anomaly.anomaly_type)}</span>

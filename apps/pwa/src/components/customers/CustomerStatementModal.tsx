@@ -233,7 +233,7 @@ export default function CustomerStatementModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-4 md:px-6 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
@@ -272,7 +272,7 @@ export default function CustomerStatementModal({
               </div>
 
               {/* Información del cliente */}
-              <div className="customer-info print-customer-info bg-muted/50 rounded-lg p-4 mb-6">
+              <div className="customer-info print-customer-info bg-card rounded-lg p-4 mb-6">
                 <h2 className="text-lg font-semibold mb-3 text-foreground">{customer.name}</h2>
                 <div className="space-y-1 text-sm">
                   {customer.document_id && (
@@ -289,15 +289,15 @@ export default function CustomerStatementModal({
 
               {/* Estadísticas */}
               <div className="stats-grid print-stats-grid grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div className="stat-card print-stat-card bg-muted/50 rounded-lg p-4 text-center border border-border">
+                <div className="stat-card print-stat-card bg-card rounded-lg p-4 text-center border border-border">
                   <div className="label text-xs text-muted-foreground mb-2 uppercase tracking-wide">Total Compras</div>
                   <div className="value text-2xl font-bold text-foreground">{history?.total_purchases || 0}</div>
                 </div>
-                <div className="stat-card print-stat-card bg-muted/50 rounded-lg p-4 text-center border border-border">
+                <div className="stat-card print-stat-card bg-card rounded-lg p-4 text-center border border-border">
                   <div className="label text-xs text-muted-foreground mb-2 uppercase tracking-wide">Total en USD</div>
                   <div className="value text-2xl font-bold text-foreground">${(history?.total_amount_usd || 0).toFixed(2)}</div>
                 </div>
-                <div className="stat-card print-stat-card bg-muted/50 rounded-lg p-4 text-center border border-border">
+                <div className="stat-card print-stat-card bg-card rounded-lg p-4 text-center border border-border">
                   <div className="label text-xs text-muted-foreground mb-2 uppercase tracking-wide">Saldo Deudor USD</div>
                   <div className={`value text-2xl font-bold ${debtsSummary?.remaining_usd ? 'text-destructive' : 'text-green-600'}`}>
                     ${(debtsSummary?.remaining_usd || 0).toFixed(2)}
@@ -313,7 +313,7 @@ export default function CustomerStatementModal({
                     <div className="inline-block min-w-full align-middle px-4 md:px-0">
                       <table className="w-full border-collapse print-table">
                         <thead>
-                          <tr className="bg-muted/50">
+                          <tr className="bg-card">
                             <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Fecha</th>
                             <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Factura</th>
                             <th className="px-3 md:px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Monto USD</th>
@@ -328,7 +328,7 @@ export default function CustomerStatementModal({
                               const totalPaidUsd = (debt.payments || []).reduce((sum, p) => sum + Number(p.amount_usd), 0)
                               const remainingUsd = Number(debt.amount_usd) - totalPaidUsd
                               return (
-                                <tr key={debt.id} className="hover:bg-muted/30 transition-colors">
+                                <tr key={debt.id} className="hover:bg-card transition-colors">
                                   <td className="px-3 md:px-4 py-3 text-sm whitespace-nowrap">{format(new Date(debt.created_at), 'dd/MM/yyyy')}</td>
                                   <td className="px-3 md:px-4 py-3 text-sm font-mono text-muted-foreground whitespace-nowrap">{debt.sale?.id || '-'}</td>
                                   <td className="px-3 md:px-4 py-3 text-sm text-right font-medium whitespace-nowrap">${Number(debt.amount_usd).toFixed(2)}</td>
@@ -345,7 +345,7 @@ export default function CustomerStatementModal({
                                 </tr>
                               )
                             })}
-                          <tr className="bg-muted/50 font-semibold">
+                          <tr className="bg-card font-semibold">
                             <td colSpan={3} className="px-3 md:px-4 py-3">Total Pendiente</td>
                             <td className="px-3 md:px-4 py-3 text-right text-base whitespace-nowrap">${(debtsSummary?.remaining_usd || 0).toFixed(2)}</td>
                             <td className="px-3 md:px-4 py-3"></td>
@@ -365,7 +365,7 @@ export default function CustomerStatementModal({
                     <div className="inline-block min-w-full align-middle px-4 md:px-0">
                       <table className="w-full border-collapse print-table">
                         <thead>
-                          <tr className="bg-muted/50">
+                          <tr className="bg-card">
                             <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Fecha</th>
                             <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Referencia</th>
                             <th className="px-3 md:px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Método de Pago</th>
@@ -375,7 +375,7 @@ export default function CustomerStatementModal({
                         </thead>
                         <tbody className="divide-y divide-border">
                           {history.recent_sales.map((sale) => (
-                            <tr key={sale.id} className="hover:bg-muted/30 transition-colors">
+                            <tr key={sale.id} className="hover:bg-card transition-colors">
                               <td className="px-3 md:px-4 py-3 text-sm whitespace-nowrap">{format(new Date(sale.sold_at), 'dd/MM/yyyy HH:mm')}</td>
                               <td className="px-3 md:px-4 py-3 text-sm font-mono text-muted-foreground whitespace-nowrap">{sale.sale_number || '-'}</td>
                               <td className="px-3 md:px-4 py-3 text-sm whitespace-nowrap">{getPaymentMethodLabel(sale.payment_method)}</td>
@@ -394,7 +394,7 @@ export default function CustomerStatementModal({
               {customer.credit_limit && Number(customer.credit_limit) > 0 && (
                 <div className="mb-6">
                   <h3 className="section-title print-section-title text-lg font-semibold mb-4 pb-2 border-b border-border">Información de Crédito</h3>
-                  <div className="customer-info print-customer-info bg-muted/50 rounded-lg p-4">
+                  <div className="customer-info print-customer-info bg-card rounded-lg p-4">
                     <div className="space-y-2 text-sm">
                       <p><strong className="text-muted-foreground">Límite de Crédito:</strong> <span className="ml-2 font-medium">${Number(customer.credit_limit).toFixed(2)} USD</span></p>
                       <p><strong className="text-muted-foreground">Crédito Utilizado:</strong> <span className="ml-2 font-medium">${(debtsSummary?.remaining_usd || 0).toFixed(2)} USD</span></p>

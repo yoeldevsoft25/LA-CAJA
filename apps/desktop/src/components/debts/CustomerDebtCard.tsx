@@ -308,7 +308,7 @@ export default function CustomerDebtCard({
                     {/* Barra de Crédito Mini (Solo si tiene limite) */}
                     {hasCreditLimit && (
                       <div className="hidden sm:flex items-center gap-2 flex-1 max-w-[120px]">
-                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-card rounded-full overflow-hidden">
                           <div className={cn("h-full transition-all", creditHealth.color)} style={{ width: `${creditHealth.percent}%` }} />
                         </div>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
@@ -371,7 +371,7 @@ export default function CustomerDebtCard({
           </AccordionTrigger>
           <AccordionContent className="px-0 pb-0">
             {/* Resumen Expandido */}
-            <div className="bg-muted/30 px-4 py-4 border-t border-border">
+            <div className="bg-card px-4 py-4 border-t border-border">
               {/* Visualización detallada del Crédito */}
               {hasCreditLimit && (
                 <div className="mb-4 bg-background p-3 rounded-lg border border-border">
@@ -384,7 +384,7 @@ export default function CustomerDebtCard({
                       Límite: <b>${creditLimit.toFixed(2)}</b>
                     </span>
                   </div>
-                  <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                  <div className="h-2.5 w-full bg-card rounded-full overflow-hidden">
                     <div className={cn("h-full transition-all", creditHealth.color)} style={{ width: `${creditHealth.percent}%` }} />
                   </div>
                   <div className="flex justify-between mt-1 text-xs text-muted-foreground">
@@ -440,14 +440,14 @@ export default function CustomerDebtCard({
             </div>
 
             {/* Lista de deudas (Timeline View) */}
-            <div className="divide-y divide-border border-t border-border bg-slate-50/30">
+            <div className="divide-y divide-border border-t border-border bg-card">
               {isLoadingTimeline ? (
                 <div className="p-8 text-center text-muted-foreground">
                   Cargando historial...
                 </div>
               ) : !timelineData || timelineData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground bg-background">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-full bg-card flex items-center justify-center mx-auto mb-3">
                     <ShieldCheck className="w-6 h-6 text-muted-foreground/50" />
                   </div>
                   <p className="text-sm">Historial limpio. Cliente sin deudas.</p>
@@ -483,8 +483,8 @@ export default function CustomerDebtCard({
                     const chainStatus = chainSummary.chainStatus
 
                     return (
-                      <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-blue-200 ring-1 ring-blue-50')}>
-                        <div className={cn("px-4 py-2 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2", chainStatus === 'Completado' ? 'bg-slate-100' : 'bg-blue-50/50')}>
+                      <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-card border-border opacity-75' : 'bg-white border-blue-200 ring-1 ring-blue-50')}>
+                        <div className={cn("px-4 py-2 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2", chainStatus === 'Completado' ? 'bg-card' : 'bg-blue-50/50')}>
                           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Ciclo iniciado el {format(firstItemDate, "d MMM yyyy", { locale: es })}
@@ -493,7 +493,7 @@ export default function CustomerDebtCard({
                             <span className="text-[11px] text-muted-foreground">
                               Último mov: {format(lastItemDate, "d MMM, h:mm a", { locale: es })}
                             </span>
-                            <Badge variant={chainStatus === 'Completado' ? 'secondary' : 'default'} className={chainStatus === 'Completado' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 shadow-none'}>
+                            <Badge variant={chainStatus === 'Completado' ? 'secondary' : 'default'} className={chainStatus === 'Completado' ? 'bg-border text-muted-foreground' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 shadow-none'}>
                               {chainStatus}
                             </Badge>
                           </div>
@@ -501,7 +501,7 @@ export default function CustomerDebtCard({
 
                         <div className="px-4 py-3 border-b bg-background/70">
                           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-                            <div className="rounded-md border border-slate-200 bg-white p-2">
+                            <div className="rounded-md border border-border bg-white p-2">
                               <p className="text-muted-foreground uppercase tracking-wider">Fiado ciclo</p>
                               <p className="font-semibold text-foreground text-sm">${chainSummary.totalDebtUsd.toFixed(2)}</p>
                             </div>
@@ -517,7 +517,7 @@ export default function CustomerDebtCard({
                               <p className="text-orange-700 uppercase tracking-wider">Saldo actual</p>
                               <p className="font-semibold text-orange-700 text-sm">${chainSummary.currentBalanceUsd.toFixed(2)}</p>
                             </div>
-                            <div className="rounded-md border border-slate-200 bg-white p-2">
+                            <div className="rounded-md border border-border bg-white p-2">
                               <p className="text-muted-foreground uppercase tracking-wider">Movimientos</p>
                               <p className="font-semibold text-foreground text-sm">{chainSummary.movementCount} ({chainSummary.debtCount} deudas)</p>
                             </div>
@@ -536,7 +536,7 @@ export default function CustomerDebtCard({
                             return (
                               <div key={`${item.type}-${item.id}-${itemIndex}`} className="relative flex gap-4 pb-8 last:pb-0 group">
                                 {!isLast && (
-                                  <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-slate-200 group-hover:bg-slate-300 transition-colors" />
+                                  <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-border group-hover:bg-border transition-colors" />
                                 )}
 
                                 <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 shadow-sm ${iconBg}`}>
@@ -563,10 +563,10 @@ export default function CustomerDebtCard({
                                   </div>
 
                                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                                    <span className="px-2 py-0.5 rounded border border-slate-200 bg-white">
+                                    <span className="px-2 py-0.5 rounded border border-border bg-white">
                                       Saldo antes: ${Number(item.runningBeforeUsd).toFixed(2)}
                                     </span>
-                                    <span className="px-2 py-0.5 rounded border border-slate-200 bg-white">
+                                    <span className="px-2 py-0.5 rounded border border-border bg-white">
                                       Saldo después: ${Math.max(Number(item.runningAfterUsd), 0).toFixed(2)}
                                     </span>
                                     {!isDebt && item.data?.method && (
@@ -583,7 +583,7 @@ export default function CustomerDebtCard({
 
                                   <div className="mt-3">
                                     {isDebt && (
-                                      <div className="text-xs bg-slate-50 p-3 rounded-md border border-slate-100 shadow-sm">
+                                      <div className="text-xs bg-card p-3 rounded-md border border-slate-100 shadow-sm">
                                         <div className="flex justify-between items-center mb-1">
                                           <span className="text-muted-foreground">Estado: <span className="font-medium text-foreground">{item.data.status === 'open' ? 'Pendiente' : (item.data.status === 'paid' ? 'Pagada' : 'Parcial')}</span></span>
                                           {item.data.status !== 'paid' && (
@@ -592,9 +592,9 @@ export default function CustomerDebtCard({
                                             </span>
                                           )}
                                         </div>
-                                        {item.data.note && <p className="italic text-slate-600 border-l-2 border-slate-300 pl-2 py-1 mt-2">"{item.data.note}"</p>}
+                                        {item.data.note && <p className="italic text-muted-foreground border-l-2 border-slate-300 pl-2 py-1 mt-2">"{item.data.note}"</p>}
 
-                                        <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end gap-2">
+                                        <div className="mt-3 pt-2 border-t border-border flex justify-end gap-2">
                                           <Button
                                             size="sm"
                                             variant="ghost"

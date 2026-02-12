@@ -145,7 +145,7 @@ export default function ComparativeMetricsChart() {
             </div>
 
             {/* Cambio porcentual */}
-            <div className="p-4 bg-muted rounded-lg">
+            <div className="p-4 bg-card border border-border rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Cambio</p>
@@ -177,7 +177,7 @@ export default function ComparativeMetricsChart() {
                       ? 'bg-green-100 text-green-800'
                       : selectedMetric.trend === 'down'
                         ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
+                        : 'bg-card text-foreground border border-border'
                   }
                 >
                   {selectedMetric.trend === 'up'

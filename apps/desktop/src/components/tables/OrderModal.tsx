@@ -336,7 +336,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                         "font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border-2",
                         currentOrder.status === 'open' ? "bg-green-100 text-green-700 border-green-200" :
                           currentOrder.status === 'paused' ? "bg-amber-100 text-amber-700 border-amber-200" :
-                            "bg-muted text-muted-foreground border-border"
+                            "bg-card text-muted-foreground border-border"
                       )}
                     >
                       {currentOrder.status === 'open' ? 'Activa' :
@@ -366,7 +366,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
             </div>
           </DialogHeader>
 
-          <div className="flex-1 flex flex-col sm:flex-row min-h-0 overflow-hidden bg-muted/20">
+          <div className="flex-1 flex flex-col sm:flex-row min-h-0 overflow-hidden bg-card">
             {/* Lista de Items - Estilo Recibo Digital */}
             <div className="flex-1 flex flex-col min-h-0 relative px-4 py-4 sm:p-6 lg:p-8">
               <div className="flex items-center justify-between mb-4">
@@ -387,7 +387,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
               <ScrollArea className="flex-1 -mx-2 px-2 mask-linear">
                 <div className="space-y-3 pb-6">
                   {orderItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-card rounded-[2rem] border-2 border-dashed border-muted/30">
+                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-card rounded-[2rem] border-2 border-dashed border-border/30">
                       <Coffee className="w-12 h-12 text-muted-foreground/20 mb-3" />
                       <p className="font-bold text-muted-foreground">No hay items registrados</p>
                     </div>
@@ -398,7 +398,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                         className="group bg-card rounded-3xl p-4 shadow-sm border border-border/60 hover:shadow-md hover:border-primary/20 transition-all flex items-center gap-4 relative isolate"
                       >
                         {/* Cantidad Badge */}
-                        <div className="h-12 w-12 rounded-2xl bg-muted/40 dark:bg-muted/10 flex items-center justify-center text-xl font-black text-foreground shrink-0 border border-muted/20">
+                        <div className="h-12 w-12 rounded-2xl bg-card dark:bg-card/10 flex items-center justify-center text-xl font-black text-foreground shrink-0 border border-border/40">
                           {item.qty}
                         </div>
 
@@ -435,7 +435,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                             variant="ghost"
                             size="icon"
                             onClick={() => handleUpdateQty(item.id, item.qty - 1)}
-                            className="h-8 w-8 rounded-full bg-muted hover:bg-card transition-colors border border-border"
+                            className="h-8 w-8 rounded-full bg-card hover:bg-card transition-colors border border-border"
                             disabled={!canPause}
                           >
                             <Minus className="w-3.5 h-3.5" />
@@ -444,7 +444,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                             variant="ghost"
                             size="icon"
                             onClick={() => handleUpdateQty(item.id, item.qty + 1)}
-                            className="h-8 w-8 rounded-full bg-muted hover:bg-card transition-colors border border-border"
+                            className="h-8 w-8 rounded-full bg-card hover:bg-card transition-colors border border-border"
                             disabled={!canPause}
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -497,7 +497,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                         </span>
                         <Badge className="bg-primary/10 text-primary border-none font-black text-xs px-3 py-1 rounded-lg">USD</Badge>
                       </div>
-                      <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-muted/30">
+                      <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-border/30">
                         <span className="text-2xl font-bold text-muted-foreground tabular-nums">
                           {totals.bs.toFixed(2)}
                         </span>
@@ -524,7 +524,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                         <Button
                           variant="outline"
                           onClick={() => setIsPaymentModalOpen(true)}
-                          className="h-14 rounded-2xl border-border bg-muted/40 font-bold hover:bg-card hover:border-primary/40 transition-all"
+                          className="h-14 rounded-2xl border-border bg-card font-bold hover:bg-card hover:border-primary/40 transition-all"
                         >
                           <DollarSign className="w-4 h-4 mr-2 text-primary" /> Pagos
                         </Button>
@@ -532,7 +532,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                           variant="outline"
                           onClick={() => setIsSplitBillModalOpen(true)}
                           disabled={orderItems.length === 0}
-                          className="h-14 rounded-2xl border-border bg-muted/40 font-bold hover:bg-card hover:border-primary/40 transition-all"
+                          className="h-14 rounded-2xl border-border bg-card font-bold hover:bg-card hover:border-primary/40 transition-all"
                         >
                           <Users className="w-4 h-4 mr-2 text-blue-500" /> Dividir
                         </Button>
@@ -579,7 +579,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
                 </div>
               </div>
 
-              <div className="mt-6 flex items-start gap-3 p-4 rounded-2xl bg-muted/40 border border-border/60">
+              <div className="mt-6 flex items-start gap-3 p-4 rounded-2xl bg-card border border-border/60">
                 <AlertCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[10px] text-muted-foreground font-medium leading-relaxed uppercase tracking-tight">
                   Pasa el mouse sobre los items para editarlos o eliminarlos rápidamente.
@@ -668,7 +668,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
 
       {/* Cancelación */}
       <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-2xl">
+        <AlertDialogContent className="rounded-[2.5rem] bg-card border border-border shadow-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-black">¿Anular esta orden?</AlertDialogTitle>
             <AlertDialogDescription className="font-medium">
@@ -676,7 +676,7 @@ export default function OrderModal({ isOpen, onClose, order, onOrderUpdated }: O
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="rounded-2xl border-none bg-muted hover:bg-muted/80 font-bold">Mantener Orden</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-2xl border border-border bg-card hover:bg-card/80 font-bold btn-glass-neutral">Mantener Orden</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               className="rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-black"

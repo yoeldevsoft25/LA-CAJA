@@ -110,7 +110,7 @@ export default function DebtDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">Detalle de Deuda</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm mt-0.5">
@@ -132,7 +132,7 @@ export default function DebtDetailModal({
                 </CardContent>
               </Card>
 
-              <Card className="bg-muted/50 border-border">
+              <Card className="bg-card border-border">
                 <CardContent className="p-4">
                   <div className="flex items-center mb-2">
                     <Calendar className="w-5 h-5 text-muted-foreground mr-2" />
@@ -166,7 +166,7 @@ export default function DebtDetailModal({
 
             {/* Montos */}
             <Card className="border-border">
-              <CardHeader className="bg-muted/50">
+              <CardHeader className="bg-card">
                 <CardTitle className="text-sm flex items-center">
                   <DollarSign className="w-4 h-4 mr-2" />
                   Resumen de Montos
@@ -199,7 +199,7 @@ export default function DebtDetailModal({
 
             {/* Historial de Pagos */}
             <Card className="border-border">
-              <CardHeader className="bg-muted/50">
+              <CardHeader className="bg-card">
                 <CardTitle className="text-sm flex items-center">
                   <CreditCard className="w-4 h-4 mr-2" />
                   Historial de Pagos ({debt.payments?.length || 0})
@@ -211,7 +211,7 @@ export default function DebtDetailModal({
                     {debt.payments
                       .sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())
                       .map((payment: DebtPayment) => (
-                        <div key={payment.id} className="p-4 hover:bg-muted/50 transition-colors">
+                        <div key={payment.id} className="p-4 hover:bg-card transition-colors">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center mb-1 gap-2">
@@ -243,7 +243,7 @@ export default function DebtDetailModal({
                   </div>
                 ) : (
                   <div className="p-8 text-center text-muted-foreground">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto mb-2">
+                    <div className="w-10 h-10 rounded-full bg-card flex items-center justify-center mx-auto mb-2">
                       <CreditCard className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <p className="text-sm">No hay pagos registrados</p>
@@ -255,8 +255,8 @@ export default function DebtDetailModal({
             {/* Venta Asociada y Artículos */}
             {hasSale && (
               <>
-                <Card className="bg-muted/50 border-border">
-                  <CardHeader className="bg-muted/50">
+                <Card className="bg-card border-border">
+                  <CardHeader className="bg-card">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm flex items-center">
                         <Package className="w-4 h-4 mr-2" />
@@ -291,7 +291,7 @@ export default function DebtDetailModal({
                 {/* Artículos de la Venta */}
                 {hasSaleItems && debt.sale && (
                   <Card className="border-border">
-                    <CardHeader className="bg-muted/50">
+                    <CardHeader className="bg-card">
                       <CardTitle className="text-sm flex items-center">
                         <Package className="w-4 h-4 mr-2" />
                         Artículos de la Venta ({debt.sale.items?.length || 0})

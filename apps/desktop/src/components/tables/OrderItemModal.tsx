@@ -220,7 +220,7 @@ export default function OrderItemModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl h-[95vh] sm:h-[85vh] flex flex-col p-0 gap-0 overflow-hidden border-none bg-card shadow-2xl">
-          <DialogHeader className="px-4 py-4 border-b border-border/40 flex-shrink-0 pr-12 bg-muted/30">
+          <DialogHeader className="px-4 py-4 border-b border-border/40 flex-shrink-0 pr-12 bg-card">
             <div className="flex items-center gap-3">
               {isConfiguring || showCart ? (
                 <Button
@@ -245,14 +245,14 @@ export default function OrderItemModal({
           {!isConfiguring && !showCart ? (
             <div className="flex-1 flex flex-col min-h-0">
               {/* Barra de búsqueda y categorías */}
-              <div className="p-4 space-y-4 bg-muted/20">
+              <div className="p-4 space-y-4 bg-card">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
                   <Input
                     placeholder="Busca por nombre, SKU o código..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-12 pl-12 bg-background border-muted/40 rounded-2xl shadow-sm focus:ring-primary/20 transition-all text-lg"
+                    className="h-12 pl-12 bg-background border-border/60 rounded-2xl shadow-sm focus:ring-primary/20 transition-all text-lg"
                   />
                   {searchQuery && (
                     <Button
@@ -275,7 +275,7 @@ export default function OrderItemModal({
                         onClick={() => setSelectedCategory(null)}
                         className={cn(
                           "rounded-full px-5 h-10 font-bold transition-all transition-transform active:scale-95",
-                          selectedCategory === null ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-primary/5 border-muted/30"
+                          selectedCategory === null ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-primary/5 border-border/30"
                         )}
                       >
                         Todos
@@ -288,7 +288,7 @@ export default function OrderItemModal({
                           onClick={() => setSelectedCategory(cat)}
                           className={cn(
                             "rounded-full px-5 h-10 font-bold transition-all transition-transform active:scale-95",
-                            selectedCategory === cat ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-primary/5 border-muted/30"
+                            selectedCategory === cat ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-primary/5 border-border/30"
                           )}
                         >
                           {cat}
@@ -310,7 +310,7 @@ export default function OrderItemModal({
                   </div>
                 ) : filteredProducts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-                    <div className="bg-muted/50 w-20 h-20 rounded-full flex items-center justify-center mb-4">
+                    <div className="bg-card w-20 h-20 rounded-full flex items-center justify-center mb-4">
                       <Filter className="w-10 h-10 opacity-20" />
                     </div>
                     <p className="font-bold text-lg">No se encontraron productos</p>
@@ -325,7 +325,7 @@ export default function OrderItemModal({
                         className="group flex flex-col h-full bg-card hover:bg-card border border-transparent hover:border-primary/20 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden text-left active:scale-[0.98]"
                       >
                         {/* Imagen o placeholder */}
-                        <div className="h-28 bg-muted relative overflow-hidden flex items-center justify-center">
+                        <div className="h-28 bg-card relative overflow-hidden flex items-center justify-center">
                           {product.image_url ? (
                             <img
                               src={product.image_url}
@@ -389,8 +389,8 @@ export default function OrderItemModal({
               <ScrollArea className="flex-1">
                 <div className="p-6 space-y-4 pb-24">
                   {cart.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 p-4 rounded-3xl bg-muted/20 border border-muted/20 isolate relative group">
-                      <div className="h-12 w-12 rounded-2xl bg-card flex items-center justify-center text-xl font-black text-primary border border-muted/20 shadow-sm">
+                    <div key={item.id} className="flex items-center gap-4 p-4 rounded-3xl bg-card border border-border/40 isolate relative group">
+                      <div className="h-12 w-12 rounded-2xl bg-card flex items-center justify-center text-xl font-black text-primary border border-border/40 shadow-sm">
                         {item.qty}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -414,7 +414,7 @@ export default function OrderItemModal({
                   ))}
                 </div>
               </ScrollArea>
-              <div className="p-6 bg-muted/30 border-t border-border/40">
+              <div className="p-6 bg-card border-t border-border/40">
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-sm font-black text-muted-foreground uppercase tracking-widest">Total Estimado</span>
                   <span className="text-3xl font-black text-foreground">${cartTotalUsd.toFixed(2)}</span>
@@ -485,13 +485,13 @@ export default function OrderItemModal({
                     <Label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">
                       Cantidad del Pedido
                     </Label>
-                    <div className="flex items-center gap-6 p-4 rounded-3xl bg-muted/20 border border-muted/40">
+                    <div className="flex items-center gap-6 p-4 rounded-3xl bg-card border border-border/60">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => setValue('qty', Math.max(1, currentQty - 1))}
-                        className="h-14 w-14 rounded-2xl bg-card shadow-sm hover:bg-card active:scale-95 transition-all text-primary border border-muted/30"
+                        className="h-14 w-14 rounded-2xl bg-card shadow-sm hover:bg-card active:scale-95 transition-all text-primary border border-border/30"
                       >
                         <Minus className="w-6 h-6" />
                       </Button>
@@ -508,7 +508,7 @@ export default function OrderItemModal({
                         variant="ghost"
                         size="icon"
                         onClick={() => setValue('qty', currentQty + 1)}
-                        className="h-14 w-14 rounded-2xl bg-card shadow-sm hover:bg-card active:scale-95 transition-all text-primary border border-muted/30"
+                        className="h-14 w-14 rounded-2xl bg-card shadow-sm hover:bg-card active:scale-95 transition-all text-primary border border-border/30"
                       >
                         <Plus className="w-6 h-6" />
                       </Button>
@@ -532,7 +532,7 @@ export default function OrderItemModal({
                                 "relative px-6 py-3 rounded-2xl border-2 transition-all group overflow-hidden shrink-0",
                                 selectedVariant?.id === v.id
                                   ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                                  : "border-muted/30 bg-background hover:border-primary/50"
+                                  : "border-border/30 bg-background hover:border-primary/50"
                               )}
                             >
                               {selectedVariant?.id === v.id && (
@@ -564,14 +564,14 @@ export default function OrderItemModal({
                     <Textarea
                       {...register('note')}
                       placeholder="Ej: Sin cebolla, extra salsa, términos de cocción..."
-                      className="h-24 sm:h-32 rounded-[2rem] border-muted/40 bg-muted/20 focus:bg-card transition-all text-lg resize-none p-6 shadow-inner"
+                      className="h-24 sm:h-32 rounded-[2rem] border-border/60 bg-card focus:bg-card transition-all text-lg resize-none p-6 shadow-inner"
                     />
                   </div>
                 </div>
               </ScrollArea>
 
               {/* Botón de Añadir Local */}
-              <div className="p-4 sm:p-6 bg-muted/30 border-t border-border/40 flex flex-col sm:flex-row gap-3">
+              <div className="p-4 sm:p-6 bg-card border-t border-border/40 flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 flex flex-col justify-center px-4 hidden sm:flex">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Subtotal Item</p>
                   <p className="text-2xl font-black text-foreground">

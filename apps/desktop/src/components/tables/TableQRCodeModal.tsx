@@ -82,7 +82,7 @@ export default function TableQRCodeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0 pr-12">
           <DialogTitle className="text-base sm:text-lg md:text-xl flex items-center">
             <QrCode className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
@@ -129,13 +129,13 @@ export default function TableQRCodeModal({
                   <Input
                     value={qrCodeUrl}
                     readOnly
-                    className="h-12 font-mono text-xs bg-muted/30 border-muted/40"
+                    className="h-12 font-mono text-xs bg-card border-border/60"
                   />
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={handleCopyURL}
-                    className="h-12 w-12 border border-muted/40 hover:bg-white text-primary"
+                    className="h-12 w-12 border border-border/60 hover:bg-white text-primary"
                     title="Copiar URL"
                   >
                     {copied ? (
@@ -178,7 +178,7 @@ export default function TableQRCodeModal({
                 <Button
                   variant="outline"
                   onClick={handleDownloadQR}
-                  className="h-12 flex-1 border-muted/40 font-bold hover:bg-white"
+                  className="h-12 flex-1 border-border/60 font-bold hover:bg-white"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Descargar

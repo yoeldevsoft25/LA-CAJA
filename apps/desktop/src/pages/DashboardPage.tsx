@@ -1045,7 +1045,7 @@ export default function DashboardPage() {
                                       <div className={cn(
                                         "w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold",
                                         index === 0 ? "bg-amber-500 text-white" :
-                                          index === 1 ? "bg-slate-400 text-white" :
+                                          index === 1 ? "bg-card border border-border text-foreground" :
                                             index === 2 ? "bg-orange-600 text-white" : "bg-card text-muted-foreground"
                                       )}>
                                         {index + 1}
@@ -1115,7 +1115,7 @@ export default function DashboardPage() {
                                       <div className={cn(
                                         "w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold",
                                         index === 0 ? "bg-amber-500 text-white" :
-                                          index === 1 ? "bg-slate-400 text-white" :
+                                          index === 1 ? "bg-card border border-border text-foreground" :
                                             index === 2 ? "bg-orange-600 text-white" : "bg-card text-muted-foreground"
                                       )}>
                                         {index + 1}

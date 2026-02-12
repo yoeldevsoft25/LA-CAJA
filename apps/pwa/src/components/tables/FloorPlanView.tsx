@@ -245,10 +245,10 @@ export default function FloorPlanView({
 
       {/* Controles Flotantes */}
       <div className="absolute bottom-6 right-6 z-20 flex flex-col gap-2 shadow-2xl rounded-2xl overflow-hidden bg-card border border-border p-1.5">
-        <Button variant="ghost" size="icon" onClick={() => handleZoom(ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-muted">
+        <Button variant="ghost" size="icon" onClick={() => handleZoom(ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-card">
           <ZoomIn className="w-5 h-5" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => handleZoom(-ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-muted">
+        <Button variant="ghost" size="icon" onClick={() => handleZoom(-ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-card">
           <ZoomOut className="w-5 h-5" />
         </Button>
         <div className="w-full h-px bg-border my-0.5" />
@@ -468,7 +468,7 @@ export default function FloorPlanView({
                     )}
                     <span className={cn(
                       "font-black text-lg leading-none",
-                      order ? "text-primary" : "text-slate-600"
+                      order ? "text-primary" : "text-muted-foreground"
                     )}>
                       {table.table_number}
                     </span>
@@ -522,13 +522,13 @@ export default function FloorPlanView({
           </div>
           <div className="w-full h-px bg-border my-1" />
           <div className="flex items-center gap-2 opacity-60">
-            <div className="w-6 h-6 rounded-lg bg-muted border border-border border-dashed flex items-center justify-center">
+            <div className="w-6 h-6 rounded-lg bg-card border border-border border-dashed flex items-center justify-center">
               <Footprints className="w-3 h-3 text-muted-foreground" />
             </div>
             <span>Pasillo</span>
           </div>
           <div className="flex items-center gap-2 opacity-60">
-            <div className="w-6 h-6 rounded-sm bg-muted-foreground flex items-center justify-center" />
+            <div className="w-6 h-6 rounded-sm bg-card-foreground flex items-center justify-center" />
             <span>Muro</span>
           </div>
         </div>

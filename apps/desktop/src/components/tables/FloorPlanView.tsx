@@ -237,7 +237,7 @@ export default function FloorPlanView({
   }
 
   return (
-    <div className="relative w-full h-[650px] border rounded-2xl overflow-hidden bg-slate-50/50">
+    <div className="relative w-full h-[650px] border rounded-2xl overflow-hidden bg-card">
       {/* Grid Pattern Sutil */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}
@@ -245,13 +245,13 @@ export default function FloorPlanView({
 
       {/* Controles Flotantes */}
       <div className="absolute bottom-6 right-6 z-20 flex flex-col gap-2 shadow-2xl rounded-2xl overflow-hidden bg-white border border-slate-100 p-1.5">
-        <Button variant="ghost" size="icon" onClick={() => handleZoom(ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="h-10 w-10 text-slate-600 rounded-xl hover:bg-slate-50">
+        <Button variant="ghost" size="icon" onClick={() => handleZoom(ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-card">
           <ZoomIn className="w-5 h-5" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => handleZoom(-ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="h-10 w-10 text-slate-600 rounded-xl hover:bg-slate-50">
+        <Button variant="ghost" size="icon" onClick={() => handleZoom(-ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="h-10 w-10 text-muted-foreground rounded-xl hover:bg-card">
           <ZoomOut className="w-5 h-5" />
         </Button>
-        <div className="w-full h-px bg-slate-100 my-0.5" />
+        <div className="w-full h-px bg-border my-0.5" />
         <Button variant="ghost" size="icon" onClick={resetView} className="h-10 w-10 text-primary rounded-xl hover:bg-primary/5">
           <RotateCcw className="w-5 h-5" />
         </Button>
@@ -469,7 +469,7 @@ export default function FloorPlanView({
                     )}
                     <span className={cn(
                       "font-black text-lg leading-none",
-                      order ? "text-primary" : "text-slate-600"
+                      order ? "text-primary" : "text-muted-foreground"
                     )}>
                       {table.table_number}
                     </span>
@@ -496,7 +496,7 @@ export default function FloorPlanView({
         </g>
       </svg>
       <div className="absolute bottom-4 left-4 bg-card rounded-2xl p-4 border border-slate-100 shadow-xl">
-        <div className="flex flex-col gap-3 text-xs font-bold text-slate-600">
+        <div className="flex flex-col gap-3 text-xs font-bold text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-card border border-slate-300 flex items-center justify-center">
               <User className="w-3 h-3 text-slate-400" />
@@ -521,15 +521,15 @@ export default function FloorPlanView({
             </div>
             <span>Limpieza</span>
           </div>
-          <div className="w-full h-px bg-slate-100 my-1" />
+          <div className="w-full h-px bg-border my-1" />
           <div className="flex items-center gap-2 opacity-60">
-            <div className="w-6 h-6 rounded-lg bg-slate-50 border border-slate-300 border-dashed flex items-center justify-center">
+            <div className="w-6 h-6 rounded-lg bg-card border border-slate-300 border-dashed flex items-center justify-center">
               <Footprints className="w-3 h-3 text-slate-400" />
             </div>
             <span>Pasillo</span>
           </div>
           <div className="flex items-center gap-2 opacity-60">
-            <div className="w-6 h-6 rounded-sm bg-slate-400 flex items-center justify-center" />
+            <div className="w-6 h-6 rounded-sm bg-border flex items-center justify-center" />
             <span>Muro</span>
           </div>
         </div>

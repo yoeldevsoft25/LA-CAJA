@@ -199,7 +199,7 @@ export default function PayAllDebtsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle>Pago Completo de Deudas</DialogTitle>
           <DialogDescription>
@@ -210,7 +210,7 @@ export default function PayAllDebtsModal({
 
         <div className="space-y-4">
           {/* Resumen de deudas */}
-          <Card className="bg-muted/50">
+          <Card className="bg-card">
             <CardContent className="p-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

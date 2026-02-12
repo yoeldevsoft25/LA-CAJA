@@ -305,10 +305,10 @@
    FIX: Dialog Animation Override
    Forces centered transform for dialogs to prevent "fly-in" glitch
    ═══════════════════════════════════════════════════════════════════════ */
-[role="dialog"]>[data-state="open"] {
+[role="dialog"][data-state="open"],
+[data-state="open"].fixed.z-\[1000\] {
   --tw-enter-translate-x: -50% !important;
   --tw-enter-translate-y: -50% !important;
-  transform: translate3d(var(--tw-translate-x, -50%), var(--tw-translate-y, -50%), 0) scale(var(--tw-scale-x), var(--tw-scale-y)) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

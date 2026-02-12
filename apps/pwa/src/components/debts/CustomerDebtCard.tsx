@@ -209,7 +209,7 @@ export default function CustomerDebtCard({
                     {/* Barra de Crédito Mini (Solo si tiene limite) */}
                     {hasCreditLimit && (
                       <div className="hidden sm:flex items-center gap-2 flex-1 max-w-[120px]">
-                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-card rounded-full overflow-hidden">
                           <div className={cn("h-full transition-all", creditHealth.color)} style={{ width: `${creditHealth.percent}%` }} />
                         </div>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
@@ -272,7 +272,7 @@ export default function CustomerDebtCard({
           </AccordionTrigger>
           <AccordionContent className="px-0 pb-0">
             {/* Resumen Expandido */}
-            <div className="bg-muted/30 px-4 py-4 border-t border-border">
+            <div className="bg-card px-4 py-4 border-t border-border">
               {/* Visualización detallada del Crédito */}
               {hasCreditLimit && (
                 <div className="mb-4 bg-background p-3 rounded-lg border border-border">
@@ -285,7 +285,7 @@ export default function CustomerDebtCard({
                       Límite: <b>${creditLimit.toFixed(2)}</b>
                     </span>
                   </div>
-                  <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                  <div className="h-2.5 w-full bg-card rounded-full overflow-hidden">
                     <div className={cn("h-full transition-all", creditHealth.color)} style={{ width: `${creditHealth.percent}%` }} />
                   </div>
                   <div className="flex justify-between mt-1 text-xs text-muted-foreground">
@@ -341,14 +341,14 @@ export default function CustomerDebtCard({
             </div>
 
             {/* Lista de deudas (Timeline View) */}
-            <div className="divide-y divide-border border-t border-border bg-slate-50/30">
+            <div className="divide-y divide-border border-t border-border bg-card">
               {isLoadingTimeline ? (
                 <div className="p-8 text-center text-muted-foreground">
                   Cargando historial...
                 </div>
               ) : !timelineData || timelineData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground bg-background">
-                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-full bg-card flex items-center justify-center mx-auto mb-3">
                     <ShieldCheck className="w-6 h-6 text-muted-foreground/50" />
                   </div>
                   <p className="text-sm">Historial limpio. Cliente sin deudas.</p>
@@ -379,15 +379,15 @@ export default function CustomerDebtCard({
                     })
 
                     return (
-                      <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-muted/30 border-border opacity-75' : 'bg-card border-blue-500/20 ring-1 ring-blue-500/5')}>
+                      <div key={chainIndex} className={cn("relative border rounded-xl overflow-hidden shadow-sm", chainStatus === 'Completado' ? 'bg-card border-border opacity-75' : 'bg-card border-blue-500/20 ring-1 ring-blue-500/5')}>
 
                         {/* Chain Header */}
-                        <div className={cn("px-4 py-2 border-b flex justify-between items-center", chainStatus === 'Completado' ? 'bg-muted/50' : 'bg-blue-500/10')}>
+                        <div className={cn("px-4 py-2 border-b flex justify-between items-center", chainStatus === 'Completado' ? 'bg-card' : 'bg-blue-500/10')}>
                           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Ciclo iniciado el {format(firstItemDate, "d MMM yyyy", { locale: es })}
                           </span>
-                          <Badge variant={chainStatus === 'Completado' ? 'secondary' : 'default'} className={chainStatus === 'Completado' ? 'bg-muted text-muted-foreground' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 shadow-none'}>
+                          <Badge variant={chainStatus === 'Completado' ? 'secondary' : 'default'} className={chainStatus === 'Completado' ? 'bg-card text-muted-foreground' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 shadow-none'}>
                             {chainStatus}
                           </Badge>
                         </div>
@@ -406,7 +406,7 @@ export default function CustomerDebtCard({
                               <div key={itemIndex} className="relative flex gap-4 pb-8 last:pb-0 group">
                                 {/* Connector Line */}
                                 {!isLast && (
-                                  <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-slate-200 group-hover:bg-slate-300 transition-colors" />
+                                  <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-border group-hover:bg-border transition-colors" />
                                 )}
 
                                 {/* Timeline Node */}
@@ -436,7 +436,7 @@ export default function CustomerDebtCard({
                                   {/* Details Box */}
                                   <div className="mt-3">
                                     {isDebt && (
-                                      <div className="text-xs bg-muted/30 p-3 rounded-md border border-border shadow-sm">
+                                      <div className="text-xs bg-card p-3 rounded-md border border-border shadow-sm">
                                         <div className="flex justify-between items-center mb-1">
                                           <span className="text-muted-foreground font-medium">Estado: <span className="text-foreground">{item.data.status === 'open' ? 'Pendiente' : (item.data.status === 'paid' ? 'Pagada' : 'Parcial')}</span></span>
                                           {item.data.status !== 'paid' && (
@@ -448,7 +448,7 @@ export default function CustomerDebtCard({
                                         {item.data.note && <p className="italic text-muted-foreground border-l-2 border-muted pl-2 py-1 mt-2">"{item.data.note}"</p>}
 
                                         {/* Acciones Deuda: Abonar | Ver Artículos */}
-                                        <div className="mt-3 pt-2 border-t border-slate-200 flex justify-end gap-2">
+                                        <div className="mt-3 pt-2 border-t border-border flex justify-end gap-2">
                                           <Button
                                             size="sm"
                                             variant="ghost"
