@@ -144,7 +144,7 @@ export default function AccountsAgingReport() {
                                                                 <TableHead className="text-right whitespace-nowrap">31 - 60 días</TableHead>
                                                                 <TableHead className="text-right whitespace-nowrap">61 - 90 días</TableHead>
                                                                 <TableHead className="text-right whitespace-nowrap">+90 días</TableHead>
-                                                                <TableHead className="text-right font-bold bg-muted/50">Total</TableHead>
+                                                                <TableHead className="text-right font-bold bg-card">Total</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -171,14 +171,14 @@ export default function AccountsAgingReport() {
                                                                         <div className="text-red-600 dark:text-red-400">{formatCurrency(customer.days_over_90_usd, 'USD')}</div>
                                                                         <div className="text-muted-foreground">{formatCurrency(customer.days_over_90_bs)}</div>
                                                                     </TableCell>
-                                                                    <TableCell className="text-right font-mono text-sm font-bold bg-muted/50">
+                                                                    <TableCell className="text-right font-mono text-sm font-bold bg-card">
                                                                         <div>{formatCurrency(customer.total_usd, 'USD')}</div>
                                                                         <div className="text-muted-foreground text-xs font-normal">{formatCurrency(customer.total_bs)}</div>
                                                                     </TableCell>
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
-                                                        <TableBody className="border-t-2 border-primary/20 bg-muted/20">
+                                                        <TableBody className="border-t-2 border-primary/20 bg-card">
                                                             <TableRow>
                                                                 <TableCell className="font-bold text-base">TOTALES</TableCell>
                                                                 <TableCell className="text-right font-bold font-mono">
@@ -201,7 +201,7 @@ export default function AccountsAgingReport() {
                                                                     <div>{formatCurrency(receivableReport?.totals.days_over_90_usd || 0, 'USD')}</div>
                                                                     <div className="text-xs text-muted-foreground">{formatCurrency(receivableReport?.totals.days_over_90_bs || 0)}</div>
                                                                 </TableCell>
-                                                                <TableCell className="text-right font-bold font-mono text-base bg-muted/50">
+                                                                <TableCell className="text-right font-bold font-mono text-base bg-card">
                                                                     <div className="text-primary">{formatCurrency(receivableReport?.totals.total_usd || 0, 'USD')}</div>
                                                                     <div className="text-xs text-muted-foreground">{formatCurrency(receivableReport?.totals.total_bs || 0)}</div>
                                                                 </TableCell>
@@ -241,7 +241,7 @@ export default function AccountsAgingReport() {
                                                                 <TableHead className="text-right whitespace-nowrap">31 - 60 días</TableHead>
                                                                 <TableHead className="text-right whitespace-nowrap">61 - 90 días</TableHead>
                                                                 <TableHead className="text-right whitespace-nowrap">+90 días</TableHead>
-                                                                <TableHead className="text-right font-bold bg-muted/50">Total</TableHead>
+                                                                <TableHead className="text-right font-bold bg-card">Total</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
@@ -268,14 +268,14 @@ export default function AccountsAgingReport() {
                                                                         <div className="text-red-600 dark:text-red-400">{formatCurrency(supplier.days_over_90_usd, 'USD')}</div>
                                                                         <div className="text-muted-foreground">{formatCurrency(supplier.days_over_90_bs)}</div>
                                                                     </TableCell>
-                                                                    <TableCell className="text-right font-mono text-sm font-bold bg-muted/50">
+                                                                    <TableCell className="text-right font-mono text-sm font-bold bg-card">
                                                                         <div>{formatCurrency(supplier.total_usd, 'USD')}</div>
                                                                         <div className="text-muted-foreground text-xs font-normal">{formatCurrency(supplier.total_bs)}</div>
                                                                     </TableCell>
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
-                                                        <TableBody className="border-t-2 border-primary/20 bg-muted/20">
+                                                        <TableBody className="border-t-2 border-primary/20 bg-card">
                                                             <TableRow>
                                                                 <TableCell className="font-bold text-base">TOTALES</TableCell>
                                                                 <TableCell className="text-right font-bold font-mono">
@@ -298,7 +298,7 @@ export default function AccountsAgingReport() {
                                                                     <div>{formatCurrency(payableReport?.totals.days_over_90_usd || 0, 'USD')}</div>
                                                                     <div className="text-xs text-muted-foreground">{formatCurrency(payableReport?.totals.days_over_90_bs || 0)}</div>
                                                                 </TableCell>
-                                                                <TableCell className="text-right font-bold font-mono text-base bg-muted/50">
+                                                                <TableCell className="text-right font-bold font-mono text-base bg-card">
                                                                     <div className="text-primary">{formatCurrency(payableReport?.totals.total_usd || 0, 'USD')}</div>
                                                                     <div className="text-xs text-muted-foreground">{formatCurrency(payableReport?.totals.total_bs || 0)}</div>
                                                                 </TableCell>

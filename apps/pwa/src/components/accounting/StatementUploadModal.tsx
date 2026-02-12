@@ -151,7 +151,7 @@ export default function StatementUploadModal({ isOpen, onClose }: StatementUploa
 
                     <div className="space-y-2">
                         <Label>Archivo CSV</Label>
-                        <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+                        <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-card transition-colors cursor-pointer relative">
                             <Input
                                 type="file"
                                 accept=".csv"

@@ -78,7 +78,7 @@ function getStatusBadge(status: LicensePayment['status']) {
     },
     expired: {
       label: 'Expirado',
-      className: 'bg-slate-500/10 text-slate-600 border-slate-200',
+      className: 'bg-card text-muted-foreground border-border',
       icon: AlertCircle,
     },
   };

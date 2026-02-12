@@ -71,7 +71,7 @@ export function QuickActionsBar({
                     onClick={onToggleSplitPayment}
                     className={cn(
                         'h-10 justify-start gap-2 rounded-xl',
-                        !isSplitPayment && 'border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
+                        !isSplitPayment && 'border-border bg-card text-foreground/70 hover:bg-card/80',
                     )}
                     aria-pressed={isSplitPayment}
                 >
@@ -87,7 +87,7 @@ export function QuickActionsBar({
                         onClick={() => onToggleFiscalInvoice(!generateFiscalInvoice)}
                         className={cn(
                             'h-10 justify-start gap-2 rounded-xl',
-                            !generateFiscalInvoice && 'border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
+                            !generateFiscalInvoice && 'border-border bg-card text-foreground/70 hover:bg-card/80',
                         )}
                         aria-pressed={generateFiscalInvoice}
                     >
@@ -106,7 +106,7 @@ export function QuickActionsBar({
                                 variant="outline"
                                 size="sm"
                                 className={cn(
-                                    'h-10 justify-start gap-2 rounded-xl border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
+                                    'h-10 justify-start gap-2 rounded-xl border-border bg-card text-foreground/70 hover:bg-card/80',
                                     selectedPromotionId && 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20',
                                 )}
                             >
@@ -141,7 +141,7 @@ export function QuickActionsBar({
                             variant="outline"
                             size="sm"
                             className={cn(
-                                'h-10 justify-start gap-2 rounded-xl border-border bg-muted/40 text-foreground/70 hover:bg-muted/60',
+                                'h-10 justify-start gap-2 rounded-xl border-border bg-card text-foreground/70 hover:bg-card/80',
                                 selectedCustomerId && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20',
                             )}
                         >

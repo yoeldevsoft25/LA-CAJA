@@ -68,7 +68,7 @@ function getStatusBadge(status: LicensePaymentStatus) {
     },
     expired: {
       label: 'Expirado',
-      className: 'bg-slate-500/10 text-slate-600 border-slate-200',
+      className: 'bg-card text-muted-foreground border-border',
       icon: AlertCircle
     },
   };
@@ -299,7 +299,7 @@ export default function LicensePaymentsPage() {
                           >
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center font-bold text-lg group-hover:bg-[#0c81cf10] group-hover:text-[#0c81cf] transition-colors">
+                                <div className="h-10 w-10 rounded-lg bg-card border border-border text-muted-foreground flex items-center justify-center font-bold text-lg group-hover:bg-[#0c81cf10] group-hover:text-[#0c81cf] transition-colors">
                                   {payment.store?.name?.charAt(0) || <Building2 className="h-5 w-5" />}
                                 </div>
                                 <div>

@@ -350,7 +350,7 @@ export default function EntryFormModal({
 
                 <div className="border rounded-lg overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-muted">
+                    <thead className="bg-card">
                       <tr>
                         <th className="p-2 text-left">Cuenta</th>
                         <th className="p-2 text-left">Descripción</th>
@@ -448,7 +448,7 @@ export default function EntryFormModal({
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-muted font-semibold">
+                    <tfoot className="bg-card font-semibold">
                       <tr>
                         <td colSpan={2} className="p-2 text-right">Total:</td>
                         <td className="p-2 text-right font-mono">{totalDebitBs.toFixed(2)}</td>

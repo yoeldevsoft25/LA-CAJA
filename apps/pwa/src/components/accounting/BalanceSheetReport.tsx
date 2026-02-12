@@ -233,7 +233,7 @@ export default function BalanceSheetReport() {
           </Card>
 
           {/* Totales */}
-          <Card className="bg-muted/50">
+          <Card className="bg-card">
             <CardContent className="pt-6">
               <div className="flex justify-end gap-8 text-xl font-bold">
                 <div className="text-right">

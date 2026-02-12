@@ -50,7 +50,7 @@ const statusLabels: Record<string, string> = {
 }
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-800',
+  draft: 'bg-card text-foreground border border-border',
   issued: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
   rejected: 'bg-orange-100 text-orange-800',
@@ -380,7 +380,7 @@ export default function FiscalInvoiceDetailPage() {
           {/* Código QR Fiscal y Código de Control */}
           <div className="mt-6 text-center">
             {invoice.fiscal_qr_code && (
-              <div className="inline-block p-4 bg-muted rounded">
+              <div className="inline-block p-4 bg-card border border-border rounded">
                 <img
                   src={invoice.fiscal_qr_code}
                   alt="Código QR Fiscal"

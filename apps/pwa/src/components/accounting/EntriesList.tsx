@@ -42,7 +42,7 @@ const entryStatusLabels: Record<EntryStatus, string> = {
 }
 
 const entryStatusColors: Record<EntryStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
+  draft: 'bg-card text-foreground border border-border',
   posted: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
 }
@@ -84,7 +84,7 @@ export default function EntriesList({ onViewEntry }: EntriesListProps) {
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="flex flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
+      <div className="flex flex-wrap gap-4 p-4 bg-card rounded-lg">
         <div className="flex-1 min-w-[200px]">
           <label className="text-sm font-medium mb-2 block">Tipo de Asiento</label>
           <Select

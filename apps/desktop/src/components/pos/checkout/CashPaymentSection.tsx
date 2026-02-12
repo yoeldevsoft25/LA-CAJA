@@ -138,7 +138,7 @@ const CashPaymentSection = memo(function CashPaymentSection({
                 </div>
 
                 {mode === 'USD' && onGiveChangeInBsChange && (
-                    <label className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                    <label className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
                         <input
                             type="checkbox"
                             id={giveChangeId}
@@ -152,7 +152,7 @@ const CashPaymentSection = memo(function CashPaymentSection({
                 )}
 
                 {(mode === 'BS' || (mode === 'USD' && giveChangeInBs)) && change > 0 && (
-                    <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+                    <div className="space-y-2 rounded-lg border border-border bg-card p-3">
                         <Label htmlFor={roundingModeId}>Politica de redondeo</Label>
                         <select
                             id={roundingModeId}

@@ -219,7 +219,7 @@ export default function BudgetReport() {
                                             </TableCell>
 
                                             {/* BS */}
-                                            <TableCell className="text-right bg-slate-50/50">
+                                            <TableCell className="text-right bg-card">
                                                 {isEditing ? (
                                                     <Input
                                                         className="h-8 text-right w-32 ml-auto"
@@ -240,7 +240,7 @@ export default function BudgetReport() {
                                             </TableCell>
 
                                             {/* USD */}
-                                            <TableCell className="text-right bg-slate-50/50">
+                                            <TableCell className="text-right bg-card">
                                                 {isEditing ? (
                                                     <Input
                                                         className="h-8 text-right w-32 ml-auto"

@@ -140,7 +140,7 @@ export default function CashFlowReport() {
                           <TableCell className="text-right font-mono">{formatCurrency(adj.amount_usd, 'USD')}</TableCell>
                         </TableRow>
                       ))}
-                      <TableRow className="bg-muted/30">
+                      <TableRow className="bg-card">
                         <TableCell className="font-semibold pl-4">Cambios en Capital de Trabajo</TableCell>
                         <TableCell></TableCell>
                         <TableCell></TableCell>
@@ -160,7 +160,7 @@ export default function CashFlowReport() {
                         <TableCell className="text-right font-mono">{formatCurrency(report.operating_activities.changes_in_working_capital.inventory_bs)}</TableCell>
                         <TableCell className="text-right font-mono">{formatCurrency(report.operating_activities.changes_in_working_capital.inventory_usd, 'USD')}</TableCell>
                       </TableRow>
-                      <TableRow className="bg-muted/50 font-semibold">
+                      <TableRow className="bg-card font-semibold">
                         <TableCell>Flujo de Efectivo Neto de Operaciones</TableCell>
                         <TableCell className="text-right font-mono">{formatCurrency(report.operating_activities.net_cash_from_operations_bs)}</TableCell>
                         <TableCell className="text-right font-mono">{formatCurrency(report.operating_activities.net_cash_from_operations_usd, 'USD')}</TableCell>
@@ -247,7 +247,7 @@ export default function CashFlowReport() {
           </Card>
 
           {/* Resumen */}
-          <Card className="bg-muted/50">
+          <Card className="bg-card">
             <CardHeader>
               <CardTitle>Resumen del Flujo de Efectivo</CardTitle>
             </CardHeader>
@@ -272,7 +272,7 @@ export default function CashFlowReport() {
                       <TableCell className="text-right font-mono">{formatCurrency(report.net_change_in_cash_bs)}</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(report.net_change_in_cash_usd, 'USD')}</TableCell>
                     </TableRow>
-                    <TableRow className="bg-muted font-semibold">
+                    <TableRow className="bg-card font-semibold">
                       <TableCell>Efectivo al final del período</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(report.cash_at_end_bs)}</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(report.cash_at_end_usd, 'USD')}</TableCell>

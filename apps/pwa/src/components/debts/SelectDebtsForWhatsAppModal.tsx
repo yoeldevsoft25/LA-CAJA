@@ -130,7 +130,7 @@ export default function SelectDebtsForWhatsAppModal({
               <Label
                 htmlFor="tone-friendly"
                 className={cn(
-                  "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-muted/50",
+                  "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-card",
                   tone === 'friendly' ? "border-green-500 bg-green-50 text-green-700" : "border-border"
                 )}
               >
@@ -141,7 +141,7 @@ export default function SelectDebtsForWhatsAppModal({
               <Label
                 htmlFor="tone-formal"
                 className={cn(
-                  "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-muted/50",
+                  "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-card",
                   tone === 'formal' ? "border-blue-500 bg-blue-50 text-blue-700" : "border-border"
                 )}
               >
@@ -152,7 +152,7 @@ export default function SelectDebtsForWhatsAppModal({
               <Label
                 htmlFor="tone-urgent"
                 className={cn(
-                  "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-muted/50",
+                  "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all hover:bg-card",
                   tone === 'urgent' ? "border-orange-500 bg-orange-50 text-orange-700" : "border-border"
                 )}
               >
@@ -173,12 +173,12 @@ export default function SelectDebtsForWhatsAppModal({
               </div>
             </div>
 
-            <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1 bg-muted/20">
+            <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1 bg-card">
               {openDebts.map((debt) => {
                 const checked = selectedIds.has(debt.id)
                 const calc = calculateDebtTotals(debt)
                 return (
-                  <label key={debt.id} className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer">
+                  <label key={debt.id} className="flex items-center gap-2 p-2 hover:bg-card rounded cursor-pointer">
                     <Checkbox checked={checked} onCheckedChange={() => toggle(debt.id)} className="h-4 w-4" />
                     <span className="text-xs flex-1">
                       {format(new Date(debt.created_at), "dd/MM/yy")} -
@@ -194,7 +194,7 @@ export default function SelectDebtsForWhatsAppModal({
           </div>
 
           {/* 3. Previsualización */}
-          <div className="bg-muted/50 rounded-lg p-3 border">
+          <div className="bg-card rounded-lg p-3 border">
             <p className="text-xs text-muted-foreground font-semibold mb-1 uppercase tracking-wider">Vista Previa</p>
             <p className="text-sm whitespace-pre-wrap italic text-muted-foreground">
               "{readablePreview}"
@@ -202,8 +202,8 @@ export default function SelectDebtsForWhatsAppModal({
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t bg-muted/10">
-          <Button type="button" variant="outline" onClick={onClose}>
+        <DialogFooter className="px-6 py-4 border-t bg-card">
+          <Button type="button" variant="outline" className="btn-glass-neutral" onClick={onClose}>
             Cancelar
           </Button>
           <Button

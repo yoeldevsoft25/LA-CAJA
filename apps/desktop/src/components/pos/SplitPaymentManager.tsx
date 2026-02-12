@@ -119,7 +119,7 @@ export default function SplitPaymentManager({
                 size="sm"
                 variant="outline"
                 onClick={() => setShowAddForm(true)}
-                className="h-9 rounded-lg border-border bg-muted/40"
+                className="h-9 rounded-lg border-border bg-card"
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Agregar
@@ -313,7 +313,7 @@ export default function SplitPaymentManager({
             })
             setShowAddForm(true)
           }}
-          className="w-full h-10 rounded-xl border-border bg-muted/40 text-foreground/80 hover:bg-muted/60"
+          className="w-full h-10 rounded-xl border-border bg-card text-foreground/80 hover:bg-card/80"
         >
           <Wallet className="w-4 h-4 mr-2" />
           Completar con Pago Movil (Bs. {remainingBs.toFixed(2)})

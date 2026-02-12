@@ -138,7 +138,7 @@ export default function AccountBalanceView() {
                         {Number(balance.total_credit_bs).toFixed(2)}
                       </p>
                     </div>
-                    <div className="border rounded-lg p-4 bg-muted">
+                    <div className="border rounded-lg p-4 bg-card">
                       <p className="text-sm text-muted-foreground mb-1">Saldo Final</p>
                       <p className="text-2xl font-bold font-mono">
                         {Number(balance.closing_balance_bs).toFixed(2)}
@@ -169,7 +169,7 @@ export default function AccountBalanceView() {
                         ${Number(balance.total_credit_usd).toFixed(2)}
                       </p>
                     </div>
-                    <div className="border rounded-lg p-4 bg-muted">
+                    <div className="border rounded-lg p-4 bg-card">
                       <p className="text-sm text-muted-foreground mb-1">Saldo Final</p>
                       <p className="text-2xl font-bold font-mono">
                         ${Number(balance.closing_balance_usd).toFixed(2)}

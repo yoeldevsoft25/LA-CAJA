@@ -113,7 +113,7 @@ export default function AuditLogViewer() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <ScrollArea className="h-[60px] w-[300px] rounded border p-2 bg-muted/50">
+                                        <ScrollArea className="h-[60px] w-[300px] rounded border p-2 bg-card">
                                             <pre className="text-[10px]">
                                                 {JSON.stringify(log.after_value || log.before_value, null, 2)}
                                             </pre>

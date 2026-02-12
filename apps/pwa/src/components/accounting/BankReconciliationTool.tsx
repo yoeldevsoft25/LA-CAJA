@@ -102,7 +102,7 @@ export default function BankReconciliationTool() {
                 <Card className="col-span-1 md:col-span-2 h-[calc(100vh-200px)] overflow-hidden flex flex-col">
                     {selectedStatementId && activeStatement ? (
                         <>
-                            <CardHeader className="border-b bg-muted/20 pb-4">
+                            <CardHeader className="border-b bg-card pb-4">
                                 <div className="flex justify-between items-center">
                                     <div>
                                         <CardTitle className="flex items-center gap-2">

@@ -245,13 +245,13 @@ export default function PartialPaymentModal({
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-muted/20">
+          <div className="flex-shrink-0 border-t border-border px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-card">
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={onClose}
-                className="h-12 flex-1 font-semibold text-muted-foreground hover:text-foreground hover:bg-white transition-all px-6"
+                className="h-12 flex-1 font-semibold btn-glass-neutral transition-all px-6"
                 disabled={isLoading}
               >
                 Cancelar

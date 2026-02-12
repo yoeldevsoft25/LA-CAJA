@@ -52,7 +52,7 @@ const PaymentMethodSelector = memo(function PaymentMethodSelector({
                                 aria-checked={isActive}
                                 className={cn(
                                     'h-auto min-h-14 justify-start gap-3 rounded-xl border px-3 py-2 text-left transition-all',
-                                    'hover:bg-muted/40 hover:border-border/80',
+                                    'hover:bg-card hover:border-border/80',
                                     isActive && 'border-primary bg-primary/10 text-primary shadow-sm hover:bg-primary/20',
                                 )}
                                 onClick={() => onChange(method.value)}
@@ -60,7 +60,7 @@ const PaymentMethodSelector = memo(function PaymentMethodSelector({
                             >
                                 <span className={cn(
                                     'flex h-8 w-8 items-center justify-center rounded-lg border',
-                                    isActive ? 'border-primary/40 bg-primary/20' : 'border-border bg-muted/30 text-muted-foreground',
+                                    isActive ? 'border-primary/40 bg-primary/20' : 'border-border bg-card text-muted-foreground',
                                 )}>
                                     {method.icon}
                                 </span>

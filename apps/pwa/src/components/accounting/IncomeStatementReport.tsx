@@ -207,7 +207,7 @@ export default function IncomeStatementReport() {
 
           {/* Ingreso Neto */}
           <Card className={cn(
-            "bg-muted/50",
+            "bg-card",
             report.totals.net_income_bs >= 0 ? "border-green-500" : "border-red-500"
           )}>
             <CardContent className="pt-6">

@@ -275,7 +275,7 @@ export default function ValidationReport() {
                                 <div className="font-medium">Detalles:</div>
                                 {error.details.map((detail: any, detailIndex: number) => (
                                   <div key={detailIndex} className="pl-4 border-l-2 border-muted">
-                                    <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                                    <pre className="text-xs bg-card p-2 rounded overflow-x-auto">
                                       {JSON.stringify(detail, null, 2)}
                                     </pre>
                                   </div>
@@ -284,7 +284,7 @@ export default function ValidationReport() {
                             ) : (
                               <div>
                                 <div className="font-medium mb-2">Detalles:</div>
-                                <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                                <pre className="text-xs bg-card p-2 rounded overflow-x-auto">
                                   {JSON.stringify(error.details, null, 2)}
                                 </pre>
                               </div>

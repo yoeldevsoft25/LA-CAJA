@@ -137,7 +137,7 @@ export default function GeneralLedgerReport() {
                   <AccordionContent className="px-6 pb-6">
                     <div className="space-y-4">
                       {/* Resumen */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-card rounded-lg">
                         <div>
                           <div className="text-sm text-muted-foreground">Saldo Inicial</div>
                           <div className="font-mono font-semibold">{formatCurrency(account.opening_balance_bs)}</div>
@@ -191,7 +191,7 @@ export default function GeneralLedgerReport() {
                             ) : (
                               <>
                                 {/* Saldo inicial */}
-                                <TableRow className="bg-muted/30">
+                                <TableRow className="bg-card">
                                   <TableCell colSpan={3} className="font-semibold">
                                     Saldo Inicial
                                   </TableCell>
@@ -223,7 +223,7 @@ export default function GeneralLedgerReport() {
                                   </TableRow>
                                 ))}
                                 {/* Saldo final */}
-                                <TableRow className="bg-muted/50 font-semibold">
+                                <TableRow className="bg-card font-semibold">
                                   <TableCell colSpan={3}>Saldo Final</TableCell>
                                   <TableCell className="text-right font-mono">{formatCurrency(account.total_debits_bs)}</TableCell>
                                   <TableCell className="text-right font-mono">{formatCurrency(account.total_credits_bs)}</TableCell>

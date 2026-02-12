@@ -36,7 +36,7 @@ const entryStatusLabels: Record<EntryStatus, string> = {
 }
 
 const entryStatusColors: Record<EntryStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
+  draft: 'bg-card text-foreground border border-border',
   posted: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
 }
@@ -160,7 +160,7 @@ export default function EntryDetailModal({
                         </TableCell>
                       </TableRow>
                     ))}
-                    <TableRow className="bg-muted font-semibold">
+                    <TableRow className="bg-card font-semibold">
                       <TableCell colSpan={2} className="text-right">Total:</TableCell>
                       <TableCell className="text-right font-mono">{Number(entry.total_debit_bs).toFixed(2)}</TableCell>
                       <TableCell className="text-right font-mono">{Number(entry.total_credit_bs).toFixed(2)}</TableCell>
