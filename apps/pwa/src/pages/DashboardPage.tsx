@@ -128,7 +128,7 @@ function KPICard({
 
         <div className="mt-4">
           {trend && (
-            <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-background/50 w-fit">
+            <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-card border border-border/60 w-fit">
               {trend.value >= 0 ? (
                 <TrendingUp className="w-3.5 h-3.5 text-[hsl(var(--success))] font-bold" />
               ) : (
@@ -349,7 +349,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg">
+            <div className="bg-card p-4 rounded-lg">
               <p className="text-sm font-semibold mb-2">Detalles del error:</p>
               <ul className="text-sm space-y-1 list-disc list-inside">
                 <li>Estado HTTP: {error?.response?.status || 'N/A'}</li>
@@ -505,7 +505,7 @@ export default function DashboardPage() {
             {/* Selector de Moneda */}
             <div className="flex flex-col gap-1 flex-shrink-0">
               <Label className="text-xs">Moneda Gráficos</Label>
-              <div className="flex bg-muted rounded-md p-1">
+              <div className="flex bg-card rounded-md p-1">
                 <button
                   type="button"
                   onClick={() => setChartCurrency('BS')}
@@ -892,7 +892,7 @@ export default function DashboardPage() {
                         <p className="text-xl sm:text-2xl font-black text-primary tracking-tight">
                           {kpis.performance.top_selling_product.name}
                         </p>
-                        <div className="mt-4 p-3 rounded-xl bg-background/50 border border-border/40">
+                        <div className="mt-4 p-3 rounded-xl bg-card border border-border/60 border border-border/40">
                           <p className="text-xs text-muted-foreground uppercase font-black opacity-60">
                             Cantidad vendida
                           </p>
@@ -1011,7 +1011,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="weight" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-background/50">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-card border border-border/60">
                       <TabsTrigger value="weight" className="font-bold">Por Peso</TabsTrigger>
                       <TabsTrigger value="units" className="font-bold">Por Unidades</TabsTrigger>
                     </TabsList>
@@ -1020,7 +1020,7 @@ export default function DashboardPage() {
                     <TabsContent value="weight" className="mt-0">
                       <div className="overflow-x-auto overflow-y-auto max-h-[380px] [-webkit-overflow-scrolling:touch]">
                         <Table>
-                          <TableHeader className="sticky top-0 bg-background/80 backdrop-blur-md z-10">
+                          <TableHeader className="sticky top-0 bg-card z-10">
                             <TableRow>
                               <TableHead className="w-12">#</TableHead>
                               <TableHead>Producto</TableHead>
@@ -1046,7 +1046,7 @@ export default function DashboardPage() {
                                         "w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold",
                                         index === 0 ? "bg-amber-500 text-white" :
                                           index === 1 ? "bg-slate-400 text-white" :
-                                            index === 2 ? "bg-orange-600 text-white" : "bg-muted text-muted-foreground"
+                                            index === 2 ? "bg-orange-600 text-white" : "bg-card text-muted-foreground"
                                       )}>
                                         {index + 1}
                                       </div>
@@ -1090,7 +1090,7 @@ export default function DashboardPage() {
                     <TabsContent value="units" className="mt-0">
                       <div className="overflow-x-auto overflow-y-auto max-h-[380px] [-webkit-overflow-scrolling:touch]">
                         <Table>
-                          <TableHeader className="sticky top-0 bg-background/80 backdrop-blur-md z-10">
+                          <TableHeader className="sticky top-0 bg-card z-10">
                             <TableRow>
                               <TableHead className="w-12">#</TableHead>
                               <TableHead>Producto</TableHead>
@@ -1116,7 +1116,7 @@ export default function DashboardPage() {
                                         "w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold",
                                         index === 0 ? "bg-amber-500 text-white" :
                                           index === 1 ? "bg-slate-400 text-white" :
-                                            index === 2 ? "bg-orange-600 text-white" : "bg-muted text-muted-foreground"
+                                            index === 2 ? "bg-orange-600 text-white" : "bg-card text-muted-foreground"
                                       )}>
                                         {index + 1}
                                       </div>

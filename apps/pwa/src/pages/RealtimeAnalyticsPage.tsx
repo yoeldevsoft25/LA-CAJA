@@ -150,7 +150,7 @@ export default function RealtimeAnalyticsPage() {
       {/* Tabs para diferentes vistas con scroll móvil */}
       <Tabs defaultValue="overview" className="space-y-4">
         <div className="overflow-x-auto pb-2 -mx-3 sm:mx-0 px-3 sm:px-0">
-          <TabsList className="w-full justify-start md:justify-center p-1 bg-muted/50 h-auto">
+          <TabsList className="w-full justify-start md:justify-center p-1 bg-card border border-border/60 h-auto">
             <TabsTrigger value="overview" className="py-2.5 px-4">
               <Activity className="w-4 h-4 mr-2" />
               Vista General

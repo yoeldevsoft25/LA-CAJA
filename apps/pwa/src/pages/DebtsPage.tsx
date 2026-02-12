@@ -272,7 +272,7 @@ export default function DebtsPage() {
       </div>
 
       {/* Advanced Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 sticky top-0 z-10 bg-background/95 backdrop-blur py-2">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 sticky top-0 z-10 bg-background/95  py-2">
         {/* Search */}
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -316,7 +316,7 @@ export default function DebtsPage() {
 
       {/* View Mode Tabs */}
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="w-full">
-        <TabsList className="w-full sm:w-auto mb-4 sm:mb-6">
+        <TabsList className="w-full sm:w-auto mb-4 sm:mb-6 bg-card border border-border/60">
           <TabsTrigger value="by_customer" className="flex-1 sm:flex-none">
             <Users className="w-4 h-4 mr-1" />
             Por Cliente
@@ -346,7 +346,7 @@ export default function DebtsPage() {
                   <Card className="border border-border">
                     <CardContent className="p-8 text-center">
                       <div className="flex flex-col items-center justify-center py-8">
-                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                        <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center mb-4">
                           <Users className="w-8 h-8 text-muted-foreground" />
                         </div>
                         <p className="text-sm sm:text-base font-medium text-foreground mb-1">
@@ -402,7 +402,7 @@ export default function DebtsPage() {
                       return (
                         <div className="p-8 text-center">
                           <div className="flex flex-col items-center justify-center py-8">
-                            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                            <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center mb-4">
                               <CreditCard className="w-8 h-8 text-muted-foreground" />
                             </div>
                             <p className="text-sm sm:text-base font-medium text-foreground mb-1">
@@ -443,7 +443,7 @@ export default function DebtsPage() {
                               const status = statusConfig[debt.status] || statusConfig.open
 
                               return (
-                                <TableRow key={debt.id} className="hover:bg-muted/50">
+                                <TableRow key={debt.id} className="hover:bg-card">
                                   <TableCell>
                                     <div>
                                       <p className="font-semibold text-foreground truncate">

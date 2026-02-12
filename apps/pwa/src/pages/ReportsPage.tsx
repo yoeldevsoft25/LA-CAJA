@@ -272,7 +272,7 @@ export default function ReportsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg">
+            <div className="bg-card p-4 rounded-lg">
               <p className="text-sm font-semibold mb-2">Detalles del error:</p>
               <ul className="text-sm space-y-1 list-disc list-inside">
                 <li>Estado HTTP: {error?.response?.status || 'N/A'}</li>
@@ -567,7 +567,7 @@ export default function ReportsPage() {
                       key={method}
                       className={cn(
                         'border',
-                        isFIAO ? 'bg-warning/5 !border-warning' : 'bg-muted/50 border-border'
+                        isFIAO ? 'bg-warning/5 !border-warning' : 'bg-card border-border'
                       )}
                     >
                       <CardContent className="p-3">
@@ -616,7 +616,7 @@ export default function ReportsPage() {
               {debtSummary ? (
                 <>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                    <Card className="bg-muted/50 border-border">
+                    <Card className="bg-card border-border">
                       <CardContent className="p-3">
                         <p className="text-xs text-muted-foreground">Total Fiado</p>
                         <p className="text-lg font-bold text-foreground">
@@ -658,7 +658,7 @@ export default function ReportsPage() {
                         {debtSummary.top_debtors.map((debtor: any, index: number) => (
                           <Card
                             key={debtor.customer_id}
-                            className="bg-muted/50 border-border"
+                            className="bg-card border-border"
                           >
                             <CardContent className="p-3">
                               <div className="flex items-center justify-between">
@@ -708,7 +708,7 @@ export default function ReportsPage() {
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <Tabs defaultValue="weight" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsList className="grid w-full grid-cols-2 mb-4 bg-card border border-border/60">
                   <TabsTrigger value="weight">Por Peso</TabsTrigger>
                   <TabsTrigger value="units">Por Cantidad</TabsTrigger>
                 </TabsList>
@@ -734,7 +734,7 @@ export default function ReportsPage() {
                           return (
                             <Card
                               key={product.product_id}
-                              className="bg-muted/50 border-border relative overflow-hidden"
+                              className="bg-card border-border relative overflow-hidden"
                             >
                               <CardContent className="p-3">
                                 <div className="relative flex items-center justify-between">
@@ -807,7 +807,7 @@ export default function ReportsPage() {
                           return (
                             <Card
                               key={product.product_id}
-                              className="bg-muted/50 border-border relative overflow-hidden"
+                              className="bg-card border-border relative overflow-hidden"
                             >
                               <CardContent className="p-3">
                                 <div className="relative flex items-center justify-between">

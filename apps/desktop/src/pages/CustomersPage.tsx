@@ -276,7 +276,7 @@ export default function CustomersPage() {
           ) : customers.length === 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-card flex items-center justify-center mb-4">
                   <Users className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-lg font-medium text-foreground mb-1">
@@ -294,7 +294,7 @@ export default function CustomersPage() {
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-muted/50">
+                  <thead className="bg-card">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
                         Cliente
