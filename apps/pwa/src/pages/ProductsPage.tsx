@@ -526,7 +526,7 @@ export default function ProductsPage() {
           {/* Opciones Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-auto px-3 gap-2 bg-background">
+              <Button variant="outline" className="w-auto px-3 gap-2 btn-glass-neutral">
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="hidden sm:inline">Opciones</span>
               </Button>
@@ -552,8 +552,8 @@ export default function ProductsPage() {
 
           <Button
             onClick={handleCreate}
-            variant="default"
-            className="shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all font-semibold"
+            variant="outline"
+            className="btn-glass-neutral font-semibold"
           >
             <Plus className="w-5 h-5 mr-2" />
             Nuevo Producto
@@ -571,7 +571,7 @@ export default function ProductsPage() {
               placeholder="Buscar por nombre, SKU o código de barras..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 h-11 sm:h-12 text-base border-muted/40 bg-background transition-all shadow-sm focus:ring-primary/20"
+              className="pl-10 pr-4 h-11 sm:h-12 text-base border-muted/40 bg-card transition-all shadow-sm focus:ring-primary/20"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -580,7 +580,7 @@ export default function ProductsPage() {
               <Input
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                className="mt-1 border-muted/40 bg-background"
+                className="mt-1 border-muted/40 bg-card"
                 placeholder="Todas"
               />
             </div>
@@ -592,7 +592,7 @@ export default function ProductsPage() {
                   setStatusFilter(value as 'all' | 'active' | 'inactive')
                 }
               >
-                <SelectTrigger className="mt-1 border-muted/40 bg-background">
+                <SelectTrigger className="mt-1 border-muted/40 bg-card">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -610,7 +610,7 @@ export default function ProductsPage() {
                   setProductTypeFilter(value as 'all' | 'sale_item' | 'ingredient' | 'prepared')
                 }
               >
-                <SelectTrigger className="mt-1 border-muted/40 bg-background">
+                <SelectTrigger className="mt-1 border-muted/40 bg-card">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -623,7 +623,7 @@ export default function ProductsPage() {
             </div>
             <div className="w-full sm:max-w-sm">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Catálogo público</Label>
-              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-background px-3 py-2">
+              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-card px-3 py-2">
                 <span className="text-sm text-muted-foreground">
                   Solo visibles
                 </span>
@@ -637,7 +637,7 @@ export default function ProductsPage() {
               <div className="w-full sm:max-w-sm">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Stock por bodega</Label>
                 <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                  <SelectTrigger className="mt-1 border-muted/40 bg-background">
+                  <SelectTrigger className="mt-1 border-muted/40 bg-card">
                     <SelectValue placeholder="Todas las bodegas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -658,12 +658,12 @@ export default function ProductsPage() {
                 onValueChange={(v) => setViewMode(v as 'cards' | 'table')}
                 className="w-auto"
               >
-                <TabsList className="h-10 bg-muted/40">
-                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <TabsList className="h-10 bg-card border border-border/60">
+                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-muted/55 data-[state=active]:shadow-sm">
                     <LayoutGrid className="w-4 h-4" />
                     <span className="hidden sm:inline">Cards</span>
                   </TabsTrigger>
-                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-muted/55 data-[state=active]:shadow-sm">
                     <LayoutList className="w-4 h-4" />
                     <span className="hidden sm:inline">Tabla</span>
                   </TabsTrigger>
@@ -675,14 +675,14 @@ export default function ProductsPage() {
       </Card>
 
       {/* Lista de productos */}
-      <Card className="border-none premium-shadow overflow-hidden bg-background ring-1 ring-border/50">
+      <Card className="border-none premium-shadow overflow-hidden bg-card ring-1 ring-border/50">
         <CardContent className="p-0">
           {isError ? (
             <div className="p-12 text-center">
               <div className="flex flex-col items-center justify-center">
                 <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-destructive dark:text-red-400" />
                 <p className="text-muted-foreground">Error al cargar productos</p>
-                <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+                <Button variant="outline" className="mt-4 btn-glass-neutral" onClick={() => refetch()}>
                   Reintentar
                 </Button>
               </div>
@@ -697,7 +697,7 @@ export default function ProductsPage() {
           ) : products.length === 0 ? (
             <div className="p-16 text-center">
               <div className="flex flex-col items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+                <div className="w-20 h-20 rounded-full bg-card border border-border/60 flex items-center justify-center mb-6">
                   <Package className="w-10 h-10 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-1">
@@ -707,7 +707,7 @@ export default function ProductsPage() {
                   {isOfflineEmpty ? 'Conéctate para ver tus productos.' : searchQuery ? 'Intenta con otro término.' : 'Crea tu primer producto ahora.'}
                 </p>
                 {!searchQuery && !isOfflineEmpty && (
-                  <Button onClick={handleCreate}>
+                  <Button onClick={handleCreate} variant="outline" className="btn-glass-neutral">
                     <Plus className="w-4 h-4 mr-2" /> Crear Producto
                   </Button>
                 )}
@@ -738,7 +738,7 @@ export default function ProductsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full sm:table-fixed">
-                <thead className="bg-muted/30">
+                <thead className="bg-card">
                   <tr className="border-b border-border/60">
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[45%] sm:w-[40%] pl-6">
                       Producto
@@ -957,6 +957,7 @@ export default function ProductsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="btn-glass-neutral"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
@@ -970,6 +971,7 @@ export default function ProductsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="btn-glass-neutral"
               onClick={() => setCurrentPage(p => p + 1)}
               disabled={currentPage >= Math.ceil(total / pageSize)}
             >

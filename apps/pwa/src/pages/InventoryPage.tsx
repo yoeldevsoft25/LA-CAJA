@@ -382,7 +382,8 @@ export default function InventoryPage() {
               setSelectedProduct(null)
               setIsStockReceivedModalOpen(true)
             }}
-            className="w-full sm:w-auto shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-all font-semibold"
+            variant="outline"
+            className="w-full sm:w-auto btn-glass-neutral font-semibold"
           >
             <Plus className="w-4 h-4 mr-2" />
             Recibir Stock
@@ -391,7 +392,7 @@ export default function InventoryPage() {
           {/* Opciones Adicionales Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-auto px-3 gap-2 bg-background hover:bg-muted/40">
+              <Button variant="outline" className="w-auto px-3 gap-2 btn-glass-neutral">
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="hidden sm:inline">Opciones</span>
               </Button>
@@ -447,7 +448,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Filtros */}
-      <Card className="mb-6 border-none shadow-md shadow-black/5 bg-background transition-all duration-300">
+      <Card className="mb-6 border-none shadow-md shadow-black/5 bg-card transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs sm:text-sm text-muted-foreground">
@@ -474,7 +475,7 @@ export default function InventoryPage() {
               placeholder="Buscar por nombre, SKU o código de barras…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 sm:pl-10 h-11 sm:h-12 text-base border-muted/40 bg-background transition-all shadow-sm focus:ring-primary/20"
+              className="pl-9 sm:pl-10 h-11 sm:h-12 text-base border-muted/40 bg-card transition-all shadow-sm focus:ring-primary/20"
               aria-label="Buscar productos en inventario"
             />
           </div>
@@ -484,7 +485,7 @@ export default function InventoryPage() {
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Bodega</Label>
               <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                <SelectTrigger className="mt-1.5 border-muted/40 bg-background">
+                <SelectTrigger className="mt-1.5 border-muted/40 bg-card">
                   <SelectValue placeholder="Todas las bodegas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -536,7 +537,7 @@ export default function InventoryPage() {
 
                   setIsPurchaseOrderModalOpen(true)
                 }}
-                className="border-primary/30 text-primary hover:bg-primary/5 min-h-[44px] w-full sm:w-auto flex-shrink-0"
+                className="btn-glass-neutral min-h-[44px] w-full sm:w-auto flex-shrink-0"
               >
                 <ShoppingCart className="w-4 h-4 mr-2" />
                 Crear Orden ({lowStockCount})
@@ -559,7 +560,7 @@ export default function InventoryPage() {
                 )}
                 <Button
                   variant="outline"
-                  className="mt-4"
+                  className="mt-4 btn-glass-neutral"
                   onClick={() => refetch()}
                 >
                   Reintentar
@@ -586,7 +587,7 @@ export default function InventoryPage() {
                 <div className="overflow-x-auto">
                   <Table className="w-full sm:table-fixed">
                     <TableHeader>
-                      <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-muted/60">
+                      <TableRow className="bg-card hover:bg-card border-b-muted/60">
                         <TableHead className="w-[50%] sm:w-[45%] font-semibold pl-4">Producto</TableHead>
                         <TableHead className="text-center font-semibold">Stock Actual</TableHead>
                         <TableHead className="text-center hidden sm:table-cell font-semibold">Mínimo</TableHead>

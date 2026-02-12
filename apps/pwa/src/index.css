@@ -714,6 +714,34 @@
     @apply bg-card border border-border;
   }
 
+  .btn-glass-neutral {
+    border: 1px solid hsl(var(--border) / 0.78);
+    background: hsl(var(--muted) / 0.72);
+    color: hsl(var(--foreground));
+    box-shadow: 0 1px 2px hsl(220 20% 8% / 0.06);
+    backdrop-filter: blur(6px);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .btn-glass-neutral:hover {
+    background: hsl(var(--muted) / 0.9);
+    border-color: hsl(var(--border));
+    box-shadow: 0 3px 10px hsl(220 20% 8% / 0.08);
+  }
+
+  .dark .btn-glass-neutral {
+    background: hsl(var(--secondary) / 0.68);
+    border-color: hsl(var(--border));
+    box-shadow: 0 2px 10px hsl(0 0% 0% / 0.35);
+  }
+
+  .dark .btn-glass-neutral:hover {
+    background: hsl(var(--secondary) / 0.84);
+  }
+
   /* ⚡ PERF: Motion Hints */
   .animate-gpu {
     will-change: transform, opacity;
