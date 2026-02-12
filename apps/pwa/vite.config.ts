@@ -228,6 +228,8 @@ export default defineConfig(({ mode }) => ({
         description: 'Sistema POS Offline-First',
         theme_color: BRAND.blue,
         background_color: BRAND.white,
+        lang: 'es',
+        scope: '/',
         display: 'standalone',
         start_url: '/',
         icons: PWA_ICONS,
