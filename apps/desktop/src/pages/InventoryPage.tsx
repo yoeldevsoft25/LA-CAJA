@@ -26,7 +26,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
+import { InventorySkeleton } from '@/components/ui/module-skeletons'
+import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
+import { useSmoothLoading } from '@/hooks/use-smooth-loading'
+import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
@@ -91,6 +94,7 @@ export default function InventoryPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
+  const debouncedSearchQuery = useDebounce(searchQuery, 250)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(20)
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
@@ -111,7 +115,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, showLowStockOnly, warehouseFilter])
+  }, [debouncedSearchQuery, showLowStockOnly, warehouseFilter])
 
   const offset = (currentPage - 1) * pageSize
 
@@ -119,6 +123,7 @@ export default function InventoryPage() {
   const {
     data: stockStatusData,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
@@ -126,7 +131,7 @@ export default function InventoryPage() {
     queryKey: [
       'inventory',
       'stock-status',
-      searchQuery,
+      debouncedSearchQuery,
       showLowStockOnly,
       warehouseFilter,
       currentPage,
@@ -135,7 +140,7 @@ export default function InventoryPage() {
     ],
     queryFn: () =>
       inventoryService.getStockStatusPaged({
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
         warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
         limit: pageSize,
         offset,
@@ -146,11 +151,14 @@ export default function InventoryPage() {
     gcTime: Infinity, // Nunca eliminar
   })
 
+  // Smooth loading state to prevent skeleton flickering
+  const isSmoothLoading = useSmoothLoading(isLoading || isFetching)
+
   const { data: lowStockCountData } = useQuery({
-    queryKey: ['inventory', 'low-stock-count', searchQuery, warehouseFilter, user?.store_id],
+    queryKey: ['inventory', 'low-stock-count', debouncedSearchQuery, warehouseFilter, user?.store_id],
     queryFn: () =>
       inventoryService.getStockStatusPaged({
-        search: searchQuery || undefined,
+        search: debouncedSearchQuery || undefined,
         warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
         low_stock_only: true,
         limit: 1,
@@ -170,6 +178,11 @@ export default function InventoryPage() {
   const stockItems = stockStatusData?.items || []
   const total = stockStatusData?.total || 0
   const lowStockCount = showLowStockOnly ? total : lowStockCountData?.total || 0
+  const activeFiltersCount = [
+    debouncedSearchQuery.trim().length > 0,
+    showLowStockOnly,
+    warehouseFilter !== 'all',
+  ].filter(Boolean).length
 
   // Mutaciones para vaciar stock (solo owners)
   const resetProductMutation = useMutation({
@@ -253,7 +266,7 @@ export default function InventoryPage() {
     setIsExporting(true)
     try {
       const items = await inventoryService.getStockStatus({
-        search: searchQuery.trim() || undefined,
+        search: debouncedSearchQuery.trim() || undefined,
         warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
         low_stock_only: showLowStockOnly || undefined,
       })
@@ -286,6 +299,13 @@ export default function InventoryPage() {
     if (item.low_stock_threshold === 0) return 100
     const percentage = (item.current_stock / (item.low_stock_threshold * 2)) * 100
     return Math.min(100, Math.max(0, percentage))
+  }
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setWarehouseFilter('all')
+    setShowLowStockOnly(false)
+    setCurrentPage(1)
   }
 
   return (
@@ -324,7 +344,7 @@ export default function InventoryPage() {
               <span className="text-4xl font-black tracking-tighter text-foreground">
                 {lowStockCount}
               </span>
-              <span className="text-sm font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded-md">
+              <span className="text-sm font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md">
                 requieren atención
               </span>
             </div>
@@ -429,15 +449,33 @@ export default function InventoryPage() {
       {/* Filtros */}
       <Card className="mb-6 border-none shadow-md shadow-black/5 bg-background transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {activeFiltersCount > 0 ? `${activeFiltersCount} filtro(s) activo(s)` : 'Filtros rápidos de inventario'}
+            </p>
+            {activeFiltersCount > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                className="h-8 text-xs"
+              >
+                Limpiar filtros
+              </Button>
+            )}
+          </div>
+
           {/* Búsqueda */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-4 h-4 sm:w-5 sm:h-5 z-10" />
             <Input
               type="text"
-              placeholder="Buscar por nombre, SKU o código de barras..."
+              placeholder="Buscar por nombre, SKU o código de barras…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 sm:pl-10 h-11 sm:h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm focus:ring-primary/20"
+              className="pl-9 sm:pl-10 h-11 sm:h-12 text-base border-muted/40 bg-muted/50 focus:bg-background transition-all shadow-sm focus:ring-primary/20"
+              aria-label="Buscar productos en inventario"
             />
           </div>
 
@@ -446,7 +484,7 @@ export default function InventoryPage() {
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Bodega</Label>
               <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                <SelectTrigger className="mt-1.5 border-muted/40 bg-white/60">
+                <SelectTrigger className="mt-1.5 border-muted/40 bg-muted/50">
                   <SelectValue placeholder="Todas las bodegas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -465,7 +503,7 @@ export default function InventoryPage() {
 
           {/* Filtro de stock bajo */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 pt-1">
-            <div className="flex items-center gap-2 flex-1 min-w-0 bg-orange-50/50 dark:bg-orange-950/10 p-2 rounded-lg border border-orange-100 dark:border-orange-900/20">
+            <div className="flex items-center gap-2 flex-1 min-w-0 bg-orange-500/10 p-2 rounded-lg border border-orange-500/20">
               <Switch
                 id="low-stock-filter"
                 checked={showLowStockOnly}
@@ -477,7 +515,7 @@ export default function InventoryPage() {
                 className="text-xs sm:text-sm cursor-pointer flex items-center gap-1.5 min-w-0"
               >
                 <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 flex-shrink-0" />
-                <span className="truncate font-medium text-orange-900 dark:text-orange-100">Solo mostrar productos con stock bajo</span>
+                <span className="truncate font-medium text-orange-600 dark:text-orange-400">Solo mostrar productos con stock bajo</span>
               </Label>
             </div>
             {/* Botón para crear orden desde productos con stock bajo */}
@@ -528,180 +566,175 @@ export default function InventoryPage() {
                 </Button>
               </div>
             </div>
-          ) : isLoading ? (
-            <div className="p-8 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
-          ) : stockItems.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="flex flex-col items-center justify-center py-4">
-                <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-6 ring-8 ring-blue-50/50 dark:ring-blue-900/10">
-                  <Package className="w-10 h-10 text-blue-500/80" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {searchQuery || showLowStockOnly
-                    ? 'No se encontraron productos'
-                    : 'Inventario Vacío'}
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-xs mx-auto mb-6">
-                  {searchQuery
+          ) : isSmoothLoading ? (
+            <InventorySkeleton />
+          ) : (
+            <>
+              {stockItems.length === 0 ? (
+                <PremiumEmptyState
+                  title={searchQuery || showLowStockOnly ? 'No se encontraron productos' : 'Inventario Vacío'}
+                  description={searchQuery
                     ? 'Intenta ajustar tus términos de búsqueda o filtros.'
                     : 'Comienza agregando productos a tu inventario mediante el botón "Recibir Stock".'}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={() => setIsStockReceivedModalOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar Primer Producto
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="w-full sm:table-fixed">
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-muted/60">
-                    <TableHead className="w-[50%] sm:w-[45%] font-semibold pl-4">Producto</TableHead>
-                    <TableHead className="text-center font-semibold">Stock Actual</TableHead>
-                    <TableHead className="text-center hidden sm:table-cell font-semibold">Mínimo</TableHead>
-                    <TableHead className="text-center hidden md:table-cell font-semibold">Estado</TableHead>
-                    <TableHead className="text-right w-32 sm:w-40 font-semibold pr-4"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stockItems.map((item) => {
-                    const stockPercentage = getStockPercentage(item)
-                    const isLowStock = item.is_low_stock
-                    const initial = item.product_name.charAt(0).toUpperCase()
-
-                    return (
-                      <TableRow
-                        key={item.product_id}
-                        className={cn(
-                          'transition-colors hover:bg-muted/40 border-b-muted/40 group',
-                          isLowStock && 'bg-orange-50/30 hover:bg-orange-50/60 dark:bg-orange-950/10'
-                        )}
-                      >
-                        <TableCell className="align-middle w-[50%] sm:w-[45%] py-3 pl-4">
-                          <div className="flex items-center gap-3 min-w-0">
-                            {/* Avatar del producto */}
-                            <div className={cn(
-                              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0 ring-2 ring-background",
-                              isLowStock
-                                ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
-                                : "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-                            )}>
-                              {initial}
-                            </div>
-
-                            <div className="flex-1 min-w-0 max-w-full">
-                              <p
-                                className="font-bold text-foreground text-sm sm:text-base break-words leading-tight group-hover:text-primary transition-colors"
-                                title={item.product_name}
-                              >
-                                {item.product_name}
-                              </p>
-                              {isLowStock && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
-                                    Stock Crítico
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center py-3">
-                          <div className="space-y-1.5 flex flex-col items-center">
-                            <span
-                              className={cn(
-                                'text-base sm:text-lg font-bold block tabular-nums',
-                                isLowStock ? 'text-orange-600' : 'text-slate-700 dark:text-slate-200'
-                              )}
-                            >
-                              {formatStockValue(item, item.current_stock)}
-                            </span>
-                            {/* Indicador de progreso visual */}
-                            <div className="w-20 sm:w-24 h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                              <div
-                                className={cn("h-full rounded-full transition-all duration-500", isLowStock ? "bg-orange-500" : "bg-blue-500")}
-                                style={{ width: `${stockPercentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center text-sm text-muted-foreground hidden sm:table-cell tabular-nums">
-                          {formatStockValue(item, item.low_stock_threshold)}
-                        </TableCell>
-                        <TableCell className="text-center hidden md:table-cell">
-                          {isLowStock ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-orange-50 text-orange-700 border-orange-200/60 font-medium px-2.5 py-0.5 rounded-full"
-                            >
-                              Bajo
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-green-50 text-green-700 border-green-200/60 font-medium px-2.5 py-0.5 rounded-full"
-                            >
-                              Normal
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="w-32 sm:w-40 py-3 text-right pr-4">
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 sm:opacity-100">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewMovements(item)}
-                              className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 rounded-full"
-                              title="Ver movimientos"
-                            >
-                              <History className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleReceiveStock(item)}
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
-                              title="Recibir stock"
-                            >
-                              <TrendingUp className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleAdjustStock(item)}
-                              className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-full"
-                              title="Ajustar stock"
-                            >
-                              <TrendingDown className="w-4 h-4" />
-                            </Button>
-                            {/* Solo owners pueden vaciar stock de un producto */}
-                            {isOwner && item.current_stock > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleResetProductStock(item)}
-                                className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full"
-                                title="Vaciar stock"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                  icon={Package}
+                  action={!searchQuery ? {
+                    label: 'Agregar Primer Producto',
+                    onClick: () => setIsStockReceivedModalOpen(true)
+                  } : undefined}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="w-full sm:table-fixed">
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-muted/60">
+                        <TableHead className="w-[50%] sm:w-[45%] font-semibold pl-4">Producto</TableHead>
+                        <TableHead className="text-center font-semibold">Stock Actual</TableHead>
+                        <TableHead className="text-center hidden sm:table-cell font-semibold">Mínimo</TableHead>
+                        <TableHead className="text-center hidden md:table-cell font-semibold">Estado</TableHead>
+                        <TableHead className="text-right w-32 sm:w-40 font-semibold pr-4"></TableHead>
                       </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {stockItems.map((item) => {
+                        const stockPercentage = getStockPercentage(item)
+                        const isLowStock = item.is_low_stock
+                        const initial = item.product_name.charAt(0).toUpperCase()
+
+                        return (
+                          <TableRow
+                            key={item.product_id}
+                            className={cn(
+                              'transition-colors hover:bg-muted/40 border-b-muted/40 group',
+                              isLowStock && 'bg-orange-500/5 hover:bg-orange-500/10'
+                            )}
+                          >
+                            <TableCell className="align-middle w-[50%] sm:w-[45%] py-3 pl-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {/* Avatar del producto */}
+                                <div className={cn(
+                                  "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0 ring-2 ring-background",
+                                  isLowStock
+                                    ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                                    : "bg-primary/10 text-primary"
+                                )}>
+                                  {initial}
+                                </div>
+
+                                <div className="flex-1 min-w-0 max-w-full">
+                                  <p
+                                    className="font-bold text-foreground text-sm sm:text-base break-words leading-tight group-hover:text-primary transition-colors"
+                                    title={item.product_name}
+                                  >
+                                    {item.product_name}
+                                  </p>
+                                  {isLowStock && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                                        Stock Crítico
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center py-3">
+                              <div className="space-y-1.5 flex flex-col items-center">
+                                <span
+                                  className={cn(
+                                    'text-base sm:text-lg font-bold block tabular-nums',
+                                    isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'
+                                  )}
+                                >
+                                  {formatStockValue(item, item.current_stock)}
+                                </span>
+                                {/* Indicador de progreso visual */}
+                                <div className="w-20 sm:w-24 h-1.5 bg-muted/50 rounded-full overflow-hidden">
+                                  <div
+                                    className={cn("h-full rounded-full transition-all duration-500", isLowStock ? "bg-orange-500" : "bg-blue-500")}
+                                    style={{ width: `${stockPercentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center text-sm text-muted-foreground hidden sm:table-cell tabular-nums">
+                              {formatStockValue(item, item.low_stock_threshold)}
+                            </TableCell>
+                            <TableCell className="text-center hidden md:table-cell">
+                              {isLowStock ? (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 font-medium px-2.5 py-0.5 rounded-full"
+                                >
+                                  Bajo
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-medium px-2.5 py-0.5 rounded-full"
+                                >
+                                  Normal
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="w-32 sm:w-40 py-3 text-right pr-4">
+                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 sm:opacity-100">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleViewMovements(item)}
+                                  className="h-8 w-8 hover:bg-muted text-muted-foreground rounded-full"
+                                  title="Ver movimientos"
+                                  aria-label={`Ver movimientos de ${item.product_name}`}
+                                >
+                                  <History className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleReceiveStock(item)}
+                                  className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 rounded-full"
+                                  title="Recibir stock"
+                                  aria-label={`Recibir stock de ${item.product_name}`}
+                                >
+                                  <TrendingUp className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleAdjustStock(item)}
+                                  className="h-8 w-8 text-purple-500 hover:text-purple-600 hover:bg-purple-500/10 rounded-full"
+                                  title="Ajustar stock"
+                                  aria-label={`Ajustar stock de ${item.product_name}`}
+                                >
+                                  <TrendingDown className="w-4 h-4" />
+                                </Button>
+                                {/* Solo owners pueden vaciar stock de un producto */}
+                                {isOwner && item.current_stock > 0 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleResetProductStock(item)}
+                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
+                                    title="Vaciar stock"
+                                    aria-label={`Vaciar stock de ${item.product_name}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -885,7 +918,7 @@ export default function InventoryPage() {
 
           <div className="space-y-4">
             <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
-              <p className="text-sm text-destructive font-medium">
+              <p className="text-sm text-destructive dark:text-red-400 font-medium">
                 Se vaciarán {stockItems.filter(item => item.current_stock > 0).length} productos con stock
               </p>
             </div>
@@ -903,7 +936,7 @@ export default function InventoryPage() {
 
             <div className="space-y-2">
               <Label htmlFor="reset-confirm">
-                Para confirmar, escribe <code className="text-destructive font-bold">VACIAR TODO</code>
+                Para confirmar, escribe <code className="text-destructive dark:text-red-400 font-bold">VACIAR TODO</code>
               </Label>
               <Input
                 id="reset-confirm"

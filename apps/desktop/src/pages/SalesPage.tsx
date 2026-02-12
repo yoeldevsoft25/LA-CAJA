@@ -32,7 +32,10 @@ import {
 } from '@/components/ui/select'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Skeleton } from '@/components/ui/skeleton'
+import { SalesSkeleton } from '@/components/ui/module-skeletons'
+import { PremiumEmptyState } from '@/components/ui/premium-empty-state'
+import { useSmoothLoading } from '@/hooks/use-smooth-loading'
+import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import { formatDateInAppTimeZone, getTimeZoneLabel } from '@/lib/timezone'
 import { printService } from '@/services/print.service'
@@ -116,6 +119,11 @@ export default function SalesPage() {
   const [maxAmountUsd, setMaxAmountUsd] = useState<string>('')
   const [customerSearch, setCustomerSearch] = useState<string>('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const debouncedCustomerSearch = useDebounce(customerSearch, 250)
+  const isAmountRangeInvalid =
+    minAmountUsd !== '' &&
+    maxAmountUsd !== '' &&
+    Number(minAmountUsd) > Number(maxAmountUsd)
 
   // Presets de fecha
   const setDatePreset = (preset: 'today' | 'yesterday' | 'week') => {
@@ -152,7 +160,7 @@ export default function SalesPage() {
   const prefetchedSales = queryClient.getQueryData<{ sales: Sale[]; total: number }>(['sales', 'list', effectiveStoreId, { limit: 10 }])
 
   // Obtener ventas
-  const { data: salesData, isLoading, isError, error, refetch } = useQuery<{ sales: Sale[]; total: number }>({
+  const { data: salesData, isLoading, isFetching, isError, error, refetch } = useQuery<{ sales: Sale[]; total: number }>({
     queryKey: ['sales', 'list', effectiveDateFrom, effectiveDateTo, effectiveStoreId, currentPage],
     queryFn: () =>
       salesService.list({
@@ -194,9 +202,12 @@ export default function SalesPage() {
         limit: 10000, // Obtener todas las ventas del día
         offset: 0,
       }),
-    enabled: isOwner && isSameDaySelected && !!effectiveDateFrom && !!effectiveDateTo,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    enabled: isOwner && isSameDaySelected && !!effectiveDateFrom && !!user?.store_id,
+    staleTime: 1000 * 60 * 5, // 5 minutos de caché fresca
   })
+
+  // Smooth loading state to prevent skeleton flickering
+  const isSmoothLoading = useSmoothLoading(isLoading || isFetching)
 
   // Filtrar ventas del día (aplicar mismos filtros que las ventas principales, pero sin anuladas para el gráfico)
   const daySalesForChart = useMemo(() => {
@@ -227,17 +238,19 @@ export default function SalesPage() {
       }
 
       // Aplicar filtro de rango de montos
-      const amountUsd = Number(sale.totals.total_usd)
-      if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
-        return false
-      }
-      if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
-        return false
+      if (!isAmountRangeInvalid) {
+        const amountUsd = Number(sale.totals.total_usd)
+        if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
+          return false
+        }
+        if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+          return false
+        }
       }
 
       // Aplicar filtro de búsqueda de cliente
-      if (customerSearch.trim()) {
-        const searchLower = customerSearch.toLowerCase().trim()
+      if (debouncedCustomerSearch.trim()) {
+        const searchLower = debouncedCustomerSearch.toLowerCase().trim()
         const customerName = sale.customer?.name?.toLowerCase() || ''
         const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
         if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
@@ -247,59 +260,63 @@ export default function SalesPage() {
 
       return true
     })
-  }, [allDaySalesData, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, customerSearch])
+  }, [allDaySalesData?.sales, paymentMethodFilter, debtFilter, minAmountUsd, maxAmountUsd, debouncedCustomerSearch, isAmountRangeInvalid])
 
   // Aplicar filtros avanzados (filtrado en frontend)
-  const sales = rawSales.filter((sale: Sale) => {
-    // Filtro por método de pago
-    if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
-      return false
-    }
-
-    // Filtro por estado (anulada/no anulada)
-    if (statusFilter === 'voided' && !sale.voided_at) {
-      return false
-    }
-    if (statusFilter === 'completed' && sale.voided_at) {
-      return false
-    }
-
-    // Filtro por deuda
-    if (debtFilter === 'with_debt') {
-      if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
+  const sales = useMemo(() => {
+    return rawSales.filter((sale: Sale) => {
+      // Filtro por método de pago
+      if (paymentMethodFilter !== 'all' && sale.payment.method !== paymentMethodFilter) {
         return false
       }
-    } else if (debtFilter === 'without_debt') {
-      if (sale.debt && (sale.debt.status === 'open' || sale.debt.status === 'partial')) {
+
+      // Filtro por estado (anulada/no anulada)
+      if (statusFilter === 'voided' && !sale.voided_at) {
         return false
       }
-    } else if (debtFilter === 'paid') {
-      if (!sale.debt || sale.debt.status !== 'paid') {
+      if (statusFilter === 'completed' && sale.voided_at) {
         return false
       }
-    }
 
-    // Filtro por rango de montos (USD)
-    const amountUsd = Number(sale.totals.total_usd)
-    if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
-      return false
-    }
-    if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
-      return false
-    }
-
-    // Filtro por búsqueda de cliente
-    if (customerSearch.trim()) {
-      const searchLower = customerSearch.toLowerCase().trim()
-      const customerName = sale.customer?.name?.toLowerCase() || ''
-      const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
-      if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
-        return false
+      // Filtro por deuda
+      if (debtFilter === 'with_debt') {
+        if (!sale.debt || (sale.debt.status !== 'open' && sale.debt.status !== 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'without_debt') {
+        if (sale.debt && (sale.debt.status === 'open' || sale.debt.status === 'partial')) {
+          return false
+        }
+      } else if (debtFilter === 'paid') {
+        if (!sale.debt || sale.debt.status !== 'paid') {
+          return false
+        }
       }
-    }
 
-    return true
-  })
+      // Filtro por rango de montos (USD)
+      if (!isAmountRangeInvalid) {
+        const amountUsd = Number(sale.totals.total_usd)
+        if (minAmountUsd && amountUsd < Number(minAmountUsd)) {
+          return false
+        }
+        if (maxAmountUsd && amountUsd > Number(maxAmountUsd)) {
+          return false
+        }
+      }
+
+      // Filtro por búsqueda de cliente
+      if (debouncedCustomerSearch.trim()) {
+        const searchLower = debouncedCustomerSearch.toLowerCase().trim()
+        const customerName = sale.customer?.name?.toLowerCase() || ''
+        const customerDoc = sale.customer?.document_id?.toLowerCase() || ''
+        if (!customerName.includes(searchLower) && !customerDoc.includes(searchLower)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [rawSales, paymentMethodFilter, statusFilter, debtFilter, minAmountUsd, maxAmountUsd, debouncedCustomerSearch, isAmountRangeInvalid])
 
   const totalPages = Math.ceil(total / limit)
 
@@ -463,7 +480,7 @@ export default function SalesPage() {
               </p>
               <span className="text-muted-foreground/30 hidden sm:inline">•</span>
               <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                <Cloud className="w-3 h-3 h-3" />
+                <Cloud className="w-3 h-3" />
                 Zona: {getTimeZoneLabel()}
               </p>
             </div>
@@ -486,7 +503,7 @@ export default function SalesPage() {
               variant="outline"
               size="sm"
               onClick={handleExportExcel}
-              className="col-span-2 sm:col-auto h-10 sm:h-12 border-muted/40 hover:bg-white shadow-sm font-semibold"
+              className="col-span-2 sm:col-auto h-10 sm:h-12 border-muted/40 hover:bg-muted shadow-sm font-semibold"
               disabled={sales.length === 0}
             >
               <Download className="w-4 h-4 mr-2" />
@@ -527,7 +544,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
                     onClick={() => setDatePreset('today')}
                   >
                     Hoy
@@ -535,7 +552,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
                     onClick={() => setDatePreset('yesterday')}
                   >
                     Ayer
@@ -543,7 +560,7 @@ export default function SalesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-10 border-muted/40 bg-white/60 hover:bg-white text-xs font-medium"
+                    className="flex-1 h-10 border-muted/40 bg-muted/50 hover:bg-muted text-xs font-medium"
                     onClick={() => setDatePreset('week')}
                   >
                     7 días
@@ -603,7 +620,7 @@ export default function SalesPage() {
                       value={paymentMethodFilter}
                       onValueChange={setPaymentMethodFilter}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
+                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -626,7 +643,7 @@ export default function SalesPage() {
                       value={statusFilter}
                       onValueChange={(v) => setStatusFilter(v as 'all' | 'completed' | 'voided')}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
+                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -646,7 +663,7 @@ export default function SalesPage() {
                       value={debtFilter}
                       onValueChange={(v) => setDebtFilter(v as 'all' | 'with_debt' | 'without_debt' | 'paid')}
                     >
-                      <SelectTrigger className="h-11 border-muted/40 bg-white/60">
+                      <SelectTrigger className="h-11 border-muted/40 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -664,21 +681,56 @@ export default function SalesPage() {
                       Cliente (Nombre o CI)
                     </Label>
                     <div className="relative">
-                      <X
-                        className={cn(
-                          "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors",
-                          !customerSearch && "hidden"
-                        )}
-                        onClick={() => setCustomerSearch('')}
-                      />
+                      {customerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomerSearch('')}
+                          aria-label="Limpiar búsqueda de cliente"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                       <Input
                         type="text"
                         value={customerSearch}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerSearch(e.target.value)}
                         placeholder="Ej: Juan Perez o 12345678"
-                        className="h-11 border-muted/40 bg-white/60 pr-10"
+                        className="h-11 border-muted/40 bg-muted/50 pr-10"
                       />
                     </div>
+                  </div>
+
+                  {/* Rango de monto en USD */}
+                  <div className="space-y-2">
+                    <Label className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-wider ml-1">
+                      Monto USD
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={minAmountUsd}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMinAmountUsd(e.target.value)}
+                        placeholder="Mín."
+                        className="h-11 border-muted/40 bg-muted/50"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={maxAmountUsd}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxAmountUsd(e.target.value)}
+                        placeholder="Máx."
+                        className="h-11 border-muted/40 bg-muted/50"
+                      />
+                    </div>
+                    {isAmountRangeInvalid && (
+                      <p className="text-[11px] text-destructive font-medium px-1">
+                        El monto mínimo no puede ser mayor al máximo.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -716,27 +768,14 @@ export default function SalesPage() {
                 </Button>
               </div>
             </div>
-          ) : isLoading ? (
-            <div className="p-8 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
+          ) : isSmoothLoading ? (
+            <SalesSkeleton />
           ) : rawSales.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <FileText className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <p className="text-sm sm:text-base font-medium text-foreground mb-1">
-                  No hay ventas
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  No se encontraron ventas en el período seleccionado
-                </p>
-              </div>
-            </div>
+            <PremiumEmptyState
+              title="No hay ventas"
+              description="No se encontraron ventas en el período seleccionado"
+              icon={FileText}
+            />
           ) : sales.length === 0 && activeFiltersCount > 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
@@ -796,9 +835,9 @@ export default function SalesPage() {
                             className={cn(
                               'transition-all duration-200 cursor-pointer active:scale-[0.98]',
                               isVoided && 'bg-muted/30 border-muted opacity-80',
-                              isPending && 'bg-orange-50/50 border-orange-200 border-l-4 border-l-orange-500 shadow-sm',
-                              isPaid && 'bg-emerald-50/50 border-emerald-200 border-l-4 border-l-emerald-500 shadow-sm',
-                              !isVoided && !isPending && !isPaid && 'bg-white hover:border-primary/30'
+                              isPending && 'bg-orange-500/10 border-orange-500/20 border-l-4 border-l-orange-500 shadow-sm',
+                              isPaid && 'bg-emerald-500/10 border-emerald-500/20 border-l-4 border-l-emerald-500 shadow-sm',
+                              !isVoided && !isPending && !isPaid && 'bg-card hover:border-primary/40'
                             )}
                             onClick={() => handleViewDetail(sale)}
                           >
@@ -857,9 +896,9 @@ export default function SalesPage() {
 
                                 <div className="flex items-center gap-1.5">
                                   {sale.sync_status === 'pending' ? (
-                                    <CloudOff className="w-3.5 h-3.5 text-amber-500" />
+                                    <CloudOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                                   ) : (
-                                    <Cloud className="w-3.5 h-3.5 text-emerald-500/50" />
+                                    <Cloud className="w-3.5 h-3.5 text-emerald-600/50 dark:text-emerald-400/50" />
                                   )}
                                   <Eye className="w-4 h-4 text-primary/40" />
                                 </div>
@@ -884,10 +923,10 @@ export default function SalesPage() {
                 </StaggerContainer>
               ) : (
                 /* Vista de tabla para desktop - Premium Grid */
-                <div className="rounded-xl overflow-x-auto border border-white/10 bg-background/50 backdrop-blur-md shadow-inner">
+                <div className="rounded-xl overflow-x-auto border border-border/50 bg-background/50 backdrop-blur-md shadow-inner">
                   <Table>
                     <TableHeader className="bg-muted/30">
-                      <TableRow className="hover:bg-transparent border-white/5">
+                      <TableRow className="hover:bg-transparent border-border/50">
                         <TableHead className="w-[180px]">
                           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             <CalendarIcon className="w-3.5 h-3.5" />
@@ -923,7 +962,7 @@ export default function SalesPage() {
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody style={{ contentVisibility: 'auto', contain: 'layout style' }}>
                       {sales.map((sale: Sale) => {
                         const itemCount = sale.items.length
                         const totalUnits = sale.items.reduce(
@@ -950,8 +989,8 @@ export default function SalesPage() {
                           <TableRow
                             key={sale.id}
                             className={cn(
-                              'group transition-all duration-200 border-white/5',
-                              isVoided ? 'bg-red-500/5 hover:bg-red-500/10' : 'hover:bg-primary/5'
+                              'group transition-all duration-200 border-border/50',
+                              isVoided ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-primary/5'
                             )}
                           >
                             <TableCell className="font-medium">
@@ -959,7 +998,7 @@ export default function SalesPage() {
                                 <span className="text-sm font-semibold tracking-tight">{format(new Date(sale.sold_at), 'dd MMM yyyy')}</span>
                                 <span className="text-xs text-muted-foreground font-mono">{format(new Date(sale.sold_at), 'HH:mm')}</span>
                                 {isVoided && (
-                                  <Badge variant="outline" className="mt-1 w-fit bg-red-500/10 text-red-500 border-red-500/20 text-[10px] h-5 px-1.5">
+                                  <Badge variant="outline" className="mt-1 w-fit bg-destructive/10 text-destructive dark:text-red-400 border-destructive/20 text-[10px] h-5 px-1.5">
                                     Anulada
                                   </Badge>
                                 )}
@@ -1005,7 +1044,7 @@ export default function SalesPage() {
                                   Mi Moneda: {Number(sale.totals.total_bs).toFixed(2)} Bs
                                 </span>
                                 {isFIAO && sale.debt && isPending && (
-                                  <Badge variant="outline" className="mt-1 bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] h-5 px-2 ml-auto whitespace-nowrap">
+                                  <Badge variant="outline" className="mt-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] h-5 px-2 ml-auto whitespace-nowrap">
                                     Debe: ${Number(sale.debt.remaining_usd || 0).toFixed(2)}
                                   </Badge>
                                 )}
@@ -1038,7 +1077,7 @@ export default function SalesPage() {
                                   <span className="text-[10px] text-muted-foreground font-mono">{sale.customer.document_id}</span>
                                 </div>
                               ) : isFIAO ? (
-                                <span className="text-xs font-bold text-orange-500">Sin cliente asignado</span>
+                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Sin cliente asignado</span>
                               ) : (
                                 <span className="text-muted-foreground/30 text-xs">-</span>
                               )}
