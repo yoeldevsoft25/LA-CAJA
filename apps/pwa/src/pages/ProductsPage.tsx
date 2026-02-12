@@ -510,7 +510,7 @@ export default function ProductsPage() {
                 "text-xs font-bold px-2 py-0.5 rounded-lg uppercase tracking-widest",
                 lowStockCount > 0
                   ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
-                  : "bg-muted text-muted-foreground"
+                  : "bg-card border border-border/60 text-muted-foreground"
               )}>
                 {lowStockCount > 0 ? 'Requieren Atención' : 'Todo en Orden'}
               </span>
@@ -659,11 +659,11 @@ export default function ProductsPage() {
                 className="w-auto"
               >
                 <TabsList className="h-10 bg-card border border-border/60">
-                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-muted/55 data-[state=active]:shadow-sm">
+                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm">
                     <LayoutGrid className="w-4 h-4" />
                     <span className="hidden sm:inline">Cards</span>
                   </TabsTrigger>
-                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-muted/55 data-[state=active]:shadow-sm">
+                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm">
                     <LayoutList className="w-4 h-4" />
                     <span className="hidden sm:inline">Tabla</span>
                   </TabsTrigger>
@@ -773,8 +773,8 @@ export default function ProductsPage() {
                       <tr
                         key={product.id}
                         className={cn(
-                          "hover:bg-muted/40 transition-colors group",
-                          !product.is_active && 'opacity-60 bg-muted/20'
+                          "hover:bg-card transition-colors group",
+                          !product.is_active && 'opacity-70'
                         )}
                       >
                         <td className="px-4 py-3 align-middle w-[45%] sm:w-[40%] pl-6">
@@ -790,7 +790,7 @@ export default function ProductsPage() {
                                 {product.name}
                               </p>
                               {product.barcode && (
-                                <p className="text-xs text-muted-foreground mt-0.5 font-mono bg-muted/50 inline-block px-1 rounded">
+                                <p className="text-xs text-muted-foreground mt-0.5 font-mono bg-card border border-border/60 inline-block px-1 rounded">
                                   {product.barcode}
                                 </p>
                               )}
@@ -840,7 +840,7 @@ export default function ProductsPage() {
                             </div>
                           ) : (
                             <div
-                              className="group/price cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 transition-all text-right"
+                              className="group/price cursor-pointer hover:bg-card rounded px-2 py-1 -mx-2 transition-all text-right"
                               onDoubleClick={() => handleStartInlinePriceEdit(product)}
                               title="Doble clic para editar precio"
                             >
@@ -883,7 +883,7 @@ export default function ProductsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleManageVariants(product)}
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-card rounded-full"
                               title="Gestionar Variantes"
                             >
                               <Layers className="w-4 h-4" />

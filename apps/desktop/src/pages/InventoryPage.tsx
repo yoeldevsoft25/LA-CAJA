@@ -457,10 +457,10 @@ export default function InventoryPage() {
             {activeFiltersCount > 0 && (
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleResetFilters}
-                className="h-8 text-xs"
+                className="h-8 text-xs btn-glass-neutral"
               >
                 Limpiar filtros
               </Button>
@@ -845,7 +845,7 @@ export default function InventoryPage() {
 
       {/* Modal de confirmación para vaciar stock de un producto */}
       <Dialog open={isResetProductModalOpen} onOpenChange={(open) => !open && handleCloseModals()}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertOctagon className="w-5 h-5" />
@@ -859,7 +859,7 @@ export default function InventoryPage() {
 
           {selectedProduct && (
             <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg">
+              <div className="p-3 bg-card border border-border/60 rounded-lg">
                 <p className="font-semibold">{selectedProduct.product_name}</p>
                 <p className="text-sm text-muted-foreground">
                   Stock actual: <span className="font-bold text-foreground">
@@ -882,7 +882,7 @@ export default function InventoryPage() {
           )}
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleCloseModals}>
+            <Button variant="outline" className="btn-glass-neutral" onClick={handleCloseModals}>
               Cancelar
             </Button>
             <Button
@@ -905,7 +905,7 @@ export default function InventoryPage() {
 
       {/* Modal de confirmación para vaciar TODO el inventario */}
       <Dialog open={isResetAllModalOpen} onOpenChange={(open) => !open && handleCloseModals()}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertOctagon className="w-5 h-5" />
@@ -949,7 +949,7 @@ export default function InventoryPage() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleCloseModals}>
+            <Button variant="outline" className="btn-glass-neutral" onClick={handleCloseModals}>
               Cancelar
             </Button>
             <Button

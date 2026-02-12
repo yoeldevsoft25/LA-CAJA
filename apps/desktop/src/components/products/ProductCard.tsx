@@ -117,7 +117,7 @@ export default function ProductCard({
     <Card
       className={cn(
         'transition-all hover:shadow-md',
-        !product.is_active && 'opacity-60 bg-muted/30'
+        !product.is_active && 'opacity-70'
       )}
     >
       <CardContent className="p-4">
@@ -129,7 +129,7 @@ export default function ProductCard({
                 'w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0',
                 product.is_active
                   ? 'bg-primary/10 text-primary'
-                  : 'bg-muted text-muted-foreground'
+                  : 'bg-card border border-border/60 text-muted-foreground'
               )}
             >
               <Package className="w-6 h-6" />
