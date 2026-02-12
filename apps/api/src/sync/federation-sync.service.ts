@@ -21,6 +21,17 @@ import { CircuitBreaker } from '../common/circuit-breaker';
 import { DistributedLockService } from '../common/distributed-lock.service';
 import { ConflictAuditService } from './conflict-audit.service';
 
+const RELAXED_UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SYSTEM_ACTOR_UUID = '00000000-0000-0000-0000-000000000002'; // Matches syntheticRelayActorId
+
+function ensureUuid(id: string | null | undefined): string {
+  if (!id || !RELAXED_UUID_REGEX.test(id)) {
+    return SYSTEM_ACTOR_UUID;
+  }
+  return id;
+}
+
 export interface FederationRelayJob {
   eventId: string;
   storeId: string;
@@ -389,7 +400,7 @@ export class FederationSyncService implements OnModuleInit {
             version: event.version,
             created_at: event.created_at.getTime(),
             actor: {
-              user_id: event.actor_user_id,
+              user_id: ensureUuid(event.actor_user_id),
               role: event.actor_role as 'owner' | 'cashier',
             },
             payload: event.payload,
@@ -1957,15 +1968,15 @@ export class FederationSyncService implements OnModuleInit {
 
     const deltaPayload =
       event.delta_payload &&
-      typeof event.delta_payload === 'object' &&
-      !Array.isArray(event.delta_payload)
+        typeof event.delta_payload === 'object' &&
+        !Array.isArray(event.delta_payload)
         ? (event.delta_payload as Record<string, unknown>)
         : null;
 
     const payload =
       event.payload &&
-      typeof event.payload === 'object' &&
-      !Array.isArray(event.payload)
+        typeof event.payload === 'object' &&
+        !Array.isArray(event.payload)
         ? (event.payload as Record<string, unknown>)
         : null;
 
@@ -2323,7 +2334,7 @@ export class FederationSyncProcessor extends WorkerHost {
             version: event.version,
             created_at: event.created_at.getTime(),
             actor: {
-              user_id: event.actor_user_id,
+              user_id: ensureUuid(event.actor_user_id),
               role: event.actor_role as 'owner' | 'cashier',
             },
             payload: event.payload,
