@@ -71,7 +71,7 @@ export default function CurrentShiftCard({
                 variant="outline"
                 size="sm"
                 onClick={onCreateCutX}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto btn-glass-neutral"
               >
                 <FileX className="w-4 h-4 mr-2" />
                 Corte X
@@ -113,7 +113,7 @@ export default function CurrentShiftCard({
           )}
 
           {!isOpen && shift.closed_at && (
-            <Alert className="bg-muted border-border">
+            <Alert className="bg-card border-border">
               <AlertCircle className="h-4 w-4 text-muted-foreground" />
               <AlertTitle>Turno Cerrado</AlertTitle>
               <AlertDescription>
@@ -124,7 +124,7 @@ export default function CurrentShiftCard({
 
           {/* Información básica */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-blue-50 border-blue-200">
+            <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="flex items-center mb-2">
                   <Calendar className="w-4 h-4 text-blue-600 mr-2" />
@@ -136,7 +136,7 @@ export default function CurrentShiftCard({
               </CardContent>
             </Card>
 
-            <Card className="bg-green-50 border-green-200">
+            <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="flex items-center mb-2">
                   <DollarSign className="w-4 h-4 text-green-600 mr-2" />
@@ -148,7 +148,7 @@ export default function CurrentShiftCard({
               </CardContent>
             </Card>
 
-            <Card className="bg-green-50 border-green-200">
+            <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="flex items-center mb-2">
                   <DollarSign className="w-4 h-4 text-green-600 mr-2" />
@@ -160,7 +160,7 @@ export default function CurrentShiftCard({
               </CardContent>
             </Card>
 
-            <Card className="bg-purple-50 border-purple-200">
+            <Card className="bg-card border-border">
               <CardContent className="p-4">
                 <div className="flex items-center mb-2">
                   <CheckCircle2 className="w-4 h-4 text-purple-600 mr-2" />
@@ -175,7 +175,7 @@ export default function CurrentShiftCard({
 
           {/* Resumen de efectivo esperado */}
           {expectedTotals && (
-            <Card className="bg-muted/50 border-border">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-base sm:text-lg">Resumen de Efectivo</CardTitle>
               </CardHeader>

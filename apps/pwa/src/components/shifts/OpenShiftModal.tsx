@@ -60,7 +60,7 @@ export default function OpenShiftModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-md max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl flex items-center">
             <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
@@ -148,7 +148,7 @@ export default function OpenShiftModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
                 disabled={isLoading}
               >
                 Cancelar

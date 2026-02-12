@@ -125,11 +125,11 @@ export default function LicensePaymentDetailModal({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-2xl p-0 flex flex-col bg-slate-50/50 backdrop-blur-xl">
+      <SheetContent className="sm:max-w-2xl p-0 flex flex-col bg-card">
         <SheetHeader className="px-6 py-6 border-b border-slate-200 bg-white shadow-sm z-10">
           <BlurFade delay={0.1}>
             <div className="flex items-center justify-between mb-2">
-              <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 font-mono">
+              <Badge variant="outline" className="bg-card text-muted-foreground border-border font-mono">
                 ID: {payment.id.slice(0, 8)}...
               </Badge>
               {getStatusBadge(payment.status)}
@@ -168,7 +168,7 @@ export default function LicensePaymentDetailModal({
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1 bg-slate-50">
+          <ScrollArea className="flex-1 bg-card">
             <div className="p-6">
               <BlurFade delay={0.2} inView>
                 <TabsContent value="details" className="space-y-6 mt-0">
@@ -223,7 +223,7 @@ export default function LicensePaymentDetailModal({
                         <div className="space-y-4">
                           <div>
                             <Label className="text-slate-500 mb-1 block text-xs">Referencia</Label>
-                            <Badge variant="secondary" className="font-mono text-slate-700 bg-slate-100 border-slate-200">
+                            <Badge variant="secondary" className="font-mono text-foreground bg-card border-border">
                               {payment.payment_reference}
                             </Badge>
                           </div>
@@ -280,7 +280,7 @@ export default function LicensePaymentDetailModal({
                           {payment.documents.map((doc) => (
                             <div
                               key={doc.id}
-                              className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-blue-200 transition-colors"
+                              className="flex items-center justify-between p-3 bg-card rounded-lg border border-border hover:border-primary/30 transition-colors"
                             >
                               <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0c81cf]">
@@ -289,7 +289,7 @@ export default function LicensePaymentDetailModal({
                                 <div>
                                   <div className="text-slate-900 text-sm font-medium">{doc.file_name}</div>
                                   <div className="flex items-center gap-2 mt-0.5">
-                                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-slate-200 text-slate-500">
+                                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-border text-muted-foreground">
                                       {doc.file_type}
                                     </Badge>
                                     <span className="text-xs text-slate-400">
@@ -374,7 +374,7 @@ export default function LicensePaymentDetailModal({
                                   <summary className="text-xs text-[#0c81cf] cursor-pointer font-medium hover:underline flex items-center gap-1">
                                     Ver datos técnicos
                                   </summary>
-                                  <div className="mt-2 text-xs bg-slate-900 text-slate-300 p-3 rounded-md overflow-x-auto font-mono">
+                                  <div className="mt-2 text-xs bg-card border border-border text-foreground p-3 rounded-md overflow-x-auto font-mono">
                                     {JSON.stringify(verification.response_data, null, 2)}
                                   </div>
                                 </details>

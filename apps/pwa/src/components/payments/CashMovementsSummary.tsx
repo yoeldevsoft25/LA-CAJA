@@ -127,7 +127,7 @@ export default function CashMovementsSummary({
           </Card>
 
           {/* Total de movimientos */}
-          <Card className="bg-muted/50 border-border">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center mb-2">
                 <TrendingUp className="w-4 h-4 text-muted-foreground mr-2" />

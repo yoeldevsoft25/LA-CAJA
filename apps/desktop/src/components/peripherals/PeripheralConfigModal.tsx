@@ -179,7 +179,7 @@ export default function PeripheralConfigModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl flex items-center">
             <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-2" />
@@ -193,7 +193,7 @@ export default function PeripheralConfigModal({
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 bg-card border border-border/60">
                 <TabsTrigger value="general">General</TabsTrigger>
                 <TabsTrigger value="connection">Conexión</TabsTrigger>
               </TabsList>
@@ -531,7 +531,7 @@ export default function PeripheralConfigModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
                 disabled={isLoading}
               >
                 Cancelar

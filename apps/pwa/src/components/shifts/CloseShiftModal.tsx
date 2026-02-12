@@ -152,7 +152,7 @@ export default function CloseShiftModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl flex items-center">
             <AlertTriangle
@@ -516,7 +516,7 @@ export default function CloseShiftModal({
                 type="button"
                 variant="outline"
                 onClick={handleBack}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
                 disabled={isLoading}
               >
                 {confirmStep === 1 ? 'Cancelar' : 'Atrás'}

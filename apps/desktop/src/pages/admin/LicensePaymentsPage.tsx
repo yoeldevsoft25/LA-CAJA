@@ -157,7 +157,7 @@ export default function LicensePaymentsPage() {
             onClick={() => refreshMutation.mutate()}
             variant="outline"
             disabled={refreshMutation.isPending}
-            className="rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm"
+            className="rounded-xl btn-glass-neutral shadow-sm"
           >
             <RefreshCw
               className={cn("h-4 w-4 mr-2", refreshMutation.isPending && "animate-spin")}
@@ -268,14 +268,14 @@ export default function LicensePaymentsPage() {
           {/* Table-like List */}
           <BlurFade delay={0.4}>
             <Card className="bg-white border-slate-200 shadow-sm overflow-hidden rounded-2xl">
-              <CardHeader className="border-b border-slate-100 bg-slate-50/50 py-4 px-6">
+              <CardHeader className="border-b border-border bg-card py-4 px-6">
                 <CardTitle className="text-base font-semibold text-slate-900">Historial de Transacciones</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/30">
+                      <tr className="border-b border-border bg-card">
                         <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tienda / Solicitante</th>
                         <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Plan & Período</th>
                         <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Referencia / Monto</th>
@@ -283,7 +283,7 @@ export default function LicensePaymentsPage() {
                         <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Fecha</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-border">
                       {filteredPayments.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
@@ -294,7 +294,7 @@ export default function LicensePaymentsPage() {
                         filteredPayments.map((payment) => (
                           <tr
                             key={payment.id}
-                            className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                            className="hover:bg-primary/5 transition-colors cursor-pointer group"
                             onClick={() => setSelectedPayment(payment)}
                           >
                             <td className="px-6 py-4">
@@ -315,7 +315,7 @@ export default function LicensePaymentsPage() {
                                 <span className="font-medium text-slate-700 text-sm whitespace-nowrap">
                                   {getPlanBadge(payment.plan)}
                                 </span>
-                                <Badge variant="outline" className="w-fit text-[9px] h-4 px-1 bg-slate-50 text-slate-500 border-slate-200">
+                                <Badge variant="outline" className="w-fit text-[9px] h-4 px-1 bg-card text-muted-foreground border-border">
                                   {payment.billing_period === 'monthly' ? 'PAGO MENSUAL' : 'PAGO ANUAL'}
                                 </Badge>
                               </div>

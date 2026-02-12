@@ -103,7 +103,7 @@ export default function DiscountSummary({ startDate, endDate }: DiscountSummaryP
               {summary.by_authorizer.map((auth) => (
                 <div
                   key={auth.authorizer_id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-card border border-border rounded-lg"
                 >
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">{auth.authorizer_name}</p>

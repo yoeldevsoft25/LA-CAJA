@@ -97,7 +97,7 @@ export default function PaymentVerificationForm({
       {/* Verificación Manual */}
       {canVerify && (
         <Card className="bg-white border-slate-200 shadow-sm overflow-hidden border-2 border-[#0c81cf20]">
-          <CardHeader className="bg-slate-50 border-b border-slate-100">
+          <CardHeader className="bg-card border-b border-border">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-[#0c81cf]" />
               Verificar Transacción
@@ -169,7 +169,7 @@ export default function PaymentVerificationForm({
       {/* Aprobar Pago */}
       {canApprove && (
         <Card className="bg-white border-slate-200 shadow-sm overflow-hidden border-2 border-emerald-500/20">
-          <CardHeader className="bg-slate-50 border-b border-slate-100">
+          <CardHeader className="bg-card border-b border-border">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               Aprobar y Activar
@@ -212,7 +212,7 @@ export default function PaymentVerificationForm({
       {/* Rechazar Pago */}
       {canReject && (
         <Card className="bg-white border-slate-200 shadow-sm overflow-hidden border-2 border-rose-500/20">
-          <CardHeader className="bg-slate-50 border-b border-slate-100">
+          <CardHeader className="bg-card border-b border-border">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <XCircle className="h-4 w-4 text-rose-500" />
               Rechazar Solicitud
