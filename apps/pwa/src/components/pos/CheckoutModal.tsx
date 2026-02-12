@@ -133,11 +133,16 @@ export default function CheckoutModal({
   const [showStockWarningDialog, setShowStockWarningDialog] = useState(false)
   const [isValidatingStock, setIsValidatingStock] = useState(false)
 
+  // Local processing state to bridge the gap between click and parent isLoading
+  const [isProcessing, setIsProcessing] = useState(false)
+
   useEffect(() => {
-    if (!isOpen) return
-    actions.reset()
-    setSplitPayments([])
-    setSelectedSerials({})
+    if (!isOpen) {
+      actions.reset()
+      setSplitPayments([])
+      setSelectedSerials({})
+      setIsProcessing(false)
+    }
   }, [isOpen, actions.reset])
 
   const { splitRemainingUsd, splitRemainingBs, splitIsComplete } = useMemo(() => {
@@ -209,6 +214,9 @@ export default function CheckoutModal({
       }
     }
 
+    // Indicate processing immediately to prevent UI freeze/flicker
+    setIsProcessing(true)
+
     // ---------------------------------------------------------
     // STOCK VALIDATION (Phase 2 Defensiva)
     // ---------------------------------------------------------
@@ -229,6 +237,7 @@ export default function CheckoutModal({
           const errorMsg = stockResult.errors.map(e => `• ${e.product_name}: ${e.message}`).join('\n')
           actions.setError(`STOCK INSUFICIENTE (OFFLINE):\n${errorMsg}`)
           setIsValidatingStock(false)
+          setIsProcessing(false) // Stop processing locally
           return
         }
 
@@ -237,6 +246,7 @@ export default function CheckoutModal({
           setStockWarnings(stockResult.warnings)
           setShowStockWarningDialog(true)
           setIsValidatingStock(false)
+          setIsProcessing(false) // Stop processing locally to wait for user confirmation
           return
         }
       } catch (err) {
@@ -254,6 +264,7 @@ export default function CheckoutModal({
       && !state.cash.changeRoundingConsent
     ) {
       actions.setError('Debes confirmar que el cliente acepta el redondeo a favor de la tienda.')
+      setIsProcessing(false)
       return
     }
 
@@ -333,7 +344,14 @@ export default function CheckoutModal({
       confirmData.customer_id = state.customerData.selectedId
     }
 
-    onConfirm(confirmData)
+    try {
+      // Treat onConfirm as a potential promise to keep spinner active until parent resolves
+      // or modal closes
+      await onConfirm(confirmData)
+    } catch (e) {
+      console.error('Payment confirmation error:', e)
+      setIsProcessing(false)
+    }
   }
 
   const totalBs = total.usd * checkoutData.exchangeRate
@@ -511,7 +529,7 @@ export default function CheckoutModal({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose() }}>
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading && !isProcessing) onClose() }}>
         <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-start justify-between gap-3">
@@ -534,7 +552,7 @@ export default function CheckoutModal({
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isLoading || isProcessing}
                 className="h-8 w-8 rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Cerrar checkout"
               >
@@ -573,7 +591,7 @@ export default function CheckoutModal({
               <Button
                 variant="outline"
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isLoading || isProcessing}
                 className="h-11 flex-1 rounded-xl border-border"
                 aria-label="Cancelar y volver al carrito"
               >
@@ -581,14 +599,14 @@ export default function CheckoutModal({
               </Button>
               <Button
                 onClick={() => handleConfirm()}
-                disabled={isLoading || isValidatingStock || items.length === 0}
+                disabled={isLoading || isValidatingStock || items.length === 0 || isProcessing}
                 className="h-11 flex-[1.25] rounded-xl font-bold"
                 aria-label="Confirmar pago y finalizar venta"
               >
-                {isLoading ? (
+                {isLoading || isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Procesando...
+                    {isValidatingStock ? 'Validando...' : 'Procesando...'}
                   </>
                 ) : (
                   <>

@@ -42,7 +42,7 @@ export function SuccessOverlay({
 
             const timer = setTimeout(() => {
                 onAnimationCompleteRef.current?.()
-            }, 2500) // Reducido un poco para mayor fluidez
+            }, 2000) // Reducido a 2s para mayor fluidez
             return () => clearTimeout(timer)
         }
     }, [isOpen])
@@ -62,7 +62,7 @@ export function SuccessOverlay({
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, transition: { duration: 0.5 } }}
+                    exit={{ opacity: 0, transition: { duration: 0.3 } }}
                     className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
                 >
                     {/* Fondo Backdrop Luminoso */}
@@ -154,7 +154,7 @@ export function SuccessOverlay({
                                 <motion.div
                                     initial={{ pathLength: 0, opacity: 0, scale: 0.5 }}
                                     animate={{ pathLength: 1, opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.4, delay: 0.35, ease: "backOut" }}
+                                    transition={{ duration: 0.4, delay: 0.25, ease: "backOut" }}
                                 >
                                     <Check className="w-14 h-14 text-white drop-shadow-md stroke-[4px]" />
                                 </motion.div>
@@ -164,7 +164,7 @@ export function SuccessOverlay({
                         <motion.div
                             initial={{ y: 20, opacity: 0, scale: 0.95 }}
                             animate={{ y: 0, opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.5, type: "spring", stiffness: 150 }}
+                            transition={{ delay: 0.3, type: "spring", stiffness: 150 }}
                             className="relative overflow-hidden rounded-2xl bg-card border border-border p-6 w-full text-center shadow-xl shadow-slate-200/50 pointer-events-auto"
                             role="status"
                             aria-live="polite"

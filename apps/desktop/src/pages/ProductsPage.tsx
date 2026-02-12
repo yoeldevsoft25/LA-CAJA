@@ -496,7 +496,7 @@ export default function ProductsPage() {
 
       {/* KPI Cards: Minimalist Style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+        <Card className="premium-shadow border-none bg-card overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute right-0 top-0 h-32 w-32 bg-primary/5 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
           <CardContent className="p-6 flex flex-col justify-center relative z-10">
@@ -513,7 +513,7 @@ export default function ProductsPage() {
           </CardContent>
         </Card>
 
-        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+        <Card className="premium-shadow border-none bg-card overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute right-0 top-0 h-32 w-32 bg-orange-500/5 rounded-full blur-3xl transform translate-x-10 -translate-y-10" />
           <CardContent className="p-6 flex flex-col justify-center relative z-10">
@@ -545,7 +545,7 @@ export default function ProductsPage() {
           {/* Opciones Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-auto px-3 gap-2 bg-background/50 backdrop-blur-sm">
+              <Button variant="outline" className="w-auto px-3 gap-2 bg-background">
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="hidden sm:inline">Opciones</span>
               </Button>
@@ -581,7 +581,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filtros Flotantes */}
-      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-background/95 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300">
+      <Card className="mb-6 border-none shadow-lg shadow-black/5 bg-card sticky top-0 z-50 transition-all duration-300">
         <CardContent className="p-3 sm:p-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-5 h-5 z-10" />
@@ -590,7 +590,7 @@ export default function ProductsPage() {
               placeholder="Buscar por nombre, SKU o código de barras..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 h-11 sm:h-12 text-base border-muted/40 bg-white/60 focus:bg-white transition-all shadow-sm focus:ring-primary/20"
+              className="pl-10 pr-4 h-11 sm:h-12 text-base border-muted/40 bg-background transition-all shadow-sm focus:ring-primary/20"
             />
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -599,7 +599,7 @@ export default function ProductsPage() {
               <Input
                 value={categoryFilter}
                 onChange={(event) => setCategoryFilter(event.target.value)}
-                className="mt-1 border-muted/40 bg-white/60"
+                className="mt-1 border-muted/40 bg-background"
                 placeholder="Todas"
               />
             </div>
@@ -611,7 +611,7 @@ export default function ProductsPage() {
                   setStatusFilter(value as 'all' | 'active' | 'inactive')
                 }
               >
-                <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                <SelectTrigger className="mt-1 border-muted/40 bg-background">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -629,7 +629,7 @@ export default function ProductsPage() {
                   setProductTypeFilter(value as 'all' | 'sale_item' | 'ingredient' | 'prepared')
                 }
               >
-                <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                <SelectTrigger className="mt-1 border-muted/40 bg-background">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -642,7 +642,7 @@ export default function ProductsPage() {
             </div>
             <div className="w-full sm:max-w-sm">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Catálogo público</Label>
-              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-white/60 px-3 py-2">
+              <div className="mt-1 flex items-center justify-between rounded-md border border-muted/40 bg-background px-3 py-2">
                 <span className="text-sm text-muted-foreground">
                   Solo visibles
                 </span>
@@ -656,7 +656,7 @@ export default function ProductsPage() {
               <div className="w-full sm:max-w-sm">
                 <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Stock por bodega</Label>
                 <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                  <SelectTrigger className="mt-1 border-muted/40 bg-white/60">
+                  <SelectTrigger className="mt-1 border-muted/40 bg-background">
                     <SelectValue placeholder="Todas las bodegas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -678,11 +678,11 @@ export default function ProductsPage() {
                 className="w-auto"
               >
                 <TabsList className="h-10 bg-muted/40">
-                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <TabsTrigger value="cards" className="px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                     <LayoutGrid className="w-4 h-4" />
                     <span className="hidden sm:inline">Cards</span>
                   </TabsTrigger>
-                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <TabsTrigger value="table" className="px-3 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                     <LayoutList className="w-4 h-4" />
                     <span className="hidden sm:inline">Tabla</span>
                   </TabsTrigger>
@@ -694,7 +694,7 @@ export default function ProductsPage() {
       </Card>
 
       {/* Lista de productos */}
-      <Card className="border-none premium-shadow overflow-hidden bg-background/50 backdrop-blur-sm ring-1 ring-border/50">
+      <Card className="border-none premium-shadow overflow-hidden bg-background ring-1 ring-border/50">
         <CardContent className="p-0">
           {isError ? (
             <div className="p-12 text-center">
@@ -837,7 +837,7 @@ export default function ProductsPage() {
                         <td className="px-4 py-3 text-right">
                           {editingPriceProductId === product.id ? (
                             <div className="flex items-center gap-2 justify-end">
-                              <div className="flex items-center gap-1 bg-white dark:bg-slate-800 rounded border p-1 shadow-sm">
+                              <div className="flex items-center gap-1 bg-card rounded border p-1 shadow-sm">
                                 <span className="text-sm text-muted-foreground px-1">$</span>
                                 <Input
                                   type="number"
@@ -875,7 +875,7 @@ export default function ProductsPage() {
                             <div className="flex flex-col items-center gap-1">
                               <span className={cn(
                                 "text-sm font-bold tabular-nums",
-                                isLowStock ? "text-orange-600" : "text-slate-700 dark:text-slate-300"
+                                isLowStock ? "text-orange-600" : "text-foreground"
                               )}>
                                 {formatStockValue(product, stockItem)}
                               </span>
@@ -902,7 +902,7 @@ export default function ProductsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleManageVariants(product)}
-                              className="h-8 w-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full"
                               title="Gestionar Variantes"
                             >
                               <Layers className="w-4 h-4" />
@@ -911,7 +911,7 @@ export default function ProductsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleChangePrice(product)}
-                              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-full"
+                              className="h-8 w-8 text-primary/80 hover:text-primary hover:bg-primary/10 rounded-full"
                               title="Cambiar Precio"
                             >
                               <DollarSign className="w-4 h-4" />
@@ -920,7 +920,7 @@ export default function ProductsPage() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleEdit(product)}
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-full"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10 rounded-full"
                               title="Editar"
                             >
                               <Edit className="w-4 h-4" />

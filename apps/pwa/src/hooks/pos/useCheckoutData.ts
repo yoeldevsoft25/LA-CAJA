@@ -20,6 +20,8 @@ export function useCheckoutData(options: {
     const {
         storeId,
         isOpen,
+        customerSearch,
+        selectedCustomerId,
     } = options
     const shouldFetchCustomers = isOpen && !!storeId
 
@@ -35,12 +37,27 @@ export function useCheckoutData(options: {
 
     // Customers
     const customersQuery = useQuery({
-        queryKey: ['customers', storeId],
+        queryKey: ['customers', storeId, customerSearch, selectedCustomerId],
         queryFn: async () => {
-            // Siempre buscamos todos para permitir filtrado local reactivo
-            return customersService.search('')
+            // Si hay un ID seleccionado, buscamos ese cliente específico
+            if (selectedCustomerId) {
+                // TODO: Implementar getById en el hook si no está cacheado
+                // Por ahora search('') devuelve recientes/todos
+            }
+
+            // Si hay término de búsqueda, buscamos específicamente
+            if (customerSearch && customerSearch.length > 2) {
+                return customersService.search(customerSearch)
+            }
+
+            // Si no hay búsqueda ni selección, NO BUSCAR NADA inicialmente
+            // O devolver una lista vacía para no saturar
+            return []
         },
-        enabled: shouldFetchCustomers,
+        enabled: shouldFetchCustomers && (
+            (!!customerSearch && customerSearch.length > 2) ||
+            !!selectedCustomerId
+        ),
         staleTime: 1000 * 60 * 5, // 5 minutos
         placeholderData: (previous) => previous,
     })

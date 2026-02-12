@@ -287,7 +287,7 @@ export default function WarehousesPage() {
       </div>
 
       {/* Toolbar (Mobile-first, sticky) */}
-      <Card className="border-none bg-background/85 backdrop-blur-md sticky top-0 z-40 ring-1 ring-border/50 shadow-sm">
+      <Card className="border-none bg-card sticky top-0 z-40 ring-1 ring-border/50 shadow-sm">
         <CardContent className="p-3 sm:p-4 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 w-5 h-5" />
@@ -296,14 +296,14 @@ export default function WarehousesPage() {
               placeholder="Buscar por nombre, código, ciudad o teléfono..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 sm:h-12 border-muted/40 bg-muted/40 focus:bg-background transition-colors"
+              className="pl-10 h-11 sm:h-12 border-muted/40 bg-background transition-colors"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="w-full">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Estado</Label>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger className="mt-1 border-muted/40 bg-muted/40">
+                <SelectTrigger className="mt-1 border-muted/40 bg-background">
                   <SelectValue placeholder="Activas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -316,7 +316,7 @@ export default function WarehousesPage() {
             <div className="w-full">
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Tipo</Label>
               <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                <SelectTrigger className="mt-1 border-muted/40 bg-muted/40">
+                <SelectTrigger className="mt-1 border-muted/40 bg-background">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -452,11 +452,11 @@ export default function WarehousesPage() {
                 )}
               </CardContent>
 
-              <CardFooter className="pt-3 border-t bg-muted/20 flex gap-2">
+              <CardFooter className="pt-3 border-t bg-card flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 bg-background hover:bg-background/80"
+                  className="flex-1 bg-background hover:bg-muted/40"
                   onClick={() => handleViewStock(warehouse)}
                 >
                   <Package className="w-3.5 h-3.5 mr-2" />
@@ -546,7 +546,7 @@ export default function WarehousesPage() {
               )}
             </ScrollArea>
           </div>
-          <div className="bg-muted/40 -mx-6 -mb-6 p-4 border-t flex justify-end">
+          <div className="bg-card -mx-6 -mb-6 p-4 border-t flex justify-end">
             <Button variant="outline" onClick={() => setShowStock(false)}>Cerrar</Button>
           </div>
         </DialogContent>

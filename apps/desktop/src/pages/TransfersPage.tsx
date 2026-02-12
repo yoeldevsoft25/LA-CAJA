@@ -249,7 +249,7 @@ export default function TransfersPage() {
         </div>
       </CardHeader>
       <CardContent className="pb-3">
-        <div className="flex items-center justify-between text-sm p-3 bg-muted/30 rounded-lg mb-3">
+        <div className="flex items-center justify-between text-sm p-3 bg-card border border-border/60 rounded-lg mb-3">
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground mb-1">Origen</span>
             <span className="font-medium flex items-center">
@@ -335,7 +335,7 @@ export default function TransfersPage() {
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Cargando transferencias...</div>
           ) : activeTransfers.length === 0 ? (
-            <div className="text-center py-12 border rounded-lg bg-muted/10">
+            <div className="text-center py-12 border rounded-lg bg-card">
               <Truck className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-lg font-medium">No hay transferencias activas</h3>
               <p className="text-muted-foreground">Crea una nueva transferencia para comenzar.</p>
@@ -353,7 +353,7 @@ export default function TransfersPage() {
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Cargando historial...</div>
           ) : historyTransfers.length === 0 ? (
-            <div className="text-center py-12 border rounded-lg bg-muted/10">
+            <div className="text-center py-12 border rounded-lg bg-card">
               <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-lg font-medium">Sin historial</h3>
               <p className="text-muted-foreground">Las transferencias completadas o canceladas aparecerán aquí.</p>
@@ -389,7 +389,7 @@ export default function TransfersPage() {
           {selectedTransfer && (
             <form onSubmit={handleShipSubmit} className="space-y-4">
               {/* Logistics Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-4 bg-muted/30 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-4 bg-card border border-border/60 rounded-lg">
                 <div className="space-y-2">
                   <Label>Conductor</Label>
                   <Input name="driver_name" placeholder="Nombre del chofer" />
@@ -517,7 +517,7 @@ export default function TransfersPage() {
           {selectedTransfer && (
             <div className="space-y-6">
               {/* Header Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 bg-muted/20 rounded-lg text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 bg-card border border-border/60 rounded-lg text-sm">
                 <div>
                   <span className="text-xs text-muted-foreground block">Origen</span>
                   <span className="font-medium">{selectedTransfer.from_warehouse?.name}</span>

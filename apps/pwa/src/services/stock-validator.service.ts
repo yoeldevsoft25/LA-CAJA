@@ -60,7 +60,7 @@ class StockValidatorService {
         };
 
         try {
-            for (const item of items) {
+            const validationPromises = items.map(async (item) => {
                 // 1. Obtener producto para ver si trackea inventario (usando cache local de productos)
                 // Nota: Si no está en cache, asumimos que NO trackea inventario (Fail Open)
                 const product = await db.products.get(item.product_id);
@@ -68,7 +68,7 @@ class StockValidatorService {
                 // Si es un servicio o no trackea stock, skip
                 // TODO: Ajustar lógica si 'product_type' define esto
                 if (product && product.product_type === 'prepared') {
-                    continue;
+                    return null;
                 }
 
                 // 2. Obtener stock local
@@ -103,38 +103,60 @@ class StockValidatorService {
 
                     if (isOnline) {
                         // Online: Warning (Fail Open, el server validará final)
-                        result.warnings.push({
-                            product_id: item.product_id,
-                            product_name: item.name,
-                            requested: item.qty,
-                            available,
-                            message: msg
-                        });
+                        return {
+                            type: 'warning',
+                            data: {
+                                product_id: item.product_id,
+                                product_name: item.name,
+                                requested: item.qty,
+                                available,
+                                message: msg
+                            } as StockWarning
+                        };
                     } else {
                         // Offline: Reglas más estrictas
                         if (available <= 0) {
                             // ERROR Bloqueante si stock <= 0
-                            result.valid = false;
-                            result.errors.push({
-                                product_id: item.product_id,
-                                product_name: item.name,
-                                requested: item.qty,
-                                available,
-                                message: msg
-                            });
+                            return {
+                                type: 'error',
+                                data: {
+                                    product_id: item.product_id,
+                                    product_name: item.name,
+                                    requested: item.qty,
+                                    available,
+                                    message: msg
+                                } as StockError
+                            };
                         } else {
                             // Warning si hay algo de stock pero no suficiente (overselling parcial permitido)
-                            result.warnings.push({
-                                product_id: item.product_id,
-                                product_name: item.name,
-                                requested: item.qty,
-                                available,
-                                message: msg
-                            });
+                            return {
+                                type: 'warning',
+                                data: {
+                                    product_id: item.product_id,
+                                    product_name: item.name,
+                                    requested: item.qty,
+                                    available,
+                                    message: msg
+                                } as StockWarning
+                            };
                         }
                     }
                 }
-            }
+                return null;
+            });
+
+            const results = await Promise.all(validationPromises);
+
+            results.forEach(res => {
+                if (!res) return;
+                if (res.type === 'error') {
+                    result.valid = false;
+                    result.errors.push(res.data as StockError);
+                } else {
+                    result.warnings.push(res.data as StockWarning);
+                }
+            });
+
         } catch (error) {
             console.error('Error validating stock offline:', error);
             // Fail Open: Si falla la validación técnica, permitimos vender

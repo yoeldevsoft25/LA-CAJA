@@ -113,7 +113,7 @@ export default function ProductLotModal({
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-xl flex flex-col p-0 gap-0 border-l border-border shadow-2xl">
-        <SheetHeader className="px-5 py-4 border-b border-border flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <SheetHeader className="px-5 py-4 border-b border-border flex-shrink-0 bg-card">
           <SheetTitle className="text-xl font-semibold flex items-center">
             <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary mr-3" />
             {lot ? 'Editar Lote' : 'Crear Lote'}
@@ -301,7 +301,7 @@ export default function ProductLotModal({
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-muted/10 backdrop-blur-sm">
+          <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-card">
             <div className="flex flex-col-reverse sm:flex-row gap-3">
               <Button
                 type="button"

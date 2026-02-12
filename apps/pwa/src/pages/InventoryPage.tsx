@@ -313,7 +313,7 @@ export default function InventoryPage() {
 
       {/* KPI Cards: Minimalist Style */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+        <Card className="premium-shadow border-none bg-card overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute right-0 top-0 h-24 w-24 bg-primary/5 rounded-full blur-2xl transform translate-x-8 -translate-y-8" />
           <CardContent className="p-6 flex flex-col justify-center relative z-10">
@@ -330,7 +330,7 @@ export default function InventoryPage() {
           </CardContent>
         </Card>
 
-        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+        <Card className="premium-shadow border-none bg-card overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute right-0 top-0 h-24 w-24 bg-orange-500/5 rounded-full blur-2xl transform translate-x-8 -translate-y-8" />
           <CardContent className="p-6 flex flex-col justify-center relative z-10">
@@ -351,7 +351,7 @@ export default function InventoryPage() {
           </CardContent>
         </Card>
 
-        <Card className="premium-shadow border-none bg-card/50 backdrop-blur-sm overflow-hidden relative group">
+        <Card className="premium-shadow border-none bg-card overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute right-0 top-0 h-24 w-24 bg-emerald-500/5 rounded-full blur-2xl transform translate-x-8 -translate-y-8" />
           <CardContent className="p-6 flex flex-col justify-center relative z-10">
@@ -391,7 +391,7 @@ export default function InventoryPage() {
           {/* Opciones Adicionales Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-auto px-3 gap-2 bg-background/50 backdrop-blur-sm hover:bg-background/80">
+              <Button variant="outline" className="w-auto px-3 gap-2 bg-background hover:bg-muted/40">
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="hidden sm:inline">Opciones</span>
               </Button>
@@ -474,7 +474,7 @@ export default function InventoryPage() {
               placeholder="Buscar por nombre, SKU o código de barras…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 sm:pl-10 h-11 sm:h-12 text-base border-muted/40 bg-muted/50 focus:bg-background transition-all shadow-sm focus:ring-primary/20"
+              className="pl-9 sm:pl-10 h-11 sm:h-12 text-base border-muted/40 bg-background transition-all shadow-sm focus:ring-primary/20"
               aria-label="Buscar productos en inventario"
             />
           </div>
@@ -484,7 +484,7 @@ export default function InventoryPage() {
             <div>
               <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Bodega</Label>
               <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-                <SelectTrigger className="mt-1.5 border-muted/40 bg-muted/50">
+                <SelectTrigger className="mt-1.5 border-muted/40 bg-background">
                   <SelectValue placeholder="Todas las bodegas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -642,7 +642,7 @@ export default function InventoryPage() {
                                 <span
                                   className={cn(
                                     'text-base sm:text-lg font-bold block tabular-nums',
-                                    isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'
+                                    isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
                                   )}
                                 >
                                   {formatStockValue(item, item.current_stock)}
@@ -650,7 +650,7 @@ export default function InventoryPage() {
                                 {/* Indicador de progreso visual */}
                                 <div className="w-20 sm:w-24 h-1.5 bg-muted/50 rounded-full overflow-hidden">
                                   <div
-                                    className={cn("h-full rounded-full transition-all duration-500", isLowStock ? "bg-orange-500" : "bg-blue-500")}
+                                    className={cn("h-full rounded-full transition-all duration-500", isLowStock ? "bg-orange-500" : "bg-primary")}
                                     style={{ width: `${stockPercentage}%` }}
                                   />
                                 </div>
@@ -694,7 +694,7 @@ export default function InventoryPage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleReceiveStock(item)}
-                                  className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 rounded-full"
+                                  className="h-8 w-8 text-primary hover:text-primary/90 hover:bg-primary/10 rounded-full"
                                   title="Recibir stock"
                                   aria-label={`Recibir stock de ${item.product_name}`}
                                 >
