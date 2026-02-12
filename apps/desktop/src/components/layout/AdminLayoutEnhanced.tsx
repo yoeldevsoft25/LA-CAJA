@@ -184,7 +184,8 @@ export default function AdminLayoutEnhanced() {
                 <div className="flex h-16 items-center gap-4 px-4 sm:px-6">
                     {/* Logo (Desktop) */}
                     <div className="flex items-center gap-3">
-                        <img src="/logo-velox.svg" alt="Velox" className="w-8 h-8" />
+                        <img src="/logo-velox.svg" alt="Velox" className="w-8 h-8 dark:hidden" />
+                        <img src="/logo-velox-white.svg" alt="Velox" className="hidden w-8 h-8 dark:block" />
                         <h1 className="text-sm font-semibold uppercase tracking-[0.08em] text-foreground/90">Velox Admin</h1>
                     </div>
 

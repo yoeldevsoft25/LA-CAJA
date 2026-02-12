@@ -5,6 +5,47 @@ import path from 'path';
 
 const buildId = process.env.PWA_BUILD_ID || new Date().toISOString();
 const buildIdJson = JSON.stringify(buildId);
+const BRAND = {
+  blue: '#0D81CE',
+  white: '#FFFFFF',
+} as const;
+
+const PWA_INCLUDE_ASSETS = [
+  'favicon.ico',
+  'favicon.svg',
+  'logo-velox.svg',
+  'logo-velox-white.svg',
+  'apple-touch-icon.png',
+  'android-chrome-192x192.png',
+  'android-chrome-512x512.png',
+];
+
+const PWA_ICONS = [
+  {
+    src: '/logo-velox.svg',
+    sizes: 'any',
+    type: 'image/svg+xml',
+    purpose: 'any',
+  },
+  {
+    src: '/logo-velox-white.svg',
+    sizes: 'any',
+    type: 'image/svg+xml',
+    purpose: 'monochrome',
+  },
+  {
+    src: '/android-chrome-192x192.png',
+    sizes: '192x192',
+    type: 'image/png',
+    purpose: 'any maskable',
+  },
+  {
+    src: '/android-chrome-512x512.png',
+    sizes: '512x512',
+    type: 'image/png',
+    purpose: 'any maskable',
+  },
+];
 // Cache por build - se limpia automáticamente en cada build
 const reactChunkCache = new Map<string, boolean>();
 const nodeModulesRegex = /[\\/](node_modules)[\\/]/;
@@ -175,7 +216,7 @@ export default defineConfig(({ mode }) => ({
       strategies: 'injectManifest', // <== SWITCH TO INJECT MANIFEST
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: PWA_INCLUDE_ASSETS,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB limit
@@ -185,24 +226,11 @@ export default defineConfig(({ mode }) => ({
         name: 'Velox POS',
         short_name: 'Velox POS',
         description: 'Sistema POS Offline-First',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: BRAND.blue,
+        background_color: BRAND.white,
         display: 'standalone',
         start_url: '/',
-        icons: [
-          {
-            src: '/android-chrome-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-          {
-            src: '/android-chrome-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-        ],
+        icons: PWA_ICONS,
       },
     }),
   ],

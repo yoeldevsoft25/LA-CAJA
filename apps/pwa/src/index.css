@@ -128,6 +128,14 @@
    LIGHT MODE — Corporate Slate Theme
    ═══════════════════════════════════════════════════════════════════════ */
 :root {
+  /* Velox brand primitives (single source of truth for semantic tokens). */
+  --brand-blue: 204 88% 43%;
+  /* #0D81CE */
+  --brand-blue-hover: 204 90% 38%;
+  --brand-blue-soft: 204 84% 94%;
+  --brand-ink: 0 0% 24%;
+  /* #3D3D3D */
+
   /* Neutral canvas with low saturation for an administrative ERP look. */
   --background: 218 14% 95%;
   --foreground: 220 22% 16%;
@@ -138,7 +146,7 @@
   --popover: 0 0% 100%;
   --popover-foreground: 220 22% 16%;
 
-  --primary: 217 29% 32%;
+  --primary: var(--brand-blue);
   --primary-foreground: 210 40% 98%;
 
   --secondary: 220 16% 92%;
@@ -147,8 +155,8 @@
   --muted: 220 14% 93%;
   --muted-foreground: 220 10% 43%;
 
-  --accent: 220 15% 89%;
-  --accent-foreground: 220 20% 22%;
+  --accent: var(--brand-blue-soft);
+  --accent-foreground: var(--brand-blue-hover);
 
   --destructive: 0 72% 52%;
   --destructive-foreground: 210 40% 98%;
@@ -164,7 +172,7 @@
 
   --border: 220 13% 84%;
   --input: 220 13% 84%;
-  --ring: 217 29% 32%;
+  --ring: var(--brand-blue);
   --radius: 0.75rem;
 
   /* App shell layers: background -> chrome (header/sidebar) -> main content */
@@ -177,12 +185,12 @@
   /* Sidebar + Header share the same surface token for cohesion. */
   --sidebar-background: 220 14% 88%;
   --sidebar-foreground: 220 15% 24%;
-  --sidebar-primary: 217 29% 32%;
+  --sidebar-primary: var(--brand-blue);
   --sidebar-primary-foreground: 0 0% 98%;
   --sidebar-accent: 220 14% 91%;
   --sidebar-accent-foreground: 220 20% 22%;
   --sidebar-border: 220 11% 80%;
-  --sidebar-ring: 217 29% 32%;
+  --sidebar-ring: var(--brand-blue);
 
   /* ⚡ PERF: Optimization variables */
   --glass-blur: 12px;
@@ -219,6 +227,11 @@
    └── Info:        199° 50% 52% ─── Quiet teal
    ═══════════════════════════════════════════════════════════════════════ */
 .dark {
+  --brand-blue: 204 88% 43%;
+  --brand-blue-hover: 204 90% 50%;
+  --brand-blue-soft: 204 66% 20%;
+  --brand-ink: 0 0% 24%;
+
   /* ── Backgrounds — Charcoal slate ───────────────────────────── */
   --background: 220 22% 8%;
   --foreground: 210 20% 92%;
@@ -232,8 +245,8 @@
   --popover-foreground: 210 18% 93%;
 
   /* ── Primary — Controlled steel accent ──────────────────────── */
-  --primary: 214 28% 65%;
-  --primary-foreground: 220 30% 12%;
+  --primary: var(--brand-blue);
+  --primary-foreground: 210 40% 98%;
 
   /* ── Secondary — Muted slate ────────────────────────────────── */
   --secondary: 220 15% 16%;
@@ -244,8 +257,8 @@
   --muted-foreground: 216 10% 67%;
 
   /* ── Accent — Hover states ──────────────────────────────────── */
-  --accent: 220 14% 20%;
-  --accent-foreground: 210 18% 93%;
+  --accent: var(--brand-blue-soft);
+  --accent-foreground: 210 40% 98%;
 
   /* ── Destructive — Controlled red ───────────────────────────── */
   --destructive: 0 60% 56%;
@@ -265,7 +278,7 @@
 
   --border: 220 12% 24%;
   --input: 220 12% 24%;
-  --ring: 214 28% 65%;
+  --ring: var(--brand-blue);
 
   --shell-background: 220 20% 9%;
   --shell-chrome: 220 15% 12%;
@@ -276,12 +289,12 @@
   /* ── Sidebar — Distinct deep panel ──────────────────────────── */
   --sidebar-background: 220 16% 11%;
   --sidebar-foreground: 210 18% 93%;
-  --sidebar-primary: 214 28% 65%;
-  --sidebar-primary-foreground: 220 30% 12%;
+  --sidebar-primary: var(--brand-blue);
+  --sidebar-primary-foreground: 210 40% 98%;
   --sidebar-accent: 220 14% 18%;
   --sidebar-accent-foreground: 210 18% 93%;
   --sidebar-border: 220 11% 24%;
-  --sidebar-ring: 214 28% 65%;
+  --sidebar-ring: var(--brand-blue);
 
   /* ⚡ PERF: Dark mode specific optimizations */
   --glass-blur: 10px;

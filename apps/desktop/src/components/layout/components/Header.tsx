@@ -76,7 +76,15 @@ export const Header = memo(function Header({
                         <img
                             src="/logo-velox.svg"
                             alt="Velox POS Logo"
-                            className="w-8 h-8 rounded-md"
+                            className="w-8 h-8 rounded-md dark:hidden"
+                            width={32}
+                            height={32}
+                            loading="eager"
+                        />
+                        <img
+                            src="/logo-velox-white.svg"
+                            alt="Velox POS Logo"
+                            className="hidden w-8 h-8 rounded-md dark:block"
                             width={32}
                             height={32}
                             loading="eager"
