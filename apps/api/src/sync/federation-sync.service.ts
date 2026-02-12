@@ -679,15 +679,26 @@ export class FederationSyncService implements OnModuleInit {
     );
     let missingIds = uniquePaymentIds.filter((id) => !foundIds.has(id));
 
+    const synthesizeFallbackIds = new Set<string>();
     let queued = 0;
-    for (const row of rows as Array<{ event_id: string }>) {
+    for (const row of rows as Array<{ event_id: string; payment_id: string }>) {
       const event = await this.eventRepository.findOne({
         where: { event_id: row.event_id },
       });
-      if (!event) continue;
+      if (!event) {
+        synthesizeFallbackIds.add(row.payment_id);
+        continue;
+      }
+      if (!this.isDebtPaymentRelayEventValid(event)) {
+        // Evento legacy/corrupto: forzar replay sintético para evitar rechazos
+        // de integridad por full_payload_hash inconsistente.
+        synthesizeFallbackIds.add(row.payment_id);
+        continue;
+      }
       await this.queueRelay(event);
       queued += 1;
     }
+    missingIds = Array.from(new Set([...missingIds, ...synthesizeFallbackIds]));
 
     if (missingIds.length > 0) {
       const paymentRows = await this.dataSource.query(
@@ -1930,6 +1941,46 @@ export class FederationSyncService implements OnModuleInit {
   private hashPayload(payload: Record<string, unknown>): string {
     const normalized = JSON.stringify(this.sortDeep(payload));
     return createHash('sha256').update(normalized).digest('hex');
+  }
+
+  private isDebtPaymentRelayEventValid(event: Event): boolean {
+    if (
+      event.type !== 'DebtPaymentRecorded' &&
+      event.type !== 'DebtPaymentAdded'
+    ) {
+      return true;
+    }
+
+    if (!event.full_payload_hash) {
+      return false;
+    }
+
+    const deltaPayload =
+      event.delta_payload &&
+      typeof event.delta_payload === 'object' &&
+      !Array.isArray(event.delta_payload)
+        ? (event.delta_payload as Record<string, unknown>)
+        : null;
+
+    const payload =
+      event.payload &&
+      typeof event.payload === 'object' &&
+      !Array.isArray(event.payload)
+        ? (event.payload as Record<string, unknown>)
+        : null;
+
+    if (
+      deltaPayload &&
+      this.hashPayload(deltaPayload) === event.full_payload_hash
+    ) {
+      return true;
+    }
+
+    if (payload && this.hashPayload(payload) === event.full_payload_hash) {
+      return true;
+    }
+
+    return false;
   }
 
   private async pushSyntheticEvents(

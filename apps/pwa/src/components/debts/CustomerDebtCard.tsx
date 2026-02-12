@@ -359,10 +359,6 @@ export default function CustomerDebtCard({
                     const firstItemDate = chain.items.length > 0 ? new Date(chain.items[chain.items.length - 1].data.created_at || chain.items[chain.items.length - 1].data.paid_at) : new Date();
                     const chainStatus = chain.items.find((i: any) => i.type === 'debt' && i.data.status !== 'paid') ? 'Activo' : 'Completado';
                     const displayItems = [...(chain.items || [])].sort((a: any, b: any) => {
-                      const getDateMs = (item: any) => new Date(item?.data?.created_at || item?.data?.paid_at || 0).getTime()
-                      const dateDiff = getDateMs(b) - getDateMs(a)
-                      if (dateDiff !== 0) return dateDiff
-
                       const getPriority = (item: any) => {
                         if (item?.type === 'debt' && item?.data?.status !== 'paid') return 0
                         if (item?.type === 'payment' && item?.data?.method === 'ROLLOVER') return 1
@@ -371,8 +367,13 @@ export default function CustomerDebtCard({
                         return 4
                       }
 
+                      // Regla visual principal: pendientes primero, completadas al final.
                       const priorityDiff = getPriority(a) - getPriority(b)
                       if (priorityDiff !== 0) return priorityDiff
+
+                      const getDateMs = (item: any) => new Date(item?.data?.created_at || item?.data?.paid_at || 0).getTime()
+                      const dateDiff = getDateMs(b) - getDateMs(a)
+                      if (dateDiff !== 0) return dateDiff
 
                       return String(b?.data?.id || '').localeCompare(String(a?.data?.id || ''))
                     })

@@ -460,9 +460,6 @@ export default function CustomerDebtCard({
 
                     const chainItems = chainAudit.items
                     const displayItems = [...chainItems].sort((a: any, b: any) => {
-                      const dateDiff = Number(b.occurredAtMs || 0) - Number(a.occurredAtMs || 0)
-                      if (dateDiff !== 0) return dateDiff
-
                       const priority = (item: any) => {
                         if (item?.type === 'debt' && item?.data?.status !== 'paid') return 0
                         if (item?.type === 'payment' && item?.data?.method === 'ROLLOVER') return 1
@@ -471,8 +468,13 @@ export default function CustomerDebtCard({
                         return 4
                       }
 
+                      // Regla visual principal: pendientes primero, completadas al final.
                       const priorityDiff = priority(a) - priority(b)
                       if (priorityDiff !== 0) return priorityDiff
+
+                      const dateDiff = Number(b.occurredAtMs || 0) - Number(a.occurredAtMs || 0)
+                      if (dateDiff !== 0) return dateDiff
+
                       return String(b?.id || '').localeCompare(String(a?.id || ''))
                     })
                     const chainSummary = chainAudit.summary
