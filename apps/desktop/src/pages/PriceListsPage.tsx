@@ -182,7 +182,7 @@ export default function PriceListsPage() {
 
       {/* Modal de formulario */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
           <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
             <DialogTitle className="text-lg sm:text-xl">
               {editingList ? 'Editar Lista de Precio' : 'Nueva Lista de Precio'}
@@ -293,7 +293,7 @@ export default function PriceListsPage() {
             </div>
           </div>
           <DialogFooter className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-border flex-shrink-0">
-              <Button type="button" variant="outline" onClick={handleCloseForm}>
+              <Button type="button" variant="outline" onClick={handleCloseForm} className="btn-glass-neutral">
                 Cancelar
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>

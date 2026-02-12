@@ -113,7 +113,7 @@ export default function AccountingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex-wrap h-auto">
+        <TabsList className="flex-wrap h-auto p-1 rounded-xl bg-card border border-border/70">
           <TabsTrigger value="accounts" className="text-xs sm:text-sm gap-1.5 sm:gap-2">
             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             <span className="hidden sm:inline">Plan de Cuentas</span>
@@ -170,12 +170,7 @@ export default function AccountingPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <CardTitle className="text-lg sm:text-xl">Plan de Cuentas</CardTitle>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    onClick={handleInitialize}
-                    disabled={initializeMutation.isPending}
-                    className="w-full sm:w-auto text-xs sm:text-sm"
-                  >
+                  <Button variant="outline" onClick={handleInitialize} disabled={initializeMutation.isPending} className="w-full sm:w-auto text-xs sm:text-sm btn-glass-neutral">
                     <span className="hidden sm:inline">Inicializar Plan Básico</span>
                     <span className="sm:hidden">Inicializar</span>
                   </Button>
@@ -248,7 +243,7 @@ export default function AccountingPage() {
 
         <TabsContent value="reports" className="space-y-4">
           <Tabs defaultValue="balance-sheet" className="space-y-4">
-            <TabsList>
+            <TabsList className="h-11 p-1 rounded-xl bg-card border border-border/70">
               <TabsTrigger value="balance-sheet">Balance General</TabsTrigger>
               <TabsTrigger value="income-statement">Estado de Resultados</TabsTrigger>
               <TabsTrigger value="cash-flow">Flujo de Efectivo</TabsTrigger>
@@ -283,7 +278,7 @@ export default function AccountingPage() {
 
         <TabsContent value="validations" className="space-y-4">
           <Tabs defaultValue="validation" className="space-y-4">
-            <TabsList>
+            <TabsList className="h-11 p-1 rounded-xl bg-card border border-border/70">
               <TabsTrigger value="validation">Validación de Integridad</TabsTrigger>
               <TabsTrigger value="reconciliation">Reconciliación de Cuentas</TabsTrigger>
             </TabsList>

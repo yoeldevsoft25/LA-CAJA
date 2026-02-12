@@ -571,8 +571,8 @@ export default function CheckoutModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading && !isProcessing) onClose() }}>
-        {/* Optimized animation: standard centered zoom/fade. Removed weird offsets. */}
-        <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom-full data-[state=open]:slide-in-from-bottom-full sm:rounded-[var(--radius)]">
+        {/* Optimized animation: FORCE centered zoom/fade. Using !important to purge inherited slides. */}
+        <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:!slide-in-from-left-1/2 data-[state=open]:!slide-in-from-top-1/2 data-[state=closed]:!slide-out-to-left-1/2 data-[state=closed]:!slide-out-to-top-1/2 sm:rounded-[var(--radius)]">
           <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">

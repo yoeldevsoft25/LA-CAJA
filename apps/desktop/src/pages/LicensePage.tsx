@@ -334,7 +334,7 @@ export default function LicensePage() {
             <p className="text-lg">
               Tu solicitud de pago para el plan <strong>{(planInfo || PLAN_METADATA)[pendingPayment.plan as LicensePlan]?.name}</strong> está siendo verificada por nuestro equipo.
             </p>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-md shadow-sm border space-y-2">
+            <div className="bg-card p-4 rounded-md shadow-sm border border-border space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Referencia:</span>
                 <span className="font-mono font-bold">{pendingPayment.payment_reference}</span>
@@ -440,7 +440,7 @@ export default function LicensePage() {
                             )}
 
                             {/* Features List */}
-                            <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300 flex-1">
+                            <ul className="space-y-2 text-sm text-muted-foreground flex-1">
                               {features.map((feature: string, idx: number) => (
                                 <li key={idx} className="flex items-start gap-2">
                                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -472,7 +472,7 @@ export default function LicensePage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="bg-card border border-primary/20 rounded-lg p-4">
                     <p className="text-sm text-blue-900 dark:text-blue-100">
                       <strong>Monto esperado:</strong>{' '}
                       {licensePaymentsService.calculateExpectedAmount(
@@ -489,7 +489,7 @@ export default function LicensePage() {
                   </div>
 
                   {exchangeRateData?.rate && (
-                    <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+                    <Alert className="bg-card border border-amber-500/20">
                       <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                       <AlertTitle className="text-yellow-800 dark:text-yellow-300">
                         Tasa de Cambio: {exchangeRateData.rate} Bs/USD
@@ -653,14 +653,7 @@ export default function LicensePage() {
                         </>
                       )}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedPlan(null);
-                        reset();
-                      }}
-                    >
+                    <Button type="button" variant="outline" onClick={() => { setSelectedPlan(null); reset(); }} className="btn-glass-neutral">
                       Cancelar
                     </Button>
                   </div>
@@ -716,7 +709,7 @@ function PendingPaymentsList({ existingPayments, isLoading }: { existingPayments
   return (
     <div className="space-y-2">
       {payments.map((payment: any) => (
-        <Card key={payment.id} className="bg-muted/50">
+        <Card key={payment.id} className="bg-card border-border">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex-1">

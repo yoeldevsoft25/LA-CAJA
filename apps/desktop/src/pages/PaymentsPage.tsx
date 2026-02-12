@@ -42,7 +42,7 @@ export default function PaymentsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="methods" className="space-y-4">
-        <TabsList>
+        <TabsList className="h-11 p-1 rounded-xl bg-card border border-border/70">
           <TabsTrigger value="methods" className="flex items-center">
             <CreditCard className="w-4 h-4 mr-2" />
             Métodos de Pago
@@ -59,7 +59,7 @@ export default function PaymentsPage() {
 
         <TabsContent value="movements" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => setIsMovementModalOpen(true)}>
+            <Button onClick={() => setIsMovementModalOpen(true)} variant="outline" className="btn-glass-neutral">
               <DollarSign className="w-4 h-4 mr-2" />
               Registrar Movimiento
             </Button>

@@ -84,7 +84,7 @@ export default function DiscountsPage() {
               : 'Gestiona límites, autorizaciones y reglas de descuentos'}
           </p>
         </div>
-        <Button onClick={() => setIsConfigModalOpen(true)}>
+        <Button onClick={() => setIsConfigModalOpen(true)} variant="outline" className="btn-glass-neutral">
           <Settings className="w-4 h-4 mr-2" />
           {config ? 'Editar Configuración' : 'Configurar Descuentos'}
         </Button>
@@ -152,7 +152,7 @@ export default function DiscountsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList>
+        <TabsList className="h-11 p-1 rounded-xl bg-card border border-border/70">
           <TabsTrigger value="summary" className="flex items-center">
             <Percent className="w-4 h-4 mr-2" />
             Resumen

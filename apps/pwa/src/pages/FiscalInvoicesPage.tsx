@@ -39,10 +39,10 @@ const statusLabels: Record<FiscalInvoiceStatus, string> = {
 }
 
 const statusColors: Record<FiscalInvoiceStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
-  issued: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-  rejected: 'bg-orange-100 text-orange-800',
+  draft: 'bg-card border border-border text-muted-foreground',
+  issued: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
+  cancelled: 'bg-destructive/10 text-destructive border border-destructive/20',
+  rejected: 'bg-amber-500/10 text-amber-600 border border-amber-500/20',
 }
 
 export default function FiscalInvoicesPage() {
@@ -329,7 +329,7 @@ export default function FiscalInvoicesPage() {
           ) : filteredInvoices.length === 0 ? (
             <div className="p-8 text-center">
               <div className="flex flex-col items-center justify-center py-8">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-card border border-border/60 flex items-center justify-center mb-4">
                   <FileText className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <p className="text-lg font-medium text-foreground mb-1">
@@ -474,7 +474,7 @@ export default function FiscalInvoicesPage() {
           setCreditNoteReason('')
         }
       }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <XCircle className="w-5 h-5 text-destructive" />

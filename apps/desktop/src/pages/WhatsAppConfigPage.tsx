@@ -324,7 +324,7 @@ export default function WhatsAppConfigPage() {
 
             {/* Vista previa del mensaje */}
             {thankYouMessage && (
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-card border border-border rounded-lg">
                 <p className="text-sm font-medium mb-2">Vista Previa:</p>
                 <p className="text-sm text-muted-foreground">
                   {thankYouMessage.replace('{storeName}', 'Mi Tienda').replace('{customerName}', 'Cliente')}
@@ -415,7 +415,7 @@ export default function WhatsAppConfigPage() {
 
       {/* Modal de Autenticación */}
       <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-card">
           <DialogHeader>
             <DialogTitle>Conectar WhatsApp</DialogTitle>
             <DialogDescription>

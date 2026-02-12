@@ -299,7 +299,7 @@ export default function InvoiceSeriesPage() {
 
       {/* Dialog de eliminar */}
       <AlertDialog open={!!seriesToDelete} onOpenChange={() => setSeriesToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar serie?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -326,7 +326,7 @@ export default function InvoiceSeriesPage() {
 
       {/* Dialog de reiniciar consecutivo */}
       <Dialog open={!!seriesToReset} onOpenChange={() => setSeriesToReset(null)}>
-        <DialogContent>
+        <DialogContent className="bg-card">
           <DialogHeader>
             <DialogTitle>Reiniciar Consecutivo</DialogTitle>
             <DialogDescription>
@@ -360,7 +360,7 @@ export default function InvoiceSeriesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSeriesToReset(null)}>
+            <Button variant="outline" onClick={() => setSeriesToReset(null)} className="btn-glass-neutral">
               Cancelar
             </Button>
             <Button

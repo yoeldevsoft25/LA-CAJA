@@ -218,7 +218,7 @@ export default function PromotionsPage() {
                         variant="secondary"
                         size="icon"
                         onClick={() => handleEdit(promotion)}
-                        className="h-9 w-9 rounded-full bg-muted/50 hover:bg-primary hover:text-white transition-all duration-300"
+                        className="h-9 w-9 rounded-full bg-card hover:bg-primary hover:text-white transition-all duration-300"
                       >
                         <Edit className="w-4.5 h-4.5" />
                       </Button>
@@ -232,7 +232,7 @@ export default function PromotionsPage() {
                         "font-bold px-3 py-1 rounded-full border-none",
                         promotion.is_active
                           ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20"
-                          : "bg-slate-200 text-slate-500 dark:bg-slate-800"
+                          : "bg-card border border-border/70 text-muted-foreground"
                       )}>
                         {promotion.is_active ? <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> : <XCircle className="w-3.5 h-3.5 mr-1.5" />}
                         {promotion.is_active ? 'Activa' : 'Pausada'}
@@ -243,7 +243,7 @@ export default function PromotionsPage() {
                     </div>
 
                     {/* Descuento Principal */}
-                    <div className="p-4 bg-muted/40 rounded-2xl flex items-center justify-between border border-border/50">
+                    <div className="p-4 bg-card rounded-2xl flex items-center justify-between border border-border/50">
                       <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-primary/10 rounded-xl">
                           <Tag className="w-5 h-5 text-primary" />
@@ -281,7 +281,7 @@ export default function PromotionsPage() {
                             <span>Progreso de usos</span>
                             <span>{promotion.usage_count || 0} / {promotion.usage_limit}</span>
                           </div>
-                          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                          <div className="h-1.5 w-full bg-card border border-border/70 rounded-full overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${Math.min(100, ((promotion.usage_count || 0) / promotion.usage_limit) * 100)}%` }}
@@ -301,7 +301,7 @@ export default function PromotionsPage() {
 
       {/* Modal de formulario */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden bg-card">
           <div className="bg-primary/5 px-6 py-6 border-b">
             <DialogHeader>
               <div className="flex items-center gap-3">
@@ -549,8 +549,8 @@ export default function PromotionsPage() {
               </div>
             </ScrollArea>
 
-            <div className="p-6 bg-muted/30 border-t flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
-              <Button type="button" variant="ghost" onClick={handleCloseForm} className="font-bold uppercase tracking-widest text-xs">
+            <div className="p-6 bg-card border-t flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
+              <Button type="button" variant="outline" onClick={handleCloseForm} className="font-bold uppercase tracking-widest text-xs btn-glass-neutral">
                 Descartar Cambios
               </Button>
               <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto px-10 h-12 bg-primary text-white font-black rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
