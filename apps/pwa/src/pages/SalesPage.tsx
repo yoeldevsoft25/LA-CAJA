@@ -120,6 +120,10 @@ export default function SalesPage() {
   const [customerSearch, setCustomerSearch] = useState<string>('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const debouncedCustomerSearch = useDebounce(customerSearch, 250)
+  const isAmountRangeInvalid =
+    minAmountUsd !== '' &&
+    maxAmountUsd !== '' &&
+    Number(minAmountUsd) > Number(maxAmountUsd)
 
   // Presets de fecha
   const setDatePreset = (preset: 'today' | 'yesterday' | 'week') => {
@@ -334,10 +338,6 @@ export default function SalesPage() {
     minAmountUsd !== '' || maxAmountUsd !== '',
     customerSearch.trim() !== '',
   ].filter(Boolean).length
-  const isAmountRangeInvalid =
-    minAmountUsd !== '' &&
-    maxAmountUsd !== '' &&
-    Number(minAmountUsd) > Number(maxAmountUsd)
 
   const handleResetAdvancedFilters = () => {
     setPaymentMethodFilter('all')
