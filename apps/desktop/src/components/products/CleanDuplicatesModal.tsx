@@ -169,7 +169,7 @@ export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: Cle
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trash2 className="w-5 h-5" />
@@ -196,7 +196,7 @@ export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: Cle
               <Button
                 onClick={handleScan}
                 disabled={isScanning}
-                className="w-full"
+                className="w-full btn-glass-neutral"
               >
                 {isScanning ? 'Escaneando...' : 'Escanear Productos Duplicados'}
               </Button>
@@ -215,12 +215,12 @@ export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: Cle
               </Alert>
 
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-muted px-4 py-2 font-semibold text-sm">
+                <div className="bg-card border-b border-border px-4 py-2 font-semibold text-sm">
                   Vista previa de duplicados (primeros 50 grupos)
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-muted/50 sticky top-0">
+                    <thead className="bg-card sticky top-0">
                       <tr>
                         <th className="px-4 py-2 text-left">Producto</th>
                         <th className="px-4 py-2 text-center">Duplicados</th>
@@ -229,7 +229,7 @@ export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: Cle
                     </thead>
                     <tbody>
                       {duplicateGroups.slice(0, 50).map((group, idx) => (
-                        <tr key={idx} className="border-t hover:bg-muted/50">
+                        <tr key={idx} className="border-t hover:bg-muted/20">
                           <td className="px-4 py-3">
                             <div className="font-medium">{group.name}</div>
                             <div className="text-xs text-muted-foreground">
@@ -247,7 +247,7 @@ export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: Cle
                         </tr>
                       ))}
                       {duplicateGroups.length > 50 && (
-                        <tr className="border-t bg-muted/30">
+                        <tr className="border-t bg-card">
                           <td colSpan={3} className="px-4 py-3 text-center text-muted-foreground">
                             ... y {duplicateGroups.length - 50} grupos más
                           </td>
@@ -263,14 +263,14 @@ export default function CleanDuplicatesModal({ isOpen, onClose, onSuccess }: Cle
                   type="button"
                   variant="outline"
                   onClick={handleClose}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleClean}
                   variant="destructive"
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   Desactivar {duplicateGroups.reduce((sum, g) => sum + g.duplicateCount, 0)} Duplicados
                 </Button>

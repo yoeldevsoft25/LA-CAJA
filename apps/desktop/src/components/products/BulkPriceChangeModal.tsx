@@ -164,7 +164,7 @@ export default function BulkPriceChangeModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-1 sm:p-4">
-      <Card className="max-w-md w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border">
+      <Card className="max-w-md w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border bg-card">
         {/* Header */}
         <CardHeader className="flex-shrink-0 border-b border-border px-3 sm:px-4 py-2 sm:py-3 flex flex-row items-center justify-between rounded-t-lg">
           <CardTitle className="text-lg sm:text-xl">
@@ -191,23 +191,23 @@ export default function BulkPriceChangeModal({
             <div className="grid grid-cols-2 gap-2 mt-2">
               <Button
                 type="button"
-                variant={mode === 'percentage' ? 'default' : 'outline'}
+                variant="outline"
                 onClick={() => {
                   setMode('percentage')
                   setError('')
                 }}
-                className="p-3"
+                className={`p-3 btn-glass-neutral ${mode === 'percentage' ? 'border-primary/40 text-primary' : ''}`}
               >
                 <p className="text-sm font-medium">Por Porcentaje</p>
               </Button>
               <Button
                 type="button"
-                variant={mode === 'bcv' ? 'default' : 'outline'}
+                variant="outline"
                 onClick={() => {
                   setMode('bcv')
                   setError('')
                 }}
-                className="p-3"
+                className={`p-3 btn-glass-neutral ${mode === 'bcv' ? 'border-primary/40 text-primary' : ''}`}
               >
                 <p className="text-sm font-medium">Tasa BCV</p>
               </Button>
@@ -372,7 +372,7 @@ export default function BulkPriceChangeModal({
               percentageChange &&
               !isNaN(parseFloat(percentageChange))) ||
               (mode === 'bcv' && bcvRate && !isNaN(parseFloat(bcvRate)) && parseFloat(bcvRate) > 0)) && (
-              <Card className="bg-muted/50 border border-border">
+              <Card className="bg-card border border-border/60">
                 <CardContent className="p-3 sm:p-4">
                   <p className="text-sm font-semibold text-foreground mb-2">
                   Vista previa:
@@ -433,7 +433,7 @@ export default function BulkPriceChangeModal({
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 btn-glass-neutral"
             >
               Cancelar
             </Button>
@@ -447,7 +447,7 @@ export default function BulkPriceChangeModal({
                 (mode === 'percentage' && !percentageChange) ||
                 (mode === 'bcv' && !bcvRate)
               }
-              className="flex-1"
+              className="flex-1 btn-glass-neutral"
             >
               {isLoading ? 'Actualizando...' : 'Aplicar Cambio'}
             </Button>
@@ -457,4 +457,3 @@ export default function BulkPriceChangeModal({
     </div>
   )
 }
-

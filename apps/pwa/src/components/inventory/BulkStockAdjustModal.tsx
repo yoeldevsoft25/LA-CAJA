@@ -232,7 +232,7 @@ export default function BulkStockAdjustModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-4 md:px-6 py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-xl">Ajuste Masivo de Stock</DialogTitle>
           <DialogDescription>
@@ -390,7 +390,7 @@ export default function BulkStockAdjustModal({
                       {previewData.slice(0, 20).map((item) => (
                         <div
                           key={item.product_id}
-                          className="flex items-center justify-between text-sm p-2 rounded bg-muted/50"
+                          className="flex items-center justify-between text-sm p-2 rounded bg-card border border-border/60"
                         >
                           <span className="truncate flex-1">{item.name}</span>
                           <span className="ml-4 text-muted-foreground">
@@ -430,7 +430,7 @@ export default function BulkStockAdjustModal({
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 btn-glass-neutral"
             >
               Cancelar
             </Button>
@@ -438,7 +438,7 @@ export default function BulkStockAdjustModal({
               type="button"
               onClick={handleSubmit}
               disabled={isLoading || previewData.length === 0}
-              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="flex-1 btn-glass-neutral"
             >
               {isLoading ? (
                 <>

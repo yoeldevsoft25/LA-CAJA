@@ -363,7 +363,7 @@ export default function StockAdjustModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-md max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">Ajustar Stock</DialogTitle>
           <DialogDescription className="sr-only">
@@ -375,7 +375,7 @@ export default function StockAdjustModal({
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 md:px-6 py-4 sm:py-6">
             <div className="space-y-4 sm:space-y-6">
               {/* Información del producto */}
-              <Card className="bg-muted/50 border-border">
+              <Card className="bg-card border border-border/60">
                 <CardContent className="p-3 sm:p-4">
                   <p className="text-sm text-muted-foreground mb-1">Producto:</p>
                   <p className="font-semibold text-foreground">{product.product_name}</p>
@@ -529,14 +529,14 @@ export default function StockAdjustModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
                 disabled={isLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="flex-1 btn-glass-neutral"
                 disabled={isLoading || qtyDelta === 0 || resultingStock < 0 || hasRecentSales}
               >
                 {isLoading ? 'Ajustando...' : 'Ajustar Stock'}

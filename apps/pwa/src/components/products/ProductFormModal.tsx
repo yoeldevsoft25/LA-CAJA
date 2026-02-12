@@ -873,7 +873,7 @@ export default function ProductFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-1 sm:p-4">
-      <Card className="max-w-2xl w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border">
+      <Card className="max-w-2xl w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border bg-card">
         {/* Header - Fijo */}
         <CardHeader className="flex-shrink-0 border-b border-border px-3 sm:px-4 py-2 sm:py-3 flex flex-row items-center justify-between rounded-t-lg">
           <CardTitle className="text-lg sm:text-xl">
@@ -915,7 +915,7 @@ export default function ProductFormModal({
                       onClick={() => handleModeChange(mode)}
                       className={`relative flex flex-col items-center gap-1 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-center ${selectedMode === mode
                         ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 ring-1 ring-primary/20'
-                        : 'border-border/60 bg-muted/20 hover:border-muted-foreground/30 hover:bg-muted/40'
+                        : 'border-border/70 bg-card hover:border-border'
                         }`}
                     >
                       <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${selectedMode === mode ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -1068,6 +1068,7 @@ export default function ProductFormModal({
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    className="btn-glass-neutral"
                                     onClick={() => handleApplySupplierPrice(item, 'A')}
                                   >
                                     Aplicar A
@@ -1078,6 +1079,7 @@ export default function ProductFormModal({
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    className="btn-glass-neutral"
                                     onClick={() => handleApplySupplierPrice(item, 'B')}
                                   >
                                     Aplicar B
@@ -1151,7 +1153,7 @@ export default function ProductFormModal({
                         onClick={() => setCalculatorCurrency('BS')}
                         className={`px-3 py-1 text-xs font-medium rounded-l-md border border-primary/20 ${calculatorCurrency === 'BS'
                           ? 'bg-primary text-primary-foreground'
-                          : 'bg-background text-foreground hover:bg-muted'
+                          : 'bg-card text-foreground'
                           }`}
                       >
                         Bs
@@ -1161,7 +1163,7 @@ export default function ProductFormModal({
                         onClick={() => setCalculatorCurrency('USD')}
                         className={`px-3 py-1 text-xs font-medium rounded-r-md border border-l-0 border-primary/20 ${calculatorCurrency === 'USD'
                           ? 'bg-primary text-primary-foreground'
-                          : 'bg-background text-foreground hover:bg-muted'
+                          : 'bg-card text-foreground'
                           }`}
                       >
                         USD
@@ -1179,7 +1181,7 @@ export default function ProductFormModal({
                         step="any"
                         inputMode="decimal"
                         placeholder="0.00"
-                        className="bg-background"
+                        className="bg-card"
                         // key para forzar re-render y limpiar al cambiar moneda si se desea, 
                         // o dejar que el usuario maneje el input
                         key={`calc-total-${calculatorCurrency}`}
@@ -1214,7 +1216,7 @@ export default function ProductFormModal({
                         step="any"
                         inputMode="decimal"
                         placeholder="Ej: 12, 24"
-                        className="bg-background"
+                        className="bg-card"
                         onChange={(e) => {
                           const units = parseFloat(e.target.value)
                           // Buscar el input hermano de total (más robusto: buscar por placeholder o atributos)
@@ -1291,7 +1293,7 @@ export default function ProductFormModal({
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-border p-3 sm:p-4 bg-muted/40">
+                <div className="rounded-lg border border-border p-3 sm:p-4 bg-card">
                   <p className="text-sm font-semibold text-foreground">Preview de margen de ganancia</p>
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center justify-between">
@@ -1574,7 +1576,7 @@ export default function ProductFormModal({
                         />
                       </div>
                       {watchedValues.image_url && (
-                        <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted">
+                        <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-card">
                           <img
                             src={watchedValues.image_url}
                             alt="Preview"
@@ -1589,7 +1591,7 @@ export default function ProductFormModal({
                       <textarea
                         id="description"
                         {...register('description')}
-                        className="mt-2 w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="mt-2 w-full min-h-[120px] rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         placeholder="Describe los ingredientes, alérgenos o detalles del plato..."
                       />
                     </div>
@@ -1606,7 +1608,7 @@ export default function ProductFormModal({
                   </div>
 
                   {/* Visibilidad pública */}
-                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/10 p-3">
+                  <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card p-3">
                     <div className="space-y-0.5">
                       <Label htmlFor="is_visible_public" className="text-sm font-semibold">Visible en menú público</Label>
                       <p className="text-xs text-muted-foreground">
@@ -1648,7 +1650,7 @@ export default function ProductFormModal({
                         <textarea
                           id="public_description"
                           {...register('public_description')}
-                          className="mt-2 w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="mt-2 w-full min-h-[100px] rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                           placeholder="Descripción visible para clientes..."
                         />
                       </div>
@@ -1700,12 +1702,12 @@ export default function ProductFormModal({
           {previewProduct.name && previewProduct.name !== 'Nombre del producto' && (
             <div className="px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
               <Separator className="my-4" />
-              <div className="rounded-lg border border-border p-3 sm:p-4 bg-muted/20">
+              <div className="rounded-lg border border-border p-3 sm:p-4 bg-card">
                 <div className="flex items-center gap-2 mb-3">
                   <Monitor className="w-4 h-4 text-primary" />
                   <p className="text-sm font-semibold text-foreground">Vista Previa en POS</p>
                 </div>
-                <div className="p-3 bg-background rounded-lg border border-border">
+                <div className="p-3 bg-card rounded-lg border border-border">
                   <div className="flex items-start justify-between gap-3 min-w-0">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm sm:text-base text-foreground break-words leading-snug flex items-center gap-1.5">
@@ -1767,14 +1769,14 @@ export default function ProductFormModal({
                 variant="outline"
                 onClick={onClose}
                 disabled={isLoading}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
               >
                 {isLoading
                   ? 'Guardando...'

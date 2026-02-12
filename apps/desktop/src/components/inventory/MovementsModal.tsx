@@ -92,7 +92,7 @@ export default function MovementsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col p-0 gap-0 bg-card">
         <DialogHeader className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg sm:text-xl">Movimientos de Inventario</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm mt-0.5">
@@ -145,7 +145,7 @@ export default function MovementsModal({
             </div>
           ) : movements.length === 0 ? (
             <div className="text-center py-8">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-full bg-card border border-border/60 flex items-center justify-center mx-auto mb-3">
                 <Package className="w-6 h-6 text-muted-foreground" />
               </div>
               <p className="text-lg font-medium text-foreground mb-1">No hay movimientos</p>
@@ -162,10 +162,10 @@ export default function MovementsModal({
                 const typeLabel =
                   movementTypeLabels[movement.movement_type] || movement.movement_type
                 const typeColor =
-                  movementTypeColors[movement.movement_type] || 'text-muted-foreground bg-muted'
+                  movementTypeColors[movement.movement_type] || 'text-muted-foreground bg-card border border-border/60'
 
                 return (
-                  <Card key={movement.id} className="border-border hover:bg-muted/50 transition-colors">
+                  <Card key={movement.id} className="border-border bg-card hover:bg-muted/20 transition-colors">
                     <CardContent className="p-3 sm:p-4">
                       <div className="flex items-start space-x-3">
                         <div className={cn('p-2 rounded-lg flex-shrink-0', typeColor)}>
@@ -276,6 +276,7 @@ export default function MovementsModal({
                 <Button
                   variant="outline"
                   size="sm"
+                  className="btn-glass-neutral"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
@@ -289,6 +290,7 @@ export default function MovementsModal({
                 <Button
                   variant="outline"
                   size="sm"
+                  className="btn-glass-neutral"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage >= totalPages}
                 >
@@ -298,7 +300,7 @@ export default function MovementsModal({
             </div>
           )}
 
-          <Button onClick={onClose} variant="outline" className="w-full">
+          <Button onClick={onClose} variant="outline" className="w-full btn-glass-neutral">
             Cerrar
           </Button>
         </div>

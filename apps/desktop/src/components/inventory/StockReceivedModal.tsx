@@ -615,7 +615,7 @@ export default function StockReceivedModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-card">
         <DialogHeader className="px-4 sm:px-6 py-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-xl">
             Recibir Stock {totalProducts > 0 && `(${totalProducts} productos)`}
@@ -657,7 +657,7 @@ export default function StockReceivedModal({
                             key={p.id}
                             type="button"
                             onClick={() => addProduct(p)}
-                            className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-center justify-between"
+                            className="w-full px-4 py-3 text-left hover:bg-muted/20 transition-colors flex items-center justify-between"
                           >
                             <div>
                               <p className="font-medium text-sm">{p.name}</p>
@@ -688,7 +688,7 @@ export default function StockReceivedModal({
                 </div>
 
                 {productItems.map((item) => (
-                  <Card key={item.id} className="bg-muted/50">
+                  <Card key={item.id} className="bg-card border border-border/60">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -832,7 +832,7 @@ export default function StockReceivedModal({
                           <Input
                             type="number"
                             value={item.unit_cost_bs.toFixed(2)}
-                            className="bg-muted text-muted-foreground"
+                            className="bg-card border-border/60 text-muted-foreground"
                             readOnly
                           />
                         </div>
@@ -973,7 +973,7 @@ export default function StockReceivedModal({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 btn-glass-neutral"
               disabled={isLoading}
             >
               Cancelar
@@ -982,7 +982,7 @@ export default function StockReceivedModal({
               type="button"
               onClick={handleSubmit}
               disabled={isLoading || productItems.length === 0}
-              className="flex-1"
+              className="flex-1 btn-glass-neutral"
             >
               {isLoading
                 ? 'Registrando...'

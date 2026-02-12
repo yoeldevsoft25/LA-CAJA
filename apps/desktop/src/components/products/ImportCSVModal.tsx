@@ -437,7 +437,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-card">
         <DialogHeader>
           <DialogTitle className="text-2xl">Importar Productos desde CSV</DialogTitle>
           <DialogDescription>
@@ -469,7 +469,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
                   type="button"
                   variant="outline"
                   onClick={downloadTemplate}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   Descargar Plantilla
@@ -540,7 +540,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
 
               <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted sticky top-0">
+                  <thead className="bg-card sticky top-0">
                     <tr>
                       <th className="px-4 py-2 text-left">Nombre</th>
                       <th className="px-4 py-2 text-left">Categoría</th>
@@ -550,7 +550,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
                   </thead>
                   <tbody>
                     {parsedProducts.slice(0, 100).map((product, idx) => (
-                      <tr key={idx} className="border-t hover:bg-muted/50">
+                      <tr key={idx} className="border-t hover:bg-muted/20">
                         <td className="px-4 py-2">{product.name}</td>
                         <td className="px-4 py-2">{product.category || '-'}</td>
                         <td className="px-4 py-2 text-right">{product.price_bs.toFixed(2)}</td>
@@ -558,7 +558,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
                       </tr>
                     ))}
                     {parsedProducts.length > 100 && (
-                      <tr className="border-t bg-muted/30">
+                      <tr className="border-t bg-card">
                         <td colSpan={4} className="px-4 py-3 text-center text-muted-foreground">
                           ... y {parsedProducts.length - 100} productos más (mostrando primeros 100)
                         </td>
@@ -573,7 +573,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
                   type="button"
                   variant="outline"
                   onClick={() => setStep('upload')}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   <X className="w-4 h-4 mr-2" />
                   Cancelar
@@ -581,7 +581,7 @@ export default function ImportCSVModal({ isOpen, onClose, onSuccess }: ImportCSV
                 <Button
                   type="button"
                   onClick={handleImport}
-                  className="flex-1"
+                  className="flex-1 btn-glass-neutral"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Importar {parsedProducts.length} Productos

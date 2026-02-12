@@ -127,7 +127,7 @@ export default function ChangePriceModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-1 sm:p-4">
-      <Card className="max-w-md w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border">
+      <Card className="max-w-md w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col border border-border bg-card">
         {/* Header */}
         <CardHeader className="flex-shrink-0 border-b border-border px-3 sm:px-4 py-2 sm:py-3 flex flex-row items-center justify-between rounded-t-lg">
           <CardTitle className="text-lg sm:text-xl">
@@ -151,7 +151,7 @@ export default function ChangePriceModal({
         >
           <CardContent className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overscroll-contain">
             {/* Información del producto */}
-            <Card className="bg-muted/50 border border-border">
+            <Card className="bg-card border border-border/60">
               <CardContent className="p-3 sm:p-4">
                 <p className="text-sm text-muted-foreground mb-1">Producto:</p>
                 <p className="font-semibold text-foreground">{product.name}</p>
@@ -194,7 +194,7 @@ export default function ChangePriceModal({
                 type="number"
                 step="0.01"
                 {...register('price_bs', { valueAsNumber: true })}
-                className="mt-2 text-base bg-muted cursor-not-allowed"
+                className="mt-2 text-base bg-card border-border/60 cursor-not-allowed"
                 placeholder="0.00"
                 readOnly
               />
@@ -238,14 +238,14 @@ export default function ChangePriceModal({
                 variant="outline"
                 onClick={onClose}
                 disabled={isLoading}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1"
+                className="flex-1 btn-glass-neutral"
               >
                 {isLoading ? 'Actualizando...' : 'Actualizar Precio'}
               </Button>
@@ -256,4 +256,3 @@ export default function ChangePriceModal({
     </div>
   )
 }
-
