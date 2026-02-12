@@ -223,7 +223,7 @@ export default function PurchaseOrderReceptionModal({
                           <Label className="text-xs text-muted-foreground">
                             Ya Recibido
                           </Label>
-                          <p className="text-lg font-bold text-blue-600">
+                          <p className="text-lg font-bold text-primary">
                             {item.quantity_received}
                           </p>
                         </div>
@@ -231,7 +231,7 @@ export default function PurchaseOrderReceptionModal({
                           <Label className="text-xs text-muted-foreground">
                             Pendiente
                           </Label>
-                          <p className="text-lg font-bold text-orange-600">{pending}</p>
+                          <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{pending}</p>
                         </div>
                       </div>
                       
@@ -291,12 +291,12 @@ export default function PurchaseOrderReceptionModal({
                         />
                         <p className="text-xs text-muted-foreground mt-1">
                           {received > 0 && received < pending && (
-                            <span className="text-orange-600 font-medium">
+                            <span className="text-orange-600 dark:text-orange-400 font-medium">
                               Recepción parcial: {received} de {pending} unidades
                             </span>
                           )}
                           {received === pending && pending > 0 && (
-                            <span className="text-green-600 font-medium">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                               Recepción completa
                             </span>
                           )}

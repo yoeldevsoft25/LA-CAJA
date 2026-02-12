@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'
 import { SplitPaymentItem, PaymentMethod } from '@/types/split-payment.types'
@@ -136,12 +137,22 @@ export default function CheckoutModal({
   // Local processing state to bridge the gap between click and parent isLoading
   const [isProcessing, setIsProcessing] = useState(false)
 
+  // State for deferred rendering to ensure smooth entrance animation
+  const [isInteractionReady, setIsInteractionReady] = useState(false)
+
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Small delay to allow CSS animation to start/finish smoothly before heavy rendering
+      const timer = setTimeout(() => {
+        setIsInteractionReady(true)
+      }, 300)
+      return () => clearTimeout(timer)
+    } else {
       actions.reset()
       setSplitPayments([])
       setSelectedSerials({})
       setIsProcessing(false)
+      setIsInteractionReady(false)
     }
   }, [isOpen, actions.reset])
 
@@ -356,6 +367,36 @@ export default function CheckoutModal({
 
   const totalBs = total.usd * checkoutData.exchangeRate
 
+  const loadingSkeleton = (
+    <div className="space-y-6 h-full p-1 animate-in fade-in duration-300">
+      {/* Summary Skeleton */}
+      <section className="rounded-2xl border border-border/60 bg-card/50 p-4 space-y-4">
+        <Skeleton className="h-4 w-32" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex justify-between gap-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="pt-4 border-t border-border/50">
+          <Skeleton className="h-16 w-full rounded-xl" />
+        </div>
+      </section>
+
+      {/* Controls Skeleton */}
+      <div className="space-y-4">
+        <Skeleton className="h-14 w-full rounded-xl" /> {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+        </div>
+        <Skeleton className="h-40 w-full rounded-xl" /> {/* Config */}
+      </div>
+    </div>
+  )
+
   const summaryPanel = (
     <div className="space-y-4">
       <section className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
@@ -563,18 +604,32 @@ export default function CheckoutModal({
 
           <div className="min-h-0 overflow-hidden">
             <div className="h-full overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4 lg:hidden">
-              <div className="space-y-4">
-                {summaryPanel}
-                {checkoutControls}
-              </div>
+              {isInteractionReady ? (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  {summaryPanel}
+                  {checkoutControls}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {loadingSkeleton}
+                </div>
+              )}
             </div>
 
             <div className="hidden h-full lg:grid lg:grid-cols-[minmax(320px,38%)_1fr] lg:divide-x lg:divide-border">
               <aside className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
-                {summaryPanel}
+                {isInteractionReady ? (
+                  <div className="animate-in fade-in duration-300">
+                    {summaryPanel}
+                  </div>
+                ) : loadingSkeleton}
               </aside>
               <section className="min-h-0 overflow-y-auto overscroll-contain bg-background/30 p-6">
-                {checkoutControls}
+                {isInteractionReady ? (
+                  <div className="animate-in fade-in duration-300">
+                    {checkoutControls}
+                  </div>
+                ) : loadingSkeleton}
               </section>
             </div>
           </div>

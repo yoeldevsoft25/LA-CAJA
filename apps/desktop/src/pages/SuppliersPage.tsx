@@ -280,7 +280,7 @@ export default function SuppliersPage() {
                   {/* Desktop Table */}
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-muted/50">
+                      <thead className="bg-card">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
                             Proveedor

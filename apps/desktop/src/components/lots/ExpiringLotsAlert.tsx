@@ -83,7 +83,7 @@ export default function ExpiringLotsAlert({
       <Link
         to="/app/lots"
         className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-orange-100 dark:bg-orange-950/30 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-950/50 transition-colors',
+          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-card border border-orange-500/30 text-foreground hover:bg-muted/30 transition-colors',
           className
         )}
       >
@@ -99,10 +99,10 @@ export default function ExpiringLotsAlert({
   // Variante Card para dashboard
   if (variant === 'card') {
     return (
-      <Card className={cn('border-orange-200 dark:border-orange-800', className)}>
+      <Card className={cn('border-orange-500/30 bg-card', className)}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-orange-600 dark:text-orange-400">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
               <AlertTriangle className="w-4 h-4" />
               Productos por Vencer
             </CardTitle>
@@ -126,7 +126,7 @@ export default function ExpiringLotsAlert({
                 return (
                   <div
                     key={lot.id}
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                    className="flex items-center justify-between p-2 bg-card border border-border/60 rounded-md"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
@@ -141,8 +141,8 @@ export default function ExpiringLotsAlert({
                         variant={status.color as any}
                         className={cn(
                           'text-xs flex-shrink-0',
-                          status.color === 'warning' && 'bg-orange-100 text-orange-800 hover:bg-orange-200',
-                          status.color === 'destructive' && 'bg-red-100 text-red-800 hover:bg-red-200'
+                          status.color === 'warning' && 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+                          status.color === 'destructive' && 'bg-destructive/10 text-destructive'
                         )}
                       >
                         <Clock className="w-3 h-3 mr-1" />
@@ -173,12 +173,12 @@ export default function ExpiringLotsAlert({
     <Alert
       variant="destructive"
       className={cn(
-        'border-orange-200 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800',
+        'border-orange-500/30 bg-card',
         className
       )}
     >
       <AlertTriangle className="h-4 w-4 text-orange-600" />
-      <AlertTitle className="text-orange-800 dark:text-orange-200 flex items-center justify-between">
+      <AlertTitle className="text-foreground flex items-center justify-between">
         <span>
           {expiredLots.length > 0
             ? `¡Atención! ${expiredLots.length} lote(s) vencido(s)`
@@ -195,7 +195,7 @@ export default function ExpiringLotsAlert({
           </Button>
         )}
       </AlertTitle>
-      <AlertDescription className="text-orange-700 dark:text-orange-300">
+      <AlertDescription className="text-foreground/90">
         <div className="mt-2 space-y-1">
           {allAlertLots.slice(0, 3).map((lot) => {
             const status = getLotStatus(lot)
@@ -211,8 +211,8 @@ export default function ExpiringLotsAlert({
                     variant="outline"
                     className={cn(
                       'text-xs',
-                      status.days < 0 && 'border-red-500 text-red-600',
-                      status.days >= 0 && status.days <= 7 && 'border-orange-500 text-orange-600'
+                      status.days < 0 && 'border-destructive/40 text-destructive',
+                      status.days >= 0 && status.days <= 7 && 'border-orange-500/40 text-orange-600 dark:text-orange-400'
                     )}
                   >
                     {status.label}
@@ -229,7 +229,7 @@ export default function ExpiringLotsAlert({
         </div>
         <Link
           to="/app/lots"
-          className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-orange-800 dark:text-orange-200 hover:underline"
+          className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-primary hover:underline"
         >
           Ver todos los lotes
           <ArrowRight className="w-4 h-4" />

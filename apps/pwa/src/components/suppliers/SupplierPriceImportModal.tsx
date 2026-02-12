@@ -163,7 +163,7 @@ export default function SupplierPriceImportModal({
           </div>
 
           {result && (
-            <div className="rounded-md border border-border bg-muted/40 p-3 text-sm space-y-2">
+            <div className="rounded-md border border-border bg-card p-3 text-sm space-y-2">
               <div className="flex items-center justify-between">
                 <span>Filas importadas:</span>
                 <span className="font-semibold">{result.imported_rows}</span>

@@ -41,12 +41,12 @@ const statusLabels: Record<PurchaseOrderStatus, string> = {
 }
 
 const statusColors: Record<PurchaseOrderStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
-  sent: 'bg-blue-100 text-blue-800',
-  confirmed: 'bg-yellow-100 text-yellow-800',
-  partial: 'bg-orange-100 text-orange-800',
-  completed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  draft: 'bg-muted text-muted-foreground',
+  sent: 'bg-primary/10 text-primary',
+  confirmed: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+  cancelled: 'bg-destructive/10 text-destructive',
 }
 
 function getStatusBadge(status: PurchaseOrderStatus) {

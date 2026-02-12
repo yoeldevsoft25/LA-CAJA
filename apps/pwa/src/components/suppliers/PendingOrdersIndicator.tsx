@@ -97,7 +97,7 @@ export default function PendingOrdersIndicator({
       >
         <Badge
           variant="secondary"
-          className="bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 hover:bg-blue-200"
+          className="bg-primary/10 text-primary hover:bg-primary/15"
         >
           <Truck className="w-3 h-3 mr-1" />
           {totalPending} pendiente{totalPending !== 1 ? 's' : ''}
@@ -112,7 +112,7 @@ export default function PendingOrdersIndicator({
       <Link
         to="/app/purchase-orders"
         className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-950/50 transition-colors',
+          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-primary/10 text-primary hover:bg-primary/15 transition-colors',
           className
         )}
       >
@@ -131,10 +131,10 @@ export default function PendingOrdersIndicator({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Truck className="w-4 h-4 text-blue-600" />
+            <Truck className="w-4 h-4 text-primary" />
             Órdenes de Compra Pendientes
           </span>
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+          <Badge variant="secondary" className="bg-primary/10 text-primary">
             {totalPending}
           </Badge>
         </CardTitle>
@@ -142,7 +142,7 @@ export default function PendingOrdersIndicator({
       <CardContent className="pt-0">
         {totalPending === 0 ? (
           <div className="text-center py-4 text-muted-foreground text-sm">
-            <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-500" />
+            <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-600 dark:text-emerald-400" />
             <p>No hay órdenes pendientes</p>
           </div>
         ) : (
@@ -157,7 +157,7 @@ export default function PendingOrdersIndicator({
                   return (
                     <div
                       key={order.id}
-                      className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                      className="flex items-center justify-between p-2 bg-card border border-border/60 rounded-md"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
@@ -173,8 +173,8 @@ export default function PendingOrdersIndicator({
                             variant="outline"
                             className={cn(
                               'text-xs',
-                              delivery.color === 'destructive' && 'border-red-500 text-red-600',
-                              delivery.color === 'warning' && 'border-orange-500 text-orange-600'
+                              delivery.color === 'destructive' && 'border-destructive/40 text-destructive',
+                              delivery.color === 'warning' && 'border-orange-500/40 text-orange-600 dark:text-orange-400'
                             )}
                           >
                             <Clock className="w-3 h-3 mr-1" />
@@ -185,8 +185,8 @@ export default function PendingOrdersIndicator({
                           variant="outline"
                           className={cn(
                             'text-xs',
-                            status.color === 'success' && 'border-green-500 text-green-600',
-                            status.color === 'warning' && 'border-orange-500 text-orange-600'
+                            status.color === 'success' && 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
+                            status.color === 'warning' && 'border-orange-500/40 text-orange-600 dark:text-orange-400'
                           )}
                         >
                           <StatusIcon className="w-3 h-3 mr-1" />

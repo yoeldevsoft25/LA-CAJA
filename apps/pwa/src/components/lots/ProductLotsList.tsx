@@ -130,7 +130,7 @@ export default function ProductLotsList({ productId }: ProductLotsListProps) {
       <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
         {lots && lots.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-full bg-card border border-border/60 flex items-center justify-center mx-auto mb-4">
               <Boxes className="w-8 h-8 text-muted-foreground/50" />
             </div>
             <h3 className="font-medium text-foreground">No hay lotes</h3>
@@ -145,7 +145,7 @@ export default function ProductLotsList({ productId }: ProductLotsListProps) {
         ) : (
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-muted/30">
+              <TableHeader className="bg-card">
                 <TableRow>
                   <TableHead>Número de Lote</TableHead>
                   <TableHead className="hidden sm:table-cell">Stock / Inicial</TableHead>
@@ -214,7 +214,7 @@ export default function ProductLotsList({ productId }: ProductLotsListProps) {
                               <span className={cn(
                                 "text-[10px] uppercase font-bold tracking-tight",
                                 expirationStatus.status === 'expired' ? "text-destructive" :
-                                  expirationStatus.status === 'warning' ? "text-orange-500" : "text-blue-500"
+                                  expirationStatus.status === 'warning' ? "text-orange-600 dark:text-orange-400" : "text-primary"
                               )}>
                                 {expirationStatus.label}
                               </span>
@@ -228,7 +228,7 @@ export default function ProductLotsList({ productId }: ProductLotsListProps) {
                         {lot.remaining_quantity === 0 ? (
                           <Badge variant="secondary" className="bg-muted text-muted-foreground">Agotado</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-green-600 bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
+                          <Badge variant="outline" className="text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800">
                             Activo
                           </Badge>
                         )}
