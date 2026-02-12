@@ -37,6 +37,7 @@ import WeightInputModal from '@/components/pos/WeightInputModal'
 import POSCart from '@/components/pos/cart/POSCart'
 import { SuccessOverlay } from '@/components/pos/SuccessOverlay'
 import { FadeInUp } from '@/components/ui/motion-wrapper'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useMobileDetection } from '@/hooks/use-mobile-detection'
 import { useOrientation } from '@/hooks/use-orientation'
@@ -56,6 +57,7 @@ export default function POSPage() {
   // Usar store persistente para UI State
   const { searchQuery, isCheckoutOpen: showCheckout, setSearchQuery, setIsCheckoutOpen: setShowCheckout } = usePOSStore()
 
+  const [mobilePanel, setMobilePanel] = useState<'cart' | 'catalog'>('cart')
   const [shouldPrint, setShouldPrint] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -74,6 +76,17 @@ export default function POSPage() {
     setActiveCart,
     carts,
   } = useCart()
+
+  const totalItemsInCart = useMemo(
+    () => items.reduce((sum, item) => sum + item.qty, 0),
+    [items]
+  )
+
+  useEffect(() => {
+    if (!isMobile && mobilePanel !== 'cart') {
+      setMobilePanel('cart')
+    }
+  }, [isMobile, mobilePanel])
 
   useEffect(() => {
     if (!isOnline || !user?.store_id || items.length === 0) return
@@ -261,6 +274,7 @@ export default function POSPage() {
   })
 
   const debouncedSearchQuery = useDebounce(searchQuery, 250)
+  const normalizedSearchQuery = debouncedSearchQuery.trim()
 
   // Búsqueda de productos (con cache offline persistente)
   const { data: productsData, isLoading, isError: isProductsError } = useQuery({
@@ -269,9 +283,9 @@ export default function POSPage() {
       Promise.race([
         productsService.search(
           {
-            q: searchQuery || undefined,
+            q: normalizedSearchQuery || undefined,
             is_active: true,
-            limit: searchQuery ? 50 : 10,
+            limit: normalizedSearchQuery ? 50 : 20,
           },
           user?.store_id
         ),
@@ -279,7 +293,7 @@ export default function POSPage() {
           setTimeout(() => reject(new Error('timeout')), 8000)
         ),
       ]),
-    enabled: (searchQuery.length >= 2 || searchQuery.length === 0) && !!user?.store_id,
+    enabled: (normalizedSearchQuery.length >= 2 || normalizedSearchQuery.length === 0) && !!user?.store_id,
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: Infinity, // Nunca eliminar del cache
     retry: (failureCount, error: any) => {
@@ -837,7 +851,7 @@ export default function POSPage() {
         {/* Búsqueda y Lista de Productos */}
         {!isMobile && (
           <div className={cn(
-            "flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-border/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-3"
+            "flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-border/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-3"
           )}>
             <CatalogHeader
               searchQuery={searchQuery}
@@ -898,13 +912,35 @@ export default function POSPage() {
                   toast.success('Actualizando productos...')
                 }}
                 isRefetching={isLoading}
+                compact
               />
 
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant={mobilePanel === 'cart' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-9 text-xs font-semibold"
+                  onClick={() => setMobilePanel('cart')}
+                >
+                  Carrito ({totalItemsInCart})
+                </Button>
+                <Button
+                  type="button"
+                  variant={mobilePanel === 'catalog' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-9 text-xs font-semibold"
+                  onClick={() => setMobilePanel('catalog')}
+                >
+                  Catálogo ({products.length})
+                </Button>
+              </div>
+
               {/* Resultados de búsqueda móviles con posicionamiento CSS absoluto (Zero Reflow) */}
-              {searchQuery.trim().length >= 2 && (
+              {mobilePanel === 'cart' && searchQuery.trim().length >= 2 && (
                 <div className="absolute top-full left-0 right-0 z-[100] mt-1 pr-0 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="rounded-xl border border-border/20 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden border-primary/20">
-                    <div className="px-3 py-2 border-b border-border/20 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] bg-primary/5">
+                  <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden border-primary/20">
+                    <div className="px-3 py-2 border-b border-border/40 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] bg-primary/5">
                       Resultados
                     </div>
                     <div className="max-h-64 overflow-y-auto overscroll-contain">
@@ -915,6 +951,7 @@ export default function POSPage() {
                       ) : (
                         products.slice(0, 8).map((product: any) => (
                           <button
+                            type="button"
                             key={`mobile-result-${product.id}`}
                             onClick={() => {
                               handleProductClick(product)
@@ -942,27 +979,66 @@ export default function POSPage() {
               )}
             </div>
           )}
-          <div className="flex-1 min-h-0">
-            <POSCart
-              items={items}
-              cartSummaries={cartSummaries}
-              activeCartId={activeCartId}
-              total={total}
-              totalDiscountUsd={totalDiscountUsd}
-              hasOpenCash={hasOpenCash}
-              isMobile={isMobile}
-              isTabletLandscape={isTabletLandscape}
-              invalidCartProductIds={invalidCartProductIds}
-              shouldPrint={shouldPrint}
-              setShouldPrint={setShouldPrint}
-              onSwitchCart={handleSwitchCart}
-              onCheckout={() => setShowCheckout(true)}
-              onUpdateQty={handleUpdateQty}
-              onRemoveItem={removeItem}
-              onClearCart={clear}
-              exchangeRate={exchangeRate}
-            />
-          </div>
+          {isMobile && mobilePanel === 'catalog' ? (
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
+              <QuickActions
+                recentProducts={recentProducts}
+                suggestedProducts={suggestedProducts}
+                isSearching={searchQuery.length > 0}
+                isMobile
+                onProductClick={handleProductClick}
+                onRecentClick={(item: any) => {
+                  const inList = products.find((p: any) => p.id === item.product_id)
+                  if (inList) handleProductClick(inList)
+                  else setSearchQuery(item.name)
+                }}
+              />
+
+              <div className="flex-1 min-h-0">
+                <ProductCatalog
+                  products={products as any[]}
+                  isLoading={isLoading}
+                  isError={isProductsError}
+                  searchQuery={searchQuery}
+                  lowStockIds={lowStockIds}
+                  onProductClick={handleProductClick}
+                  exchangeRate={exchangeRate}
+                />
+              </div>
+
+              {totalItemsInCart > 0 && (
+                <Button
+                  type="button"
+                  className="h-10 text-sm font-semibold"
+                  onClick={() => setMobilePanel('cart')}
+                >
+                  Volver al carrito ({totalItemsInCart})
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0">
+              <POSCart
+                items={items}
+                cartSummaries={cartSummaries}
+                activeCartId={activeCartId}
+                total={total}
+                totalDiscountUsd={totalDiscountUsd}
+                hasOpenCash={hasOpenCash}
+                isMobile={isMobile}
+                isTabletLandscape={isTabletLandscape}
+                invalidCartProductIds={invalidCartProductIds}
+                shouldPrint={shouldPrint}
+                setShouldPrint={setShouldPrint}
+                onSwitchCart={handleSwitchCart}
+                onCheckout={() => setShowCheckout(true)}
+                onUpdateQty={handleUpdateQty}
+                onRemoveItem={removeItem}
+                onClearCart={clear}
+                exchangeRate={exchangeRate}
+              />
+            </div>
+          )}
         </div>
       </div>
 

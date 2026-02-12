@@ -131,14 +131,16 @@ export const Header = memo(function Header({
 
                 {/* Search Trigger (Desktop) — Abre Command Menu con Ctrl+K */}
                 <button
+                    type="button"
                     onClick={() => {
-                        // Dispatch Ctrl+K to open CommandMenu
-                        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))
+                        // Trigger shortcuts listeners on macOS (Meta+K) and Windows/Linux (Ctrl+K).
+                        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', code: 'KeyK', metaKey: true, ctrlKey: true, bubbles: true }))
                     }}
                     className="hidden lg:flex items-center gap-2 h-9 px-3 rounded-lg
                                border border-border/50 bg-muted/30 hover:bg-muted/50
                                text-muted-foreground hover:text-foreground
                                transition-all duration-200 text-sm min-w-[200px] group"
+                    aria-label="Abrir búsqueda rápida"
                 >
                     <Search className="w-3.5 h-3.5 shrink-0 opacity-50 group-hover:opacity-70" />
                     <span className="flex-1 text-left text-xs">Buscar...</span>

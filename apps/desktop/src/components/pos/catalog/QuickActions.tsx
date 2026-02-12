@@ -41,17 +41,18 @@ export function QuickActions({
                         {suggestedProducts.map((product) => (
                             <motion.button
                                 key={product.id}
+                                type="button"
                                 onClick={() => onProductClick(product)}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 className={isMobile
-                                    ? "inline-flex items-center gap-1 bg-[#0c81cf10] hover:bg-[#0c81cf] text-[#0c81cf] hover:text-white px-2.5 py-1 rounded-full text-[11px] font-semibold transition-[background-color,color,border-color] border border-[#0c81cf30] hover:border-[#0c81cf] shadow-sm"
-                                    : "inline-flex items-center gap-1.5 bg-[#0c81cf10] hover:bg-[#0c81cf] text-[#0c81cf] hover:text-white px-3 py-1.5 rounded-full text-sm font-bold transition-[background-color,color,border-color] border border-[#0c81cf30] hover:border-[#0c81cf] shadow-sm"
+                                    ? "inline-flex items-center gap-1 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground px-2.5 py-1 rounded-full text-[11px] font-semibold transition-[background-color,color,border-color] border border-primary/30 hover:border-primary shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                    : "inline-flex items-center gap-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground px-3 py-1.5 rounded-full text-sm font-bold transition-[background-color,color,border-color] border border-primary/30 hover:border-primary shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                 }
                             >
                                 {product.name}
                                 {product.is_weight_product && (
-                                    <span className={isMobile ? "text-[9px] bg-white/50 px-1 rounded" : "text-[10px] bg-white/50 px-1 rounded"}>
+                                    <span className={isMobile ? "text-[9px] bg-background/70 px-1 rounded" : "text-[10px] bg-background/70 px-1 rounded"}>
                                         {product.weight_unit || 'kg'}
                                     </span>
                                 )}
@@ -72,12 +73,13 @@ export function QuickActions({
                         {recentProducts.map((item) => (
                             <motion.button
                                 key={`recent-${item.product_id}`}
+                                type="button"
                                 onClick={() => onRecentClick(item)} // Nota: en POSPage esto requerirá fetch si no tenemos el objeto completo
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 className={isMobile
-                                    ? "inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border border-slate-200"
-                                    : "inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border border-slate-200"
+                                    ? "inline-flex items-center gap-1 bg-muted hover:bg-accent text-foreground/80 hover:text-foreground px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border border-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                    : "inline-flex items-center gap-1.5 bg-muted hover:bg-accent text-foreground/80 hover:text-foreground px-3 py-1.5 rounded-full text-sm font-medium transition-colors border border-border/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                 }
                             >
                                 {item.name}

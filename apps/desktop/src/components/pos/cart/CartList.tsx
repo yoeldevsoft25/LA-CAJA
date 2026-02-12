@@ -46,7 +46,7 @@ export function CartList({
             ) : (
                 <AnimatePresence initial={false}>
                     {items.map((item) => {
-                        const isInvalid = invalidCartProductIds.includes(item.id)
+                        const isInvalid = invalidCartProductIds.includes(item.product_id)
                         return (
                             <motion.div
                                 key={item.id}

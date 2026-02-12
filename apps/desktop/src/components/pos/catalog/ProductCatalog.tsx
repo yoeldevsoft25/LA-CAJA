@@ -160,7 +160,7 @@ export const ProductCatalog = memo(function ProductCatalog({
     }
 
     return (
-        <div className="h-full w-full relative bg-white dark:bg-slate-900 rounded-2xl border border-border/20 dark:border-white/10 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="h-full w-full relative bg-card rounded-2xl border border-border/60 overflow-hidden shadow-[0_8px_30px_hsl(var(--foreground)_/_0.08)]">
             <ScrollArea
                 className="h-full"
                 viewportRef={listViewportRef}
@@ -193,8 +193,9 @@ export const ProductCatalog = memo(function ProductCatalog({
                                 }}
                             >
                                 <button
+                                    type="button"
                                     onClick={() => onProductClick(product)}
-                                    className="w-full h-[104px] text-left group relative bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800 rounded-2xl border border-border/20 dark:border-white/5 hover:border-primary/30 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/10 transition-all duration-200 will-change-transform"
+                                    className="w-full h-[104px] text-left group relative bg-card hover:bg-accent/35 rounded-2xl border border-border/55 hover:border-primary/35 shadow-sm hover:shadow-md overflow-hidden p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ring-1 ring-transparent hover:ring-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-[background-color,border-color,box-shadow,transform] duration-200 will-change-transform"
                                 >
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/0 group-hover:bg-primary transition-[background-color] duration-300" />
 
@@ -203,7 +204,7 @@ export const ProductCatalog = memo(function ProductCatalog({
                                         "w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 shadow-inner",
                                         isLowStock
                                             ? "bg-warning/10 text-warning ring-1 ring-warning/20"
-                                            : "bg-gradient-to-br from-primary/10 to-primary/5 text-primary group-hover:from-primary/20 group-hover:to-primary/10 ring-1 ring-primary/10"
+                                            : "bg-gradient-to-br from-primary/12 to-primary/5 text-primary group-hover:from-primary/22 group-hover:to-primary/12 ring-1 ring-primary/15"
                                     )}>
                                         {product.is_weight_product ? (
                                             <Scale className={cn("w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 group-hover:scale-110", isLowStock && "animate-pulse")} />
@@ -227,7 +228,7 @@ export const ProductCatalog = memo(function ProductCatalog({
 
                                         <div className="flex items-center gap-2 mt-auto">
                                             {product.category && (
-                                                <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[100px] hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/30 dark:bg-white/5 border border-white/5">
+                                                <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[100px] hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-md bg-muted/40 border border-border/40">
                                                     {product.category}
                                                 </span>
                                             )}
