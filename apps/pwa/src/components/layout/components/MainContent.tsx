@@ -11,7 +11,7 @@ export const MainContent = memo(function MainContent({ isPosRoute }: MainContent
         <main
             id="main-content"
             className={cn(
-                'flex-1 overflow-x-hidden touch-pan-y overscroll-contain min-h-0 scroll-smooth',
+                'flex-1 overflow-x-hidden touch-pan-y overscroll-contain min-h-0 scroll-smooth app-shell-main',
                 isPosRoute ? 'overflow-hidden' : 'overflow-y-auto'
             )}
             role="main"

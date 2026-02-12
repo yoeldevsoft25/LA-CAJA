@@ -65,27 +65,24 @@ export const Header = memo(function Header({
 }: HeaderProps) {
     return (
         <header
-            className="sticky top-0 z-40 border-b border-sidebar-border
-                 bg-sidebar-background/95 backdrop-blur-md
-                 transition-[background-color] duration-300
-                 will-change-[backdrop-filter] relative"
+            className="sticky top-0 z-40 border-b app-shell-header
+                 transition-[background-color,border-color] duration-300
+                 relative"
         >
             <div className="flex h-14 items-center gap-2 sm:gap-3 px-3 sm:px-4">
                 {/* Logo (Desktop) — Compacto y elegante */}
                 <div className="hidden lg:flex items-center gap-2.5 mr-1">
-                    <div className="relative">
+                    <div className="rounded-lg bg-card/70 ring-1 ring-border/70 p-0.5">
                         <img
                             src="/logo-velox.svg"
                             alt="Velox POS Logo"
-                            className="w-8 h-8 rounded-lg"
+                            className="w-8 h-8 rounded-md"
                             width={32}
                             height={32}
                             loading="eager"
                         />
-                        {/* Glow sutil detrás del logo */}
-                        <div className="absolute inset-0 rounded-lg bg-primary/20 blur-md -z-10" />
                     </div>
-                    <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                    <span className="text-sm font-semibold tracking-[0.08em] uppercase text-foreground/90">
                         Velox
                     </span>
                 </div>
@@ -105,7 +102,7 @@ export const Header = memo(function Header({
                     </SheetTrigger>
                     <SheetContent
                         side="left"
-                        className="p-0 w-72 flex flex-col max-h-screen overflow-hidden bg-sidebar-background text-sidebar-foreground border-sidebar-border"
+                        className="p-0 w-72 flex flex-col max-h-screen overflow-hidden app-shell-sidebar text-sidebar-foreground border-r"
                         hideClose
                     >
                         <SidebarContent

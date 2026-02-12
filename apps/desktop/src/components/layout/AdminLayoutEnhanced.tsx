@@ -79,7 +79,7 @@ export default function AdminLayoutEnhanced() {
     // Sidebar Content Component
     const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }): JSX.Element => {
         return (
-            <div className="flex flex-col h-full min-h-0 bg-sidebar-background/85 backdrop-blur-xl border-r border-sidebar-border/70">
+            <div className="flex flex-col h-full min-h-0 app-shell-sidebar border-r">
                 <ScrollArea className="flex-1 min-h-0 py-6">
                     <nav className={cn("space-y-6 flex flex-col", sidebarCollapsed && !isMobile ? "px-0 items-center" : "px-4")}>
                         {adminNavSections.map((section) => (
@@ -178,14 +178,14 @@ export default function AdminLayoutEnhanced() {
     }
 
     return (
-        <div className="min-h-screen bg-background font-sans">
+        <div className="min-h-screen app-shell font-sans">
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-sidebar-background/95 backdrop-blur-xl border-b border-sidebar-border transition-all duration-500">
+            <header className="sticky top-0 z-40 app-shell-header border-b transition-colors duration-300">
                 <div className="flex h-16 items-center gap-4 px-4 sm:px-6">
                     {/* Logo (Desktop) */}
                     <div className="flex items-center gap-3">
                         <img src="/logo-velox.svg" alt="Velox" className="w-8 h-8" />
-                        <h1 className="font-bold text-lg leading-tight text-primary">Velox Admin</h1>
+                        <h1 className="text-sm font-semibold uppercase tracking-[0.08em] text-foreground/90">Velox Admin</h1>
                     </div>
 
                     {/* Mobile Menu Trigger */}
@@ -195,7 +195,7 @@ export default function AdminLayoutEnhanced() {
                                 <Menu className="w-5 h-5" />
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" className="p-0 w-72 border-r-0">
+                        <SheetContent side="left" className="p-0 w-72 app-shell-sidebar border-r">
                             <SidebarContent isMobile />
                         </SheetContent>
                     </Sheet>
@@ -237,14 +237,14 @@ export default function AdminLayoutEnhanced() {
             <div className="flex h-[calc(100vh-64px)]">
                 {/* Desktop Sidebar */}
                 <aside className={cn(
-                    "hidden lg:block border-r border-border/50 bg-sidebar-background/70 backdrop-blur-sm transition-all duration-500 ease-in-out z-30",
+                    "hidden lg:block border-r app-shell-sidebar transition-all duration-500 ease-in-out z-30",
                     sidebarCollapsed ? "w-20" : "w-72"
                 )}>
                     <SidebarContent />
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-auto bg-background relative">
+                <main className="flex-1 overflow-auto app-shell-main relative">
                     <div className="container relative z-10 mx-auto p-4 sm:p-6 lg:p-8 max-w-[1600px]">
                         <AnimatePresence mode="wait">
                             <BlurFade key={location.pathname} delay={0.1}>

@@ -55,55 +55,62 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   LIGHT MODE — Premium Blue Theme
+   LIGHT MODE — Corporate Slate Theme
    ═══════════════════════════════════════════════════════════════════════ */
 :root {
-  --background: 220 13% 94%;
-  --foreground: 224 71% 4%;
+  --background: 218 14% 95%;
+  --foreground: 220 22% 16%;
 
   --card: 0 0% 100%;
-  --card-foreground: 224 71% 4%;
+  --card-foreground: 220 22% 16%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 224 71% 4%;
+  --popover-foreground: 220 22% 16%;
 
-  --primary: 204 89% 43%;
+  --primary: 217 29% 32%;
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 210 20% 96%;
-  --secondary-foreground: 224 71% 4%;
+  --secondary: 220 16% 92%;
+  --secondary-foreground: 220 19% 21%;
 
-  --muted: 210 20% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 220 14% 93%;
+  --muted-foreground: 220 10% 43%;
 
-  --accent: 204 90% 97%;
-  --accent-foreground: 204 89% 43%;
+  --accent: 220 15% 89%;
+  --accent-foreground: 220 20% 22%;
 
-  --destructive: 0 84% 60%;
+  --destructive: 0 72% 52%;
   --destructive-foreground: 210 40% 98%;
 
-  --success: 151 65% 52%;
+  --success: 150 32% 40%;
   --success-foreground: 0 0% 98%;
 
-  --warning: 38 92% 50%;
+  --warning: 38 70% 46%;
   --warning-foreground: 0 0% 98%;
 
-  --info: 199 89% 48%;
+  --info: 205 46% 44%;
   --info-foreground: 0 0% 98%;
 
-  --border: 220 13% 88%;
-  --input: 220 13% 88%;
-  --ring: 204 89% 43%;
+  --border: 220 13% 84%;
+  --input: 220 13% 84%;
+  --ring: 217 29% 32%;
   --radius: 0.75rem;
 
-  --sidebar-background: 220 13% 92%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
+  /* App shell layers: background -> chrome (header/sidebar) -> main content */
+  --shell-background: 220 15% 93%;
+  --shell-chrome: 220 14% 90%;
+  --shell-sidebar: 220 14% 88%;
+  --shell-main: 0 0% 99%;
+  --shell-border: 220 11% 80%;
+
+  --sidebar-background: 220 14% 88%;
+  --sidebar-foreground: 220 15% 24%;
+  --sidebar-primary: 217 29% 32%;
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 220 13% 95%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 88%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --sidebar-accent: 220 14% 91%;
+  --sidebar-accent-foreground: 220 20% 22%;
+  --sidebar-border: 220 11% 80%;
+  --sidebar-ring: 217 29% 32%;
 
   --glass-blur: 12px;
   --glass-opacity: 0.95;
@@ -113,50 +120,79 @@
    DARK MODE — OBSIDIAN DEEP
    ═══════════════════════════════════════════════════════════════════════ */
 .dark {
-  --background: 220 30% 6%;
-  --foreground: 210 40% 98%;
+  --background: 220 22% 8%;
+  --foreground: 210 20% 92%;
 
-  --card: 220 25% 11%;
-  --card-foreground: 210 40% 98%;
+  --card: 220 16% 12%;
+  --card-foreground: 210 18% 93%;
 
-  --popover: 220 25% 11%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 220 16% 12%;
+  --popover-foreground: 210 18% 93%;
 
-  --primary: 217 91% 60%;
-  --primary-foreground: 222 47% 11%;
+  --primary: 214 28% 65%;
+  --primary-foreground: 220 30% 12%;
 
-  --secondary: 217 33% 15%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 220 15% 16%;
+  --secondary-foreground: 210 18% 93%;
 
-  --muted: 217 20% 15%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 220 12% 17%;
+  --muted-foreground: 216 10% 67%;
 
-  --accent: 217 25% 15%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 220 14% 20%;
+  --accent-foreground: 210 18% 93%;
 
-  --destructive: 0 84% 60%;
+  --destructive: 0 60% 56%;
   --destructive-foreground: 0 0% 100%;
 
-  --success: 142 71% 45%;
+  --success: 150 35% 46%;
   --success-foreground: 0 0% 100%;
 
-  --warning: 38 92% 50%;
+  --warning: 38 72% 58%;
   --warning-foreground: 0 0% 100%;
 
-  --info: 199 89% 48%;
+  --info: 204 42% 55%;
   --info-foreground: 0 0% 100%;
 
-  --border: 217 20% 18%;
-  --input: 217 20% 18%;
-  --ring: 217 91% 60%;
+  --border: 220 12% 24%;
+  --input: 220 12% 24%;
+  --ring: 214 28% 65%;
 
-  --sidebar-background: 220 30% 5%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 217 91% 60%;
-  --sidebar-primary-foreground: 222 47% 11%;
-  --sidebar-accent: 217 25% 15%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217 20% 18%;
-  --sidebar-ring: 217 91% 60%;
+  --shell-background: 220 20% 9%;
+  --shell-chrome: 220 15% 12%;
+  --shell-sidebar: 220 16% 11%;
+  --shell-main: 220 14% 13%;
+  --shell-border: 220 11% 24%;
+
+  --sidebar-background: 220 16% 11%;
+  --sidebar-foreground: 210 18% 93%;
+  --sidebar-primary: 214 28% 65%;
+  --sidebar-primary-foreground: 220 30% 12%;
+  --sidebar-accent: 220 14% 18%;
+  --sidebar-accent-foreground: 210 18% 93%;
+  --sidebar-border: 220 11% 24%;
+  --sidebar-ring: 214 28% 65%;
 }
 
+.app-shell {
+  background-color: hsl(var(--shell-background));
+}
+
+.app-shell-header {
+  background-color: hsl(var(--shell-chrome));
+  border-color: hsl(var(--shell-border));
+  box-shadow:
+    inset 0 -1px 0 hsl(var(--shell-border) / 0.7),
+    0 1px 2px hsl(220 20% 8% / 0.06);
+}
+
+.app-shell-sidebar {
+  background-color: hsl(var(--shell-sidebar));
+  border-color: hsl(var(--shell-border));
+  box-shadow:
+    inset -1px 0 0 hsl(var(--shell-border) / 0.65),
+    1px 0 2px hsl(220 20% 8% / 0.03);
+}
+
+.app-shell-main {
+  background-color: hsl(var(--shell-main));
+}

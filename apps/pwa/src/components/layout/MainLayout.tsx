@@ -87,12 +87,7 @@ export default function MainLayout() {
   // =============================================
   return (
     <div
-      className={cn(
-        'min-h-screen bg-background',
-        // Subtle grid pattern only - removed colored washes for cleaner POS look
-        'bg-[radial-gradient(circle_at_1px_1px,hsl(var(--muted-foreground)_/_0.06)_1px,transparent_0)]',
-        '[background-size:24px_24px]'
-      )}
+      className={cn('min-h-screen app-shell text-foreground')}
     >
       {/* Accessibility */}
       <SkipLinks />
@@ -131,8 +126,7 @@ export default function MainLayout() {
         <aside
           id="main-navigation"
           className={cn(
-            'hidden lg:flex flex-col border-r border-sidebar-border bg-sidebar-background/95 h-full relative',
-            'shadow-[0_1px_0_hsl(var(--sidebar-border)_/_0.25),0_24px_60px_-56px_hsl(var(--foreground)_/_0.22)]',
+            'hidden lg:flex flex-col border-r app-shell-sidebar h-full relative',
             'transition-[width] duration-300 will-change-[width]',
             sidebarCollapsed ? 'w-20' : 'w-64'
           )}
