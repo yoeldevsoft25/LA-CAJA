@@ -519,15 +519,9 @@ export class FederationSyncService implements OnModuleInit {
     const foundSaleIds = new Set<string>(
       rows.map((row: { sale_id: string }) => row.sale_id),
     );
-    const missingSaleIds = uniqueSaleIds.filter(
+    let missingSaleIds = uniqueSaleIds.filter(
       (saleId) => !foundSaleIds.has(saleId),
     );
-
-    if (missingSaleIds.length > 0) {
-      this.logger.warn(
-        `Missing SaleCreated events for sale_ids: ${missingSaleIds.join(', ')}`,
-      );
-    }
 
     let queued = 0;
     for (const row of rows as Array<{ event_id: string }>) {
@@ -544,8 +538,68 @@ export class FederationSyncService implements OnModuleInit {
       queued += 1;
     }
 
+    if (missingSaleIds.length > 0) {
+      this.logger.warn(
+        `Missing SaleCreated events for sale_ids: ${missingSaleIds.join(', ')}. Attempting synthetic replay.`,
+      );
+
+      // Fetch full sale data including items
+      const saleRows = await this.dataSource
+        .getRepository('Sale')
+        .createQueryBuilder('sale')
+        .leftJoinAndSelect('sale.items', 'items')
+        .where('sale.store_id = :storeId', { storeId })
+        .andWhere('sale.id IN (:...ids)', { ids: missingSaleIds })
+        .getMany();
+
+      if (saleRows.length > 0) {
+        const syntheticEvents = saleRows.map((row) =>
+          this.buildSyntheticSaleCreatedEvent(storeId, row),
+        );
+        const eventToSaleId = new Map(
+          syntheticEvents.map((event, idx) => [
+            event.event_id,
+            String(saleRows[idx].id),
+          ]),
+        );
+
+        try {
+          const pushResult = await this.pushSyntheticEvents(
+            storeId,
+            syntheticEvents,
+          );
+          const replayedSaleIds = new Set(
+            pushResult.acceptedEventIds
+              .map((eventId) => eventToSaleId.get(eventId))
+              .filter((value): value is string => Boolean(value)),
+          );
+
+          queued += replayedSaleIds.size;
+          missingSaleIds = missingSaleIds.filter(
+            (id) => !replayedSaleIds.has(id),
+          );
+
+          if (pushResult.rejected > 0 || pushResult.conflicted > 0) {
+            this.logger.warn(
+              `Sale synthetic replay had rejects/conflicts for store ${storeId}: rejected=${pushResult.rejected}, conflicted=${pushResult.conflicted}`,
+            );
+          } else {
+            this.logger.log(
+              `✅ Sale synthetic replay success: ${replayedSaleIds.size} sales pushed synthetically.`,
+            );
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `Sale synthetic replay failed for store ${storeId}: ${msg}`,
+          );
+        }
+      }
+    }
+
     this.logger.log(
-      `🔁 Federation replay queued ${queued}/${uniqueSaleIds.length} SaleCreated events (found ${rows.length})`,
+      `🔁 Federation replay queued ${queued}/${uniqueSaleIds.length} SaleCreated events (found ${rows.length} real, synthesized ${queued - rows.length
+      })`,
     );
 
     return {
@@ -1846,6 +1900,49 @@ export class FederationSyncService implements OnModuleInit {
   private diff(source: string[], target: string[]): string[] {
     const targetSet = new Set(target);
     return source.filter((id) => !targetSet.has(id));
+  }
+
+  private buildSyntheticSaleCreatedEvent(
+    storeId: string,
+    row: any,
+  ): SyntheticRelayEvent {
+    // Generamos un event_id determinista usando el ID de la venta
+    const uniqueString = `${storeId}:${row.id}:SaleCreated:synthetic`;
+    const eventId = createHash('sha256')
+      .update(uniqueString)
+      .digest('hex')
+      .substring(0, 36); // Truncar para formato UUID aunque no sea válido std
+
+    return {
+      event_id: ensureUuid(eventId), // Aseguramos formato UUID válido
+      seq: 0, // Synthetic sequence usually 0 or irrelevant for relay
+      type: 'SaleCreated',
+      version: 1,
+      created_at: new Date(row.created_at).getTime(),
+      actor: {
+        user_id: ensureUuid(row.sold_by_user_id),
+        role: 'cashier', // Default fallback role
+      },
+      payload: {
+        matches: [], // Synthetic doesn't have match detail
+        payment: row.payment,
+        sale_id: row.id,
+        sold_at: row.sold_at,
+        currency: row.currency,
+        items: row.items || [], // Assuming items are hydrated in the query or joined
+        store_id: storeId,
+        payments: [], // Legacy field if needed
+        sale_number: Number(row.sale_number),
+        total_price: Number(row.totals.total_usd), // Canonical total often used
+        customer_id: row.customer_id ? String(row.customer_id) : null,
+        total_price_bs: Number(row.totals.total_bs),
+        exchange_rate_bs: Number(row.exchange_rate),
+      },
+      vector_clock: {},
+      causal_dependencies: [],
+      delta_payload: {},
+      full_payload_hash: 'synthetic',
+    };
   }
 
   private buildSyntheticDebtCreatedEvent(
