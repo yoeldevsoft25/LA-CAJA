@@ -1743,7 +1743,7 @@ export class FederationSyncService implements OnModuleInit {
             // 3.5 Delete Accounting Data (Journal Entries, Lines, Chart of Accounts)
             // Must delete lines first because they reference accounts
             await manager.query(
-              `DELETE FROM journal_entry_lines WHERE journal_entry_id IN (SELECT id FROM journal_entries WHERE store_id = $1)`,
+              `DELETE FROM journal_entry_lines WHERE entry_id IN (SELECT id FROM journal_entries WHERE store_id = $1)`,
               [storeId],
             );
             await manager.query(
