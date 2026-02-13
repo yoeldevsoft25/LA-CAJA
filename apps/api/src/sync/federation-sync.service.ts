@@ -1739,6 +1739,22 @@ export class FederationSyncService implements OnModuleInit {
               storeId,
             ]);
 
+
+            // 3.5 Delete Accounting Data (Journal Entries, Lines, Chart of Accounts)
+            // Must delete lines first because they reference accounts
+            await manager.query(
+              `DELETE FROM journal_entry_lines WHERE journal_entry_id IN (SELECT id FROM journal_entries WHERE store_id = $1)`,
+              [storeId],
+            );
+            await manager.query(
+              `DELETE FROM journal_entries WHERE store_id = $1`,
+              [storeId],
+            );
+            await manager.query(
+              `DELETE FROM chart_of_accounts WHERE store_id = $1`,
+              [storeId],
+            );
+
             // 4. Delete Configuration/Other store-specific entities
             await manager.query(
               `DELETE FROM fiscal_configs WHERE store_id = $1`,
