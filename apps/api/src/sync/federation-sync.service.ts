@@ -1700,25 +1700,25 @@ export class FederationSyncService implements OnModuleInit {
         : Promise.resolve({ queued: 0 }),
     ]);
 
-    // PASO 3: Replicar deudas y ventas (Local -> Remote)
-    // Las deudas antes de los pagos
-    const [
-      debtsToRemoteResult,
-      salesToRemoteResult,
-      invToRemoteResult,
-      voidsToRemoteResult,
-    ] = await Promise.all([
-      replayDebtsToRemote.length > 0
-        ? this.replayDebtsByIds(storeId, replayDebtsToRemote)
-        : Promise.resolve({ queued: 0 }),
+    // PASO 3: Replicar ventas y anulaciones (Local -> Remote)
+    // CRITICAL: Sales MUST be synced before Debts to avoid FK violations (400 Bad Request)
+    const [salesToRemoteResult, voidsToRemoteResult] = await Promise.all([
       replaySalesToRemote.length > 0
         ? this.replaySalesByIds(storeId, replaySalesToRemote)
         : Promise.resolve({ queued: 0 }),
-      replayInvToRemote.length > 0
-        ? this.replayInventoryByFilter(storeId, replayInvToRemote, [])
-        : Promise.resolve({ queued: 0 }),
       replayVoidsToRemote.length > 0
         ? this.replaySalesByIds(storeId, replayVoidsToRemote) // Reusamos replaySalesByIds ya que maneja SaleVoided
+        : Promise.resolve({ queued: 0 }),
+    ]);
+
+    // PASO 4: Replicar deudas e inventario (Local -> Remote)
+    // Ahora es seguro enviar deudas porque las ventas ya existen en el remoto
+    const [debtsToRemoteResult, invToRemoteResult] = await Promise.all([
+      replayDebtsToRemote.length > 0
+        ? this.replayDebtsByIds(storeId, replayDebtsToRemote)
+        : Promise.resolve({ queued: 0 }),
+      replayInvToRemote.length > 0
+        ? this.replayInventoryByFilter(storeId, replayInvToRemote, [])
         : Promise.resolve({ queued: 0 }),
     ]);
 
@@ -1729,7 +1729,7 @@ export class FederationSyncService implements OnModuleInit {
         : Promise.resolve({ queued: 0 }),
     ]);
 
-    // PASO 4: Pedir repetición remota (Remote -> Local)
+    // PASO 5: Pedir repetición remota (Remote -> Local)
     if (replaySessionsToLocal.length > 0) {
       await this.postRemoteReplay('/sync/federation/replay-sessions', {
         store_id: storeId,
@@ -1773,7 +1773,7 @@ export class FederationSyncService implements OnModuleInit {
       });
     }
 
-    // Paso 5: Re-ejecutar autocorrección luego de replicar eventos.
+    // Paso 6: Re-ejecutar autocorrección luego de replicar eventos.
     const localPostHeal = await this.reconcileInventoryStock(storeId);
     const remotePostHeal = await this.postRemoteStockReconcile(storeId).catch(
       (error) => {
