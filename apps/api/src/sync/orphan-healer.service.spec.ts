@@ -68,4 +68,27 @@ describe('OrphanHealerService', () => {
         expect(projectionsService.projectEvent).toHaveBeenCalledWith(expect.objectContaining({ event_id: 'evt-1' }));
         expect(eventRepo.update).toHaveBeenCalledWith('evt-1', expect.objectContaining({ projection_status: 'processed' }));
     });
+
+    it('should discard permanent debt-payment orphans to avoid infinite retries', async () => {
+        (dataSource.query as jest.Mock)
+            .mockResolvedValueOnce([]) // Sales
+            .mockResolvedValueOnce([]) // Debts
+            .mockResolvedValueOnce([{ event_id: 'evt-pay-1', type: 'DebtPaymentRecorded' }]) // Payments
+            .mockResolvedValueOnce([]); // Voids
+
+        eventRepo.findOne.mockResolvedValue({
+            event_id: 'evt-pay-1',
+            type: 'DebtPaymentRecorded',
+        });
+        projectionsService.projectEvent.mockRejectedValue(
+            new Error('La deuda debt-1 no existe para la tienda store-1'),
+        );
+
+        await service.healStore('store-1');
+
+        expect(eventRepo.update).toHaveBeenCalledWith(
+            'evt-pay-1',
+            expect.objectContaining({ projection_status: 'discarded' }),
+        );
+    });
 });

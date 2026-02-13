@@ -9,10 +9,11 @@ export interface OrphanHealResult {
   checked: number;
   healed: number;
   failed: number;
+  discarded?: number;
   details: Array<{
     event_id: string;
     type: string;
-    status: 'healed' | 'failed';
+    status: 'healed' | 'failed' | 'discarded';
     error?: string;
   }>;
 }
@@ -56,6 +57,7 @@ export class OrphanHealerService {
       checked: 0,
       healed: 0,
       failed: 0,
+      discarded: 0,
       details: [],
     };
 
@@ -176,6 +178,27 @@ export class OrphanHealerService {
         result.healed++;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
+        const isPermanent = this.isPermanentOrphanFailure(orphan.type, msg);
+
+        if (isPermanent) {
+          await this.eventRepository.update(orphan.event_id, {
+            projection_status: 'discarded',
+            projection_error: `[permanent-orphan] ${msg}`,
+          });
+
+          this.logger.warn(
+            `🩹 Orphan discarded ${orphan.type} (${orphan.event_id}) for store ${storeId}: ${msg}`,
+          );
+
+          result.details.push({
+            event_id: orphan.event_id,
+            type: orphan.type,
+            status: 'discarded',
+            error: msg,
+          });
+          result.discarded = (result.discarded || 0) + 1;
+          continue;
+        }
 
         await this.eventRepository.update(orphan.event_id, {
           projection_status: 'failed',
@@ -199,16 +222,40 @@ export class OrphanHealerService {
     if (result.healed > 0) {
       this.logger.log(
         `🩹 Healed ${result.healed}/${result.checked} orphaned projections ` +
-          `for store ${storeId} (${result.failed} failed)`,
+          `for store ${storeId} (${result.failed} failed, ${result.discarded || 0} discarded)`,
       );
     } else if (result.failed > 0) {
       this.logger.warn(
         `🩹 No orphaned projections healed for store ${storeId}. ` +
           `Failed ${result.failed}/${result.checked}. First: ${result.details[0]?.event_id || 'n/a'}`,
       );
+    } else if ((result.discarded || 0) > 0) {
+      this.logger.warn(
+        `🩹 Discarded ${result.discarded}/${result.checked} permanent orphans for store ${storeId}.`,
+      );
     }
 
     return result;
+  }
+
+  private isPermanentOrphanFailure(eventType: string, errorMessage: string): boolean {
+    if (!errorMessage) return false;
+
+    const normalized = errorMessage.toLowerCase();
+
+    const debtMissingPatterns = [
+      'la deuda',
+      'no existe para la tienda',
+      'deuda',
+      'not found',
+      'does not exist',
+    ];
+
+    if (eventType === 'DebtPaymentRecorded' || eventType === 'DebtPaymentAdded') {
+      return debtMissingPatterns.some((pattern) => normalized.includes(pattern));
+    }
+
+    return false;
   }
 
   private async getActiveStoreIds(): Promise<string[]> {
