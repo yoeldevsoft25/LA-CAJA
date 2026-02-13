@@ -1649,9 +1649,12 @@ export class FederationSyncService implements OnModuleInit {
           // Perform a cascaded delete within a transaction to handle FK constraints
           await this.dataSource.transaction(async (manager) => {
             // 1. Delete Inventory/Warehouse data
-            // (Assumptions: warehouse_stock -> warehouses -> stores)
             await manager.query(
               `DELETE FROM warehouse_stock WHERE warehouse_id IN (SELECT id FROM warehouses WHERE store_id = $1)`,
+              [storeId],
+            );
+            await manager.query(
+              `DELETE FROM inventory_movements WHERE store_id = $1`,
               [storeId],
             );
             await manager.query(`DELETE FROM warehouses WHERE store_id = $1`, [
@@ -1659,24 +1662,54 @@ export class FederationSyncService implements OnModuleInit {
             ]);
 
             // 2. Delete Sales and related data
-            // sale_items depend on sales AND products.
-            // We need to clear sale_items first to free up products and sales.
+            // Sale Return Items
+            await manager.query(
+              `DELETE FROM sale_return_items WHERE return_id IN (SELECT id FROM sale_returns WHERE store_id = $1)`,
+              [storeId],
+            );
+            // Sale Returns
+            await manager.query(
+              `DELETE FROM sale_returns WHERE store_id = $1`,
+              [storeId],
+            );
+
+            // Sale Items
             await manager.query(
               `DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE store_id = $1)`,
               [storeId],
             );
-            // Delete payments, debts, etc linked to sales/store
-            await manager.query(`DELETE FROM payments WHERE store_id = $1`, [
-              storeId,
-            ]);
+            // Sale Payments (was incorrectly 'payments')
+            await manager.query(
+              `DELETE FROM sale_payments WHERE sale_id IN (SELECT id FROM sales WHERE store_id = $1)`,
+              [storeId],
+            );
+
+            // Fiscal Invoices (and items)
+            await manager.query(
+              `DELETE FROM fiscal_invoice_items WHERE fiscal_invoice_id IN (SELECT id FROM fiscal_invoices WHERE store_id = $1)`,
+              [storeId],
+            );
+            await manager.query(
+              `DELETE FROM fiscal_invoices WHERE store_id = $1`,
+              [storeId]
+            );
+
+            // Debt Payments
+            await manager.query(
+              `DELETE FROM debt_payments WHERE store_id = $1`,
+              [storeId],
+            );
+            // Debts
             await manager.query(`DELETE FROM debts WHERE store_id = $1`, [
               storeId,
             ]);
+
+            // Sales
             await manager.query(`DELETE FROM sales WHERE store_id = $1`, [
               storeId,
             ]);
 
-            // 3. Delete Products (now safe because sale_items are gone)
+            // 3. Delete Products
             await manager.query(`DELETE FROM products WHERE store_id = $1`, [
               storeId,
             ]);
