@@ -572,7 +572,7 @@ export default function CheckoutModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading && !isProcessing) onClose() }}>
-        <DialogContent
+        <CheckoutDialogContent
           className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-[var(--radius)]"
         >
           <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
@@ -684,7 +684,7 @@ export default function CheckoutModal({
             quantity={serialSelectorItem?.quantity || 0}
             onSelect={handleSerialSelect}
           />
-        </DialogContent>
+        </CheckoutDialogContent>
       </Dialog>
 
       <AlertDialog open={showStockWarningDialog} onOpenChange={setShowStockWarningDialog}>
