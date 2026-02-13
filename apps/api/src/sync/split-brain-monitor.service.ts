@@ -117,6 +117,12 @@ export class SplitBrainMonitorService {
                   AND e.created_at < NOW() - INTERVAL '1 minute'
                   AND e.projection_status IN ('processed', 'failed')
                   AND d.id IS NULL
+                  -- Exclude if a debt already exists for this sale (Bucket C: Dedupe)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM debts d2 
+                    WHERE d2.store_id = e.store_id
+                    AND d2.sale_id = (e.payload->>'sale_id')::uuid
+                  )
                 `,
         [storeId],
       );
