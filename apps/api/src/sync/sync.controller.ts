@@ -42,7 +42,7 @@ export class SyncController {
     private readonly federationSyncService: FederationSyncService,
     private readonly projectionsService: ProjectionsService,
     private readonly splitBrainMonitorService: SplitBrainMonitorService,
-  ) {}
+  ) { }
 
   @Post('push')
   @HttpCode(HttpStatus.OK)
@@ -104,6 +104,16 @@ export class SyncController {
       100,
       cursorEventId,
     );
+  }
+
+  @Get('federation/store-status')
+  @UseGuards(FederationAuthGuard)
+  async getStoreStatus(
+    @Query('store_id') storeId: string,
+  ): Promise<{ exists: boolean }> {
+    if (!storeId) throw new BadRequestException('store_id is required');
+    const knownIds = await this.federationSyncService.getKnownStoreIds(); // Public helper needed? Or access repo via service
+    return { exists: knownIds.includes(storeId) };
   }
 
   @Get('federation/status')

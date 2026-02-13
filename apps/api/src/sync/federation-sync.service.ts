@@ -461,6 +461,29 @@ export class FederationSyncService implements OnModuleInit {
     }
   }
 
+  private async checkRemoteStoreStatus(storeId: string): Promise<boolean | null> {
+    if (!this.remoteUrl) return null;
+    try {
+      const response = await axios.get(
+        `${this.remoteUrl}/sync/federation/store-status`,
+        {
+          params: { store_id: storeId },
+          headers: { Authorization: `Bearer ${this.adminKey}` },
+          validateStatus: (status) => status < 500, // Accept 404/400 as valid responses to parse
+        },
+      );
+      if (response.status === 200) {
+        return response.data.exists;
+      }
+      return null; // Unknown/Error
+    } catch (error) {
+      this.logger.warn(
+        `Failed to check remote status for store ${storeId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null; // Fail safe, don't delete
+    }
+  }
+
   async getFederationStatus(): Promise<FederationStatus> {
     const [waiting, active, delayed, completed, failed, remoteProbe] =
       await Promise.all([
@@ -1333,7 +1356,7 @@ export class FederationSyncService implements OnModuleInit {
     );
   }
 
-  private async getKnownStoreIds(): Promise<string[]> {
+  public async getKnownStoreIds(): Promise<string[]> {
     const rows = await this.dataSource.query(
       `SELECT id FROM stores ORDER BY created_at DESC LIMIT 50`,
     );
@@ -1613,6 +1636,34 @@ export class FederationSyncService implements OnModuleInit {
     this.logger.log(
       `🔄 Reconcile ${storeId}: outbound batch=${maxBatchOutbound}, inbound batch=${maxBatchInbound}`,
     );
+
+    // CRITICAL: Check if store exists on remote. If not, self-destruct local data to stop errors.
+    // Only applies if we are acting as a client (remoteUrl is set).
+    if (this.remoteUrl) {
+      const remoteExists = await this.checkRemoteStoreStatus(storeId);
+      if (remoteExists === false) {
+        this.logger.error(
+          `🚨 Store ${storeId} does NOT exist on remote. Initiating LOCAL CLEANUP (Auto-Delete).`,
+        );
+        try {
+          await this.dataSource.query('DELETE FROM stores WHERE id = $1', [
+            storeId,
+          ]);
+          this.logger.log(`✅ Local data for store ${storeId} deleted successfully.`);
+          return {
+            storeId,
+            sales: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0 },
+            inventory: { remoteMissingCount: 0, localMissingCount: 0, replayedToRemote: 0, replayedToLocal: 0, localStockHealed: 0, remoteStockHealed: 0 },
+            skipped: true,
+            reason: 'Store deleted on remote',
+          };
+        } catch (error) {
+          this.logger.error(
+            `❌ Failed to delete local store ${storeId}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+    }
 
     // Paso 1: Autocorrección local/remota de snapshot de inventario antes de comparar IDs.
     const localPreHeal = await this.reconcileInventoryStock(storeId);
