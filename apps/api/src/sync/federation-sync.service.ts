@@ -1756,9 +1756,7 @@ export class FederationSyncService implements OnModuleInit {
               `DELETE FROM conflict_audit_log WHERE store_id = $1`,
               [storeId],
             );
-            await manager.query(`DELETE FROM devices WHERE store_id = $1`, [
-              storeId,
-            ]);
+
 
             // 5. Finally, delete the store
             await manager.query('DELETE FROM stores WHERE id = $1', [storeId]);
