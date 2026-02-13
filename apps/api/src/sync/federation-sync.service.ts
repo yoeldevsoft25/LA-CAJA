@@ -1857,7 +1857,7 @@ export class FederationSyncService implements OnModuleInit {
     const payload = {
       debt_id: String(row.id),
       sale_id: row.sale_id ? String(row.sale_id) : null,
-      customer_id: String(row.customer_id),
+      customer_id: row.customer_id ? String(row.customer_id) : null,
       created_at: createdAt.toISOString(),
       amount_bs: Number(row.amount_bs || 0),
       amount_usd: Number(row.amount_usd || 0),
@@ -1893,7 +1893,7 @@ export class FederationSyncService implements OnModuleInit {
     const seq = paidAt.getTime();
     const payload = {
       payment_id: String(row.id),
-      debt_id: String(row.debt_id),
+      debt_id: row.debt_id ? String(row.debt_id) : null,
       amount_bs: Number(row.amount_bs || 0),
       amount_usd: Number(row.amount_usd || 0),
       method: String(row.method || 'cash'),
@@ -2002,42 +2002,53 @@ export class FederationSyncService implements OnModuleInit {
       return { acceptedEventIds: [], rejected: 0, conflicted: 0 };
     }
 
-    const response = await this.circuitBreaker.execute(() =>
-      axios.post(
-        `${this.remoteUrl}/sync/push`,
-        {
-          store_id: storeId,
-          device_id: this.syntheticRelayDeviceId,
-          client_version: 'federation-synthetic-relay-1.0',
-          events,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.adminKey}`,
-            'Content-Type': 'application/json',
+    try {
+      const response = await this.circuitBreaker.execute(() =>
+        axios.post(
+          `${this.remoteUrl}/sync/push`,
+          {
+            store_id: storeId,
+            device_id: this.syntheticRelayDeviceId,
+            client_version: 'federation-synthetic-relay-1.0',
+            events,
           },
-          timeout: 15000,
-        },
-      ),
-    );
+          {
+            headers: {
+              Authorization: `Bearer ${this.adminKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 15000,
+          },
+        ),
+      );
 
-    const accepted = Array.isArray(response.data?.accepted)
-      ? response.data.accepted
-      : [];
-    const rejected = Array.isArray(response.data?.rejected)
-      ? response.data.rejected.length
-      : 0;
-    const conflicted = Array.isArray(response.data?.conflicted)
-      ? response.data.conflicted.length
-      : 0;
+      const accepted = Array.isArray(response.data?.accepted)
+        ? response.data.accepted
+        : [];
+      const rejected = Array.isArray(response.data?.rejected)
+        ? response.data.rejected.length
+        : 0;
+      const conflicted = Array.isArray(response.data?.conflicted)
+        ? response.data.conflicted.length
+        : 0;
 
-    return {
-      acceptedEventIds: accepted
-        .map((item: { event_id?: string }) => item.event_id)
-        .filter((id: unknown): id is string => typeof id === 'string'),
-      rejected,
-      conflicted,
-    };
+      return {
+        acceptedEventIds: accepted
+          .map((item: { event_id?: string }) => item.event_id)
+          .filter((id: unknown): id is string => typeof id === 'string'),
+        rejected,
+        conflicted,
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        this.logger.error(
+          `❌ Synthetic push failed (400 Bad Request) for store ${storeId}. Response: ${JSON.stringify(
+            error.response.data,
+          )}`,
+        );
+      }
+      throw error;
+    }
   }
 
   private async fetchRemoteIds(
