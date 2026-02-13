@@ -288,7 +288,9 @@ export default function POSPage() {
           {
             q: normalizedSearchQuery || undefined,
             is_active: true,
-            limit: normalizedSearchQuery ? 50 : 20,
+            // En offline no limitamos resultados para no ocultar productos cacheados.
+            // En online mantenemos un límite alto para rendimiento de red/UI.
+            limit: isOnline ? (normalizedSearchQuery ? 200 : 50) : undefined,
           },
           user?.store_id
         ),
