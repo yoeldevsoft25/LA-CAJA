@@ -1648,6 +1648,27 @@ export class FederationSyncService implements OnModuleInit {
         try {
           // Perform a cascaded delete within a transaction to handle FK constraints
           await this.dataSource.transaction(async (manager) => {
+            // 0. Delete Sync/Device/Conflict data (Child tables of stores)
+            await manager.query(
+              `DELETE FROM device_sync_state WHERE store_id = $1`,
+              [storeId],
+            );
+            await manager.query(
+              `DELETE FROM sync_conflicts WHERE store_id = $1`,
+              [storeId],
+            );
+            await manager.query(`DELETE FROM sync_metrics WHERE store_id = $1`, [
+              storeId,
+            ]);
+            // Try to delete from 'devices' if it exists (legacy support)
+            try {
+              await manager.query(`DELETE FROM devices WHERE store_id = $1`, [
+                storeId,
+              ]);
+            } catch (e) {
+              // Ignore if table doesn't exist
+            }
+
             // 1. Delete Inventory/Warehouse data
             await manager.query(
               `DELETE FROM warehouse_stock WHERE warehouse_id IN (SELECT id FROM warehouses WHERE store_id = $1)`,
