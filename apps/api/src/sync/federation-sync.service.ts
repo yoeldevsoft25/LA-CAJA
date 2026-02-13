@@ -1751,6 +1751,10 @@ export class FederationSyncService implements OnModuleInit {
               [storeId],
             );
             await manager.query(
+              `DELETE FROM accounting_account_mappings WHERE store_id = $1`,
+              [storeId],
+            );
+            await manager.query(
               `DELETE FROM chart_of_accounts WHERE store_id = $1`,
               [storeId],
             );
