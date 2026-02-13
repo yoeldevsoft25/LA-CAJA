@@ -1662,11 +1662,15 @@ export class FederationSyncService implements OnModuleInit {
             ]);
             // Try to delete from 'devices' if it exists (legacy support)
             try {
+              // Create a savepoint to prevent transaction abortion on error (Postgres specific)
+              await manager.query('SAVEPOINT delete_devices');
               await manager.query(`DELETE FROM devices WHERE store_id = $1`, [
                 storeId,
               ]);
+              await manager.query('RELEASE SAVEPOINT delete_devices');
             } catch (e) {
-              // Ignore if table doesn't exist
+              // Rollback to savepoint if table doesn't exist or other error, keeping transaction alive
+              await manager.query('ROLLBACK TO SAVEPOINT delete_devices');
             }
 
             // 1. Delete Inventory/Warehouse data
