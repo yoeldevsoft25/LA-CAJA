@@ -415,33 +415,18 @@ export class LaCajaDB extends Dexie {
     product_type?: 'sale_item' | 'ingredient' | 'prepared';
     limit?: number;
   }): Promise<LocalProduct[]> {
-    // 🚀 PERF: START WITH THE MOST SELECTIVE INDEX
-    let collection: Dexie.Collection<LocalProduct, any>;
+    const normalizedStoreId = typeof storeId === 'string' ? storeId.trim() : '';
+    if (!normalizedStoreId) return [];
+
+    // Consulta segura y consistente: evitar índices compuestos aquí por inestabilidad
+    // de claves en ciertos entornos IndexedDB.
+    let products = await this.products
+      .where('store_id')
+      .equals(normalizedStoreId)
+      .toArray();
 
     if (options?.is_active !== undefined) {
-      // Usar índice compuesto [store_id+is_active]
-      collection = (this.products
-        .where('[store_id+is_active]') as any)
-        .equals([storeId, options.is_active]);
-    } else if (options?.category) {
-      // Usar índice compuesto [store_id+category]
-      collection = this.products
-        .where('[store_id+category]')
-        .equals([storeId, options.category]);
-    } else {
-      // Fallback a store_id
-      collection = this.products.where('store_id').equals(storeId);
-    }
-
-    // Fallback defensivo: si el índice compuesto no devuelve nada, usar store_id + filtro.
-    // Esto evita vacíos en catálogos offline por inconsistencias históricas de tipos.
-    let products = await collection.toArray();
-    if (options?.is_active !== undefined && products.length === 0) {
-      products = await this.products
-        .where('store_id')
-        .equals(storeId)
-        .filter((p) => p.is_active === options.is_active)
-        .toArray();
+      products = products.filter((p) => p.is_active === options.is_active);
     }
 
     // Filtros secundarios en memoria (solo sobre el subset indexado)

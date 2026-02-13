@@ -169,8 +169,46 @@ export class ProductsCacheService {
     product_type?: 'sale_item' | 'ingredient' | 'prepared';
     limit?: number;
   }): Promise<Product[]> {
-    const localProducts = await db.getProducts(storeId, options);
-    return localProducts.map(local => this.toProduct(local));
+    try {
+      const localProducts = await db.getProducts(storeId, options);
+      return localProducts.map(local => this.toProduct(local));
+    } catch (error) {
+      // Fallback defensivo: evita fallar búsqueda offline por errores de índice compuesto.
+      const safeStoreId = typeof storeId === 'string' ? storeId.trim() : '';
+      if (!safeStoreId) return [];
+
+      const allByStore = await db.products.where('store_id').equals(safeStoreId).toArray();
+      let filtered = allByStore;
+
+      if (options?.is_active !== undefined) {
+        filtered = filtered.filter((p) => p.is_active === options.is_active);
+      }
+      if (options?.category) {
+        filtered = filtered.filter((p) => p.category === options.category);
+      }
+      if (options?.is_visible_public !== undefined) {
+        filtered = filtered.filter((p) => p.is_visible_public === options.is_visible_public);
+      }
+      if (options?.product_type) {
+        filtered = filtered.filter((p) => p.product_type === options.product_type);
+      }
+      if (options?.search) {
+        const searchLower = options.search.toLowerCase();
+        filtered = filtered.filter((p) =>
+          !!(
+            p.name.toLowerCase().includes(searchLower) ||
+            (p.sku && p.sku.toLowerCase().includes(searchLower)) ||
+            (p.barcode && p.barcode.includes(searchLower))
+          )
+        );
+      }
+
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+      if (options?.limit) {
+        filtered = filtered.slice(0, options.limit);
+      }
+      return filtered.map((local) => this.toProduct(local));
+    }
   }
 
   /**
@@ -222,16 +260,12 @@ export class ProductsCacheService {
     if (this.barcodeIndexStoreId === sanitizedStoreId && this.barcodeIndex.size > 0) return;
 
     try {
-      // ✅ Fix: Remove "as unknown as string" casting which confuses Dexie if types don't match exactly at runtime
-      // Ensure we pass a proper array for compound index
-      const locals = await db.products
-        .where('[store_id+is_active]')
-        .equals([sanitizedStoreId, 1 /* 1 = true for boolean index sometimes in Dexie/IndexedDB depending on adapter */])
-        .or('store_id').equals(sanitizedStoreId).and(p => p.is_active === true) // Fallback query if compound index fails
-        .toArray();
-
-      // Optimization: If the fallback approach is too slow, stick to simple filter if compound index issues persist
-      // But [store_id+is_active] should work if defined in database.ts stores()
+      // Consulta robusta: evitar índice compuesto por inestabilidad en algunos engines.
+      const locals = (await db.products
+        .where('store_id')
+        .equals(sanitizedStoreId)
+        .toArray())
+        .filter((p) => p.is_active === true);
 
       this.barcodeIndex.clear();
       this.barcodeIndexStoreId = sanitizedStoreId;
