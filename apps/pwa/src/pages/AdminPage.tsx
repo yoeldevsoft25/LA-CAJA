@@ -250,7 +250,27 @@ export default function AdminPage() {
     },
   })
 
-  // deleteStoreMutation is not used
+  const deleteStoreMutation = useMutation({
+    mutationFn: ({ storeId }: { storeId: string; storeName: string }) => adminService.deleteStore(storeId),
+    onSuccess: (_data, variables) => {
+      toast.success(`Tienda "${variables.storeName}" eliminada`)
+      qc.invalidateQueries({ queryKey: ['admin-stores'] })
+      if (userSheetStore?.id === variables.storeId) setUserSheetStore(null)
+      if (planSheetStore?.id === variables.storeId) setPlanSheetStore(null)
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Error eliminando tienda'
+      toast.error(msg)
+    },
+  })
+
+  const handleDeleteStore = (store: AdminStore) => {
+    const confirmed = window.confirm(
+      `¿Seguro que deseas eliminar la tienda "${store.name}"?\n\nEsta acción es irreversible.`
+    )
+    if (!confirmed) return
+    deleteStoreMutation.mutate({ storeId: store.id, storeName: store.name })
+  }
 
 
   return (
@@ -510,7 +530,11 @@ export default function AdminPage() {
                                 Cambiar Plan
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-rose-600 focus:text-rose-600 hover:bg-rose-50" onClick={() => { /* setDeleteConfirmStore(store) */ }}>
+                              <DropdownMenuItem
+                                className="text-rose-600 focus:text-rose-600 hover:bg-rose-50"
+                                onClick={() => handleDeleteStore(store)}
+                                disabled={deleteStoreMutation.isPending}
+                              >
                                 <Trash2 className="mr-2 h-4 w-4" /> Eliminar Tienda
                               </DropdownMenuItem>
                             </DropdownMenuContent>
