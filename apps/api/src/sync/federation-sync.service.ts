@@ -1646,9 +1646,66 @@ export class FederationSyncService implements OnModuleInit {
           `🚨 Store ${storeId} does NOT exist on remote. Initiating LOCAL CLEANUP (Auto-Delete).`,
         );
         try {
-          await this.dataSource.query('DELETE FROM stores WHERE id = $1', [
-            storeId,
-          ]);
+          // Perform a cascaded delete within a transaction to handle FK constraints
+          await this.dataSource.transaction(async (manager) => {
+            // 1. Delete Inventory/Warehouse data
+            // (Assumptions: warehouse_stock -> warehouses -> stores)
+            await manager.query(
+              `DELETE FROM warehouse_stock WHERE warehouse_id IN (SELECT id FROM warehouses WHERE store_id = $1)`,
+              [storeId],
+            );
+            await manager.query(`DELETE FROM warehouses WHERE store_id = $1`, [
+              storeId,
+            ]);
+
+            // 2. Delete Sales and related data
+            // sale_items depend on sales AND products.
+            // We need to clear sale_items first to free up products and sales.
+            await manager.query(
+              `DELETE FROM sale_items WHERE sale_id IN (SELECT id FROM sales WHERE store_id = $1)`,
+              [storeId],
+            );
+            // Delete payments, debts, etc linked to sales/store
+            await manager.query(`DELETE FROM payments WHERE store_id = $1`, [
+              storeId,
+            ]);
+            await manager.query(`DELETE FROM debts WHERE store_id = $1`, [
+              storeId,
+            ]);
+            await manager.query(`DELETE FROM sales WHERE store_id = $1`, [
+              storeId,
+            ]);
+
+            // 3. Delete Products (now safe because sale_items are gone)
+            await manager.query(`DELETE FROM products WHERE store_id = $1`, [
+              storeId,
+            ]);
+
+            // 4. Delete Configuration/Other store-specific entities
+            await manager.query(
+              `DELETE FROM fiscal_configs WHERE store_id = $1`,
+              [storeId],
+            );
+            await manager.query(
+              `DELETE FROM invoice_series WHERE store_id = $1`,
+              [storeId],
+            );
+            await manager.query(`DELETE FROM events WHERE store_id = $1`, [
+              storeId,
+            ]);
+            // Clear sync/conflict logs
+            await manager.query(
+              `DELETE FROM conflict_audit_log WHERE store_id = $1`,
+              [storeId],
+            );
+            await manager.query(`DELETE FROM devices WHERE store_id = $1`, [
+              storeId,
+            ]);
+
+            // 5. Finally, delete the store
+            await manager.query('DELETE FROM stores WHERE id = $1', [storeId]);
+          });
+
           this.logger.log(`✅ Local data for store ${storeId} deleted successfully.`);
           return {
             storeId,
