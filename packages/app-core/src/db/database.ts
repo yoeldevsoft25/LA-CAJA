@@ -416,13 +416,13 @@ export class LaCajaDB extends Dexie {
     limit?: number;
   }): Promise<LocalProduct[]> {
     // 🚀 PERF: START WITH THE MOST SELECTIVE INDEX
-    let collection: Dexie.Collection<LocalProduct, string>;
+    let collection: Dexie.Collection<LocalProduct, any>;
 
     if (options?.is_active !== undefined) {
       // Usar índice compuesto [store_id+is_active]
-      collection = this.products
-        .where('[store_id+is_active]')
-        .equals([storeId, options.is_active ? 1 as any : 0 as any]);
+      collection = (this.products
+        .where('[store_id+is_active]') as any)
+        .equals([storeId, options.is_active]);
     } else if (options?.category) {
       // Usar índice compuesto [store_id+category]
       collection = this.products
@@ -433,25 +433,37 @@ export class LaCajaDB extends Dexie {
       collection = this.products.where('store_id').equals(storeId);
     }
 
+    // Fallback defensivo: si el índice compuesto no devuelve nada, usar store_id + filtro.
+    // Esto evita vacíos en catálogos offline por inconsistencias históricas de tipos.
+    let products = await collection.toArray();
+    if (options?.is_active !== undefined && products.length === 0) {
+      products = await this.products
+        .where('store_id')
+        .equals(storeId)
+        .filter((p) => p.is_active === options.is_active)
+        .toArray();
+    }
+
     // Filtros secundarios en memoria (solo sobre el subset indexado)
+    let filtered = products;
     if (options?.is_visible_public !== undefined) {
-      collection = collection.filter(p => p.is_visible_public === options.is_visible_public);
+      filtered = filtered.filter(p => p.is_visible_public === options.is_visible_public);
     }
 
     if (options?.product_type) {
-      collection = collection.filter(p => p.product_type === options.product_type);
+      filtered = filtered.filter(p => p.product_type === options.product_type);
     }
 
     // Si ya usamos category en el index, no filtramos de nuevo
     if (options?.category && options?.is_active === undefined) {
       // Ya filtrado por index
     } else if (options?.category) {
-      collection = collection.filter(p => p.category === options.category);
+      filtered = filtered.filter(p => p.category === options.category);
     }
 
     if (options?.search) {
       const searchLower = options.search.toLowerCase();
-      collection = collection.filter(p => {
+      filtered = filtered.filter(p => {
         // Búsqueda rápida por prefijo o inclusión
         return !!(p.name.toLowerCase().includes(searchLower) ||
           (p.sku && p.sku.toLowerCase().includes(searchLower)) ||
@@ -459,18 +471,14 @@ export class LaCajaDB extends Dexie {
       });
     }
 
-    // Limitar antes de cargar TODO a memoria si es posible
-    // Pero Dexie necesita cargar para ordenar por nombre si no hay índice
-    const products = await collection.toArray();
-
     // Ordenar por nombre
-    products.sort((a, b) => a.name.localeCompare(b.name));
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
 
     if (options?.limit) {
-      return products.slice(0, options.limit);
+      return filtered.slice(0, options.limit);
     }
 
-    return products;
+    return filtered;
   }
 
   async getProductById(id: string): Promise<LocalProduct | undefined> {

@@ -57,7 +57,11 @@ export default function POSPage() {
   // Usar store persistente para UI State
   const { searchQuery, isCheckoutOpen: showCheckout, setSearchQuery, setIsCheckoutOpen: setShowCheckout } = usePOSStore()
 
-  const [mobilePanel, setMobilePanel] = useState<'cart' | 'catalog'>('cart')
+  const [mobilePanel, setMobilePanel] = useState<'cart' | 'catalog'>(() => {
+    if (typeof window === 'undefined') return 'catalog'
+    const saved = window.localStorage.getItem('pos-mobile-panel')
+    return saved === 'cart' || saved === 'catalog' ? saved : 'catalog'
+  })
   const [shouldPrint, setShouldPrint] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -83,10 +87,9 @@ export default function POSPage() {
   )
 
   useEffect(() => {
-    if (!isMobile && mobilePanel !== 'cart') {
-      setMobilePanel('cart')
-    }
-  }, [isMobile, mobilePanel])
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('pos-mobile-panel', mobilePanel)
+  }, [mobilePanel])
 
   useEffect(() => {
     if (!isOnline || !user?.store_id || items.length === 0) return
@@ -293,7 +296,7 @@ export default function POSPage() {
           setTimeout(() => reject(new Error('timeout')), 8000)
         ),
       ]),
-    enabled: (normalizedSearchQuery.length >= 2 || normalizedSearchQuery.length === 0) && !!user?.store_id,
+    enabled: !!user?.store_id,
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: Infinity, // Nunca eliminar del cache
     retry: (failureCount, error: any) => {
