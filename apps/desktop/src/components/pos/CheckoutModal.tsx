@@ -6,7 +6,8 @@ import { calculateRoundedChangeWithMode, roundToNearestDenomination, roundToNear
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogHeader, DialogDescription, AccessibleDialogTitle } from '@/components/ui/dialog'
+import { CheckoutDialogContent } from './CheckoutDialogContent'
 import { cn } from '@/lib/utils'
 import SerialSelector from '@/components/serials/SerialSelector'
 import SplitPaymentManager from './SplitPaymentManager'
@@ -512,7 +513,7 @@ export default function CheckoutModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose() }}>
-        <DialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
+        <CheckoutDialogContent className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -608,7 +609,7 @@ export default function CheckoutModal({
             quantity={serialSelectorItem?.quantity || 0}
             onSelect={handleSerialSelect}
           />
-        </DialogContent>
+        </CheckoutDialogContent>
       </Dialog>
 
       <AlertDialog open={showStockWarningDialog} onOpenChange={setShowStockWarningDialog}>
