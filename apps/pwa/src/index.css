@@ -302,16 +302,6 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   FIX: Dialog Animation Override
-   Forces centered transform for dialogs to prevent "fly-in" glitch
-   ═══════════════════════════════════════════════════════════════════════ */
-[role="dialog"][data-state="open"],
-[data-state="open"].fixed.z-\[1000\] {
-  --tw-enter-translate-x: -50% !important;
-  --tw-enter-translate-y: -50% !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
    BASE LAYER
    ═══════════════════════════════════════════════════════════════════════ */
 @layer base {
@@ -788,7 +778,18 @@
     will-change: contents;
   }
 
-  /* Checkout modal animation: force center-anchored transform at all keyframes */
+  /* Checkout modal animation: isolate from ui-core/tailwind animation vars */
+  .checkout-dialog-content {
+    transform: translate(-50%, -50%);
+    transform-origin: center center;
+    will-change: transform, opacity;
+  }
+
+  .checkout-dialog-overlay {
+    background: hsl(220 20% 8% / 0.42);
+    will-change: opacity;
+  }
+
   @keyframes checkout-dialog-in {
     from {
       opacity: 0;
@@ -811,11 +812,38 @@
     }
   }
 
+  @keyframes checkout-overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes checkout-overlay-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
   .checkout-dialog-content[data-state="open"] {
-    animation: checkout-dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: checkout-dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .checkout-dialog-content[data-state="closed"] {
-    animation: checkout-dialog-out 140ms ease-in;
+    animation: checkout-dialog-out 140ms ease-in both;
+  }
+
+  .checkout-dialog-overlay[data-state="open"] {
+    animation: checkout-overlay-in 140ms ease-out both;
+  }
+
+  .checkout-dialog-overlay[data-state="closed"] {
+    animation: checkout-overlay-out 120ms ease-in both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .checkout-dialog-content[data-state="open"],
+    .checkout-dialog-content[data-state="closed"],
+    .checkout-dialog-overlay[data-state="open"],
+    .checkout-dialog-overlay[data-state="closed"] {
+      animation: none;
+    }
   }
 }

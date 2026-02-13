@@ -110,6 +110,8 @@ export default function CheckoutModal({
 
   const { state, actions } = useCheckoutState()
   const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState(state.customerData.search)
+  // Defer expensive data work until modal entrance animation completes.
+  const [isInteractionReady, setIsInteractionReady] = useState(false)
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -120,7 +122,7 @@ export default function CheckoutModal({
 
   const checkoutData = useCheckoutData({
     storeId: storeId || undefined,
-    isOpen,
+    isOpen: isOpen && isInteractionReady,
     customerSearch: debouncedCustomerSearch,
     selectedCustomerId: state.customerData.selectedId,
   })
@@ -137,9 +139,6 @@ export default function CheckoutModal({
 
   // Local processing state to bridge the gap between click and parent isLoading
   const [isProcessing, setIsProcessing] = useState(false)
-
-  // State for deferred rendering to ensure smooth entrance animation
-  const [isInteractionReady, setIsInteractionReady] = useState(false)
 
   useEffect(() => {
     if (isOpen) {

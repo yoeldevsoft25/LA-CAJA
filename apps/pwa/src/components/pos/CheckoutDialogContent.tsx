@@ -1,6 +1,6 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { DialogOverlay, DialogPortal, DialogClose } from '@/components/ui/dialog'
+import { DialogPortal, DialogClose } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-react'
 
@@ -9,11 +9,11 @@ export const CheckoutDialogContent = React.forwardRef<
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
     <DialogPortal>
-        <DialogOverlay className="z-[999]" />
+        <DialogPrimitive.Overlay className="checkout-dialog-overlay fixed inset-0 z-[999]" />
         <DialogPrimitive.Content
             ref={ref}
             className={cn(
-                "checkout-dialog-content fixed left-1/2 top-1/2 z-[1000] grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border border-border bg-background p-6 shadow-lg duration-200",
+                "checkout-dialog-content fixed left-1/2 top-1/2 z-[1000] grid w-full max-w-lg gap-4 border border-border bg-background p-6 shadow-lg",
                 className
             )}
             {...props}
