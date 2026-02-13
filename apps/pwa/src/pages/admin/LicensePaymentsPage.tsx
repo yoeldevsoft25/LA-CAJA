@@ -96,6 +96,7 @@ function getPlanBadge(plan: string) {
 export default function LicensePaymentsPage() {
   const queryClient = useQueryClient();
   const [adminKey, setAdminKey] = useState(() => adminService.getKey() || '');
+  const [adminKeyInput, setAdminKeyInput] = useState(() => adminService.getKey() || '');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchRef, setSearchRef] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<LicensePayment | null>(null);
@@ -137,19 +138,35 @@ export default function LicensePaymentsPage() {
     return true;
   }) || [];
 
+  const handleSubmitAdminKey = () => {
+    const normalized = adminKeyInput.trim();
+    if (!normalized) return;
+    adminService.setKey(normalized);
+    setAdminKey(normalized);
+    refetch();
+  };
+
+  const handleChangeAdminKey = () => {
+    adminService.clearKey();
+    setAdminKey('');
+    setAdminKeyInput('');
+    queryClient.removeQueries({ queryKey: ['license-payments'] });
+    queryClient.removeQueries({ queryKey: ['license-payments-stats'] });
+  };
+
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
       <BlurFade delay={0.1}>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
               <div className="p-2 rounded-2xl bg-[#0c81cf10] text-[#0c81cf]">
                 <CreditCard className="h-8 w-8" />
               </div>
               Pagos & Licencias
             </h1>
-            <p className="text-slate-500 mt-1">
+            <p className="text-muted-foreground mt-1">
               Verifica transacciones y gestiona el estado de las suscripciones
             </p>
           </div>
@@ -164,6 +181,15 @@ export default function LicensePaymentsPage() {
             />
             Actualizar Dashboard
           </Button>
+          {adminKey && (
+            <Button
+              variant="outline"
+              onClick={handleChangeAdminKey}
+              className="rounded-xl btn-glass-neutral shadow-sm"
+            >
+              Cambiar clave admin
+            </Button>
+          )}
         </div>
       </BlurFade>
 
@@ -173,22 +199,25 @@ export default function LicensePaymentsPage() {
             <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-[#0c81cf]">
               <ShieldCheck className="h-8 w-8" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Acceso Restringido</h2>
-            <p className="text-slate-500 mb-6 max-w-md">Esta área es para la administración financiera. Por favor ingresa tu clave maestra para continuar.</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Acceso Restringido</h2>
+            <p className="text-muted-foreground mb-6 max-w-md">Esta área es para la administración financiera. Por favor ingresa tu clave maestra para continuar.</p>
             <div className="flex gap-2 max-w-sm w-full">
               <Input
                 type="password"
                 placeholder="Admin Key"
-                value={adminKey}
+                value={adminKeyInput}
                 onChange={(e) => {
-                  setAdminKey(e.target.value);
-                  if (e.target.value) {
-                    adminService.setKey(e.target.value);
+                  setAdminKeyInput(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmitAdminKey();
                   }
                 }}
-                className="bg-white"
+                className="bg-card"
               />
-              <Button onClick={() => refetch()} disabled={!adminKey} className="bg-[#0c81cf] hover:bg-[#0a6fb3]">Ingresar</Button>
+              <Button onClick={handleSubmitAdminKey} disabled={!adminKeyInput.trim()} className="bg-[#0c81cf] hover:bg-[#0a6fb3]">Ingresar</Button>
             </div>
           </ShineBorder>
         </BlurFade>
@@ -210,18 +239,18 @@ export default function LicensePaymentsPage() {
             <BlurFade delay={0.2} inView>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                  { label: 'Total Pagos', value: stats.total, color: 'text-slate-900', icon: Building2 },
+                  { label: 'Total Pagos', value: stats.total, color: 'text-foreground', icon: Building2 },
                   { label: 'Pendientes', value: stats.pending, color: 'text-amber-500', icon: Clock },
                   { label: 'Verificando', value: stats.verified, color: 'text-[#0c81cf]', icon: RefreshCw },
                   { label: 'Aprobados', value: stats.approved, color: 'text-emerald-500', icon: CheckCircle2 },
                   { label: 'Rechazados', value: stats.rejected, color: 'text-rose-500', icon: XCircle },
-                  { label: 'Expirados', value: stats.expired, color: 'text-slate-400', icon: AlertCircle },
+                  { label: 'Expirados', value: stats.expired, color: 'text-muted-foreground/80', icon: AlertCircle },
                 ].map((stat, i) => (
-                  <Card key={i} className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
+                  <Card key={i} className="bg-card border-border shadow-sm hover:shadow-md transition-all duration-300">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <stat.icon className={cn("h-4 w-4", stat.color)} />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">{stat.label}</span>
                       </div>
                       <div className={cn("text-2xl font-bold", stat.color)}>
                         <NumberTicker value={stat.value} />
@@ -237,10 +266,10 @@ export default function LicensePaymentsPage() {
           <BlurFade delay={0.3}>
             <div className="flex flex-col md:flex-row gap-4 items-center">
               <div className="relative w-full md:w-96 group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-[#0c81cf] transition-colors" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80 w-4 h-4 group-focus-within:text-[#0c81cf] transition-colors" />
                 <Input
                   placeholder="Buscar por referencia de pago..."
-                  className="pl-9 bg-white border-slate-200 focus:border-[#0c81cf] transition-all rounded-xl shadow-sm"
+                  className="pl-9 bg-card border-border focus:border-[#0c81cf] transition-all rounded-xl shadow-sm"
                   value={searchRef}
                   onChange={(e) => setSearchRef(e.target.value)}
                 />
@@ -248,10 +277,10 @@ export default function LicensePaymentsPage() {
 
               <div className="flex gap-2 w-full md:w-auto">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-[180px] bg-white border-slate-200 rounded-xl h-10 shadow-sm text-xs font-semibold">
+                  <SelectTrigger className="w-full md:w-[180px] bg-card border-border rounded-xl h-10 shadow-sm text-xs font-semibold">
                     <SelectValue placeholder="Estado" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                  <SelectContent className="rounded-xl border-border shadow-xl">
                     <SelectItem value="all">Todos los estados</SelectItem>
                     <SelectItem value="pending">⏳ Pendiente</SelectItem>
                     <SelectItem value="verifying">🔄 Verificando</SelectItem>
@@ -267,26 +296,26 @@ export default function LicensePaymentsPage() {
 
           {/* Table-like List */}
           <BlurFade delay={0.4}>
-            <Card className="bg-white border-slate-200 shadow-sm overflow-hidden rounded-2xl">
+            <Card className="bg-card border-border shadow-sm overflow-hidden rounded-2xl">
               <CardHeader className="border-b border-border bg-card py-4 px-6">
-                <CardTitle className="text-base font-semibold text-slate-900">Historial de Transacciones</CardTitle>
+                <CardTitle className="text-base font-semibold text-foreground">Historial de Transacciones</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-border bg-card">
-                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tienda / Solicitante</th>
-                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Plan & Período</th>
-                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Referencia / Monto</th>
-                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estado</th>
-                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Fecha</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">Tienda / Solicitante</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">Plan & Período</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">Referencia / Monto</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">Estado</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest text-right">Fecha</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {filteredPayments.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                          <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground/80">
                             No se encontraron transacciones para estos filtros.
                           </td>
                         </tr>
@@ -303,16 +332,16 @@ export default function LicensePaymentsPage() {
                                   {payment.store?.name?.charAt(0) || <Building2 className="h-5 w-5" />}
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-slate-900 group-hover:text-[#0c81cf] transition-colors leading-tight">
+                                  <div className="font-semibold text-foreground group-hover:text-[#0c81cf] transition-colors leading-tight">
                                     {payment.store?.name || 'Tienda desconocida'}
                                   </div>
-                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">ID: {payment.store_id.substring(0, 8)}...</div>
+                                  <div className="text-[10px] text-muted-foreground/80 font-mono mt-0.5">ID: {payment.store_id.substring(0, 8)}...</div>
                                 </div>
                               </div>
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex flex-col gap-1">
-                                <span className="font-medium text-slate-700 text-sm whitespace-nowrap">
+                                <span className="font-medium text-foreground/80 text-sm whitespace-nowrap">
                                   {getPlanBadge(payment.plan)}
                                 </span>
                                 <Badge variant="outline" className="w-fit text-[9px] h-4 px-1 bg-card text-muted-foreground border-border">
@@ -322,11 +351,11 @@ export default function LicensePaymentsPage() {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
-                                <div className="font-mono text-xs text-slate-900 flex items-center gap-1">
-                                  <span className="text-slate-400">#</span>{payment.payment_reference}
+                                <div className="font-mono text-xs text-foreground flex items-center gap-1">
+                                  <span className="text-muted-foreground/80">#</span>{payment.payment_reference}
                                 </div>
                                 <div className="font-bold text-[#0c81cf] text-base mt-0.5">
-                                  ${payment.amount_usd} <span className="text-[10px] text-slate-400 font-normal">USD</span>
+                                  ${payment.amount_usd} <span className="text-[10px] text-muted-foreground/80 font-normal">USD</span>
                                 </div>
                               </div>
                             </td>
@@ -335,11 +364,11 @@ export default function LicensePaymentsPage() {
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex flex-col items-end gap-1">
-                                <div className="text-xs font-medium text-slate-900 flex items-center gap-1.5 justify-end">
-                                  <Calendar className="h-3 w-3 text-slate-400" />
+                                <div className="text-xs font-medium text-foreground flex items-center gap-1.5 justify-end">
+                                  <Calendar className="h-3 w-3 text-muted-foreground/80" />
                                   {format(parseISO(payment.created_at), 'dd/MM/yyyy')}
                                 </div>
-                                <div className="text-[10px] text-slate-400">
+                                <div className="text-[10px] text-muted-foreground/80">
                                   {format(parseISO(payment.created_at), 'HH:mm')} hrs
                                 </div>
                               </div>

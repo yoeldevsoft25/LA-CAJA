@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 // import { useNavigate } from 'react-router-dom'
 import { adminService, AdminStore, AdminMember } from '@/services/admin.service'
@@ -67,6 +67,7 @@ export default function AdminPage() {
   const [planFilter, setPlanFilter] = useState<string>('all')
   const [expiringIn] = useState<string>('none')
   const [adminKey, setAdminKey] = useState<string>(() => adminService.getKey() || '')
+  const [adminKeyInput, setAdminKeyInput] = useState<string>(() => adminService.getKey() || '')
   const [userSheetStore, setUserSheetStore] = useState<AdminStore | null>(null)
   const [planSheetStore, setPlanSheetStore] = useState<AdminStore | null>(null)
   const [newPlan, setNewPlan] = useState<string>('')
@@ -97,9 +98,20 @@ export default function AdminPage() {
     staleTime: 1000 * 30,
   })
 
-  useEffect(() => {
-    if (adminKey) adminService.setKey(adminKey)
-  }, [adminKey])
+  const handleSubmitAdminKey = () => {
+    const normalized = adminKeyInput.trim()
+    if (!normalized) return
+    adminService.setKey(normalized)
+    setAdminKey(normalized)
+    refetch()
+  }
+
+  const handleChangeAdminKey = () => {
+    adminService.clearKey()
+    setAdminKey('')
+    setAdminKeyInput('')
+    qc.removeQueries({ queryKey: ['admin-stores'] })
+  }
 
   const mutation = useMutation({
     mutationFn: (payload: { storeId: string; data: any }) =>
@@ -246,29 +258,38 @@ export default function AdminPage() {
       {/* Top Bar with Search and Create */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
         <div className="relative w-full md:w-96 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-[#0c81cf] transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/80 w-4 h-4 group-focus-within:text-[#0c81cf] transition-colors" />
           <Input
             placeholder="Buscar tienda por nombre o ID..."
-            className="pl-9 bg-white border-slate-200 focus:border-[#0c81cf] transition-all rounded-xl shadow-sm"
+            className="pl-9 bg-card border-border focus:border-[#0c81cf] transition-all rounded-xl shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         <div className="flex gap-2 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-1.5 py-1.5 shadow-sm">
+          {adminKey && (
+            <Button
+              variant="outline"
+              className="btn-glass-neutral"
+              onClick={handleChangeAdminKey}
+            >
+              Cambiar clave admin
+            </Button>
+          )}
+          <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-1.5 py-1.5 shadow-sm">
             <Input
               placeholder="Nombre nueva tienda"
               value={newStore.name}
               onChange={(e) => setNewStore((prev) => ({ ...prev, name: e.target.value }))}
-              className="h-9 bg-transparent border-none focus-visible:ring-0 text-slate-900 placeholder:text-slate-400 w-48"
+              className="h-9 bg-transparent border-none focus-visible:ring-0 text-foreground placeholder:text-muted-foreground/80 w-48"
             />
             <div className="h-6 w-px bg-slate-200" />
             <Input
               placeholder="Días"
               value={newStore.days}
               onChange={(e) => setNewStore((prev) => ({ ...prev, days: e.target.value }))}
-              className="h-9 bg-transparent border-none focus-visible:ring-0 text-slate-900 w-16 text-center"
+              className="h-9 bg-transparent border-none focus-visible:ring-0 text-foreground w-16 text-center"
             />
             <Button
               size="sm"
@@ -285,55 +306,55 @@ export default function AdminPage() {
       {/* Bento Grid Stats */}
       <BlurFade delay={0.1}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-card border-border shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Total Tiendas</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Tiendas</CardTitle>
               <Store className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900">
+              <div className="text-2xl font-bold text-foreground">
                 <NumberTicker value={stats.total} />
               </div>
-              <p className="text-xs text-slate-400">Registradas en plataforma</p>
+              <p className="text-xs text-muted-foreground/80">Registradas en plataforma</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-card border-border shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Activas</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Activas</CardTitle>
               <Activity className="h-4 w-4 text-[#0c81cf]" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#0c81cf]">
                 <NumberTicker value={stats.active} />
               </div>
-              <p className="text-xs text-slate-400">Licencias vigentes</p>
+              <p className="text-xs text-muted-foreground/80">Licencias vigentes</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-card border-border shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Suspendidas</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Suspendidas</CardTitle>
               <ShieldOff className="h-4 w-4 text-rose-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-rose-500">
                 <NumberTicker value={stats.suspended} />
               </div>
-              <p className="text-xs text-slate-400">Acceso bloqueado</p>
+              <p className="text-xs text-muted-foreground/80">Acceso bloqueado</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-card border-border shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Riesgo Expiración</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Riesgo Expiración</CardTitle>
               <AlertTriangle className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-amber-500">
                 <NumberTicker value={stats.expiringSoon} />
               </div>
-              <p className="text-xs text-slate-400">Expiran en &lt; 7 días</p>
+              <p className="text-xs text-muted-foreground/80">Expiran en &lt; 7 días</p>
             </CardContent>
           </Card>
         </div>
@@ -347,17 +368,23 @@ export default function AdminPage() {
               <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-[#0c81cf]">
                 <ShieldCheck className="h-8 w-8" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Acceso Restringido</h2>
-              <p className="text-slate-500 mb-6 max-w-md">Esta área es exclusiva para administradores del sistema. Por favor ingresa tu clave maestra para continuar.</p>
+              <h2 className="text-2xl font-bold text-foreground mb-2">Acceso Restringido</h2>
+              <p className="text-muted-foreground mb-6 max-w-md">Esta área es exclusiva para administradores del sistema. Por favor ingresa tu clave maestra para continuar.</p>
               <div className="flex gap-2 max-w-sm w-full">
                 <Input
                   type="password"
                   placeholder="Admin Key"
-                  value={adminKey}
-                  onChange={(e) => setAdminKey(e.target.value)}
-                  className="bg-white"
+                  value={adminKeyInput}
+                  onChange={(e) => setAdminKeyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleSubmitAdminKey()
+                    }
+                  }}
+                  className="bg-card"
                 />
-                <Button onClick={() => refetch()} disabled={!adminKey} className="bg-[#0c81cf] hover:bg-[#0a6fb3]">Ingresar</Button>
+                <Button onClick={handleSubmitAdminKey} disabled={!adminKeyInput.trim()} className="bg-[#0c81cf] hover:bg-[#0a6fb3]">Ingresar</Button>
               </div>
             </ShineBorder>
           </BlurFade>
@@ -374,16 +401,16 @@ export default function AdminPage() {
           </Card>
         ) : (
           <BlurFade delay={0.3}>
-            <Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
-              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+            <Card className="bg-card border-border shadow-sm overflow-hidden">
+              <CardHeader className="border-b border-border/60 bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Tiendas Registradas</CardTitle>
-                    <p className="text-sm text-slate-500 mt-1">Gestión centralizada de clientes y licencias</p>
+                    <p className="text-sm text-muted-foreground mt-1">Gestión centralizada de clientes y licencias</p>
                   </div>
                   <div className="flex gap-2">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[130px] h-8 bg-white text-xs">
+                      <SelectTrigger className="w-[130px] h-8 bg-card text-xs">
                         <SelectValue placeholder="Estado" />
                       </SelectTrigger>
                       <SelectContent>
@@ -394,7 +421,7 @@ export default function AdminPage() {
                       </SelectContent>
                     </Select>
                     <Select value={planFilter} onValueChange={setPlanFilter}>
-                      <SelectTrigger className="w-[130px] h-8 bg-white text-xs">
+                      <SelectTrigger className="w-[130px] h-8 bg-card text-xs">
                         <SelectValue placeholder="Plan" />
                       </SelectTrigger>
                       <SelectContent>
@@ -410,7 +437,7 @@ export default function AdminPage() {
               </CardHeader>
               <div className="p-0">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+                  <thead className="bg-muted/30 text-muted-foreground font-medium border-b border-border/60">
                     <tr>
                       <th className="px-6 py-3">Tienda</th>
                       <th className="px-6 py-3">Estado</th>
@@ -420,17 +447,17 @@ export default function AdminPage() {
                       <th className="px-6 py-3 text-right">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border/60">
                     {sorted.map((store /*, i*/) => (
-                      <tr key={store.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <tr key={store.id} className="hover:bg-muted/30 transition-colors group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-[#0c81cf] to-[#0ea5e9] flex items-center justify-center text-white font-bold text-lg shadow-sm">
                               {store.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-semibold text-slate-900 group-hover:text-[#0c81cf] transition-colors">{store.name}</div>
-                              <div className="text-xs text-slate-400 font-mono">{store.id.substring(0, 8)}...</div>
+                              <div className="font-semibold text-foreground group-hover:text-[#0c81cf] transition-colors">{store.name}</div>
+                              <div className="text-xs text-muted-foreground/80 font-mono">{store.id.substring(0, 8)}...</div>
                             </div>
                           </div>
                         </td>
@@ -438,23 +465,23 @@ export default function AdminPage() {
                           {statusBadge(store)}
                         </td>
                         <td className="px-6 py-4">
-                          <Badge variant="outline" className="font-normal capitalize bg-slate-50 text-slate-600 border-slate-200">
+                          <Badge variant="outline" className="font-normal capitalize bg-muted/30 text-slate-600 border-border">
                             {store.license_plan || 'N/A'}
                           </Badge>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-slate-900 font-medium">{formatDate(store.license_expires_at)}</div>
-                          <div className="text-xs text-slate-400">{formatDistance(store.license_expires_at)}</div>
+                          <div className="text-foreground font-medium">{formatDate(store.license_expires_at)}</div>
+                          <div className="text-xs text-muted-foreground/80">{formatDistance(store.license_expires_at)}</div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex -space-x-2 overflow-hidden">
                             {store.members?.slice(0, 3).map((m, idx) => (
-                              <div key={idx} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-100 flex items-center justify-center text-[10px] text-slate-600 font-bold" title={m.full_name ?? 'Usuario'}>
+                              <div key={idx} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-muted/50 flex items-center justify-center text-[10px] text-slate-600 font-bold" title={m.full_name ?? 'Usuario'}>
                                 {m.full_name ? m.full_name.charAt(0) : '?'}
                               </div>
                             ))}
                             {(store.member_count || 0) > 3 && (
-                              <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-50 flex items-center justify-center text-[10px] text-slate-400">
+                              <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-muted/30 flex items-center justify-center text-[10px] text-muted-foreground/80">
                                 +{store.member_count - 3}
                               </div>
                             )}
@@ -463,7 +490,7 @@ export default function AdminPage() {
                         <td className="px-6 py-4 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/80 hover:text-foreground">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -494,7 +521,7 @@ export default function AdminPage() {
                   </tbody>
                 </table>
                 {sorted.length === 0 && (
-                  <div className="p-12 text-center text-slate-500">
+                  <div className="p-12 text-center text-muted-foreground">
                     No se encontraron tiendas con los filtros seleccionados.
                   </div>
                 )}
@@ -506,33 +533,33 @@ export default function AdminPage() {
 
       {/* Sheet para usuarios */}
       <Sheet open={!!userSheetStore} onOpenChange={(open) => !open && setUserSheetStore(null)}>
-        <SheetContent className="bg-white text-slate-900 border-slate-200 w-[420px]">
+        <SheetContent className="bg-card text-foreground border-border w-[420px]">
           <SheetHeader>
-            <SheetTitle className="text-slate-900">Usuarios de {userSheetStore?.name || ''}</SheetTitle>
-            <SheetDescription className="text-slate-500">
+            <SheetTitle className="text-foreground">Usuarios de {userSheetStore?.name || ''}</SheetTitle>
+            <SheetDescription className="text-muted-foreground">
               Crea, revisa o elimina usuarios (owner/cashier) de la tienda.
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-4 space-y-4">
             {isMembersLoading ? (
-              <p className="text-sm text-slate-500">Cargando usuarios...</p>
+              <p className="text-sm text-muted-foreground">Cargando usuarios...</p>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Usuarios</p>
-                <ScrollArea className="h-48 rounded-md border border-slate-200">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Usuarios</p>
+                <ScrollArea className="h-48 rounded-md border border-border">
                   <div className="p-3 space-y-2">
                     {(members ?? []).map((m) => (
                       <div
                         key={m.user_id}
-                        className="flex items-center justify-between rounded border border-slate-200 px-3 py-2"
+                        className="flex items-center justify-between rounded border border-border px-3 py-2"
                       >
                         <div>
-                          <div className="text-sm font-semibold text-slate-900">{m.full_name || m.user_id}</div>
-                          <div className="text-[11px] text-slate-500">{m.user_id}</div>
+                          <div className="text-sm font-semibold text-foreground">{m.full_name || m.user_id}</div>
+                          <div className="text-[11px] text-muted-foreground">{m.user_id}</div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="border-slate-200 text-slate-700">
+                          <Badge variant="outline" className="border-border text-foreground/80">
                             {m.role}
                           </Badge>
                           <Button
@@ -548,7 +575,7 @@ export default function AdminPage() {
                       </div>
                     ))}
                     {(members ?? []).length === 0 && (
-                      <div className="text-sm text-slate-400 text-center py-6">Sin usuarios aún.</div>
+                      <div className="text-sm text-muted-foreground/80 text-center py-6">Sin usuarios aún.</div>
                     )}
                   </div>
                 </ScrollArea>
@@ -558,45 +585,45 @@ export default function AdminPage() {
             <Separator className="bg-slate-200" />
 
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Crear usuario</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Crear usuario</p>
               <div className="space-y-2">
-                <Label className="text-slate-700">Nombre</Label>
+                <Label className="text-foreground/80">Nombre</Label>
                 <Input
                   value={newUser.full_name}
                   onChange={(e) => setNewUser((prev) => ({ ...prev, full_name: e.target.value }))}
-                  className="bg-white border-slate-200 text-slate-900"
+                  className="bg-card border-border text-foreground"
                   placeholder="Nombre completo"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700">Rol</Label>
+                <Label className="text-foreground/80">Rol</Label>
                 <Select
                   value={newUser.role}
                   onValueChange={(val) => setNewUser((prev) => ({ ...prev, role: val as 'owner' | 'cashier' }))}
                 >
-                  <SelectTrigger className="bg-white border-slate-200 text-slate-900">
+                  <SelectTrigger className="bg-card border-border text-foreground">
                     <SelectValue placeholder="Rol" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                  <SelectContent className="bg-card border-border text-foreground">
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="cashier">Cashier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700">PIN / Contraseña</Label>
+                <Label className="text-foreground/80">PIN / Contraseña</Label>
                 <Input
                   type="password"
                   value={newUser.pin}
                   onChange={(e) => setNewUser((prev) => ({ ...prev, pin: e.target.value }))}
-                  className="bg-white border-slate-200 text-slate-900"
+                  className="bg-card border-border text-foreground"
                   placeholder={
                     newUser.role === 'cashier'
                       ? 'PIN para cajero (4-6 dígitos)'
                       : 'PIN para owner (4-6 dígitos, opcional pero recomendado)'
                   }
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {newUser.role === 'cashier'
                     ? 'Requerido para cajeros.'
                     : 'Si lo defines, el owner podrá ingresar con este PIN.'}
@@ -621,31 +648,31 @@ export default function AdminPage() {
 
       {/* Sheet para cambiar plan */}
       <Sheet open={!!planSheetStore} onOpenChange={(open) => !open && setPlanSheetStore(null)}>
-        <SheetContent className="bg-white text-slate-900 border-slate-200 w-[420px]">
+        <SheetContent className="bg-card text-foreground border-border w-[420px]">
           <SheetHeader>
-            <SheetTitle className="text-slate-900">Cambiar Plan - {planSheetStore?.name || ''}</SheetTitle>
-            <SheetDescription className="text-slate-500">
+            <SheetTitle className="text-foreground">Cambiar Plan - {planSheetStore?.name || ''}</SheetTitle>
+            <SheetDescription className="text-muted-foreground">
               Actualiza el plan de suscripción de esta tienda.
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label className="text-slate-700">Plan Actual</Label>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                <Badge variant="outline" className="border-slate-200 text-slate-700">
+              <Label className="text-foreground/80">Plan Actual</Label>
+              <div className="p-3 bg-muted/30 border border-border rounded-lg">
+                <Badge variant="outline" className="border-border text-foreground/80">
                   {planSheetStore?.license_plan || 'Sin plan'}
                 </Badge>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-700">Nuevo Plan</Label>
+              <Label className="text-foreground/80">Nuevo Plan</Label>
               <Select value={newPlan} onValueChange={setNewPlan}>
-                <SelectTrigger className="bg-white border-slate-200 text-slate-900">
+                <SelectTrigger className="bg-card border-border text-foreground">
                   <SelectValue placeholder="Selecciona un plan" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectContent className="bg-card border-border text-foreground">
                   <SelectItem value="freemium">🆓 Freemium - GRATIS</SelectItem>
                   <SelectItem value="basico">💼 Básico - $29/mes</SelectItem>
                   <SelectItem value="profesional">🚀 Profesional - $79/mes</SelectItem>
@@ -655,17 +682,17 @@ export default function AdminPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-700">Fecha de Expiración (opcional)</Label>
+              <Label className="text-foreground/80">Fecha de Expiración (opcional)</Label>
               <div className="flex gap-2">
                 <Input
                   type="number"
                   placeholder="Días desde hoy"
                   value={planExpiryDays}
                   onChange={(e) => setPlanExpiryDays(e.target.value)}
-                  className="bg-white border-slate-200 text-slate-900"
+                  className="bg-card border-border text-foreground"
                 />
                 {planExpiryDays && (
-                  <div className="text-xs text-slate-500 flex items-center gap-1">
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {formatDate(
                       new Date(Date.now() + Number(planExpiryDays) * 86400000).toISOString()
@@ -673,7 +700,7 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Deja vacío para mantener la fecha actual. Ingresa días para extender desde hoy.
               </p>
             </div>

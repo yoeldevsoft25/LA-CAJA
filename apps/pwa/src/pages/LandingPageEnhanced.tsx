@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useScroll, useTransform, Variants } from 'framer-motion'
 import {
@@ -54,6 +54,16 @@ export default function LandingPageEnhanced() {
   const heroTitleY = useTransform(scrollYProgress, [0, 0.25], [0, -18])
   const heroSubtitleY = useTransform(scrollYProgress, [0, 0.25], [0, -10])
   const progressWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
+
+  useEffect(() => {
+    // La landing se mantiene en estética clara para preservar identidad de marca.
+    const root = document.documentElement
+    const hadDark = root.classList.contains('dark')
+    root.classList.remove('dark')
+    return () => {
+      if (hadDark) root.classList.add('dark')
+    }
+  }, [])
 
   const features = useMemo(
     () => [
@@ -195,7 +205,7 @@ export default function LandingPageEnhanced() {
           style={{ y: haloY3 }}
           className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(12,129,207,0.12),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(12,129,207,0.1),transparent_40%),linear-gradient(120deg,rgba(12,129,207,0.03),transparent_30%)]"
         />
-        <div className={`absolute inset-0 opacity-20 mix-blend-soft-light bg-[url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="180" height="180" filter="url(%23n)" opacity="0.35"/></svg>')] bg-repeat`} />
+        <div className={`absolute inset-0 opacity-12 bg-[url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="180" height="180" filter="url(%23n)" opacity="0.35"/></svg>')] bg-repeat`} />
       </div>
 
       {/* Header */}
