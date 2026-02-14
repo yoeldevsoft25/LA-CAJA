@@ -23,6 +23,9 @@ import { CashLedgerEntry } from '../database/entities/cash-ledger-entry.entity';
 import { StockEscrow } from '../database/entities/stock-escrow.entity';
 import { FiscalInvoice } from '../database/entities/fiscal-invoice.entity';
 import { randomUUID } from 'crypto';
+import { v5 as uuidv5 } from 'uuid';
+
+const PROJECTION_NAMESPACE = 'e4566d5d-c689-4676-a664-47f6d22df2b7';
 import { WhatsAppMessagingService } from '../whatsapp/whatsapp-messaging.service';
 import { FiscalInvoicesService } from '../fiscal-invoices/fiscal-invoices.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
@@ -93,7 +96,7 @@ export class ProjectionsService {
     private warehousesService: WarehousesService,
     private metricsService: SyncMetricsService,
     private invoiceSeriesService: InvoiceSeriesService,
-  ) {}
+  ) { }
 
   private toBoolean(value: unknown): boolean {
     if (typeof value === 'boolean') {
@@ -267,31 +270,31 @@ export class ProjectionsService {
 
     const resolvedPhone =
       (typeof customerPayload.phone === 'string' &&
-      customerPayload.phone.trim().length > 0
+        customerPayload.phone.trim().length > 0
         ? customerPayload.phone.trim()
         : null) ||
       (typeof rawPayload.customer_phone === 'string' &&
-      rawPayload.customer_phone.trim().length > 0
+        rawPayload.customer_phone.trim().length > 0
         ? rawPayload.customer_phone.trim()
         : null);
 
     const resolvedDocumentId =
       (typeof customerPayload.document_id === 'string' &&
-      customerPayload.document_id.trim().length > 0
+        customerPayload.document_id.trim().length > 0
         ? customerPayload.document_id.trim()
         : null) ||
       (typeof rawPayload.customer_document_id === 'string' &&
-      rawPayload.customer_document_id.trim().length > 0
+        rawPayload.customer_document_id.trim().length > 0
         ? rawPayload.customer_document_id.trim()
         : null);
 
     const resolvedEmail =
       (typeof customerPayload.email === 'string' &&
-      customerPayload.email.trim().length > 0
+        customerPayload.email.trim().length > 0
         ? customerPayload.email.trim()
         : null) ||
       (typeof rawPayload.customer_email === 'string' &&
-      rawPayload.customer_email.trim().length > 0
+        rawPayload.customer_email.trim().length > 0
         ? rawPayload.customer_email.trim()
         : null);
 
@@ -875,13 +878,13 @@ export class ProjectionsService {
           const productIds = payload.items.map((i) => i.product_id);
           const deviceEscrows = event.device_id
             ? await manager.getRepository(StockEscrow).find({
-                where: {
-                  store_id: event.store_id,
-                  device_id: event.device_id,
-                  product_id: In(productIds),
-                  expires_at: MoreThan(new Date()),
-                },
-              })
+              where: {
+                store_id: event.store_id,
+                device_id: event.device_id,
+                product_id: In(productIds),
+                expires_at: MoreThan(new Date()),
+              },
+            })
             : [];
 
           const escrowMap = new Map<string, StockEscrow>();
@@ -895,7 +898,7 @@ export class ProjectionsService {
           for (const item of payload.items) {
             const totalQty =
               this.toBoolean(item.is_weight_product) &&
-              item.weight_value != null
+                item.weight_value != null
                 ? this.toNumber(item.weight_value)
                 : this.toNumber(item.qty);
 
@@ -1052,9 +1055,9 @@ export class ProjectionsService {
           fiscalInvoiceForAccounting?.status === 'issued'
             ? fiscalInvoiceForAccounting
             : await this.fiscalInvoicesService.findBySale(
-                event.store_id,
-                savedSale.id,
-              );
+              event.store_id,
+              savedSale.id,
+            );
 
         if (issuedInvoice && issuedInvoice.status === 'issued') {
           await this.accountingService.generateEntryFromFiscalInvoice(
@@ -1563,7 +1566,10 @@ export class ProjectionsService {
     const payload = event.payload as unknown as StockQuotaGrantedPayload;
     if (!payload.quota_id) return;
 
-    const movementId = `grant-${payload.request_id || payload.quota_id}`;
+    const movementId = uuidv5(
+      `grant-${payload.request_id || payload.quota_id}`,
+      PROJECTION_NAMESPACE,
+    );
     const exists = await this.movementRepository.findOne({
       where: { id: movementId, store_id: event.store_id },
     });
@@ -1640,7 +1646,10 @@ export class ProjectionsService {
     const payload = event.payload as unknown as StockQuotaTransferredPayload;
     if (!payload.request_id) return;
 
-    const movementId = `transfer-${payload.request_id}`;
+    const movementId = uuidv5(
+      `transfer-${payload.request_id}`,
+      PROJECTION_NAMESPACE,
+    );
     const exists = await this.movementRepository.findOne({
       where: { id: movementId, store_id: event.store_id },
     });
@@ -1720,7 +1729,10 @@ export class ProjectionsService {
     const payload = event.payload as unknown as StockQuotaReclaimedPayload;
     if (!payload.request_id) return;
 
-    const movementId = `reclaim-${payload.request_id}`;
+    const movementId = uuidv5(
+      `reclaim-${payload.request_id}`,
+      PROJECTION_NAMESPACE,
+    );
     const exists = await this.movementRepository.findOne({
       where: { id: movementId, store_id: event.store_id },
     });
