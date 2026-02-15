@@ -428,7 +428,7 @@ export default function CheckoutModal({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card p-4 shadow-sm">
+      <section className="rounded-2xl border border-primary/20 bg-linear-to-br from-primary/10 via-card to-card p-4 shadow-sm">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">Total pagable</p>
         <div className="mt-2 flex items-end justify-between gap-2">
           <p className="text-3xl font-black tracking-tight text-foreground tabular-nums sm:text-4xl">
@@ -572,7 +572,7 @@ export default function CheckoutModal({
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading && !isProcessing) onClose() }}>
         <CheckoutDialogContent
-          className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto] duration-200 sm:rounded-[var(--radius)]"
+          className="[&>button]:hidden w-[calc(100vw-1rem)] max-w-[1180px] h-[calc(100dvh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100dvh-2rem)] lg:h-[min(860px,calc(100dvh-3rem))] overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl grid grid-rows-[auto_minmax(0,1fr)_auto] duration-200 sm:rounded-(--radius)"
         >
           <DialogHeader className="border-b border-border bg-card px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-start justify-between gap-3">

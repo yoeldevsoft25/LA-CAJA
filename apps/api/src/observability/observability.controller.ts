@@ -8,6 +8,7 @@ import {
   UseGuards,
   Request,
   Patch,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -38,11 +39,13 @@ import { FederationHealthReport } from '../sync/split-brain-monitor.service';
 @Roles('owner')
 @ApiBearerAuth('JWT-auth')
 export class ObservabilityController {
+  private readonly logger = new Logger(ObservabilityController.name);
+
   constructor(
     private observabilityService: ObservabilityService,
     private alertService: AlertService,
     private uptimeTracker: UptimeTrackerService,
-  ) {}
+  ) { }
 
   @Get('federation-health')
   @ApiOperation({ summary: 'Get federation health reports for all stores' })
@@ -70,7 +73,12 @@ export class ObservabilityController {
   @ApiOperation({ summary: 'Obtener estado general del sistema' })
   @ApiResponse({ status: 200, type: HealthStatusDto })
   async getStatus(): Promise<HealthStatusDto> {
-    return this.observabilityService.getStatus();
+    try {
+      return await this.observabilityService.getStatus();
+    } catch (error) {
+      this.logger.error(`Failed to get status`, error);
+      throw error;
+    }
   }
 
   @Get('services')
@@ -93,7 +101,12 @@ export class ObservabilityController {
     @Query('service') serviceName?: string,
     @Query('days') days?: number,
   ): Promise<UptimeStatsDto> {
-    return this.uptimeTracker.calculateUptime(serviceName, days || 30);
+    try {
+      return await this.uptimeTracker.calculateUptime(serviceName, days || 30);
+    } catch (error) {
+      this.logger.error(`Failed to get uptime`, error);
+      throw error;
+    }
   }
 
   @Get('uptime/history')
@@ -123,13 +136,18 @@ export class ObservabilityController {
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
-    return this.alertService.getAlerts(
-      status as any,
-      severity as any,
-      serviceName,
-      limit || 100,
-      offset || 0,
-    );
+    try {
+      return await this.alertService.getAlerts(
+        status as any,
+        severity as any,
+        serviceName,
+        limit || 100,
+        offset || 0,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to get alerts`, error);
+      throw error;
+    }
   }
 
   @Post('alerts')

@@ -943,8 +943,8 @@ export default function POSPage() {
 
               {/* Resultados de búsqueda móviles con posicionamiento CSS absoluto (Zero Reflow) */}
               {mobilePanel === 'cart' && searchQuery.trim().length >= 2 && (
-                <div className="absolute top-full left-0 right-0 z-[100] mt-1 pr-0 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="rounded-xl border border-border/50 bg-card shadow-2xl overflow-hidden border-primary/20">
+                <div className="absolute top-full left-0 right-0 z-100 mt-1 pr-0 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="rounded-xl border border-primary/20 bg-card shadow-2xl overflow-hidden">
                     <div className="px-3 py-2 border-b border-border/40 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] bg-primary/5">
                       Resultados
                     </div>

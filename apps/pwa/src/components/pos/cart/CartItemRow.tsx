@@ -48,7 +48,7 @@ export function CartItemRow({
             <div className="flex gap-3">
                 {/* 1. Icono Grande */}
                 <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mt-1",
+                    "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors mt-1",
                     isInvalid ? "bg-destructive/10 text-destructive" : "bg-primary/5 text-primary/70 group-hover:bg-primary/10 group-hover:text-primary"
                 )}>
                     {item.is_weight_product ? (

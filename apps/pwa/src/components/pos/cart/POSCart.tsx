@@ -80,7 +80,7 @@ const POSCart = memo(function POSCart({
                 />
 
                 {/* Header del Carrito (Título + Limpiar) */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 flex-shrink-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="bg-primary/10 p-2 rounded-full">
                             <ShoppingCartIcon className="w-5 h-5 text-primary" />

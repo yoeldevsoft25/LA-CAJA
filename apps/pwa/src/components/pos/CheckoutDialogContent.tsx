@@ -9,11 +9,11 @@ export const CheckoutDialogContent = React.forwardRef<
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
     <DialogPortal>
-        <DialogPrimitive.Overlay className="checkout-dialog-overlay fixed inset-0 z-[999]" />
+        <DialogPrimitive.Overlay className="checkout-dialog-overlay fixed inset-0 z-999" />
         <DialogPrimitive.Content
             ref={ref}
             className={cn(
-                "checkout-dialog-content fixed left-1/2 top-1/2 z-[1000] grid w-full max-w-lg gap-4 border border-border bg-background p-6 shadow-lg",
+                "checkout-dialog-content fixed left-1/2 top-1/2 z-1000 grid w-full max-w-lg gap-4 border border-border bg-background p-6 shadow-lg",
                 className
             )}
             {...props}

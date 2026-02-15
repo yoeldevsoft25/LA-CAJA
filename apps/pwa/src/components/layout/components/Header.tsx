@@ -66,8 +66,7 @@ export const Header = memo(function Header({
     return (
         <header
             className="sticky top-0 z-40 border-b app-shell-header
-                 transition-[background-color,border-color] duration-300
-                 relative"
+                 transition-[background-color,border-color] duration-300"
         >
             <div className="flex h-14 items-center gap-2 sm:gap-3 px-3 sm:px-4">
                 {/* Logo (Desktop) — Compacto y elegante */}
@@ -164,7 +163,7 @@ export const Header = memo(function Header({
                     {/* Online indicator (mobile only) */}
                     <span
                         className="sm:hidden inline-flex h-2 w-2 rounded-full bg-[hsl(var(--success))] animate-pulse
-                       shadow-[0_0_0_3px_hsl(var(--success)_/_0.18)]"
+                       shadow-[0_0_0_3px_hsl(var(--success)/0.18)]"
                         aria-hidden="true"
                     />
 

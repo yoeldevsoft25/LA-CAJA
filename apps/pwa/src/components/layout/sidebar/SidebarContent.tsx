@@ -87,7 +87,7 @@ export const SidebarContent = React.memo(({
                                                                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                                         )}
                                                     >
-                                                        <SectionIcon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={hasActiveItem ? 2.5 : 1.75} />
+                                                        <SectionIcon className="w-[18px] h-[18px] shrink-0" strokeWidth={hasActiveItem ? 2.5 : 1.75} />
                                                         {/* Active indicator dot */}
                                                         {hasActiveItem && (
                                                             <motion.span
@@ -133,15 +133,15 @@ export const SidebarContent = React.memo(({
                                                                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                                         )}
                                                     >
-                                                        <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 1.75} />
+                                                        <Icon className="w-4 h-4 shrink-0" strokeWidth={active ? 2.5 : 1.75} />
                                                         <span className="flex-1 text-left truncate">{item.label}</span>
                                                         {item.badge && (
                                                             <Badge
                                                                 variant="secondary"
                                                                 className={cn(
-                                                                    "text-[9px] h-4 px-1 flex-shrink-0",
+                                                                    "text-[9px] h-4 px-1 shrink-0",
                                                                     item.badge === 'Nuevo' && "bg-primary/15 text-primary border-0",
-                                                                    item.badge === 'Beta' && "bg-[hsl(var(--warning)_/_0.16)] text-[hsl(var(--warning))] border-0"
+                                                                    item.badge === 'Beta' && "bg-[hsl(var(--warning)/0.16)] text-[hsl(var(--warning))] border-0"
                                                                 )}
                                                             >
                                                                 {item.badge}
@@ -159,7 +159,7 @@ export const SidebarContent = React.memo(({
                 </ScrollArea>
 
                 {/* Expand button */}
-                <div className="p-2 flex-shrink-0 border-t border-border/30">
+                <div className="p-2 shrink-0 border-t border-border/30">
                     <Button
                         variant="ghost"
                         size="sm"
@@ -203,7 +203,7 @@ export const SidebarContent = React.memo(({
                                         <div className="flex items-center gap-2.5 flex-1">
                                             <SectionIcon
                                                 className={cn(
-                                                    "w-[18px] h-[18px] flex-shrink-0 transition-colors",
+                                                    "w-[18px] h-[18px] shrink-0 transition-colors",
                                                     hasActiveItem ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground"
                                                 )}
                                                 strokeWidth={hasActiveItem ? 2.5 : 1.75}
@@ -241,15 +241,15 @@ export const SidebarContent = React.memo(({
                                                                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                                             />
                                                         )}
-                                                        <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={active ? 2.5 : 1.75} />
+                                                        <Icon className="w-4 h-4 shrink-0" strokeWidth={active ? 2.5 : 1.75} />
                                                         <span className="flex-1 text-left truncate">{item.label}</span>
                                                         {item.badge && (
                                                             <Badge
                                                                 variant="secondary"
                                                                 className={cn(
-                                                                    "text-[9px] h-4 px-1.5 flex-shrink-0 font-semibold",
+                                                                    "text-[9px] h-4 px-1.5 shrink-0 font-semibold",
                                                                     item.badge === 'Nuevo' && "bg-primary/15 text-primary border-0",
-                                                                    item.badge === 'Beta' && "bg-[hsl(var(--warning)_/_0.16)] text-[hsl(var(--warning))] border-0"
+                                                                    item.badge === 'Beta' && "bg-[hsl(var(--warning)/0.16)] text-[hsl(var(--warning))] border-0"
                                                                 )}
                                                             >
                                                                 {item.badge}
@@ -268,7 +268,7 @@ export const SidebarContent = React.memo(({
             </ScrollArea>
 
             {/* Collapse/Close button */}
-            <div className="p-3 flex-shrink-0 border-t border-border/30">
+            <div className="p-3 shrink-0 border-t border-border/30">
                 {!isMobile ? (
                     <Button
                         variant="ghost"
