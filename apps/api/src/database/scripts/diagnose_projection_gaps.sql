@@ -12,7 +12,7 @@ SELECT
     e.projection_error
 FROM events e
 LEFT JOIN sales s ON s.id = (e.payload->>'sale_id')::uuid
-WHERE e.store_id = '89c07cf6-c32f-488f-9e5c-097a89278292' -- Replace with actual store ID if different
+WHERE e.store_id = '89c07cf6-a02f-4afe-adc8-896f8bae6187'
   AND e.type = 'SaleCreated'
   AND e.created_at < NOW() - INTERVAL '1 minute'
   AND e.projection_status IN ('processed', 'failed')
@@ -30,7 +30,7 @@ SELECT
     e.projection_error
 FROM events e
 LEFT JOIN debts d ON d.id = (e.payload->>'debt_id')::uuid
-WHERE e.store_id = '89c07cf6-c32f-488f-9e5c-097a89278292' -- Replace with actual store ID if different
+WHERE e.store_id = '89c07cf6-a02f-4afe-adc8-896f8bae6187'
   AND e.type = 'DebtCreated'
   AND e.created_at < NOW() - INTERVAL '1 minute'
   AND e.projection_status IN ('processed', 'failed')
