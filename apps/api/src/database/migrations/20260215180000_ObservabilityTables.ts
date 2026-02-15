@@ -56,27 +56,14 @@ export class ObservabilityTables20260215180000 implements MigrationInterface {
       ]
     }), true);
 
-    // Create alert indices
-    await queryRunner.createIndex("alerts", new TableIndex({
-      name: "IDX_alerts_status",
-      columnNames: ["status"]
-    }));
-    await queryRunner.createIndex("alerts", new TableIndex({
-      name: "IDX_alerts_service_name",
-      columnNames: ["service_name"]
-    }));
-    await queryRunner.createIndex("alerts", new TableIndex({
-      name: "IDX_alerts_severity",
-      columnNames: ["severity"]
-    }));
-    await queryRunner.createIndex("alerts", new TableIndex({
-      name: "IDX_alerts_created_at",
-      columnNames: ["created_at"]
-    }));
+    // Create alert indices using raw SQL with IF NOT EXISTS for idempotency
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_alerts_status" ON "alerts" ("status")');
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_alerts_service_name" ON "alerts" ("service_name")');
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_alerts_severity" ON "alerts" ("severity")');
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_alerts_created_at" ON "alerts" ("created_at")');
 
     // Partial index support varies by driver, assuming Postgres
-    // using single quotes for the query string to avoid backtick issues
-    await queryRunner.query('CREATE INDEX "IDX_alerts_status_created_at_active" ON "alerts" ("status", "created_at") WHERE status = \'active\'');
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_alerts_status_created_at_active" ON "alerts" ("status", "created_at") WHERE status = \'active\'');
 
     // Create uptime_records table
     await queryRunner.createTable(new Table({
@@ -128,23 +115,11 @@ export class ObservabilityTables20260215180000 implements MigrationInterface {
       ]
     }), true);
 
-    // Create uptime_records indices
-    await queryRunner.createIndex("uptime_records", new TableIndex({
-      name: "IDX_uptime_records_timestamp",
-      columnNames: ["timestamp"]
-    }));
-    await queryRunner.createIndex("uptime_records", new TableIndex({
-      name: "IDX_uptime_records_service_name",
-      columnNames: ["service_name"]
-    }));
-    await queryRunner.createIndex("uptime_records", new TableIndex({
-      name: "IDX_uptime_records_status",
-      columnNames: ["status"]
-    }));
-    await queryRunner.createIndex("uptime_records", new TableIndex({
-      name: "IDX_uptime_records_service_name_timestamp",
-      columnNames: ["service_name", "timestamp"]
-    }));
+    // Create uptime_records indices using raw SQL with IF NOT EXISTS for idempotency
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_uptime_records_timestamp" ON "uptime_records" ("timestamp")');
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_uptime_records_service_name" ON "uptime_records" ("service_name")');
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_uptime_records_status" ON "uptime_records" ("status")');
+    await queryRunner.query('CREATE INDEX IF NOT EXISTS "IDX_uptime_records_service_name_timestamp" ON "uptime_records" ("service_name", "timestamp")');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
