@@ -414,6 +414,14 @@ function AppRoutes() {
               <Route path="/admin/license-payments" element={<LicensePaymentsPage />} />
             </Route>
             <Route
+              path="/observability"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <ObservabilityPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/onboarding"
               element={
                 <ProtectedRoute allowedRoles={['owner']}>
@@ -650,14 +658,6 @@ function AppRoutes() {
                 element={
                   <ProtectedRoute allowedRoles={['owner']}>
                     <RealtimeAnalyticsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="observability"
-                element={
-                  <ProtectedRoute allowedRoles={['owner']}>
-                    <ObservabilityPage />
                   </ProtectedRoute>
                 }
               />
