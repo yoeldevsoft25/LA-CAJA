@@ -47,7 +47,7 @@ import { FederationAlertsService } from './federation-alerts.service';
     DiscountsModule,
     QueuesModule,
     LicensesModule,
-    ObservabilityModule,
+    forwardRef(() => ObservabilityModule),
     forwardRef(() => InventoryEscrowModule),
     forwardRef(() => InventoryModule),
     FiscalModule,

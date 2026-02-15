@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ObservabilityController } from './observability.controller';
 import { ObservabilityService } from './services/observability.service';
@@ -12,6 +12,7 @@ import { MetricsModule } from '../metrics/metrics.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ObservabilityGateway } from './gateways/observability.gateway';
 import { HealthModule } from '../health/health.module';
+import { SyncModule } from '../sync/sync.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { HealthModule } from '../health/health.module';
     MetricsModule,
     NotificationsModule,
     HealthModule,
+    forwardRef(() => SyncModule),
   ],
   controllers: [ObservabilityController],
   providers: [

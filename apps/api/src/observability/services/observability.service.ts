@@ -1,30 +1,57 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HealthCheckService } from '@nestjs/terminus';
+import { DataSource } from 'typeorm';
 import { MetricsService } from '../../metrics/metrics.service';
 import { AlertService } from './alert.service';
 import { UptimeTrackerService } from './uptime-tracker.service';
 import { HealthStatusDto, ServiceHealthDto } from '../dto/health-status.dto';
 import { MetricsDto } from '../dto/metrics.dto';
+import {
+  FederationHealthReport,
+  SplitBrainMonitorService,
+} from '../../sync/split-brain-monitor.service';
 
 @Injectable()
 export class ObservabilityService {
   private readonly logger = new Logger(ObservabilityService.name);
 
   constructor(
-    private healthCheckService: HealthCheckService,
-    private metricsService: MetricsService,
-    private alertService: AlertService,
-    private uptimeTracker: UptimeTrackerService,
+    private readonly healthCheckService: HealthCheckService,
+    private readonly metricsService: MetricsService,
+    private readonly alertService: AlertService,
+    private readonly uptimeTracker: UptimeTrackerService,
+    private readonly splitBrainMonitorService: SplitBrainMonitorService,
+    private readonly dataSource: DataSource,
   ) {}
 
-  /**
-   * Obtiene el estado general del sistema
-   */
+  async getFederationHealthReport(
+    storeId: string,
+  ): Promise<FederationHealthReport> {
+    return this.splitBrainMonitorService.getHealthReport(storeId);
+  }
+
+  async getAllFederationHealthReports(): Promise<FederationHealthReport[]> {
+    const stores = await this.dataSource.query('SELECT id FROM stores');
+    const reports = await Promise.all(
+      stores.map(async (store: { id: string }) => {
+        try {
+          return await this.splitBrainMonitorService.getHealthReport(store.id);
+        } catch (error) {
+          this.logger.error(
+            `Failed to get health report for store ${store.id}`,
+            error,
+          );
+          return null; // Return null on error for a specific store
+        }
+      }),
+    );
+    return reports.filter((report) => report !== null) as FederationHealthReport[];
+  }
+
   async getStatus(): Promise<HealthStatusDto> {
     try {
       const healthCheck = await this.healthCheckService.check([
         async () => {
-          // Health checks básicos
           return { observability: { status: 'up' } };
         },
       ]);
@@ -35,7 +62,6 @@ export class ObservabilityService {
       );
       const activeAlerts = await this.alertService.getActiveAlerts();
 
-      // Determinar estado general
       let overallStatus: 'ok' | 'degraded' | 'down' = 'ok';
       if (uptimeStats.uptime < 99.0) {
         overallStatus = 'down';
@@ -46,7 +72,6 @@ export class ObservabilityService {
         overallStatus = 'degraded';
       }
 
-      // Construir lista de servicios (simplificado)
       const services: ServiceHealthDto[] = [
         {
           name: 'database',
@@ -73,12 +98,7 @@ export class ObservabilityService {
     }
   }
 
-  /**
-   * Obtiene métricas agregadas
-   */
   async getMetrics(): Promise<MetricsDto> {
-    // Este método debería obtener métricas de Prometheus
-    // Por ahora retornamos estructura básica
     return {
       http: [],
       database: [],

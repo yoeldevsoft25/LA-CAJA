@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiOkResponse,
 } from '@nestjs/swagger';
 import { ObservabilityService } from './services/observability.service';
 import { AlertService } from './services/alert.service';
@@ -29,6 +30,7 @@ import { UptimeStatsDto, UptimeHistoryDto } from './dto/uptime.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { FederationHealthReport } from '../sync/split-brain-monitor.service';
 
 @ApiTags('observability')
 @Controller('observability')
@@ -42,6 +44,28 @@ export class ObservabilityController {
     private uptimeTracker: UptimeTrackerService,
   ) {}
 
+  @Get('federation-health')
+  @ApiOperation({ summary: 'Get federation health reports for all stores' })
+  @ApiOkResponse({
+    description: 'An array of federation health reports',
+    type: [FederationHealthReport],
+  })
+  async getAllFederationHealthReports(): Promise<FederationHealthReport[]> {
+    return this.observabilityService.getAllFederationHealthReports();
+  }
+
+  @Get('federation-health/:storeId')
+  @ApiOperation({ summary: 'Get federation health report for a specific store' })
+  @ApiOkResponse({
+    description: 'Federation health report for the specified store',
+    type: FederationHealthReport,
+  })
+  async getFederationHealthReport(
+    @Param('storeId') storeId: string,
+  ): Promise<FederationHealthReport> {
+    return this.observabilityService.getFederationHealthReport(storeId);
+  }
+
   @Get('status')
   @ApiOperation({ summary: 'Obtener estado general del sistema' })
   @ApiResponse({ status: 200, type: HealthStatusDto })
@@ -53,7 +77,6 @@ export class ObservabilityController {
   @ApiOperation({ summary: 'Obtener estado de todos los servicios' })
   @ApiResponse({ status: 200, description: 'Lista de servicios y su estado' })
   async getServices() {
-    // Implementación simplificada - debería obtener de health checks
     return {
       services: [
         { name: 'database', status: 'up' },
@@ -137,7 +160,6 @@ export class ObservabilityController {
   @ApiOperation({ summary: 'Obtener historial de eventos' })
   @ApiResponse({ status: 200, description: 'Historial de eventos' })
   async getHistory() {
-    // Implementación futura
     return { events: [] };
   }
 }

@@ -1,5 +1,35 @@
 import { api } from '@/lib/api';
 
+// Duplicating the interface from the backend for type safety
+export interface FederationHealthReport {
+  timestamp: string;
+  storeId: string;
+  overallHealth: 'healthy' | 'degraded' | 'critical';
+  metrics: {
+    eventLagCount: number;
+    projectionGapCount: number;
+    stockDivergenceCount: number;
+    negativeStockCount: number;
+    queueDepth: number;
+    failedJobs: number;
+    remoteReachable: boolean;
+    remoteLatencyMs: number | null;
+    fiscalDuplicates: number;
+    conflictRate: number;
+    outboxBacklog: number;
+    outboxDead: number;
+  };
+  details?: {
+    projectionGaps?: {
+      sales: number;
+      debts: number;
+    };
+    conflicts?: {
+      last1h: number;
+    };
+  };
+}
+
 export interface HealthStatus {
   status: 'ok' | 'degraded' | 'down';
   uptime: number;
@@ -46,25 +76,26 @@ export interface ServiceStatus {
 }
 
 export const observabilityService = {
-  /**
-   * Obtiene el estado general del sistema
-   */
+  async getAllFederationHealthReports(): Promise<FederationHealthReport[]> {
+    const response = await api.get<FederationHealthReport[]>('/observability/federation-health');
+    return response.data;
+  },
+
+  async getFederationHealthReport(storeId: string): Promise<FederationHealthReport> {
+    const response = await api.get<FederationHealthReport>(`/observability/federation-health/${storeId}`);
+    return response.data;
+  },
+
   async getStatus(): Promise<HealthStatus> {
     const response = await api.get<HealthStatus>('/observability/status');
     return response.data;
   },
 
-  /**
-   * Obtiene el estado de todos los servicios
-   */
   async getServices(): Promise<{ services: ServiceStatus[] }> {
     const response = await api.get<{ services: ServiceStatus[] }>('/observability/services');
     return response.data;
   },
 
-  /**
-   * Obtiene estadísticas de uptime
-   */
   async getUptime(service?: string, days?: number): Promise<UptimeStats> {
     const params: any = {};
     if (service) params.service = service;
@@ -74,9 +105,6 @@ export const observabilityService = {
     return response.data;
   },
 
-  /**
-   * Obtiene historial de uptime
-   */
   async getUptimeHistory(service?: string, hours?: number) {
     const params: any = {};
     if (service) params.service = service;
@@ -86,9 +114,6 @@ export const observabilityService = {
     return response.data;
   },
 
-  /**
-   * Obtiene alertas activas
-   */
   async getAlerts(params?: {
     status?: string;
     severity?: string;
@@ -102,17 +127,11 @@ export const observabilityService = {
     return response.data;
   },
 
-  /**
-   * Resuelve una alerta
-   */
   async resolveAlert(alertId: string): Promise<Alert> {
     const response = await api.patch<Alert>(`/observability/alerts/${alertId}/resolve`);
     return response.data;
   },
 
-  /**
-   * Reconoce una alerta
-   */
   async acknowledgeAlert(alertId: string): Promise<Alert> {
     const response = await api.patch<Alert>(`/observability/alerts/${alertId}/acknowledge`);
     return response.data;
