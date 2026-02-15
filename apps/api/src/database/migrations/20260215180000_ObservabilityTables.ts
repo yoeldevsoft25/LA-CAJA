@@ -73,9 +73,10 @@ export class ObservabilityTables20260215180000 implements MigrationInterface {
       name: "IDX_alerts_created_at",
       columnNames: ["created_at"]
     }));
-    // Partial index support varies by driver, assuming Postgres
-    await queryRunner.query(`CREATE INDEX "IDX_alerts_status_created_at_active" ON "alerts" ("status", "created_at") WHERE status = 'active'`);
 
+    // Partial index support varies by driver, assuming Postgres
+    // using single quotes for the query string to avoid backtick issues
+    await queryRunner.query('CREATE INDEX "IDX_alerts_status_created_at_active" ON "alerts" ("status", "created_at") WHERE status = \'active\'');
 
     // Create uptime_records table
     await queryRunner.createTable(new Table({
