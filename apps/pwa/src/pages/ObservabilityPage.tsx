@@ -15,7 +15,6 @@ import { FederationHealthDashboard } from '@/components/observability/Federation
 export default function ObservabilityPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Queries para datos
   const { data: status } = useQuery({
     queryKey: ['observability', 'status'],
     queryFn: () => observabilityService.getStatus(),
@@ -63,7 +62,34 @@ export default function ObservabilityPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* ... Other HealthStatusCard components ... */}
+        <HealthStatusCard
+          title="Estado General"
+          status={status?.status || 'unknown'}
+          value={status?.uptime.toFixed(3) + '%' || 'N/A'}
+          subtitle={`Objetivo: ${status?.targetUptime || 99.9}%`}
+          icon={<Activity className="h-4 w-4" />}
+        />
+        <HealthStatusCard
+          title="Uptime (30 días)"
+          status={uptime && uptime.uptime >= 99.9 ? 'ok' : uptime && uptime.uptime >= 99.0 ? 'degraded' : 'down'}
+          value={uptime?.uptime.toFixed(3) + '%' || 'N/A'}
+          subtitle={`${uptime?.successfulChecks || 0} checks exitosos`}
+          icon={<Server className="h-4 w-4" />}
+        />
+        <HealthStatusCard
+          title="Alertas Activas"
+          status={alertsData && alertsData.alerts.length > 0 ? 'warning' : 'ok'}
+          value={alertsData?.alerts.length || 0}
+          subtitle={`${alertsData?.alerts.filter(a => a.severity === 'critical').length || 0} críticas`}
+          icon={<AlertTriangle className="h-4 w-4" />}
+        />
+        <HealthStatusCard
+          title="Servicios"
+          status={servicesData && servicesData.services.every(s => s.status === 'up') ? 'ok' : 'degraded'}
+          value={`${servicesData?.services.filter(s => s.status === 'up').length || 0}/${servicesData?.services.length || 0}`}
+          subtitle="Operacionales"
+          icon={<BarChart3 className="h-4 w-4" />}
+        />
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
@@ -76,7 +102,27 @@ export default function ObservabilityPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-            {/* ... Overview content ... */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Uptime Tracker</CardTitle>
+                <CardDescription>Historial de disponibilidad</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UptimeTracker uptime={uptime} loading={uptimeLoading} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Métricas en Tiempo Real</CardTitle>
+                <CardDescription>Actualizaciones en vivo</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RealTimeMetrics />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="federation" className="space-y-4">
@@ -84,15 +130,45 @@ export default function ObservabilityPage() {
         </TabsContent>
 
         <TabsContent value="services" className="space-y-4">
-            {/* ... Services content ... */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Estado de Servicios</CardTitle>
+              <CardDescription>Monitoreo de todos los servicios</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ServiceStatusList
+                services={servicesData?.services || []}
+                loading={servicesLoading}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="metrics" className="space-y-4">
-            {/* ... Metrics content ... */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Métricas del Sistema</CardTitle>
+              <CardDescription>Gráficos de rendimiento</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MetricsChart />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="alerts" className="space-y-4">
-            {/* ... Alerts content ... */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Panel de Alertas</CardTitle>
+              <CardDescription>Alertas activas y configuración</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AlertsPanel
+                alerts={alertsData?.alerts || []}
+                loading={alertsLoading}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
