@@ -74,80 +74,80 @@ export class ObservabilityTables20260215180000 implements MigrationInterface {
       columnNames: ["created_at"]
     }));
     // Partial index support varies by driver, assuming Postgres
-    await queryRunner.query(\`CREATE INDEX "IDX_alerts_status_created_at_active" ON "alerts" ("status", "created_at") WHERE status = 'active'\`);
+    await queryRunner.query(`CREATE INDEX "IDX_alerts_status_created_at_active" ON "alerts" ("status", "created_at") WHERE status = 'active'`);
 
 
-        // Create uptime_records table
-        await queryRunner.createTable(new Table({
-            name: "uptime_records",
-            columns: [
-                {
-                    name: "id",
-                    type: "uuid",
-                    isPrimary: true,
-                    isGenerated: true,
-                    generationStrategy: "uuid",
-                    default: "uuid_generate_v4()"
-                },
-                {
-                    name: "timestamp",
-                    type: "timestamptz"
-                },
-                {
-                    name: "status",
-                    type: "varchar",
-                    length: "20"
-                },
-                {
-                    name: "service_name",
-                    type: "varchar",
-                    length: "100",
-                    isNullable: true
-                },
-                {
-                    name: "response_time_ms",
-                    type: "integer",
-                    isNullable: true
-                },
-                {
-                    name: "error_message",
-                    type: "text",
-                    isNullable: true
-                },
-                {
-                    name: "metadata",
-                    type: "jsonb",
-                    isNullable: true
-                },
-                {
-                    name: "created_at",
-                    type: "timestamptz",
-                    default: "now()"
-                }
-            ]
-        }), true);
+    // Create uptime_records table
+    await queryRunner.createTable(new Table({
+      name: "uptime_records",
+      columns: [
+        {
+          name: "id",
+          type: "uuid",
+          isPrimary: true,
+          isGenerated: true,
+          generationStrategy: "uuid",
+          default: "uuid_generate_v4()"
+        },
+        {
+          name: "timestamp",
+          type: "timestamptz"
+        },
+        {
+          name: "status",
+          type: "varchar",
+          length: "20"
+        },
+        {
+          name: "service_name",
+          type: "varchar",
+          length: "100",
+          isNullable: true
+        },
+        {
+          name: "response_time_ms",
+          type: "integer",
+          isNullable: true
+        },
+        {
+          name: "error_message",
+          type: "text",
+          isNullable: true
+        },
+        {
+          name: "metadata",
+          type: "jsonb",
+          isNullable: true
+        },
+        {
+          name: "created_at",
+          type: "timestamptz",
+          default: "now()"
+        }
+      ]
+    }), true);
 
-        // Create uptime_records indices
-        await queryRunner.createIndex("uptime_records", new TableIndex({
-            name: "IDX_uptime_records_timestamp",
-            columnNames: ["timestamp"]
-        }));
-        await queryRunner.createIndex("uptime_records", new TableIndex({
-            name: "IDX_uptime_records_service_name",
-            columnNames: ["service_name"]
-        }));
-        await queryRunner.createIndex("uptime_records", new TableIndex({
-            name: "IDX_uptime_records_status",
-            columnNames: ["status"]
-        }));
-        await queryRunner.createIndex("uptime_records", new TableIndex({
-            name: "IDX_uptime_records_service_name_timestamp",
-            columnNames: ["service_name", "timestamp"]
-        }));
-    }
+    // Create uptime_records indices
+    await queryRunner.createIndex("uptime_records", new TableIndex({
+      name: "IDX_uptime_records_timestamp",
+      columnNames: ["timestamp"]
+    }));
+    await queryRunner.createIndex("uptime_records", new TableIndex({
+      name: "IDX_uptime_records_service_name",
+      columnNames: ["service_name"]
+    }));
+    await queryRunner.createIndex("uptime_records", new TableIndex({
+      name: "IDX_uptime_records_status",
+      columnNames: ["status"]
+    }));
+    await queryRunner.createIndex("uptime_records", new TableIndex({
+      name: "IDX_uptime_records_service_name_timestamp",
+      columnNames: ["service_name", "timestamp"]
+    }));
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable("uptime_records");
-        await queryRunner.dropTable("alerts");
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropTable("uptime_records");
+    await queryRunner.dropTable("alerts");
+  }
 }
