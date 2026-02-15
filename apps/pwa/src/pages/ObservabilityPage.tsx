@@ -65,14 +65,14 @@ export default function ObservabilityPage() {
         <HealthStatusCard
           title="Estado General"
           status={status?.status || 'unknown'}
-          value={status?.uptime.toFixed(3) + '%' || 'N/A'}
+          value={status?.uptime != null ? `${status.uptime.toFixed(3)}%` : 'N/A'}
           subtitle={`Objetivo: ${status?.targetUptime || 99.9}%`}
           icon={<Activity className="h-4 w-4" />}
         />
         <HealthStatusCard
           title="Uptime (30 días)"
-          status={uptime && uptime.uptime >= 99.9 ? 'ok' : uptime && uptime.uptime >= 99.0 ? 'degraded' : 'down'}
-          value={uptime?.uptime.toFixed(3) + '%' || 'N/A'}
+          status={uptime?.uptime == null ? 'unknown' : uptime.uptime >= 99.9 ? 'ok' : uptime.uptime >= 99.0 ? 'degraded' : 'down'}
+          value={uptime?.uptime != null ? `${uptime.uptime.toFixed(3)}%` : 'N/A'}
           subtitle={`${uptime?.successfulChecks || 0} checks exitosos`}
           icon={<Server className="h-4 w-4" />}
         />
