@@ -161,7 +161,7 @@ export default function ObservabilityPage() {
             <CardHeader>
               <CardTitle>Panel de Alertas</CardTitle>
               <CardDescription>Alertas activas y configuración</CardDescription>
-            </-header>
+            </CardHeader>
             <CardContent>
               <AlertsPanel
                 alerts={alertsData?.alerts || []}
