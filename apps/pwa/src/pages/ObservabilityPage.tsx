@@ -9,7 +9,7 @@ import { MetricsChart } from '@/components/observability/MetricsChart';
 import { RealTimeMetrics } from '@/components/observability/RealTimeMetrics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, AlertTriangle, BarChart3, Server, GitMerge } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, Server } from 'lucide-react';
 import { FederationHealthDashboard } from '@/components/observability/FederationHealthDashboard';
 
 export default function ObservabilityPage() {
@@ -161,7 +161,7 @@ export default function ObservabilityPage() {
             <CardHeader>
               <CardTitle>Panel de Alertas</CardTitle>
               <CardDescription>Alertas activas y configuración</CardDescription>
-            </CardHeader>
+            </-header>
             <CardContent>
               <AlertsPanel
                 alerts={alertsData?.alerts || []}
