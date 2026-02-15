@@ -274,6 +274,10 @@ export { BankTransaction } from './bank-transaction.entity';
 // Audit entities
 export { AccountingAuditLog } from './accounting-audit-log.entity';
 
+// Observability entities
+export { Alert } from '../observability/entities/alert.entity';
+export { UptimeRecord } from '../observability/entities/uptime-record.entity';
+
 /**
  * Array con todas las entidades de TypeORM para configuración centralizada
  * Esto reduce el tamaño del objeto serializado en NestJS y mejora el rendimiento
@@ -284,6 +288,9 @@ import { BankTransaction } from './bank-transaction.entity';
 import { AccountingAuditLog } from './accounting-audit-log.entity';
 import { AccountingBudget } from './accounting-budget.entity';
 import { AccountingBudgetLine } from './accounting-budget-line.entity';
+
+import { Alert } from '../observability/entities/alert.entity';
+import { UptimeRecord } from '../observability/entities/uptime-record.entity';
 
 export const ALL_ENTITIES = [
   Store,
@@ -393,4 +400,6 @@ export const ALL_ENTITIES = [
   AccountingAuditLog,
   AccountingBudget,
   AccountingBudgetLine,
+  Alert,
+  UptimeRecord,
 ];

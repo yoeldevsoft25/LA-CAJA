@@ -1,70 +1,153 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table, TableIndex } from "typeorm";
 
 export class ObservabilityTables20260215180000 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // 62. OBSERVABILIDAD - ALERTAS Y UPTIME
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Create alerts table
+    await queryRunner.createTable(new Table({
+      name: "alerts",
+      columns: [
+        {
+          name: "id",
+          type: "uuid",
+          isPrimary: true,
+          isGenerated: true,
+          generationStrategy: "uuid",
+          default: "uuid_generate_v4()"
+        },
+        {
+          name: "service_name",
+          type: "varchar",
+          length: "100"
+        },
+        {
+          name: "alert_type",
+          type: "varchar",
+          length: "50"
+        },
+        {
+          name: "severity",
+          type: "varchar",
+          length: "20"
+        },
+        {
+          name: "message",
+          type: "text"
+        },
+        {
+          name: "status",
+          type: "varchar",
+          length: "20"
+        },
+        {
+          name: "metadata",
+          type: "jsonb",
+          isNullable: true
+        },
+        {
+          name: "created_at",
+          type: "timestamptz",
+          default: "now()"
+        },
+        {
+          name: "updated_at",
+          type: "timestamptz",
+          default: "now()"
+        }
+      ]
+    }), true);
 
-        // Tabla de alertas
-        await queryRunner.query(`
-      CREATE TABLE IF NOT EXISTS alerts (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        service_name VARCHAR(100) NOT NULL,
-        alert_type VARCHAR(50) NOT NULL,
-        severity VARCHAR(20) NOT NULL CHECK (severity IN ('critical', 'warning', 'info')),
-        message TEXT NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'acknowledged')),
-        resolved_at TIMESTAMPTZ,
-        acknowledged_at TIMESTAMPTZ,
-        acknowledged_by UUID,
-        metadata JSONB,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
+    // Create alert indices
+    await queryRunner.createIndex("alerts", new TableIndex({
+      name: "IDX_alerts_status",
+      columnNames: ["status"]
+    }));
+    await queryRunner.createIndex("alerts", new TableIndex({
+      name: "IDX_alerts_service_name",
+      columnNames: ["service_name"]
+    }));
+    await queryRunner.createIndex("alerts", new TableIndex({
+      name: "IDX_alerts_severity",
+      columnNames: ["severity"]
+    }));
+    await queryRunner.createIndex("alerts", new TableIndex({
+      name: "IDX_alerts_created_at",
+      columnNames: ["created_at"]
+    }));
+    // Partial index support varies by driver, assuming Postgres
+    await queryRunner.query(\`CREATE INDEX "IDX_alerts_status_created_at_active" ON "alerts" ("status", "created_at") WHERE status = 'active'\`);
 
-        // Tabla de registros de uptime
-        await queryRunner.query(`
-      CREATE TABLE IF NOT EXISTS uptime_records (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        timestamp TIMESTAMPTZ NOT NULL,
-        status VARCHAR(20) NOT NULL CHECK (status IN ('up', 'down', 'degraded')),
-        service_name VARCHAR(100),
-        response_time_ms INTEGER,
-        error_message TEXT,
-        metadata JSONB,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
 
-        // Índices para alerts
-        await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
-      CREATE INDEX IF NOT EXISTS idx_alerts_service ON alerts(service_name);
-      CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity);
-      CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at);
-      CREATE INDEX IF NOT EXISTS idx_alerts_active ON alerts(status, created_at) WHERE status = 'active';
-    `);
+        // Create uptime_records table
+        await queryRunner.createTable(new Table({
+            name: "uptime_records",
+            columns: [
+                {
+                    name: "id",
+                    type: "uuid",
+                    isPrimary: true,
+                    isGenerated: true,
+                    generationStrategy: "uuid",
+                    default: "uuid_generate_v4()"
+                },
+                {
+                    name: "timestamp",
+                    type: "timestamptz"
+                },
+                {
+                    name: "status",
+                    type: "varchar",
+                    length: "20"
+                },
+                {
+                    name: "service_name",
+                    type: "varchar",
+                    length: "100",
+                    isNullable: true
+                },
+                {
+                    name: "response_time_ms",
+                    type: "integer",
+                    isNullable: true
+                },
+                {
+                    name: "error_message",
+                    type: "text",
+                    isNullable: true
+                },
+                {
+                    name: "metadata",
+                    type: "jsonb",
+                    isNullable: true
+                },
+                {
+                    name: "created_at",
+                    type: "timestamptz",
+                    default: "now()"
+                }
+            ]
+        }), true);
 
-        // Índices para uptime_records
-        await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS idx_uptime_timestamp ON uptime_records(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_uptime_service ON uptime_records(service_name);
-      CREATE INDEX IF NOT EXISTS idx_uptime_status ON uptime_records(status);
-      CREATE INDEX IF NOT EXISTS idx_uptime_service_timestamp ON uptime_records(service_name, timestamp DESC);
-    `);
-
-        // Comentarios
-        await queryRunner.query(`
-      COMMENT ON TABLE alerts IS 'Sistema de alertas para monitoreo de servicios';
-      COMMENT ON TABLE uptime_records IS 'Registros históricos de uptime para cálculo de SLA';
-      COMMENT ON COLUMN alerts.severity IS 'Nivel de severidad: critical, warning, info';
-      COMMENT ON COLUMN alerts.status IS 'Estado de la alerta: active, resolved, acknowledged';
-      COMMENT ON COLUMN uptime_records.status IS 'Estado del servicio: up, down, degraded';
-    `);
+        // Create uptime_records indices
+        await queryRunner.createIndex("uptime_records", new TableIndex({
+            name: "IDX_uptime_records_timestamp",
+            columnNames: ["timestamp"]
+        }));
+        await queryRunner.createIndex("uptime_records", new TableIndex({
+            name: "IDX_uptime_records_service_name",
+            columnNames: ["service_name"]
+        }));
+        await queryRunner.createIndex("uptime_records", new TableIndex({
+            name: "IDX_uptime_records_status",
+            columnNames: ["status"]
+        }));
+        await queryRunner.createIndex("uptime_records", new TableIndex({
+            name: "IDX_uptime_records_service_name_timestamp",
+            columnNames: ["service_name", "timestamp"]
+        }));
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP TABLE IF EXISTS uptime_records;`);
-        await queryRunner.query(`DROP TABLE IF EXISTS alerts;`);
+        await queryRunner.dropTable("uptime_records");
+        await queryRunner.dropTable("alerts");
     }
 }
