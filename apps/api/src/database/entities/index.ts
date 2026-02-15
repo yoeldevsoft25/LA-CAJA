@@ -275,8 +275,8 @@ export { BankTransaction } from './bank-transaction.entity';
 export { AccountingAuditLog } from './accounting-audit-log.entity';
 
 // Observability entities
-export { Alert } from '../observability/entities/alert.entity';
-export { UptimeRecord } from '../observability/entities/uptime-record.entity';
+export { Alert } from '../../observability/entities/alert.entity';
+export { UptimeRecord } from '../../observability/entities/uptime-record.entity';
 
 /**
  * Array con todas las entidades de TypeORM para configuración centralizada
@@ -289,8 +289,8 @@ import { AccountingAuditLog } from './accounting-audit-log.entity';
 import { AccountingBudget } from './accounting-budget.entity';
 import { AccountingBudgetLine } from './accounting-budget-line.entity';
 
-import { Alert } from '../observability/entities/alert.entity';
-import { UptimeRecord } from '../observability/entities/uptime-record.entity';
+import { Alert } from '../../observability/entities/alert.entity';
+import { UptimeRecord } from '../../observability/entities/uptime-record.entity';
 
 export const ALL_ENTITIES = [
   Store,
